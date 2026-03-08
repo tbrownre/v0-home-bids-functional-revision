@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import Link from "next/link";
+import { isDemoModeClient } from "@/lib/demo/config";
 
 export function DemoBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    // Restore dismissed state from sessionStorage
+    // Only show when demo mode is active (env var OR URL param)
+    if (!isDemoModeClient()) return;
     const dismissed = sessionStorage.getItem("demo-banner-dismissed");
     if (!dismissed) setVisible(true);
   }, []);
