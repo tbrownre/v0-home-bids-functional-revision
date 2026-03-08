@@ -206,18 +206,6 @@ export function isJobArchived(jobId: string): boolean {
   return jobStatuses.get(jobId)?.archived === true;
 }
 
-/**
- * Pre-seed job statuses for demo jobs so getJobStatus() resolves immediately.
- * Called on load in demo mode before the subscribe callback is registered.
- */
-export function seedDemoJobs(jobIds: string[]) {
-  for (const id of jobIds) {
-    if (!jobStatuses.has(id)) {
-      jobStatuses.set(id, { status_owner: "receiving_bids", selected_bid_id: null });
-    }
-  }
-}
-
 // Listener Management
 export function subscribe(listener: () => void) {
   listeners.add(listener);

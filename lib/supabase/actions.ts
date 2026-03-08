@@ -1,16 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
-
-// Service role client — bypasses RLS, only used server-side for trusted writes
-function createServiceClient() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
 
 const MAKE_WEBHOOK_URL = "https://hook.us2.make.com/1v7w6jnit6c3cbddxsqeyrobgnf21su9";
 
@@ -56,6 +47,7 @@ export async function signUpHomeowner(formData: {
     },
   });
   if (error) {
+    // User already exists but hasn't confirmed — prompt resend instead of blocking
     if (
       error.message.toLowerCase().includes("already registered") ||
       error.message.toLowerCase().includes("user already exists")
@@ -100,7 +92,6 @@ export async function signUpContractor(formData: {
     options: {
       data: {
         full_name: `${formData.firstName} ${formData.lastName}`.trim(),
-        role: "contractor",
         user_type: "contractor",
         business_name: formData.businessName,
         phone: formData.phone,
@@ -108,40 +99,29 @@ export async function signUpContractor(formData: {
       emailRedirectTo: getConfirmUrl(),
     },
   });
-  if (error) {
-    if (
-      error.message.toLowerCase().includes("already registered") ||
-      error.message.toLowerCase().includes("user already exists")
-    ) {
-      return { error: "An account with this email already exists. Please sign in." };
-    }
-    return { error: error.message };
-  }
+  if (error) return { error: error.message };
 
   const userId = data.user?.id;
   if (!userId) return { error: "Failed to create user account." };
 
   // The handle_new_user trigger already inserts into profiles.
-  // Use service role client so RLS doesn't block the insert — the session
-  // cookie is not yet established for a brand-new user at this point.
-  const serviceClient = createServiceClient();
-  const yearsExpRaw = formData.yearsInBusiness ? parseInt(formData.yearsInBusiness, 10) : null;
-  const yearsExp = yearsExpRaw !== null && !isNaN(yearsExpRaw) ? yearsExpRaw : null;
-  const { error: contractorError } = await serviceClient.from("contractor_profiles").insert({
+  // We just need to insert into contractor_profiles.
+  const yearsExp = formData.yearsInBusiness ? parseInt(formData.yearsInBusiness, 10) : null;
+  const { error: contractorError } = await supabase.from("contractor_profiles").insert({
     id: userId,
     business_name: formData.businessName,
     specialties: formData.selectedServices,
     service_area: formData.serviceAreas,
     bio: formData.bio || null,
     license_number: formData.licenseNumber || null,
-    years_experience: yearsExp,
+    years_experience: isNaN(yearsExp as number) ? null : yearsExp,
     approval_status: "pending",
     is_verified: false,
     is_approved: false,
   });
-
   if (contractorError) {
-    console.error("[signUpContractor] contractors insert error:", contractorError.message);
+    // Friendly error — don't expose raw DB messages to the UI
+    console.error("[signUpContractor] contractor_profiles insert error:", contractorError.message);
     return { error: "We couldn't save your contractor details. Please try again or contact support." };
   }
 
@@ -268,7 +248,7 @@ export async function getJobById(id: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("jobs")
-    .select("*, profiles(full_name), bids(*, contractors(business_name), profiles(full_name))")
+    .select("*, profiles(full_name), bids(*, contractor_profiles(business_name), profiles(full_name))")
     .eq("id", id)
     .single();
 
@@ -311,6 +291,7 @@ export async function acceptBid(bidId: string, jobId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  // Mark selected bid as accepted, others as rejected
   const { error: rejectError } = await supabase
     .from("bids")
     .update({ status: "rejected" })
@@ -324,6 +305,7 @@ export async function acceptBid(bidId: string, jobId: string) {
     .eq("id", bidId);
   if (acceptError) return { error: acceptError.message };
 
+  // Update job status
   await supabase.from("jobs").update({ status: "in_progress" }).eq("id", jobId);
 
   revalidatePath(`/jobs/${jobId}/bids`);
