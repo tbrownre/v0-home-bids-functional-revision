@@ -46,12 +46,9 @@ import Image from "next/image";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { SubscriptionCheckout } from "@/components/subscription-checkout";
-import { getJobStatus, subscribe, isJobArchived, seedDemoJobs, type JobStatusOwner, getJobStatusLabel } from "@/lib/job-store";
+import { getJobStatus, subscribe, isJobArchived, type JobStatusOwner, getJobStatusLabel } from "@/lib/job-store";
 import { signUpHomeowner, createJob, getHomeownerJobs } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
-import { isDemoMode, isDemoModeClient } from "@/lib/demo/config";
-import * as demoServices from "@/lib/demo/services";
-import { useDemoTimeline } from "@/lib/demo/use-demo-timeline";
 
 interface UploadedImage {
   id: string;
@@ -94,9 +91,8 @@ export default function HomePage() {
   const homeownerUnreadCount = 0; // inbox wired separately
 
   useEffect(() => {
-    // Skip Supabase entirely in demo mode or the v0 preview sandbox
+    // Skip Supabase entirely in the v0 preview sandbox — it blocks external fetch
     if (typeof window === "undefined") return;
-    if (isDemoModeClient()) return;
     if (window.location.hostname.includes("vusercontent.net")) return;
     let subscription: { unsubscribe: () => void } | null = null;
     try {
@@ -271,37 +267,20 @@ export default function HomePage() {
     return unsubscribe;
   }, []);
 
-  // Load jobs — demo data when in demo mode, Supabase otherwise
+  // Load real jobs from Supabase when user is signed in
   useEffect(() => {
-    if (isDemoModeClient()) {
-      demoServices.getHomeownerJobs().then(({ jobs: demoJobs }: { jobs: any[] }) => {
-        // Seed job-store so getJobStatus() resolves for demo ids immediately
-        seedDemoJobs(demoJobs.map((j: any) => j.id));
-        setUserJobs(demoJobs.map((j: any) => ({
-          id: j.id,
-          description: j.description,
-          status: j.status as JobStatusOwner,
-          createdAt: j.createdAt,
-          bidsCount: j.bidsCount ?? 0,
-        })));
-      });
-      return;
-    }
-    getHomeownerJobs().then(({ jobs: dbJobs }: { jobs: any[] }) => {
+    getHomeownerJobs().then(({ jobs: dbJobs }) => {
       if (dbJobs && dbJobs.length > 0) {
         setUserJobs(dbJobs.map((j: any) => ({
           id: j.id,
           description: j.description,
           status: (j.status === "open" ? "receiving_bids" : j.status) as JobStatusOwner,
-          createdAt: j.createdAt ?? new Date(j.created_at),
-          bidsCount: j.bidsCount ?? j.bids?.[0]?.count ?? 0,
+          createdAt: new Date(j.created_at),
+          bidsCount: j.bids?.[0]?.count ?? 0,
         })));
       }
     });
   }, []);
-
-  // Demo scripted timeline — fires after a job is "posted" in demo mode
-  useDemoTimeline(isDemoModeClient() && currentStep === "success");
 
   const handleImageUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {

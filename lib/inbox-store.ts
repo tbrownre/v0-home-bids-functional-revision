@@ -297,26 +297,3 @@ export function subscribeInbox(listener: Listener) {
     listeners.delete(listener);
   };
 }
-
-/**
- * Prepend a new notification to the store.
- * Used by the demo timeline hook and demo control panel.
- */
-export function addNotification(n: InboxNotification, isContractor: boolean) {
-  if (isContractor) {
-    contractorState = [n, ...contractorState];
-  } else {
-    homeownerState = [n, ...homeownerState];
-  }
-  notify();
-}
-
-/**
- * Reset both notification lists back to the seeded defaults.
- * Used by the demo control panel Reset button.
- */
-export function resetInbox() {
-  homeownerState = [...homeownerNotifications];
-  contractorState = [...contractorNotifications];
-  notify();
-}
