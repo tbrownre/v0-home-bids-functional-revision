@@ -72,9 +72,9 @@ export async function updateSession(request: NextRequest) {
     }
     // Check approval status
     const { data: contractorProfile } = await supabase
-      .from('contractor_profiles')
-      .select('approval_status')
-      .eq('id', user.id)
+  .from('contractors')
+  .select('approval_status')
+  .eq('user_id', user.id)
       .single()
 
     if (!contractorProfile) {
