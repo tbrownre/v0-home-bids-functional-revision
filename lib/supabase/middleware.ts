@@ -63,16 +63,8 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Contractor dashboard: require auth + approved status
-  // Skip entirely in demo mode (env var OR ?demo= URL param)
-  const demoParam = request.nextUrl.searchParams.get('demo');
-  const isDemo =
-    process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ||
-    demoParam === 'true' ||
-    demoParam === 'contractor' ||
-    demoParam === 'homeowner';
-
-  if (!isDemo && (request.nextUrl.pathname.startsWith('/contractors/dashboard') || 
-      request.nextUrl.pathname.startsWith('/contractors/bids'))) {
+  if (request.nextUrl.pathname.startsWith('/contractors/dashboard') || 
+      request.nextUrl.pathname.startsWith('/contractors/bids')) {
     if (!user) {
       const url = request.nextUrl.clone()
       url.pathname = '/auth/login'
