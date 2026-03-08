@@ -56,7 +56,6 @@ export async function signUpHomeowner(formData: {
     },
   });
   if (error) {
-    // User already exists but hasn't confirmed — prompt resend instead of blocking
     if (
       error.message.toLowerCase().includes("already registered") ||
       error.message.toLowerCase().includes("user already exists")
@@ -101,6 +100,7 @@ export async function signUpContractor(formData: {
     options: {
       data: {
         full_name: `${formData.firstName} ${formData.lastName}`.trim(),
+        role: "contractor",
         user_type: "contractor",
         business_name: formData.businessName,
         phone: formData.phone,
@@ -108,7 +108,15 @@ export async function signUpContractor(formData: {
       emailRedirectTo: getConfirmUrl(),
     },
   });
-  if (error) return { error: error.message };
+  if (error) {
+    if (
+      error.message.toLowerCase().includes("already registered") ||
+      error.message.toLowerCase().includes("user already exists")
+    ) {
+      return { error: "An account with this email already exists. Please sign in." };
+    }
+    return { error: error.message };
+  }
 
   const userId = data.user?.id;
   if (!userId) return { error: "Failed to create user account." };
@@ -120,19 +128,27 @@ export async function signUpContractor(formData: {
   const yearsExp = formData.yearsInBusiness ? parseInt(formData.yearsInBusiness, 10) : null;
   const { error: contractorError } = await serviceClient.from("contractor_profiles").insert({
     id: userId,
+  // 2. Insert into contractors table
+  const yearsExp = formData.yearsInBusiness ? parseInt(formData.yearsInBusiness, 10) : null;
+  const { error: contractorError } = await supabase.from("contractors").insert({
+    user_id: userId,
     business_name: formData.businessName,
+    business_type: formData.businessType || null,
     specialties: formData.selectedServices,
     service_area: formData.serviceAreas,
     bio: formData.bio || null,
     license_number: formData.licenseNumber || null,
+    license_state: formData.licenseState || null,
+    insurance_provider: formData.insuranceProvider || null,
+    bonded_amount: formData.bondedAmount || null,
     years_experience: isNaN(yearsExp as number) ? null : yearsExp,
-    approval_status: "pending",
+    phone: formData.phone || null,
+    approval_status: "pending_approval",
     is_verified: false,
-    is_approved: false,
   });
+
   if (contractorError) {
-    // Friendly error — don't expose raw DB messages to the UI
-    console.error("[signUpContractor] contractor_profiles insert error:", contractorError.message);
+    console.error("[signUpContractor] contractors insert error:", contractorError.message);
     return { error: "We couldn't save your contractor details. Please try again or contact support." };
   }
 
@@ -259,7 +275,7 @@ export async function getJobById(id: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("jobs")
-    .select("*, profiles(full_name), bids(*, contractor_profiles(business_name), profiles(full_name))")
+    .select("*, profiles(full_name), bids(*, contractors(business_name), profiles(full_name))")
     .eq("id", id)
     .single();
 
@@ -302,7 +318,6 @@ export async function acceptBid(bidId: string, jobId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  // Mark selected bid as accepted, others as rejected
   const { error: rejectError } = await supabase
     .from("bids")
     .update({ status: "rejected" })
@@ -316,7 +331,6 @@ export async function acceptBid(bidId: string, jobId: string) {
     .eq("id", bidId);
   if (acceptError) return { error: acceptError.message };
 
-  // Update job status
   await supabase.from("jobs").update({ status: "in_progress" }).eq("id", jobId);
 
   revalidatePath(`/jobs/${jobId}/bids`);
