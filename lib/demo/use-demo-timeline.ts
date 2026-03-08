@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useRef } from "react";
-import { isDemoMode } from "./config";
+import { isDemoModeClient } from "./config";
 import { addNotification } from "../inbox-store";
 
 interface UseDemoTimelineOptions {
@@ -112,7 +112,7 @@ export function useDemoTimeline({ triggered }: UseDemoTimelineOptions) {
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
-    if (!isDemoMode()) return;
+    if (!isDemoModeClient()) return;
     if (!triggered) return;
     if (firedRef.current) return;
 

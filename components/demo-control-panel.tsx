@@ -11,9 +11,9 @@
  * without any server calls.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Zap, X, ChevronDown, ChevronUp, RotateCcw, Bell, MessageCircle, TrendingUp, CheckCircle2 } from "lucide-react";
-import { isDemoMode } from "@/lib/demo/config";
+import { isDemoModeClient } from "@/lib/demo/config";
 import { addNotification } from "@/lib/inbox-store";
 import { setJobStatus, selectBidAsWinner } from "@/lib/job-store";
 
@@ -33,8 +33,13 @@ export function DemoControlPanel() {
   const [open, setOpen] = useState(false);
   const [statusIndex, setStatusIndex] = useState(0);
   const [lastAction, setLastAction] = useState<string | null>(null);
+  const [active, setActive] = useState(false);
 
-  if (!isDemoMode()) return null;
+  useEffect(() => {
+    setActive(isDemoModeClient());
+  }, []);
+
+  if (!active) return null;
 
   function flash(msg: string) {
     setLastAction(msg);

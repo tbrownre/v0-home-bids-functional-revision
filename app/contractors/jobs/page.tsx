@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { getOpenJobs, submitBid } from "@/lib/supabase/actions";
+import { isDemoModeClient } from "@/lib/demo/config";
+import * as demoServices from "@/lib/demo/services";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
@@ -263,9 +265,10 @@ export default function ContractorJobsMarketplace() {
   const searchParams = useSearchParams();
   const [jobs, setJobs] = useState<AvailableJob[]>(allAvailableJobs);
 
-  // Fetch real jobs from Supabase, fall back to mock data
+  // Fetch jobs from Supabase (or demo data when in demo mode)
   useEffect(() => {
-    getOpenJobs().then(({ jobs: dbJobs }) => {
+    const loader = isDemoModeClient() ? demoServices.getOpenJobs : getOpenJobs;
+    loader().then(({ jobs: dbJobs }) => {
       if (dbJobs && dbJobs.length > 0) {
         const mapped: AvailableJob[] = dbJobs.map((j: any) => ({
           id: j.id,

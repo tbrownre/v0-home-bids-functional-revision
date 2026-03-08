@@ -11,7 +11,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { X, Sparkles } from "lucide-react";
-import { isDemoMode } from "@/lib/demo/config";
+import { isDemoModeClient } from "@/lib/demo/config";
 
 const STORAGE_KEY = "homebids_demo_banner_dismissed";
 
@@ -19,7 +19,7 @@ export function DemoBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (!isDemoMode()) return;
+    if (!isDemoModeClient()) return;
     if (sessionStorage.getItem(STORAGE_KEY) === "1") return;
     setVisible(true);
   }, []);

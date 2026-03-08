@@ -46,10 +46,10 @@ import Image from "next/image";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { SubscriptionCheckout } from "@/components/subscription-checkout";
-import { getJobStatus, subscribe, isJobArchived, type JobStatusOwner, getJobStatusLabel } from "@/lib/job-store";
+import { getJobStatus, subscribe, isJobArchived, seedDemoJobs, type JobStatusOwner, getJobStatusLabel } from "@/lib/job-store";
 import { signUpHomeowner, createJob, getHomeownerJobs } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
-import { isDemoMode } from "@/lib/demo/config";
+import { isDemoModeClient } from "@/lib/demo/config";
 import * as demoServices from "@/lib/demo/services";
 import { useDemoTimeline } from "@/lib/demo/use-demo-timeline";
 
@@ -276,8 +276,24 @@ export default function HomePage() {
 
   // Load jobs from Supabase (or demo data when in demo mode)
   useEffect(() => {
-    const loader = isDemoMode() ? demoServices.getHomeownerJobs : getHomeownerJobs;
-    loader().then(({ jobs: dbJobs }) => {
+    if (isDemoModeClient()) {
+      demoServices.getHomeownerJobs().then(({ jobs: demoJobs }) => {
+        if (demoJobs && demoJobs.length > 0) {
+          // Seed job-store so the subscribe callback can resolve demo ids immediately
+          seedDemoJobs(demoJobs.map((j: any) => j.id));
+          setUserJobs(demoJobs.map((j: any) => ({
+            id: j.id,
+            description: j.description,
+            status: j.status as JobStatusOwner,
+            createdAt: j.createdAt ?? new Date(),
+            bidsCount: j.bidsCount ?? 0,
+          })));
+          setShowJobsBoard(true);
+        }
+      });
+      return;
+    }
+    getHomeownerJobs().then(({ jobs: dbJobs }) => {
       if (dbJobs && dbJobs.length > 0) {
         setUserJobs(dbJobs.map((j: any) => ({
           id: j.id,
@@ -286,7 +302,6 @@ export default function HomePage() {
           createdAt: new Date(j.created_at),
           bidsCount: j.bids?.[0]?.count ?? 0,
         })));
-        if (isDemoMode()) setShowJobsBoard(true);
       }
     });
   }, []);
@@ -369,7 +384,7 @@ export default function HomePage() {
     setSubmitJobError("");
 
     // In demo mode: skip all Supabase calls, immediately show success + fire timeline
-    if (isDemoMode()) {
+    if (isDemoModeClient()) {
       const newJob: Job = {
         id: `demo-job-new-${Date.now()}`,
         description: jobDescription.trim(),
