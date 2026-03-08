@@ -63,8 +63,10 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Contractor dashboard: require auth + approved status
-  if (request.nextUrl.pathname.startsWith('/contractors/dashboard') || 
-      request.nextUrl.pathname.startsWith('/contractors/bids')) {
+  // Skip entirely in demo mode — no auth needed
+  const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+  if (!isDemo && (request.nextUrl.pathname.startsWith('/contractors/dashboard') || 
+      request.nextUrl.pathname.startsWith('/contractors/bids'))) {
     if (!user) {
       const url = request.nextUrl.clone()
       url.pathname = '/auth/login'
