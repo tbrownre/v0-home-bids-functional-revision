@@ -49,6 +49,9 @@ import { SubscriptionCheckout } from "@/components/subscription-checkout";
 import { getJobStatus, subscribe, isJobArchived, type JobStatusOwner, getJobStatusLabel } from "@/lib/job-store";
 import { signUpHomeowner, createJob, getHomeownerJobs } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
+import { isDemoMode } from "@/lib/demo/config";
+import * as demoServices from "@/lib/demo/services";
+import { useDemoTimeline } from "@/lib/demo/use-demo-timeline";
 
 interface UploadedImage {
   id: string;
@@ -84,6 +87,10 @@ export default function HomePage() {
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [showJobsBoard, setShowJobsBoard] = useState(false);
   const [creatingNewJob, setCreatingNewJob] = useState(false);
+
+  // Demo mode: track whether a job was "posted" to trigger the timeline
+  const [demoJobPosted, setDemoJobPosted] = useState(false);
+  useDemoTimeline({ triggered: demoJobPosted });
 
   // Auth state from Supabase only
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -267,9 +274,10 @@ export default function HomePage() {
     return unsubscribe;
   }, []);
 
-  // Load real jobs from Supabase when user is signed in
+  // Load jobs from Supabase (or demo data when in demo mode)
   useEffect(() => {
-    getHomeownerJobs().then(({ jobs: dbJobs }) => {
+    const loader = isDemoMode() ? demoServices.getHomeownerJobs : getHomeownerJobs;
+    loader().then(({ jobs: dbJobs }) => {
       if (dbJobs && dbJobs.length > 0) {
         setUserJobs(dbJobs.map((j: any) => ({
           id: j.id,
@@ -278,6 +286,7 @@ export default function HomePage() {
           createdAt: new Date(j.created_at),
           bidsCount: j.bids?.[0]?.count ?? 0,
         })));
+        if (isDemoMode()) setShowJobsBoard(true);
       }
     });
   }, []);
@@ -358,6 +367,23 @@ export default function HomePage() {
     if (submittingJob) return; // double-submit guard
     setSubmittingJob(true);
     setSubmitJobError("");
+
+    // In demo mode: skip all Supabase calls, immediately show success + fire timeline
+    if (isDemoMode()) {
+      const newJob: Job = {
+        id: `demo-job-new-${Date.now()}`,
+        description: jobDescription.trim(),
+        status: "receiving_bids",
+        createdAt: new Date(),
+        bidsCount: 0,
+      };
+      setUserJobs((prev) => [newJob, ...prev]);
+      setShowPasswordModal(false);
+      setSubmittingJob(false);
+      setDemoJobPosted(true);
+      setCurrentStep("success");
+      return;
+    }
 
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();

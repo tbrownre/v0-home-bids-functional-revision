@@ -297,3 +297,19 @@ export function subscribeInbox(listener: Listener) {
     listeners.delete(listener);
   };
 }
+
+/**
+ * Push a new notification into the store at runtime.
+ * Used by the demo timeline hook and the demo control panel.
+ *
+ * @param notification  The notification to prepend to the list.
+ * @param isContractor  When true, adds to contractor inbox; otherwise homeowner.
+ */
+export function addNotification(notification: InboxNotification, isContractor: boolean) {
+  if (isContractor) {
+    contractorState = [notification, ...contractorState];
+  } else {
+    homeownerState = [notification, ...homeownerState];
+  }
+  notify();
+}
