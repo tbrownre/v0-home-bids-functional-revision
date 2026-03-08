@@ -1,0 +1,14 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    @media (prefers-color-scheme: light) {
+      .background { fill: #1a1a1a; }
+      .text { fill: #ffffff; }
+    }
+    @media (prefers-color-scheme: dark) {
+      .background { fill: #ffffff; }
+      .text { fill: #1a1a1a; }
+    }
+  </style>
+  <rect class="background" width="180" height="180" rx="37" />
+  <text class="text" x="90" y="108" font-family="system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="80" font-weight="500" text-anchor="middle" letter-spacing="-2">HB</text>
+</svg>
