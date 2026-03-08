@@ -125,26 +125,19 @@ export async function signUpContractor(formData: {
   // Use service role client so RLS doesn't block the insert — the session
   // cookie is not yet established for a brand-new user at this point.
   const serviceClient = createServiceClient();
-  const yearsExp = formData.yearsInBusiness ? parseInt(formData.yearsInBusiness, 10) : null;
+  const yearsExpRaw = formData.yearsInBusiness ? parseInt(formData.yearsInBusiness, 10) : null;
+  const yearsExp = yearsExpRaw !== null && !isNaN(yearsExpRaw) ? yearsExpRaw : null;
   const { error: contractorError } = await serviceClient.from("contractor_profiles").insert({
     id: userId,
-  // 2. Insert into contractors table
-  const yearsExp = formData.yearsInBusiness ? parseInt(formData.yearsInBusiness, 10) : null;
-  const { error: contractorError } = await supabase.from("contractors").insert({
-    user_id: userId,
     business_name: formData.businessName,
-    business_type: formData.businessType || null,
     specialties: formData.selectedServices,
     service_area: formData.serviceAreas,
     bio: formData.bio || null,
     license_number: formData.licenseNumber || null,
-    license_state: formData.licenseState || null,
-    insurance_provider: formData.insuranceProvider || null,
-    bonded_amount: formData.bondedAmount || null,
-    years_experience: isNaN(yearsExp as number) ? null : yearsExp,
-    phone: formData.phone || null,
-    approval_status: "pending_approval",
+    years_experience: yearsExp,
+    approval_status: "pending",
     is_verified: false,
+    is_approved: false,
   });
 
   if (contractorError) {
