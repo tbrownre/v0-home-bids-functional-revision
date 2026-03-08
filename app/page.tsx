@@ -49,6 +49,9 @@ import { SubscriptionCheckout } from "@/components/subscription-checkout";
 import { getJobStatus, subscribe, isJobArchived, type JobStatusOwner, getJobStatusLabel } from "@/lib/job-store";
 import { signUpHomeowner, createJob, getHomeownerJobs } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
+import { isDemoMode } from "@/lib/demo/config";
+import * as demoServices from "@/lib/demo/services";
+import { useDemoTimeline } from "@/lib/demo/use-demo-timeline";
 
 interface UploadedImage {
   id: string;
@@ -91,8 +94,9 @@ export default function HomePage() {
   const homeownerUnreadCount = 0; // inbox wired separately
 
   useEffect(() => {
-    // Skip Supabase entirely in the v0 preview sandbox — it blocks external fetch
+    // Skip Supabase entirely in demo mode or the v0 preview sandbox
     if (typeof window === "undefined") return;
+    if (isDemoMode()) return;
     if (window.location.hostname.includes("vusercontent.net")) return;
     let subscription: { unsubscribe: () => void } | null = null;
     try {
@@ -267,20 +271,24 @@ export default function HomePage() {
     return unsubscribe;
   }, []);
 
-  // Load real jobs from Supabase when user is signed in
+  // Load jobs — demo data when in demo mode, Supabase otherwise
   useEffect(() => {
-    getHomeownerJobs().then(({ jobs: dbJobs }) => {
+    const loader = isDemoMode() ? demoServices.getHomeownerJobs : getHomeownerJobs;
+    loader().then(({ jobs: dbJobs }: { jobs: any[] }) => {
       if (dbJobs && dbJobs.length > 0) {
         setUserJobs(dbJobs.map((j: any) => ({
           id: j.id,
           description: j.description,
           status: (j.status === "open" ? "receiving_bids" : j.status) as JobStatusOwner,
-          createdAt: new Date(j.created_at),
-          bidsCount: j.bids?.[0]?.count ?? 0,
+          createdAt: j.createdAt ?? new Date(j.created_at),
+          bidsCount: j.bidsCount ?? j.bids?.[0]?.count ?? 0,
         })));
       }
     });
   }, []);
+
+  // Demo scripted timeline — fires after a job is "posted" in demo mode
+  useDemoTimeline(isDemoMode() && currentStep === "success");
 
   const handleImageUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
