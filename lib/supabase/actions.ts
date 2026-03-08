@@ -1,7 +1,16 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
+
+// Service role client — bypasses RLS, only used server-side for trusted writes
+function createServiceClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 const MAKE_WEBHOOK_URL = "https://hook.us2.make.com/1v7w6jnit6c3cbddxsqeyrobgnf21su9";
 
@@ -105,9 +114,11 @@ export async function signUpContractor(formData: {
   if (!userId) return { error: "Failed to create user account." };
 
   // The handle_new_user trigger already inserts into profiles.
-  // We just need to insert into contractor_profiles.
+  // Use service role client so RLS doesn't block the insert — the session
+  // cookie is not yet established for a brand-new user at this point.
+  const serviceClient = createServiceClient();
   const yearsExp = formData.yearsInBusiness ? parseInt(formData.yearsInBusiness, 10) : null;
-  const { error: contractorError } = await supabase.from("contractor_profiles").insert({
+  const { error: contractorError } = await serviceClient.from("contractor_profiles").insert({
     id: userId,
     business_name: formData.businessName,
     specialties: formData.selectedServices,
