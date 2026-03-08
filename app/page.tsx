@@ -46,10 +46,10 @@ import Image from "next/image";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { SubscriptionCheckout } from "@/components/subscription-checkout";
-import { getJobStatus, subscribe, isJobArchived, type JobStatusOwner, getJobStatusLabel } from "@/lib/job-store";
+import { getJobStatus, subscribe, isJobArchived, seedDemoJobs, type JobStatusOwner, getJobStatusLabel } from "@/lib/job-store";
 import { signUpHomeowner, createJob, getHomeownerJobs } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
-import { isDemoMode } from "@/lib/demo/config";
+import { isDemoMode, isDemoModeClient } from "@/lib/demo/config";
 import * as demoServices from "@/lib/demo/services";
 import { useDemoTimeline } from "@/lib/demo/use-demo-timeline";
 
@@ -96,7 +96,7 @@ export default function HomePage() {
   useEffect(() => {
     // Skip Supabase entirely in demo mode or the v0 preview sandbox
     if (typeof window === "undefined") return;
-    if (isDemoMode()) return;
+    if (isDemoModeClient()) return;
     if (window.location.hostname.includes("vusercontent.net")) return;
     let subscription: { unsubscribe: () => void } | null = null;
     try {
@@ -273,8 +273,21 @@ export default function HomePage() {
 
   // Load jobs — demo data when in demo mode, Supabase otherwise
   useEffect(() => {
-    const loader = isDemoMode() ? demoServices.getHomeownerJobs : getHomeownerJobs;
-    loader().then(({ jobs: dbJobs }: { jobs: any[] }) => {
+    if (isDemoModeClient()) {
+      demoServices.getHomeownerJobs().then(({ jobs: demoJobs }: { jobs: any[] }) => {
+        // Seed job-store so getJobStatus() resolves for demo ids immediately
+        seedDemoJobs(demoJobs.map((j: any) => j.id));
+        setUserJobs(demoJobs.map((j: any) => ({
+          id: j.id,
+          description: j.description,
+          status: j.status as JobStatusOwner,
+          createdAt: j.createdAt,
+          bidsCount: j.bidsCount ?? 0,
+        })));
+      });
+      return;
+    }
+    getHomeownerJobs().then(({ jobs: dbJobs }: { jobs: any[] }) => {
       if (dbJobs && dbJobs.length > 0) {
         setUserJobs(dbJobs.map((j: any) => ({
           id: j.id,
@@ -288,7 +301,7 @@ export default function HomePage() {
   }, []);
 
   // Demo scripted timeline — fires after a job is "posted" in demo mode
-  useDemoTimeline(isDemoMode() && currentStep === "success");
+  useDemoTimeline(isDemoModeClient() && currentStep === "success");
 
   const handleImageUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {

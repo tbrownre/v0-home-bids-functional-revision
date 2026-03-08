@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Settings, RotateCcw, MessageCircle, DollarSign, CheckSquare, ChevronDown, ChevronUp, X } from "lucide-react";
 import { addNotification, resetInbox, type InboxNotification } from "@/lib/inbox-store";
 import { setJobStatus, selectBidAsWinner } from "@/lib/job-store";
+import { isDemoModeClient } from "@/lib/demo/config";
 
 let demoEventCounter = 0;
 
@@ -57,6 +58,13 @@ let currentStatusIdx = 0;
 
 export function DemoControlPanel() {
   const [open, setOpen] = useState(true);
+  const [active, setActive] = useState(false);
+
+  useEffect(() => {
+    setActive(isDemoModeClient());
+  }, []);
+
+  if (!active) return null;
 
   function handleAddBid() {
     addNotification(makeBidNotification(), false);

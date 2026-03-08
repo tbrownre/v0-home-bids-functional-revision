@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getContractorBids } from "@/lib/supabase/actions";
-import { isDemoMode } from "@/lib/demo/config";
+import { isDemoModeClient } from "@/lib/demo/config";
 import * as demoServices from "@/lib/demo/services";
 
 interface ActiveBid {
@@ -122,7 +122,7 @@ export default function ContractorBidsPage() {
       return;
     }
     setBidsLoading(true);
-    if (isDemoMode()) {
+    if (isDemoModeClient()) {
       demoServices.getContractorBids().then(({ bids: demoBids }) => {
         setAllBids(demoBids as unknown as ActiveBid[]);
         setBidsLoading(false);

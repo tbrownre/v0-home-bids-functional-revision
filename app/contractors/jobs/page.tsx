@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { getOpenJobs, submitBid } from "@/lib/supabase/actions";
-import { isDemoMode } from "@/lib/demo/config";
+import { isDemoModeClient } from "@/lib/demo/config";
 import * as demoServices from "@/lib/demo/services";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
@@ -267,7 +267,7 @@ export default function ContractorJobsMarketplace() {
 
   // Fetch jobs — demo data when in demo mode, Supabase otherwise
   useEffect(() => {
-    if (isDemoMode()) {
+    if (isDemoModeClient()) {
       demoServices.getOpenJobs().then(({ jobs: demoJobs }) => {
         setJobs(demoJobs as unknown as AvailableJob[]);
       });
