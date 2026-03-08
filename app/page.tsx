@@ -46,7 +46,7 @@ import Image from "next/image";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { SubscriptionCheckout } from "@/components/subscription-checkout";
-import { getJobStatus, subscribe, isJobArchived, type JobStatusOwner, getJobStatusLabel } from "@/lib/job-store";
+import { getJobStatus, subscribe, isJobArchived, seedDemoJobs, type JobStatusOwner, getJobStatusLabel } from "@/lib/job-store";
 import { signUpHomeowner, createJob, getHomeownerJobs } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
 import { isDemoMode } from "@/lib/demo/config";
@@ -273,8 +273,21 @@ export default function HomePage() {
 
   // Load jobs — demo data when in demo mode, Supabase otherwise
   useEffect(() => {
-    const loader = isDemoMode() ? demoServices.getHomeownerJobs : getHomeownerJobs;
-    loader().then(({ jobs: dbJobs }: { jobs: any[] }) => {
+    if (isDemoMode()) {
+      demoServices.getHomeownerJobs().then(({ jobs: demoJobs }: { jobs: any[] }) => {
+        // Seed job-store so getJobStatus() resolves for demo ids immediately
+        seedDemoJobs(demoJobs.map((j: any) => j.id));
+        setUserJobs(demoJobs.map((j: any) => ({
+          id: j.id,
+          description: j.description,
+          status: j.status as JobStatusOwner,
+          createdAt: j.createdAt,
+          bidsCount: j.bidsCount ?? 0,
+        })));
+      });
+      return;
+    }
+    getHomeownerJobs().then(({ jobs: dbJobs }: { jobs: any[] }) => {
       if (dbJobs && dbJobs.length > 0) {
         setUserJobs(dbJobs.map((j: any) => ({
           id: j.id,
