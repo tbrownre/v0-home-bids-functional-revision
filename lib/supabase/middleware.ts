@@ -45,7 +45,7 @@ export async function updateSession(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith('/admin')) {
     if (!user) {
       const url = request.nextUrl.clone()
-      url.pathname = '/auth/login'
+      url.pathname = '/auth/sign-in'
       return NextResponse.redirect(url)
     }
     if (!user.app_metadata?.is_admin) {
@@ -58,7 +58,7 @@ export async function updateSession(request: NextRequest) {
   // Redirect unauthenticated users away from protected routes
   if (request.nextUrl.pathname.startsWith('/protected') && !user) {
     const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
+    url.pathname = '/auth/sign-in'
     return NextResponse.redirect(url)
   }
 
@@ -67,7 +67,7 @@ export async function updateSession(request: NextRequest) {
       request.nextUrl.pathname.startsWith('/contractors/bids')) {
     if (!user) {
       const url = request.nextUrl.clone()
-      url.pathname = '/auth/login'
+      url.pathname = '/auth/sign-in'
       return NextResponse.redirect(url)
     }
     // Check approval status
@@ -75,7 +75,7 @@ export async function updateSession(request: NextRequest) {
       .from('contractor_profiles')
       .select('approval_status')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
     if (!contractorProfile) {
       // Not a contractor at all — redirect home
