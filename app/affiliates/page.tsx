@@ -514,7 +514,7 @@ export default function AffiliatesPage() {
             transition={{ duration: 0.4, delay: 0.1 }}
             className="mt-6 text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl"
           >
-            Earn recurring revenue by referring homeowners &amp; contractors to HomeBids.
+            Earn Recurring Revenue Referring Homeowners &amp; Contractors
           </motion.h1>
 
           <motion.p
