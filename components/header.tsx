@@ -174,7 +174,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
             <div
               ref={panelRef}
               role="menu"
-              className="absolute left-3 top-14 z-50 w-52 rounded-xl border border-border bg-background p-1.5 shadow-lg"
+              className="absolute left-3 top-14 z-50 w-56 rounded-xl border border-border bg-background p-1.5 shadow-lg"
             >
               {/* Public nav */}
               <Link href="/" className={menuItemClass} onClick={closeMenu}>
@@ -198,51 +198,51 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
                 About Us
               </Link>
 
-              <div className={separatorClass} />
-
-              {/* Authenticated nav */}
+              {/* Authenticated nav — only shown when logged in */}
               {isLoggedIn && (
-                <Link
-                  href={`/inbox?type=${isContractor ? "contractor" : "homeowner"}`}
-                  className={menuItemClass}
-                  onClick={closeMenu}
-                >
-                  <Bell className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="flex-1">Notifications</span>
-                  {unreadCount > 0 && (
-                    <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                      {unreadCount > 9 ? "9+" : unreadCount}
-                    </span>
+                <>
+                  <div className={separatorClass} />
+
+                  <Link
+                    href={`/inbox?type=${isContractor ? "contractor" : "homeowner"}`}
+                    className={menuItemClass}
+                    onClick={closeMenu}
+                  >
+                    <Bell className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="flex-1">Notifications</span>
+                    {unreadCount > 0 && (
+                      <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </Link>
+
+                  {isContractor ? (
+                    <Link href="/contractors/jobs" className={menuItemClass} onClick={closeMenu}>
+                      <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      Available Jobs
+                    </Link>
+                  ) : (
+                    <Link href="/" className={menuItemClass} onClick={closeMenu}>
+                      <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      Post a Job
+                    </Link>
                   )}
-                </Link>
-              )}
 
-              {isContractor ? (
-                <Link href="/contractors/jobs" className={menuItemClass} onClick={closeMenu}>
-                  <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  Available Jobs
-                </Link>
-              ) : (
-                <Link href="/" className={menuItemClass} onClick={closeMenu}>
-                  <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  Post a Job
-                </Link>
-              )}
-
-              {isLoggedIn && (
-                <Link
-                  href={isContractor ? "/contractors/bids" : "/?showJobs=true"}
-                  className={menuItemClass}
-                  onClick={closeMenu}
-                >
-                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  {isContractor ? "Your Bids" : "Your Jobs"}
-                </Link>
+                  <Link
+                    href={isContractor ? "/contractors/bids" : "/?showJobs=true"}
+                    className={menuItemClass}
+                    onClick={closeMenu}
+                  >
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    {isContractor ? "Your Bids" : "Your Jobs"}
+                  </Link>
+                </>
               )}
 
               <div className={separatorClass} />
 
-              {isContractor || isSignedIn ? (
+              {isLoggedIn ? (
                 <button type="button" onClick={handleSignOut} className={`${menuItemClass} text-red-600 hover:text-red-600`}>
                   <LogOut className="h-4 w-4 shrink-0" />
                   Sign Out
