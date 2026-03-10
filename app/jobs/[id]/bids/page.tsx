@@ -26,7 +26,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { selectBidAsWinner } from "@/lib/job-store";
-import { acceptBid as acceptBidAction, getJobById } from "@/lib/supabase/actions";
+import { acceptBid as acceptBidAction, getJobBids } from "@/lib/supabase/actions";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -296,20 +296,26 @@ export default function BidsPage() {
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
   const [messages, setMessages] = useState<Record<string, Message[]>>(sampleMessages);
 
-  // Fetch real bids from Supabase for this job, fall back to sample data
+  // Fetch real bids for this job using the decoupled getJobBids action.
+  // Falls back to sampleBids if no real bids are found (demo/preview mode).
   useEffect(() => {
     if (!jobId) return;
-    getJobById(jobId).then(({ job }) => {
-      if (job?.bids && job.bids.length > 0) {
-        const mapped: Bid[] = job.bids.map((b: any) => ({
+    if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
+    getJobBids(jobId).then(({ bids: realBids, error }) => {
+      if (error) {
+        console.error("[BidsPage] Failed to load bids:", error);
+        return; // Keep sample bids as fallback
+      }
+      if (realBids && realBids.length > 0) {
+        const mapped: Bid[] = realBids.map((b: any) => ({
           id: b.id,
-          companyName: b.contractor_profiles?.business_name ?? `${b.profiles?.first_name} ${b.profiles?.last_name}`,
+          companyName: b.business_name ?? "Contractor",
           companyLogo: "/images/contractor-placeholder.png",
           price: b.amount,
           timeline: b.timeline ?? "Flexible",
           rating: 0,
           reviewCount: 0,
-          message: b.message,
+          message: b.message ?? "",
           verified: false,
           yearsInBusiness: 0,
           location: "",
