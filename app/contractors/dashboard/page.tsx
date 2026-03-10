@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { getContractorBids } from "@/lib/supabase/actions";
+import { createClient } from "@/lib/supabase/client";
 
 interface ActiveBid {
   id: string;
@@ -155,6 +156,19 @@ export default function ContractorDashboard() {
   const [bids, setBids] = useState<ActiveBid[]>([]);
   const [bidsLoading, setBidsLoading] = useState(true);
   const [bidsError, setBidsError] = useState<string | null>(null);
+
+  // Client-side session guard — redirects to sign-in if no valid session exists.
+  // This catches stale/expired sessions that middleware may have passed through.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hostname.includes("vusercontent.net")) return;
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user }, error }) => {
+      if (error || !user) {
+        window.location.replace("/auth/sign-in");
+      }
+    });
+  }, []);
 
   useEffect(() => {
     // Skip in v0 preview sandbox

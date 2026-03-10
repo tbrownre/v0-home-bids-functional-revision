@@ -4,7 +4,8 @@ import React from "react"
 
 import { useState } from "react";
 import { Header } from "@/components/header";
-import { signIn as authSignIn } from "@/lib/auth-store";
+import { signIn as supabaseSignIn } from "@/lib/supabase/actions";
+import { AlertCircle, Loader2 as Loader } from "lucide-react";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -58,16 +59,36 @@ export default function ContractorsPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
 
   const handleDashboardClick = () => {
     setShowLoginModal(true);
   };
 
-  const handleContractorLogin = (e: React.FormEvent) => {
+  const handleContractorLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    authSignIn("contractor");
-    setShowLoginModal(false);
-    window.location.href = "/contractors/dashboard";
+    setLoginLoading(true);
+    setLoginError("");
+
+    const result = await supabaseSignIn(loginEmail, loginPassword);
+
+    if (result.error) {
+      if (
+        result.error.toLowerCase().includes("email not confirmed") ||
+        result.error.toLowerCase().includes("not confirmed")
+      ) {
+        setShowLoginModal(false);
+        window.location.href = `/auth/verify-email?status=pending&email=${encodeURIComponent(loginEmail)}`;
+        return;
+      }
+      setLoginError(result.error);
+      setLoginLoading(false);
+      return;
+    }
+
+    // Hard navigation so middleware picks up the new session cookie.
+    window.location.replace("/contractors/dashboard");
   };
 
   return (
@@ -603,6 +624,8 @@ export default function ContractorsPage() {
         if (!open) {
           setLoginEmail("");
           setLoginPassword("");
+          setLoginError("");
+          setLoginLoading(false);
         }
       }}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden">
@@ -623,6 +646,12 @@ export default function ContractorsPage() {
 
           <div className="px-6 pb-6">
             <form onSubmit={handleContractorLogin} className="space-y-4">
+              {loginError && (
+                <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  {loginError}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="contractor-email" className="text-sm font-medium">
                   Email
@@ -634,6 +663,8 @@ export default function ContractorsPage() {
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   className="h-11"
+                  required
+                  autoComplete="email"
                 />
               </div>
               <div className="space-y-2">
@@ -652,14 +683,16 @@ export default function ContractorsPage() {
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   className="h-11"
+                  required
+                  autoComplete="current-password"
                 />
               </div>
               <Button
                 type="submit"
                 className="w-full h-11 gap-2 text-base"
-                disabled={!loginEmail.trim() || !loginPassword.trim()}
+                disabled={loginLoading || !loginEmail.trim() || !loginPassword.trim()}
               >
-                <LogIn className="h-4 w-4" />
+                {loginLoading ? <Loader className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
                 Sign In
               </Button>
             </form>
