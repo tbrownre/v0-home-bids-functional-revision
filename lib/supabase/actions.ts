@@ -247,14 +247,88 @@ export async function getOpenJobs() {
 
 export async function getJobById(id: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+
+  // Step 1: Fetch the job itself — no bid join so a missing relationship never
+  // blocks the homeowner from seeing their own job.
+  const { data: job, error: jobError } = await supabase
     .from("jobs")
-    .select("*, profiles(full_name), bids(*, contractor_profiles(business_name), profiles(full_name))")
+    .select("*, profiles(full_name)")
     .eq("id", id)
     .single();
 
-  if (error) return { error: error.message, job: null };
-  return { job: data };
+  if (jobError) return { error: jobError.message, job: null };
+  if (!job) return { error: "Job not found", job: null };
+
+  // Step 2: Fetch a simple count of bids for the summary chip.
+  // This is best-effort — if it fails, the job still renders with bidsCount = 0.
+  let bidsCount = 0;
+  try {
+    const { count } = await supabase
+      .from("bids")
+      .select("id", { count: "exact", head: true })
+      .eq("job_id", id);
+    bidsCount = count ?? 0;
+  } catch {
+    // Non-blocking
+  }
+
+  return { job: { ...job, bids: Array(bidsCount).fill({}) }, bidsCount };
+}
+
+// Separate action for the bids page — fetches bids with only the profiles join
+// (which is valid: bids.contractor_id → profiles.id).
+// contractor_profiles enrichment is done as a second optional pass.
+export async function getJobBids(jobId: string) {
+  const supabase = await createClient();
+
+  // bids.contractor_id → profiles.id — this FK exists in the schema.
+  const { data: bids, error: bidsError } = await supabase
+    .from("bids")
+    .select("*, profiles(id, full_name, avatar_url)")
+    .eq("job_id", jobId)
+    .order("created_at", { ascending: true });
+
+  if (bidsError) {
+    console.error("[getJobBids] bids fetch failed:", bidsError.message);
+    return { bids: [], error: bidsError.message };
+  }
+
+  if (!bids || bids.length === 0) return { bids: [], error: null };
+
+  // Step 2: Optionally enrich with contractor_profiles.
+  // contractor_profiles.id = profiles.id = bids.contractor_id so we can look up
+  // by the contractor_id column directly.
+  const contractorIds = bids.map((b) => b.contractor_id).filter(Boolean);
+  let contractorProfileMap: Record<string, { business_name: string | null }> = {};
+
+  if (contractorIds.length > 0) {
+    try {
+      const { data: contractorProfiles } = await supabase
+        .from("contractor_profiles")
+        .select("id, business_name")
+        .in("id", contractorIds);
+
+      if (contractorProfiles) {
+        contractorProfileMap = Object.fromEntries(
+          contractorProfiles.map((cp) => [cp.id, cp])
+        );
+      }
+    } catch {
+      // Enrichment failure is non-blocking — bids still render with fallback names.
+      console.error("[getJobBids] contractor_profiles enrichment failed, using fallback names");
+    }
+  }
+
+  // Merge enrichment into bids
+  const enrichedBids = bids.map((bid) => ({
+    ...bid,
+    business_name:
+      contractorProfileMap[bid.contractor_id]?.business_name ??
+      (bid.profiles as any)?.full_name ??
+      "Contractor",
+  }));
+
+  return { bids: enrichedBids, error: null };
 }
 
 // ── Bids ─────────────────────────────────────────────────────────────────────
