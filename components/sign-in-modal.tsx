@@ -64,10 +64,12 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
     onSignIn?.(userType);
     handleClose();
 
+    // Hard navigation so middleware flushes the new session cookie before
+    // the destination page attempts auth state reads.
     if (userType === "contractor") {
-      window.location.href = "/contractors/dashboard";
+      window.location.replace("/contractors/dashboard");
     } else {
-      window.location.href = "/?showJobs=true";
+      window.location.replace("/?showJobs=true");
     }
   };
 

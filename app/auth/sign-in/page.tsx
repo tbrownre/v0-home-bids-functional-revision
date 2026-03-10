@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +10,6 @@ import { AlertCircle, Loader2 } from "lucide-react";
 import { signIn } from "@/lib/supabase/actions";
 
 export default function SignInPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -30,7 +28,7 @@ export default function SignInPage() {
         result.error.toLowerCase().includes("email not confirmed") ||
         result.error.toLowerCase().includes("not confirmed")
       ) {
-        router.push(`/auth/verify-email?status=pending&email=${encodeURIComponent(email)}`);
+        window.location.href = `/auth/verify-email?status=pending&email=${encodeURIComponent(email)}`;
         return;
       }
       setError(result.error);
@@ -38,10 +36,12 @@ export default function SignInPage() {
       return;
     }
 
+    // Hard navigation so the middleware runs and the session cookie is available
+    // before the destination page attempts to read auth state.
     if (result.userType === "contractor") {
-      router.push("/contractors/dashboard");
+      window.location.replace("/contractors/dashboard");
     } else {
-      router.push("/");
+      window.location.replace("/?showJobs=true");
     }
   }
 

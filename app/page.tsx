@@ -50,6 +50,17 @@ import { getJobStatus, subscribe, isJobArchived, type JobStatusOwner, getJobStat
 import { signUpHomeowner, createJob, getHomeownerJobs } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
 
+// Centralized sign-out: clears Supabase session then hard-navigates to home.
+async function performSignOut() {
+  try {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+  } catch {
+    // ignore — we still navigate away
+  }
+  window.location.href = "/";
+}
+
 interface UploadedImage {
   id: string;
   file: File;
@@ -91,17 +102,38 @@ export default function HomePage() {
   const homeownerUnreadCount = 0; // inbox wired separately
 
   useEffect(() => {
-    // Skip Supabase entirely in the v0 preview sandbox — it blocks external fetch
+    // Skip Supabase entirely in the v0 preview sandbox
     if (typeof window === "undefined") return;
     if (window.location.hostname.includes("vusercontent.net")) return;
+
     let subscription: { unsubscribe: () => void } | null = null;
     try {
       const supabase = createClient();
-      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+
+      // Initialise state from the current session on mount, then listen for changes.
+      // Using getUser() (not getSession()) so the server always validates the token.
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          const type = user.user_metadata?.user_type;
+          if (type === "contractor") {
+            // Contractor landed on the homeowner page — redirect once, safely.
+            window.location.replace("/contractors/dashboard");
+          } else {
+            setIsSignedIn(true);
+            setIsContractor(false);
+          }
+        }
+      });
+
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+        // Ignore INITIAL_SESSION — we handle that in getUser() above to avoid
+        // double-redirect on first paint.
+        if (event === "INITIAL_SESSION") return;
+
         if (session?.user) {
           const type = session.user.user_metadata?.user_type;
           if (type === "contractor") {
-            router.replace("/contractors/dashboard");
+            window.location.replace("/contractors/dashboard");
           } else {
             setIsSignedIn(true);
             setIsContractor(false);
@@ -109,6 +141,7 @@ export default function HomePage() {
         } else {
           setIsSignedIn(false);
           setIsContractor(false);
+          setShowJobsBoard(false);
         }
       });
       subscription = data.subscription;
@@ -116,7 +149,10 @@ export default function HomePage() {
       // Silently no-op if Supabase is unavailable (e.g. preview sandbox)
     }
     return () => subscription?.unsubscribe();
-  }, [router]);
+  // router intentionally omitted — we use window.location.replace to avoid
+  // capturing a stale router reference across renders.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Handle URL query params and restore jobs board for signed-in users
   useEffect(() => {
@@ -267,8 +303,10 @@ export default function HomePage() {
     return unsubscribe;
   }, []);
 
-  // Load real jobs from Supabase when user is signed in
+  // Load real jobs from Supabase — only when the user is confirmed signed-in.
   useEffect(() => {
+    if (!isSignedIn) return;
+    if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
     getHomeownerJobs().then(({ jobs: dbJobs }) => {
       if (dbJobs && dbJobs.length > 0) {
         setUserJobs(dbJobs.map((j: any) => ({
@@ -280,7 +318,7 @@ export default function HomePage() {
         })));
       }
     });
-  }, []);
+  }, [isSignedIn]);
 
   const handleImageUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -500,10 +538,10 @@ export default function HomePage() {
 
 
   const handleSignOut = useCallback(() => {
-    authSignOut();
     setShowJobsBoard(false);
     setCurrentStep("describe");
     setJobDescription("");
+    performSignOut();
   }, []);
 
   return (
