@@ -196,7 +196,7 @@ export default function ContractorSignupPage() {
             className="mb-8 text-center"
           >
             <h1 className="text-3xl font-bold text-foreground sm:text-4xl">
-              Apply To Be Pro
+              Build Your Profile
             </h1>
             <p className="mt-3 text-muted-foreground">
               Complete your profile to start bidding on verified homeowner projects
