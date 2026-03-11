@@ -1,330 +1,179 @@
 "use client";
 
+import { useState } from "react";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { motion } from "framer-motion";
-import { Shield } from "lucide-react";
+import { Shield, ChevronDown, ChevronUp } from "lucide-react";
 
 const sections = [
   {
-    title: "1. Information We Collect",
+    id: "info-collect",
+    title: "Information We Collect",
     content: (
       <>
-        <p className="text-muted-foreground mb-4">
-          HomeBids may collect several types of information when users interact with the Platform.
-        </p>
-        <h3 className="text-base font-semibold text-foreground mb-2">Personal Information</h3>
-        <p className="text-muted-foreground mb-2">Information users may provide includes:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Name</li>
-          <li>Email address</li>
-          <li>Phone number</li>
-          <li>Property address</li>
-          <li>Account login credentials</li>
-          <li>Project details submitted by homeowners</li>
-          <li>Contractor business information</li>
-          <li>Contractor service areas</li>
-          <li>Profile information</li>
+        <p>HomeBids may collect information including:</p>
+        <ul>
+          <li>name</li>
+          <li>email address</li>
+          <li>phone number</li>
+          <li>property address</li>
+          <li>project details</li>
+          <li>contractor business information</li>
+          <li>service areas</li>
         </ul>
-        <p className="text-muted-foreground">
-          Homeowners may also submit project details such as descriptions of requested work, photos, budgets, or timelines.
-        </p>
       </>
     ),
   },
   {
-    title: "2. Contractor Business Information",
+    id: "public-contractor-data",
+    title: "Public Contractor Information",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">Contractors may provide business-related information including:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Business name</li>
-          <li>Contact details</li>
-          <li>Licensing information</li>
-          <li>Insurance details</li>
-          <li>Service categories</li>
-          <li>Service areas</li>
-          <li>Bid pricing</li>
+        <p>HomeBids may collect contractor information from publicly available sources including:</p>
+        <ul>
+          <li>business directories</li>
+          <li>contractor websites</li>
+          <li>licensing databases</li>
+          <li>public review platforms</li>
         </ul>
-        <p className="text-muted-foreground">
-          Contractors are responsible for ensuring the accuracy of the information they provide.
-        </p>
+        <p>This information may be used to identify contractors relevant to homeowner projects.</p>
       </>
     ),
   },
   {
-    title: "3. Publicly Available Information",
+    id: "auto-collected",
+    title: "Automatically Collected Information",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">
-          HomeBids may collect and organize publicly available business information about contractors from third-party sources including:
-        </p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Business directories</li>
-          <li>Public websites</li>
-          <li>Publicly listed contact details</li>
-          <li>Publicly available online reviews</li>
-          <li>Licensing databases</li>
-        </ul>
-        <p className="text-muted-foreground mb-2">
-          This information may be used to identify contractors relevant to homeowner project requests.
-        </p>
-        <p className="text-muted-foreground">
-          HomeBids does not guarantee the accuracy or completeness of publicly sourced data.
-        </p>
-      </>
-    ),
-  },
-  {
-    title: "4. Automatically Collected Information",
-    content: (
-      <>
-        <p className="text-muted-foreground mb-2">
-          When users interact with the Platform, HomeBids may automatically collect certain technical information including:
-        </p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
+        <p>We may automatically collect information including:</p>
+        <ul>
           <li>IP address</li>
-          <li>Device type</li>
-          <li>Browser type</li>
-          <li>Operating system</li>
-          <li>Usage activity</li>
-          <li>Pages viewed</li>
-          <li>Session duration</li>
-          <li>Referral sources</li>
+          <li>browser type</li>
+          <li>device information</li>
+          <li>usage patterns</li>
+          <li>session activity</li>
         </ul>
-        <p className="text-muted-foreground">
-          This information helps improve platform performance and security.
-        </p>
       </>
     ),
   },
   {
-    title: "5. How We Use Information",
+    id: "how-used",
+    title: "How Information Is Used",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">HomeBids may use collected information to:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Create and manage accounts</li>
-          <li>Connect homeowners with contractors</li>
-          <li>Distribute project requests to contractors</li>
-          <li>Allow messaging between users</li>
-          <li>Improve platform functionality</li>
-          <li>Analyze platform usage</li>
-          <li>Detect fraud or abuse</li>
-          <li>Provide customer support</li>
-          <li>Comply with legal obligations</li>
+        <p>Information may be used to:</p>
+        <ul>
+          <li>connect homeowners with contractors</li>
+          <li>distribute project opportunities</li>
+          <li>improve platform functionality</li>
+          <li>analyze usage patterns</li>
+          <li>detect fraud or abuse</li>
         </ul>
-        <p className="text-muted-foreground">
-          HomeBids may also use information to develop and improve automated contractor matching systems.
-        </p>
       </>
     ),
   },
   {
-    title: "6. Lead Distribution and Contractor Outreach",
+    id: "lead-distribution",
+    title: "Lead Distribution",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">
-          When a homeowner submits a project request, HomeBids may distribute project details to contractors who may wish to bid on the work.
-        </p>
-        <p className="text-muted-foreground mb-2">This may include sharing:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Homeowner name</li>
-          <li>Property location</li>
-          <li>Project description</li>
-          <li>Photos or attachments</li>
-        </ul>
-        <p className="text-muted-foreground mb-2">
-          Contractors may contact homeowners directly regarding project opportunities.
-        </p>
-        <p className="text-muted-foreground">
-          HomeBids does not guarantee contractor responses or bids.
-        </p>
+        <p>When a homeowner submits a project request, HomeBids may share project information with contractors.</p>
+        <p>Contractors may contact homeowners directly.</p>
       </>
     ),
   },
   {
-    title: "7. Communications",
+    id: "affiliate-program",
+    title: "Affiliate and Referral Program",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">Users may receive communications from HomeBids including:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Project alerts</li>
-          <li>Contractor bid notifications</li>
-          <li>Account notifications</li>
-          <li>Service announcements</li>
-          <li>Platform updates</li>
-          <li>Marketing communications</li>
-        </ul>
-        <p className="text-muted-foreground mb-2">These communications may be sent using automated systems.</p>
-        <p className="text-muted-foreground">Users may opt out of non-essential communications.</p>
+        <p>HomeBids operates an affiliate program allowing users to earn compensation for referrals.</p>
+        <p>Participants may receive commissions or revenue shares.</p>
+        <p>Affiliate participants may have financial incentives to promote the Platform.</p>
+        <p>HomeBids is not responsible for statements made by affiliates.</p>
       </>
     ),
   },
   {
-    title: "8. Cookies and Tracking Technologies",
+    id: "ai-systems",
+    title: "Artificial Intelligence Systems",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">HomeBids may use cookies and similar tracking technologies to:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Remember user preferences</li>
-          <li>Analyze traffic patterns</li>
-          <li>Improve platform functionality</li>
-          <li>Detect security issues</li>
-          <li>Personalize user experiences</li>
-        </ul>
-        <p className="text-muted-foreground">Users may adjust cookie settings through their browser preferences.</p>
+        <p>HomeBids may use automated systems and artificial intelligence to assist with contractor discovery, project categorization, and lead distribution.</p>
+        <p>AI-generated results are informational only.</p>
       </>
     ),
   },
   {
-    title: "9. Third-Party Services",
+    id: "aggregated-data",
+    title: "Aggregated and De-Identified Data",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">HomeBids may use third-party providers for services including:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Cloud hosting</li>
-          <li>Payment processing</li>
-          <li>Analytics</li>
-          <li>Authentication</li>
-          <li>Communications services</li>
-          <li>Fraud prevention</li>
-        </ul>
-        <p className="text-muted-foreground">These providers only access information necessary to perform their services.</p>
+        <p>HomeBids may create aggregated or de-identified datasets derived from platform activity.</p>
+        <p>These datasets may be used for analytics, research, platform improvement, and development of automated systems.</p>
+        <p>HomeBids retains ownership of aggregated datasets.</p>
       </>
     ),
   },
   {
-    title: "10. Artificial Intelligence and Automated Systems",
+    id: "cookies",
+    title: "Cookies and Tracking",
+    content: (
+      <p>HomeBids may use cookies and similar technologies to analyze traffic, improve platform functionality, and enhance user experience.</p>
+    ),
+  },
+  {
+    id: "third-party",
+    title: "Third-Party Services",
+    content: (
+      <p>HomeBids may use third-party providers for services such as hosting, analytics, communications, and authentication.</p>
+    ),
+  },
+  {
+    id: "data-security",
+    title: "Data Security",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">
-          HomeBids may use automated systems, artificial intelligence, and machine learning tools to assist with:
-        </p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Contractor discovery</li>
-          <li>Contractor matching</li>
-          <li>Project categorization</li>
-          <li>Lead distribution</li>
-          <li>Fraud detection</li>
-        </ul>
-        <p className="text-muted-foreground mb-2">
-          Automated recommendations generated by these systems are informational only.
-        </p>
-        <p className="text-muted-foreground">
-          Users should independently evaluate contractors before making hiring decisions.
-        </p>
+        <p>HomeBids uses reasonable safeguards designed to protect personal information.</p>
+        <p>However, no system can guarantee complete security.</p>
       </>
     ),
   },
   {
-    title: "11. Data Security",
+    id: "data-retention",
+    title: "Data Retention",
     content: (
-      <p className="text-muted-foreground">
-        HomeBids uses commercially reasonable safeguards designed to protect personal information from unauthorized access, disclosure, or misuse. However, no internet transmission or electronic storage method can be guaranteed completely secure.
-      </p>
+      <p>HomeBids may retain information as long as necessary to operate the Platform, comply with legal obligations, and resolve disputes.</p>
     ),
   },
   {
-    title: "12. Data Retention",
+    id: "user-content",
+    title: "User Content",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">HomeBids may retain personal information as long as necessary to:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Provide services</li>
-          <li>Comply with legal obligations</li>
-          <li>Resolve disputes</li>
-          <li>Enforce agreements</li>
-        </ul>
-        <p className="text-muted-foreground">
-          Information may be retained after account closure when necessary for legitimate business purposes.
-        </p>
+        <p>Users may submit reviews, project descriptions, and contractor profiles.</p>
+        <p>By submitting content, users grant HomeBids permission to display and use such content in connection with the Platform.</p>
       </>
     ),
   },
   {
-    title: "13. User Content",
+    id: "policy-changes",
+    title: "Changes to Privacy Policy",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">Users may submit content including:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Reviews</li>
-          <li>Ratings</li>
-          <li>Project descriptions</li>
-          <li>Contractor profiles</li>
-          <li>Messages</li>
-        </ul>
-        <p className="text-muted-foreground">
-          By submitting content, users grant HomeBids a worldwide license to display and use such content in connection with the Platform.
-        </p>
+        <p>HomeBids may update this policy periodically.</p>
+        <p>Continued use of the Platform constitutes acceptance of updates.</p>
       </>
     ),
   },
   {
-    title: "14. Children's Privacy",
+    id: "contact",
+    title: "Contact",
     content: (
-      <>
-        <p className="text-muted-foreground mb-2">The Platform is not intended for individuals under the age of 18.</p>
-        <p className="text-muted-foreground mb-2">HomeBids does not knowingly collect personal information from children.</p>
-        <p className="text-muted-foreground">If such information is discovered, it will be removed.</p>
-      </>
-    ),
-  },
-  {
-    title: "15. User Rights",
-    content: (
-      <>
-        <p className="text-muted-foreground mb-2">Depending on applicable law, users may have the right to:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Access their personal data</li>
-          <li>Request corrections</li>
-          <li>Request deletion of personal data</li>
-          <li>Opt out of certain communications</li>
-        </ul>
-        <p className="text-muted-foreground">Requests may be submitted through the contact information below.</p>
-      </>
-    ),
-  },
-  {
-    title: "16. California Privacy Rights",
-    content: (
-      <>
-        <p className="text-muted-foreground mb-2">
-          California residents may have rights under the California Consumer Privacy Act (CCPA).
-        </p>
-        <p className="text-muted-foreground">
-          HomeBids does not sell personal information in exchange for monetary compensation.
-        </p>
-      </>
-    ),
-  },
-  {
-    title: "17. International Users",
-    content: (
-      <>
-        <p className="text-muted-foreground mb-2">The Platform is operated in the United States.</p>
-        <p className="text-muted-foreground">
-          Users accessing the Platform from outside the United States acknowledge that information may be transferred and processed in the United States.
-        </p>
-      </>
-    ),
-  },
-  {
-    title: "18. Changes to This Privacy Policy",
-    content: (
-      <>
-        <p className="text-muted-foreground mb-2">HomeBids may update this Privacy Policy periodically.</p>
-        <p className="text-muted-foreground mb-2">Updates will be posted on this page with an updated revision date.</p>
-        <p className="text-muted-foreground">Continued use of the Platform constitutes acceptance of the revised policy.</p>
-      </>
-    ),
-  },
-  {
-    title: "19. Contact Information",
-    content: (
-      <p className="text-muted-foreground">
+      <p>
         HomeBids<br />
-        [Insert Company Address]<br />
+        [Insert Address]<br />
         [Insert Support Email]<br />
         [Insert Website URL]
       </p>
@@ -332,47 +181,171 @@ const sections = [
   },
 ];
 
+function AccordionSection({
+  section,
+  index,
+  activeSection,
+}: {
+  section: (typeof sections)[0];
+  index: number;
+  activeSection: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const isActive = activeSection === section.id;
+
+  return (
+    <section id={section.id} className="scroll-mt-28">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={`group flex w-full items-center justify-between rounded-xl border px-5 py-4 text-left transition-colors ${
+          open
+            ? "border-border bg-card"
+            : "border-transparent bg-secondary/50 hover:bg-secondary"
+        }`}
+        aria-expanded={open}
+      >
+        <span className="flex items-center gap-3">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-foreground">
+            {index + 1}
+          </span>
+          <span className={`font-semibold ${isActive ? "text-primary" : "text-foreground"}`}>
+            {section.title}
+          </span>
+        </span>
+        {open ? (
+          <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+        )}
+      </button>
+
+      {open && (
+        <div className="mt-1 rounded-xl border border-border bg-card px-5 pb-6 pt-5">
+          <div className="prose-legal">
+            {section.content}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function PrivacyPolicyPage() {
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [mobileJump, setMobileJump] = useState("");
+
+  function handleMobileJump(e: React.ChangeEvent<HTMLSelectElement>) {
+    const id = e.target.value;
+    setMobileJump(id);
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => setMobileJump(""), 1000);
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4 }}
         >
           {/* Page header */}
           <div className="mb-12 text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
               <Shield className="h-7 w-7 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold text-foreground sm:text-4xl text-balance">
+            <h1 className="text-balance text-3xl font-bold text-foreground sm:text-4xl">
               Privacy Policy
             </h1>
             <p className="mt-2 text-muted-foreground">
-              How HomeBids collects, uses, and protects your information.
+              How HomeBids collects and uses information.
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">Last Updated: March 6, 2026</p>
+            <p className="mt-1 text-xs text-muted-foreground/60">Last Updated: March 11, 2026</p>
           </div>
 
-          {/* Introduction */}
-          <p className="mb-10 leading-relaxed text-muted-foreground">
-            HomeBids (&quot;HomeBids&quot;, &quot;we&quot;, &quot;our&quot;, or &quot;us&quot;) respects your privacy and is committed to protecting the personal information you share with us. This Privacy Policy explains how HomeBids collects, uses, discloses, and safeguards information when you use our website, mobile applications, and related services (collectively, the &quot;Platform&quot;). By accessing or using the Platform, you agree to the practices described in this Privacy Policy.
-          </p>
+          {/* Intro card */}
+          <div className="mb-10 rounded-2xl border border-border bg-card p-6 leading-relaxed text-muted-foreground">
+            <p>This Privacy Policy describes how HomeBids collects, uses, and shares information in connection with the Platform. By using HomeBids, you agree to the practices described below.</p>
+          </div>
 
-          {/* Sections */}
-          <div className="space-y-10">
-            {sections.map((section) => (
-              <section key={section.title} className="border-t border-border pt-8">
-                <h2 className="mb-4 text-xl font-semibold text-foreground">{section.title}</h2>
-                <div className="leading-relaxed">{section.content}</div>
-              </section>
-            ))}
+          {/* Mobile jump-to dropdown */}
+          <div className="mb-8 lg:hidden">
+            <label htmlFor="mobile-jump-privacy" className="mb-1.5 block text-sm font-medium text-foreground">
+              Jump to Section
+            </label>
+            <select
+              id="mobile-jump-privacy"
+              value={mobileJump}
+              onChange={handleMobileJump}
+              className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Select a section...</option>
+              {sections.map((s, i) => (
+                <option key={s.id} value={s.id}>
+                  {i + 1}. {s.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Two-column layout: sidebar + content */}
+          <div className="flex gap-10">
+            {/* Sticky sidebar TOC — desktop only */}
+            <aside className="hidden lg:block w-60 shrink-0">
+              <div className="sticky top-24 rounded-2xl border border-border bg-card p-5">
+                <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Table of Contents
+                </p>
+                <nav aria-label="Privacy Policy sections">
+                  <ol className="space-y-1">
+                    {sections.map((s, i) => (
+                      <li key={s.id}>
+                        <a
+                          href={`#${s.id}`}
+                          onClick={() => setActiveSection(s.id)}
+                          className={`flex items-start gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors ${
+                            activeSection === s.id
+                              ? "bg-primary/10 font-medium text-foreground"
+                              : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                          }`}
+                        >
+                          <span className="mt-0.5 shrink-0 text-xs text-muted-foreground/60 tabular-nums w-4">
+                            {i + 1}.
+                          </span>
+                          <span>{s.title}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ol>
+                </nav>
+              </div>
+            </aside>
+
+            {/* Accordion sections */}
+            <div className="min-w-0 flex-1 space-y-3">
+              {sections.map((s, i) => (
+                <AccordionSection
+                  key={s.id}
+                  section={s}
+                  index={i}
+                  activeSection={activeSection}
+                />
+              ))}
+            </div>
           </div>
         </motion.div>
       </main>
+
+      <style>{`
+        .prose-legal p { margin-bottom: 0.75rem; line-height: 1.7; color: var(--color-muted-foreground); }
+        .prose-legal p:last-child { margin-bottom: 0; }
+        .prose-legal ul { margin: 0.5rem 0 0.75rem 0; padding-left: 1.25rem; list-style: disc; }
+        .prose-legal ul li { margin-bottom: 0.3rem; line-height: 1.6; color: var(--color-muted-foreground); }
+      `}</style>
 
       <ScrollToTop />
     </div>
