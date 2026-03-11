@@ -1,13 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { motion } from "framer-motion";
-import { Shield } from "lucide-react";
+import { Shield, ChevronDown, ChevronUp } from "lucide-react";
 
 const sections = [
   {
-    title: "Section 1 — Information We Collect",
+    id: "info-collect",
+    title: "Information We Collect",
     content: (
       <>
         <p>HomeBids may collect information including:</p>
@@ -24,7 +26,8 @@ const sections = [
     ),
   },
   {
-    title: "Section 2 — Public Contractor Information",
+    id: "public-contractor-data",
+    title: "Public Contractor Information",
     content: (
       <>
         <p>HomeBids may collect contractor information from publicly available sources including:</p>
@@ -39,7 +42,8 @@ const sections = [
     ),
   },
   {
-    title: "Section 3 — Automatically Collected Information",
+    id: "auto-collected",
+    title: "Automatically Collected Information",
     content: (
       <>
         <p>We may automatically collect information including:</p>
@@ -54,7 +58,8 @@ const sections = [
     ),
   },
   {
-    title: "Section 4 — How Information Is Used",
+    id: "how-used",
+    title: "How Information Is Used",
     content: (
       <>
         <p>Information may be used to:</p>
@@ -69,7 +74,8 @@ const sections = [
     ),
   },
   {
-    title: "Section 5 — Lead Distribution",
+    id: "lead-distribution",
+    title: "Lead Distribution",
     content: (
       <>
         <p>When a homeowner submits a project request, HomeBids may share project information with contractors.</p>
@@ -78,7 +84,8 @@ const sections = [
     ),
   },
   {
-    title: "Section 6 — Affiliate and Referral Program",
+    id: "affiliate-program",
+    title: "Affiliate and Referral Program",
     content: (
       <>
         <p>HomeBids operates an affiliate program allowing users to earn compensation for referrals.</p>
@@ -89,7 +96,8 @@ const sections = [
     ),
   },
   {
-    title: "Section 7 — Artificial Intelligence Systems",
+    id: "ai-systems",
+    title: "Artificial Intelligence Systems",
     content: (
       <>
         <p>HomeBids may use automated systems and artificial intelligence to assist with contractor discovery, project categorization, and lead distribution.</p>
@@ -98,7 +106,8 @@ const sections = [
     ),
   },
   {
-    title: "Section 8 — Aggregated and De-Identified Data",
+    id: "aggregated-data",
+    title: "Aggregated and De-Identified Data",
     content: (
       <>
         <p>HomeBids may create aggregated or de-identified datasets derived from platform activity.</p>
@@ -108,19 +117,22 @@ const sections = [
     ),
   },
   {
-    title: "Section 9 — Cookies and Tracking",
+    id: "cookies",
+    title: "Cookies and Tracking",
     content: (
       <p>HomeBids may use cookies and similar technologies to analyze traffic, improve platform functionality, and enhance user experience.</p>
     ),
   },
   {
-    title: "Section 10 — Third-Party Services",
+    id: "third-party",
+    title: "Third-Party Services",
     content: (
       <p>HomeBids may use third-party providers for services such as hosting, analytics, communications, and authentication.</p>
     ),
   },
   {
-    title: "Section 11 — Data Security",
+    id: "data-security",
+    title: "Data Security",
     content: (
       <>
         <p>HomeBids uses reasonable safeguards designed to protect personal information.</p>
@@ -129,13 +141,15 @@ const sections = [
     ),
   },
   {
-    title: "Section 12 — Data Retention",
+    id: "data-retention",
+    title: "Data Retention",
     content: (
       <p>HomeBids may retain information as long as necessary to operate the Platform, comply with legal obligations, and resolve disputes.</p>
     ),
   },
   {
-    title: "Section 13 — User Content",
+    id: "user-content",
+    title: "User Content",
     content: (
       <>
         <p>Users may submit reviews, project descriptions, and contractor profiles.</p>
@@ -144,7 +158,8 @@ const sections = [
     ),
   },
   {
-    title: "Section 14 — Changes to Privacy Policy",
+    id: "policy-changes",
+    title: "Changes to Privacy Policy",
     content: (
       <>
         <p>HomeBids may update this policy periodically.</p>
@@ -153,7 +168,8 @@ const sections = [
     ),
   },
   {
-    title: "Section 15 — Contact",
+    id: "contact",
+    title: "Contact",
     content: (
       <p>
         HomeBids<br />
@@ -165,47 +181,171 @@ const sections = [
   },
 ];
 
+function AccordionSection({
+  section,
+  index,
+  activeSection,
+}: {
+  section: (typeof sections)[0];
+  index: number;
+  activeSection: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const isActive = activeSection === section.id;
+
+  return (
+    <section id={section.id} className="scroll-mt-28">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={`group flex w-full items-center justify-between rounded-xl border px-5 py-4 text-left transition-colors ${
+          open
+            ? "border-border bg-card"
+            : "border-transparent bg-secondary/50 hover:bg-secondary"
+        }`}
+        aria-expanded={open}
+      >
+        <span className="flex items-center gap-3">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-foreground">
+            {index + 1}
+          </span>
+          <span className={`font-semibold ${isActive ? "text-primary" : "text-foreground"}`}>
+            {section.title}
+          </span>
+        </span>
+        {open ? (
+          <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+        )}
+      </button>
+
+      {open && (
+        <div className="mt-1 rounded-xl border border-border bg-card px-5 pb-6 pt-5">
+          <div className="prose-legal">
+            {section.content}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function PrivacyPolicyPage() {
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [mobileJump, setMobileJump] = useState("");
+
+  function handleMobileJump(e: React.ChangeEvent<HTMLSelectElement>) {
+    const id = e.target.value;
+    setMobileJump(id);
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => setMobileJump(""), 1000);
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4 }}
         >
           {/* Page header */}
           <div className="mb-12 text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
               <Shield className="h-7 w-7 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold text-foreground sm:text-4xl text-balance">
+            <h1 className="text-balance text-3xl font-bold text-foreground sm:text-4xl">
               Privacy Policy
             </h1>
             <p className="mt-2 text-muted-foreground">
               How HomeBids collects and uses information.
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">Last Updated: [Insert Date]</p>
+            <p className="mt-1 text-xs text-muted-foreground/60">Last Updated: March 11, 2026</p>
           </div>
 
-          {/* Introduction */}
-          <p className="mb-10 leading-relaxed text-muted-foreground">
-            This Privacy Policy describes how HomeBids collects, uses, and shares information in connection with the Platform. By using HomeBids, you agree to the practices described below.
-          </p>
+          {/* Intro card */}
+          <div className="mb-10 rounded-2xl border border-border bg-card p-6 leading-relaxed text-muted-foreground">
+            <p>This Privacy Policy describes how HomeBids collects, uses, and shares information in connection with the Platform. By using HomeBids, you agree to the practices described below.</p>
+          </div>
 
-          {/* Sections */}
-          <div className="space-y-10">
-            {sections.map((section) => (
-              <section key={section.title} className="border-t border-border pt-8">
-                <h2 className="mb-4 text-xl font-semibold text-foreground">{section.title}</h2>
-                <div className="leading-relaxed">{section.content}</div>
-              </section>
-            ))}
+          {/* Mobile jump-to dropdown */}
+          <div className="mb-8 lg:hidden">
+            <label htmlFor="mobile-jump-privacy" className="mb-1.5 block text-sm font-medium text-foreground">
+              Jump to Section
+            </label>
+            <select
+              id="mobile-jump-privacy"
+              value={mobileJump}
+              onChange={handleMobileJump}
+              className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Select a section...</option>
+              {sections.map((s, i) => (
+                <option key={s.id} value={s.id}>
+                  {i + 1}. {s.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Two-column layout: sidebar + content */}
+          <div className="flex gap-10">
+            {/* Sticky sidebar TOC — desktop only */}
+            <aside className="hidden lg:block w-60 shrink-0">
+              <div className="sticky top-24 rounded-2xl border border-border bg-card p-5">
+                <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Table of Contents
+                </p>
+                <nav aria-label="Privacy Policy sections">
+                  <ol className="space-y-1">
+                    {sections.map((s, i) => (
+                      <li key={s.id}>
+                        <a
+                          href={`#${s.id}`}
+                          onClick={() => setActiveSection(s.id)}
+                          className={`flex items-start gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors ${
+                            activeSection === s.id
+                              ? "bg-primary/10 font-medium text-foreground"
+                              : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                          }`}
+                        >
+                          <span className="mt-0.5 shrink-0 text-xs text-muted-foreground/60 tabular-nums w-4">
+                            {i + 1}.
+                          </span>
+                          <span>{s.title}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ol>
+                </nav>
+              </div>
+            </aside>
+
+            {/* Accordion sections */}
+            <div className="min-w-0 flex-1 space-y-3">
+              {sections.map((s, i) => (
+                <AccordionSection
+                  key={s.id}
+                  section={s}
+                  index={i}
+                  activeSection={activeSection}
+                />
+              ))}
+            </div>
           </div>
         </motion.div>
       </main>
+
+      <style>{`
+        .prose-legal p { margin-bottom: 0.75rem; line-height: 1.7; color: var(--color-muted-foreground); }
+        .prose-legal p:last-child { margin-bottom: 0; }
+        .prose-legal ul { margin: 0.5rem 0 0.75rem 0; padding-left: 1.25rem; list-style: disc; }
+        .prose-legal ul li { margin-bottom: 0.3rem; line-height: 1.6; color: var(--color-muted-foreground); }
+      `}</style>
 
       <ScrollToTop />
     </div>

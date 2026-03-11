@@ -1,14 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { motion } from "framer-motion";
-import { FileText } from "lucide-react";
+import { FileText, ChevronDown, ChevronUp } from "lucide-react";
 
 const sections = [
   {
     id: "platform-overview",
-    title: "Section 1 — Platform Overview",
+    title: "Platform Overview",
     content: (
       <>
         <p>HomeBids operates a technology platform that connects homeowners seeking home services with independent contractors willing to submit bids for those services.</p>
@@ -20,7 +21,7 @@ const sections = [
   },
   {
     id: "authorization",
-    title: "Section 2 — Authorization to Seek Bids",
+    title: "Authorization to Seek Bids",
     content: (
       <>
         <p>By submitting a project request, homeowners authorize HomeBids to:</p>
@@ -35,7 +36,7 @@ const sections = [
   },
   {
     id: "independent-contractors",
-    title: "Section 3 — Independent Contractors",
+    title: "Independent Contractors",
     content: (
       <>
         <p>All contractors using the Platform operate independent businesses.</p>
@@ -52,7 +53,7 @@ const sections = [
   },
   {
     id: "safe-harbor",
-    title: "Section 4 — Platform Safe Harbor",
+    title: "Platform Safe Harbor",
     content: (
       <>
         <p>HomeBids operates solely as a neutral technology platform facilitating introductions between homeowners and contractors.</p>
@@ -63,7 +64,7 @@ const sections = [
   },
   {
     id: "no-project-management",
-    title: "Section 5 — No Project Management or Payment Handling",
+    title: "No Project Management or Payment Handling",
     content: (
       <>
         <p>HomeBids does not manage construction projects and does not process payments between homeowners and contractors.</p>
@@ -80,7 +81,7 @@ const sections = [
   },
   {
     id: "ai-matching",
-    title: "Section 6 — AI and Algorithmic Matching",
+    title: "AI and Algorithmic Matching",
     content: (
       <>
         <p>HomeBids may use automated systems, machine learning, and artificial intelligence to identify contractors relevant to homeowner projects.</p>
@@ -98,7 +99,7 @@ const sections = [
   },
   {
     id: "affiliate-program",
-    title: "Section 7 — Affiliate and Referral Program",
+    title: "Affiliate and Referral Program",
     content: (
       <>
         <p>HomeBids operates an affiliate and referral program.</p>
@@ -117,7 +118,7 @@ const sections = [
   },
   {
     id: "contractor-referral",
-    title: "Section 8 — Contractor Referral Incentives",
+    title: "Contractor Referral Incentives",
     content: (
       <>
         <p>Contractors may receive compensation for referring homeowners to the Platform.</p>
@@ -129,7 +130,7 @@ const sections = [
   },
   {
     id: "marketplace-neutrality",
-    title: "Section 9 — Marketplace Neutrality",
+    title: "Marketplace Neutrality",
     content: (
       <>
         <p>HomeBids operates as a neutral technology platform.</p>
@@ -147,7 +148,7 @@ const sections = [
   },
   {
     id: "no-guarantee",
-    title: "Section 10 — No Guarantee of Work",
+    title: "No Guarantee of Work",
     content: (
       <>
         <p>HomeBids does not guarantee contractors will receive project opportunities, leads, or revenue.</p>
@@ -157,7 +158,7 @@ const sections = [
   },
   {
     id: "communications",
-    title: "Section 11 — Platform Communications",
+    title: "Platform Communications",
     content: (
       <>
         <p>The Platform may enable communication between homeowners and contractors.</p>
@@ -168,7 +169,7 @@ const sections = [
   },
   {
     id: "fees",
-    title: "Section 12 — Fees",
+    title: "Fees",
     content: (
       <>
         <p>HomeBids may charge subscription fees or bid placement fees.</p>
@@ -179,7 +180,7 @@ const sections = [
   },
   {
     id: "information-accuracy",
-    title: "Section 13 — Information Accuracy Disclaimer",
+    title: "Information Accuracy Disclaimer",
     content: (
       <>
         <p>Information on the Platform may originate from user submissions, publicly available sources, automated systems, or third-party databases.</p>
@@ -190,7 +191,7 @@ const sections = [
   },
   {
     id: "limitation",
-    title: "Section 14 — Limitation of Liability",
+    title: "Limitation of Liability",
     content: (
       <>
         <p>To the maximum extent permitted by law, HomeBids is not liable for damages arising from contractor services, project outcomes, or user interactions.</p>
@@ -200,7 +201,7 @@ const sections = [
   },
   {
     id: "arbitration",
-    title: "Section 15 — Arbitration and Class Action Waiver",
+    title: "Arbitration and Class Action Waiver",
     content: (
       <>
         <p>Disputes related to the Platform will be resolved through binding arbitration.</p>
@@ -210,7 +211,7 @@ const sections = [
   },
   {
     id: "modifications",
-    title: "Section 16 — Platform Modifications",
+    title: "Platform Modifications",
     content: (
       <>
         <p>HomeBids may modify or discontinue Platform features at any time.</p>
@@ -221,79 +222,179 @@ const sections = [
   },
   {
     id: "governing-law",
-    title: "Section 17 — Governing Law",
+    title: "Governing Law",
     content: <p>These Terms are governed by the laws of the State of Arizona.</p>,
   },
 ];
 
+function AccordionSection({
+  section,
+  index,
+  activeSection,
+}: {
+  section: (typeof sections)[0];
+  index: number;
+  activeSection: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const isActive = activeSection === section.id;
+
+  return (
+    <section id={section.id} className="scroll-mt-28">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={`group flex w-full items-center justify-between rounded-xl border px-5 py-4 text-left transition-colors ${
+          open
+            ? "border-border bg-card"
+            : "border-transparent bg-secondary/50 hover:bg-secondary"
+        }`}
+        aria-expanded={open}
+      >
+        <span className="flex items-center gap-3">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-foreground">
+            {index + 1}
+          </span>
+          <span className={`font-semibold ${isActive ? "text-primary" : "text-foreground"}`}>
+            {section.title}
+          </span>
+        </span>
+        {open ? (
+          <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+        )}
+      </button>
+
+      {open && (
+        <div className="mt-1 rounded-xl border border-border bg-card px-5 pb-6 pt-5">
+          <div className="prose-legal">
+            {section.content}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function TermsOfServicePage() {
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [mobileJump, setMobileJump] = useState("");
+
+  function handleMobileJump(e: React.ChangeEvent<HTMLSelectElement>) {
+    const id = e.target.value;
+    setMobileJump(id);
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => setMobileJump(""), 1000);
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4 }}
         >
           {/* Page header */}
           <div className="mb-12 text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
               <FileText className="h-7 w-7 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold text-foreground sm:text-4xl">Terms of Service</h1>
-            <p className="mt-2 text-sm text-muted-foreground">These Terms govern your use of the HomeBids platform.</p>
-            <p className="mt-1 text-xs text-muted-foreground/60">Last Updated: [Insert Date]</p>
+            <h1 className="text-balance text-3xl font-bold text-foreground sm:text-4xl">
+              Terms of Service
+            </h1>
+            <p className="mt-2 text-muted-foreground">
+              These Terms govern your use of the HomeBids platform.
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground/60">Last Updated: March 11, 2026</p>
           </div>
 
-          {/* Intro */}
-          <div className="mb-10 space-y-4 rounded-2xl border border-border bg-card p-6">
-            <p className="text-muted-foreground">
-              Welcome to <strong className="text-foreground">HomeBids</strong>.
-            </p>
-            <p className="text-muted-foreground">
-              These Terms of Service (&quot;Terms&quot;) govern your access to and use of the HomeBids website, mobile applications, and related services (the &quot;Platform&quot;).
-            </p>
-            <p className="text-muted-foreground">
-              By accessing or using the Platform you agree to these Terms.
-            </p>
-            <p className="text-muted-foreground">
-              If you do not agree, you may not use HomeBids.
-            </p>
+          {/* Intro card */}
+          <div className="mb-10 space-y-3 rounded-2xl border border-border bg-card p-6 leading-relaxed text-muted-foreground">
+            <p>Welcome to <strong className="text-foreground">HomeBids</strong>.</p>
+            <p>These Terms of Service (&quot;Terms&quot;) govern your access to and use of the HomeBids website, mobile applications, and related services (the &quot;Platform&quot;).</p>
+            <p>By accessing or using the Platform you agree to these Terms.</p>
+            <p>If you do not agree, you may not use HomeBids.</p>
           </div>
 
-          {/* Anchor nav */}
-          <nav className="mb-12 rounded-2xl border border-border bg-card p-6" aria-label="Table of contents">
-            <p className="mb-4 text-sm font-semibold text-foreground">Table of Contents</p>
-            <ol className="grid gap-1.5 sm:grid-cols-2">
-              {sections.map((s) => (
-                <li key={s.id}>
-                  <a
-                    href={`#${s.id}`}
-                    className="text-sm text-muted-foreground transition-colors hover:text-primary"
-                  >
-                    {s.title}
-                  </a>
-                </li>
+          {/* Mobile jump-to dropdown */}
+          <div className="mb-8 lg:hidden">
+            <label htmlFor="mobile-jump-terms" className="mb-1.5 block text-sm font-medium text-foreground">
+              Jump to Section
+            </label>
+            <select
+              id="mobile-jump-terms"
+              value={mobileJump}
+              onChange={handleMobileJump}
+              className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Select a section...</option>
+              {sections.map((s, i) => (
+                <option key={s.id} value={s.id}>
+                  {i + 1}. {s.title}
+                </option>
               ))}
-            </ol>
-          </nav>
+            </select>
+          </div>
 
-          {/* Sections */}
-          <div className="space-y-10">
-            {sections.map((s) => (
-              <section key={s.id} id={s.id} className="scroll-mt-24">
-                <h2 className="mb-4 text-lg font-semibold text-foreground">{s.title}</h2>
-                <div className="space-y-3 text-muted-foreground [&_ul]:mt-2 [&_ul]:space-y-1.5 [&_ul]:pl-5 [&_ul]:list-disc [&_p]:leading-relaxed">
-                  {s.content}
-                </div>
-                <div className="mt-10 border-b border-border" />
-              </section>
-            ))}
+          {/* Two-column layout: sidebar + content */}
+          <div className="flex gap-10">
+            {/* Sticky sidebar TOC — desktop only */}
+            <aside className="hidden lg:block w-60 shrink-0">
+              <div className="sticky top-24 rounded-2xl border border-border bg-card p-5">
+                <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Table of Contents
+                </p>
+                <nav aria-label="Terms of Service sections">
+                  <ol className="space-y-1">
+                    {sections.map((s, i) => (
+                      <li key={s.id}>
+                        <a
+                          href={`#${s.id}`}
+                          onClick={() => setActiveSection(s.id)}
+                          className={`flex items-start gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors ${
+                            activeSection === s.id
+                              ? "bg-primary/10 font-medium text-foreground"
+                              : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                          }`}
+                        >
+                          <span className="mt-0.5 shrink-0 text-xs text-muted-foreground/60 tabular-nums w-4">
+                            {i + 1}.
+                          </span>
+                          <span>{s.title}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ol>
+                </nav>
+              </div>
+            </aside>
+
+            {/* Accordion sections */}
+            <div className="min-w-0 flex-1 space-y-3">
+              {sections.map((s, i) => (
+                <AccordionSection
+                  key={s.id}
+                  section={s}
+                  index={i}
+                  activeSection={activeSection}
+                />
+              ))}
+            </div>
           </div>
         </motion.div>
       </main>
+
+      <style>{`
+        .prose-legal p { margin-bottom: 0.75rem; line-height: 1.7; color: var(--color-muted-foreground); }
+        .prose-legal p:last-child { margin-bottom: 0; }
+        .prose-legal ul { margin: 0.5rem 0 0.75rem 0; padding-left: 1.25rem; list-style: disc; }
+        .prose-legal ul li { margin-bottom: 0.3rem; line-height: 1.6; color: var(--color-muted-foreground); }
+      `}</style>
 
       <ScrollToTop />
     </div>
