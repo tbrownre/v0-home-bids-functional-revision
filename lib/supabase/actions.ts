@@ -82,6 +82,7 @@ export async function signUpContractor(formData: {
   serviceAreas: string;
   minimumJobSize: string;
   bio: string;
+  planId?: string;
 }) {
   const supabase = await createClient();
 
@@ -118,6 +119,7 @@ export async function signUpContractor(formData: {
     approval_status: "pending",
     is_verified: false,
     is_approved: false,
+    ...(formData.planId ? { selected_plan: formData.planId } : {}),
   });
   if (contractorError) {
     // Friendly error — don't expose raw DB messages to the UI

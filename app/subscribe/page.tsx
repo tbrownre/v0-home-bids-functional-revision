@@ -39,6 +39,11 @@ export default function SubscribePage() {
   const contractorPlans = getContractorPlans();
 
   const handleSelectPlan = (plan: SubscriptionPlan) => {
+    if (plan.userType === "contractor") {
+      // Contractors choose a plan first, then complete their profile.
+      router.push(`/contractors/signup?plan=${plan.id}`);
+      return;
+    }
     setSelectedPlan(plan);
     setShowCheckout(true);
   };

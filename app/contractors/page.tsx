@@ -525,7 +525,7 @@ export default function ContractorsPage() {
             className="mt-12 text-center"
           >
             <Button size="lg" asChild>
-              <Link href="/contractors/signup">
+              <Link href="/subscribe?type=contractor">
                 Create Your Free Account
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
@@ -712,10 +712,10 @@ export default function ContractorsPage() {
               <p className="text-sm text-muted-foreground">
                 {"Want to join as a contractor? "}
                 <a
-                  href="/contractors/signup"
+                  href="/subscribe?type=contractor"
                   className="font-semibold text-primary hover:underline"
                 >
-                  Apply now
+                  Click here
                 </a>
               </p>
             </div>

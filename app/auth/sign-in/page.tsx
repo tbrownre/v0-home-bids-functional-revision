@@ -101,7 +101,7 @@ export default function SignInPage() {
             </p>
             <p>
               Contractor?{" "}
-              <Link href="/contractors/signup" className="font-medium text-primary hover:underline">
+              <Link href="/subscribe?type=contractor" className="font-medium text-primary hover:underline">
                 Join as a contractor
               </Link>
             </p>
