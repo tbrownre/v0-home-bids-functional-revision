@@ -39,10 +39,7 @@ export default function SubscribePage() {
   const contractorPlans = getContractorPlans();
 
   const handleSelectPlan = (plan: SubscriptionPlan) => {
-    if (plan.userType === "contractor") {
-      router.push(`/contractors/signup?plan=${plan.id}`);
-      return;
-    }
+    // All plans (contractor and homeowner) go through Stripe first.
     setSelectedPlan(plan);
     setShowCheckout(true);
   };
@@ -50,8 +47,13 @@ export default function SubscribePage() {
   const handleSuccess = async () => {
     const isContractor = selectedPlan?.userType === "contractor";
     setShowCheckout(false);
-    // No need to call mock auth — Supabase session is already active after checkout
-    router.push(isContractor ? "/contractors/dashboard" : "/");
+    if (isContractor && selectedPlan) {
+      // Payment confirmed — now send contractor to complete their profile.
+      router.push(`/contractors/signup?plan=${selectedPlan.id}`);
+    } else {
+      // Homeowner payment confirmed — go to homepage to post a job.
+      router.push("/");
+    }
   };
 
   return (
