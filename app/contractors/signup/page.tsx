@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { signUpContractor } from "@/lib/supabase/actions";
 import {
@@ -54,8 +54,6 @@ const serviceCategories = [
 
 export default function ContractorSignupPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const selectedPlanId = searchParams.get("plan") ?? "contractor-starter";
   const [currentStep, setCurrentStep] = useState<Step>("business");
   const [formData, setFormData] = useState({
     // Business Info
@@ -176,7 +174,6 @@ export default function ContractorSignupPage() {
       serviceAreas: formData.serviceAreas,
       minimumJobSize: formData.minimumJobSize,
       bio: formData.bio,
-      planId: selectedPlanId,
     });
     setSubmitting(false);
     if (result.error) {
@@ -199,7 +196,7 @@ export default function ContractorSignupPage() {
             className="mb-8 text-center"
           >
             <h1 className="text-3xl font-bold text-foreground sm:text-4xl">
-              Build Your Profile
+              Apply To Be Pro
             </h1>
             <p className="mt-3 text-muted-foreground">
               Complete your profile to start bidding on verified homeowner projects

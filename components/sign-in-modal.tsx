@@ -170,8 +170,8 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
             ) : (
               <p>
                 {"Want to join as a contractor? "}
-                <Link href="/subscribe?type=contractor" onClick={handleClose} className="font-medium text-primary hover:underline">
-                  Click here
+                <Link href="/contractors/signup" onClick={handleClose} className="font-medium text-primary hover:underline">
+                  Apply now
                 </Link>
               </p>
             )}
