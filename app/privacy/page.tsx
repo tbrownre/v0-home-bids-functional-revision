@@ -7,324 +7,157 @@ import { Shield } from "lucide-react";
 
 const sections = [
   {
-    title: "1. Information We Collect",
+    title: "Section 1 — Information We Collect",
     content: (
       <>
-        <p className="text-muted-foreground mb-4">
-          HomeBids may collect several types of information when users interact with the Platform.
-        </p>
-        <h3 className="text-base font-semibold text-foreground mb-2">Personal Information</h3>
-        <p className="text-muted-foreground mb-2">Information users may provide includes:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Name</li>
-          <li>Email address</li>
-          <li>Phone number</li>
-          <li>Property address</li>
-          <li>Account login credentials</li>
-          <li>Project details submitted by homeowners</li>
-          <li>Contractor business information</li>
-          <li>Contractor service areas</li>
-          <li>Profile information</li>
+        <p>HomeBids may collect information including:</p>
+        <ul>
+          <li>name</li>
+          <li>email address</li>
+          <li>phone number</li>
+          <li>property address</li>
+          <li>project details</li>
+          <li>contractor business information</li>
+          <li>service areas</li>
         </ul>
-        <p className="text-muted-foreground">
-          Homeowners may also submit project details such as descriptions of requested work, photos, budgets, or timelines.
-        </p>
       </>
     ),
   },
   {
-    title: "2. Contractor Business Information",
+    title: "Section 2 — Public Contractor Information",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">Contractors may provide business-related information including:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Business name</li>
-          <li>Contact details</li>
-          <li>Licensing information</li>
-          <li>Insurance details</li>
-          <li>Service categories</li>
-          <li>Service areas</li>
-          <li>Bid pricing</li>
+        <p>HomeBids may collect contractor information from publicly available sources including:</p>
+        <ul>
+          <li>business directories</li>
+          <li>contractor websites</li>
+          <li>licensing databases</li>
+          <li>public review platforms</li>
         </ul>
-        <p className="text-muted-foreground">
-          Contractors are responsible for ensuring the accuracy of the information they provide.
-        </p>
+        <p>This information may be used to identify contractors relevant to homeowner projects.</p>
       </>
     ),
   },
   {
-    title: "3. Publicly Available Information",
+    title: "Section 3 — Automatically Collected Information",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">
-          HomeBids may collect and organize publicly available business information about contractors from third-party sources including:
-        </p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Business directories</li>
-          <li>Public websites</li>
-          <li>Publicly listed contact details</li>
-          <li>Publicly available online reviews</li>
-          <li>Licensing databases</li>
-        </ul>
-        <p className="text-muted-foreground mb-2">
-          This information may be used to identify contractors relevant to homeowner project requests.
-        </p>
-        <p className="text-muted-foreground">
-          HomeBids does not guarantee the accuracy or completeness of publicly sourced data.
-        </p>
-      </>
-    ),
-  },
-  {
-    title: "4. Automatically Collected Information",
-    content: (
-      <>
-        <p className="text-muted-foreground mb-2">
-          When users interact with the Platform, HomeBids may automatically collect certain technical information including:
-        </p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
+        <p>We may automatically collect information including:</p>
+        <ul>
           <li>IP address</li>
-          <li>Device type</li>
-          <li>Browser type</li>
-          <li>Operating system</li>
-          <li>Usage activity</li>
-          <li>Pages viewed</li>
-          <li>Session duration</li>
-          <li>Referral sources</li>
+          <li>browser type</li>
+          <li>device information</li>
+          <li>usage patterns</li>
+          <li>session activity</li>
         </ul>
-        <p className="text-muted-foreground">
-          This information helps improve platform performance and security.
-        </p>
       </>
     ),
   },
   {
-    title: "5. How We Use Information",
+    title: "Section 4 — How Information Is Used",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">HomeBids may use collected information to:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Create and manage accounts</li>
-          <li>Connect homeowners with contractors</li>
-          <li>Distribute project requests to contractors</li>
-          <li>Allow messaging between users</li>
-          <li>Improve platform functionality</li>
-          <li>Analyze platform usage</li>
-          <li>Detect fraud or abuse</li>
-          <li>Provide customer support</li>
-          <li>Comply with legal obligations</li>
+        <p>Information may be used to:</p>
+        <ul>
+          <li>connect homeowners with contractors</li>
+          <li>distribute project opportunities</li>
+          <li>improve platform functionality</li>
+          <li>analyze usage patterns</li>
+          <li>detect fraud or abuse</li>
         </ul>
-        <p className="text-muted-foreground">
-          HomeBids may also use information to develop and improve automated contractor matching systems.
-        </p>
       </>
     ),
   },
   {
-    title: "6. Lead Distribution and Contractor Outreach",
+    title: "Section 5 — Lead Distribution",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">
-          When a homeowner submits a project request, HomeBids may distribute project details to contractors who may wish to bid on the work.
-        </p>
-        <p className="text-muted-foreground mb-2">This may include sharing:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Homeowner name</li>
-          <li>Property location</li>
-          <li>Project description</li>
-          <li>Photos or attachments</li>
-        </ul>
-        <p className="text-muted-foreground mb-2">
-          Contractors may contact homeowners directly regarding project opportunities.
-        </p>
-        <p className="text-muted-foreground">
-          HomeBids does not guarantee contractor responses or bids.
-        </p>
+        <p>When a homeowner submits a project request, HomeBids may share project information with contractors.</p>
+        <p>Contractors may contact homeowners directly.</p>
       </>
     ),
   },
   {
-    title: "7. Communications",
+    title: "Section 6 — Affiliate and Referral Program",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">Users may receive communications from HomeBids including:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Project alerts</li>
-          <li>Contractor bid notifications</li>
-          <li>Account notifications</li>
-          <li>Service announcements</li>
-          <li>Platform updates</li>
-          <li>Marketing communications</li>
-        </ul>
-        <p className="text-muted-foreground mb-2">These communications may be sent using automated systems.</p>
-        <p className="text-muted-foreground">Users may opt out of non-essential communications.</p>
+        <p>HomeBids operates an affiliate program allowing users to earn compensation for referrals.</p>
+        <p>Participants may receive commissions or revenue shares.</p>
+        <p>Affiliate participants may have financial incentives to promote the Platform.</p>
+        <p>HomeBids is not responsible for statements made by affiliates.</p>
       </>
     ),
   },
   {
-    title: "8. Cookies and Tracking Technologies",
+    title: "Section 7 — Artificial Intelligence Systems",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">HomeBids may use cookies and similar tracking technologies to:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Remember user preferences</li>
-          <li>Analyze traffic patterns</li>
-          <li>Improve platform functionality</li>
-          <li>Detect security issues</li>
-          <li>Personalize user experiences</li>
-        </ul>
-        <p className="text-muted-foreground">Users may adjust cookie settings through their browser preferences.</p>
+        <p>HomeBids may use automated systems and artificial intelligence to assist with contractor discovery, project categorization, and lead distribution.</p>
+        <p>AI-generated results are informational only.</p>
       </>
     ),
   },
   {
-    title: "9. Third-Party Services",
+    title: "Section 8 — Aggregated and De-Identified Data",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">HomeBids may use third-party providers for services including:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Cloud hosting</li>
-          <li>Payment processing</li>
-          <li>Analytics</li>
-          <li>Authentication</li>
-          <li>Communications services</li>
-          <li>Fraud prevention</li>
-        </ul>
-        <p className="text-muted-foreground">These providers only access information necessary to perform their services.</p>
+        <p>HomeBids may create aggregated or de-identified datasets derived from platform activity.</p>
+        <p>These datasets may be used for analytics, research, platform improvement, and development of automated systems.</p>
+        <p>HomeBids retains ownership of aggregated datasets.</p>
       </>
     ),
   },
   {
-    title: "10. Artificial Intelligence and Automated Systems",
+    title: "Section 9 — Cookies and Tracking",
+    content: (
+      <p>HomeBids may use cookies and similar technologies to analyze traffic, improve platform functionality, and enhance user experience.</p>
+    ),
+  },
+  {
+    title: "Section 10 — Third-Party Services",
+    content: (
+      <p>HomeBids may use third-party providers for services such as hosting, analytics, communications, and authentication.</p>
+    ),
+  },
+  {
+    title: "Section 11 — Data Security",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">
-          HomeBids may use automated systems, artificial intelligence, and machine learning tools to assist with:
-        </p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Contractor discovery</li>
-          <li>Contractor matching</li>
-          <li>Project categorization</li>
-          <li>Lead distribution</li>
-          <li>Fraud detection</li>
-        </ul>
-        <p className="text-muted-foreground mb-2">
-          Automated recommendations generated by these systems are informational only.
-        </p>
-        <p className="text-muted-foreground">
-          Users should independently evaluate contractors before making hiring decisions.
-        </p>
+        <p>HomeBids uses reasonable safeguards designed to protect personal information.</p>
+        <p>However, no system can guarantee complete security.</p>
       </>
     ),
   },
   {
-    title: "11. Data Security",
+    title: "Section 12 — Data Retention",
     content: (
-      <p className="text-muted-foreground">
-        HomeBids uses commercially reasonable safeguards designed to protect personal information from unauthorized access, disclosure, or misuse. However, no internet transmission or electronic storage method can be guaranteed completely secure.
-      </p>
+      <p>HomeBids may retain information as long as necessary to operate the Platform, comply with legal obligations, and resolve disputes.</p>
     ),
   },
   {
-    title: "12. Data Retention",
+    title: "Section 13 — User Content",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">HomeBids may retain personal information as long as necessary to:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Provide services</li>
-          <li>Comply with legal obligations</li>
-          <li>Resolve disputes</li>
-          <li>Enforce agreements</li>
-        </ul>
-        <p className="text-muted-foreground">
-          Information may be retained after account closure when necessary for legitimate business purposes.
-        </p>
+        <p>Users may submit reviews, project descriptions, and contractor profiles.</p>
+        <p>By submitting content, users grant HomeBids permission to display and use such content in connection with the Platform.</p>
       </>
     ),
   },
   {
-    title: "13. User Content",
+    title: "Section 14 — Changes to Privacy Policy",
     content: (
       <>
-        <p className="text-muted-foreground mb-2">Users may submit content including:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Reviews</li>
-          <li>Ratings</li>
-          <li>Project descriptions</li>
-          <li>Contractor profiles</li>
-          <li>Messages</li>
-        </ul>
-        <p className="text-muted-foreground">
-          By submitting content, users grant HomeBids a worldwide license to display and use such content in connection with the Platform.
-        </p>
+        <p>HomeBids may update this policy periodically.</p>
+        <p>Continued use of the Platform constitutes acceptance of updates.</p>
       </>
     ),
   },
   {
-    title: "14. Children's Privacy",
+    title: "Section 15 — Contact",
     content: (
-      <>
-        <p className="text-muted-foreground mb-2">The Platform is not intended for individuals under the age of 18.</p>
-        <p className="text-muted-foreground mb-2">HomeBids does not knowingly collect personal information from children.</p>
-        <p className="text-muted-foreground">If such information is discovered, it will be removed.</p>
-      </>
-    ),
-  },
-  {
-    title: "15. User Rights",
-    content: (
-      <>
-        <p className="text-muted-foreground mb-2">Depending on applicable law, users may have the right to:</p>
-        <ul className="list-disc pl-6 text-muted-foreground space-y-1 mb-4">
-          <li>Access their personal data</li>
-          <li>Request corrections</li>
-          <li>Request deletion of personal data</li>
-          <li>Opt out of certain communications</li>
-        </ul>
-        <p className="text-muted-foreground">Requests may be submitted through the contact information below.</p>
-      </>
-    ),
-  },
-  {
-    title: "16. California Privacy Rights",
-    content: (
-      <>
-        <p className="text-muted-foreground mb-2">
-          California residents may have rights under the California Consumer Privacy Act (CCPA).
-        </p>
-        <p className="text-muted-foreground">
-          HomeBids does not sell personal information in exchange for monetary compensation.
-        </p>
-      </>
-    ),
-  },
-  {
-    title: "17. International Users",
-    content: (
-      <>
-        <p className="text-muted-foreground mb-2">The Platform is operated in the United States.</p>
-        <p className="text-muted-foreground">
-          Users accessing the Platform from outside the United States acknowledge that information may be transferred and processed in the United States.
-        </p>
-      </>
-    ),
-  },
-  {
-    title: "18. Changes to This Privacy Policy",
-    content: (
-      <>
-        <p className="text-muted-foreground mb-2">HomeBids may update this Privacy Policy periodically.</p>
-        <p className="text-muted-foreground mb-2">Updates will be posted on this page with an updated revision date.</p>
-        <p className="text-muted-foreground">Continued use of the Platform constitutes acceptance of the revised policy.</p>
-      </>
-    ),
-  },
-  {
-    title: "19. Contact Information",
-    content: (
-      <p className="text-muted-foreground">
+      <p>
         HomeBids<br />
-        [Insert Company Address]<br />
+        [Insert Address]<br />
         [Insert Support Email]<br />
         [Insert Website URL]
       </p>
@@ -352,14 +185,14 @@ export default function PrivacyPolicyPage() {
               Privacy Policy
             </h1>
             <p className="mt-2 text-muted-foreground">
-              How HomeBids collects, uses, and protects your information.
+              How HomeBids collects and uses information.
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">Last Updated: March 6, 2026</p>
+            <p className="mt-1 text-sm text-muted-foreground">Last Updated: [Insert Date]</p>
           </div>
 
           {/* Introduction */}
           <p className="mb-10 leading-relaxed text-muted-foreground">
-            HomeBids (&quot;HomeBids&quot;, &quot;we&quot;, &quot;our&quot;, or &quot;us&quot;) respects your privacy and is committed to protecting the personal information you share with us. This Privacy Policy explains how HomeBids collects, uses, discloses, and safeguards information when you use our website, mobile applications, and related services (collectively, the &quot;Platform&quot;). By accessing or using the Platform, you agree to the practices described in this Privacy Policy.
+            This Privacy Policy describes how HomeBids collects, uses, and shares information in connection with the Platform. By using HomeBids, you agree to the practices described below.
           </p>
 
           {/* Sections */}
