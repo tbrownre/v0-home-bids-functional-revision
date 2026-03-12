@@ -261,29 +261,50 @@ const urgencyConfig = {
 
 export default function ContractorJobsMarketplace() {
   const searchParams = useSearchParams();
-  const [jobs, setJobs] = useState<AvailableJob[]>(allAvailableJobs);
+  // Start empty — never show mock jobs to real contractors. Real jobs are loaded
+  // from Supabase below. If the DB returns 0 open jobs, the empty state renders.
+  const [jobs, setJobs] = useState<AvailableJob[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(true);
+  const [jobsError, setJobsError] = useState<string | null>(null);
 
-  // Fetch real jobs from Supabase, fall back to mock data
+  // Fetch real open jobs from Supabase — always replace local state.
   useEffect(() => {
-    getOpenJobs().then(({ jobs: dbJobs }) => {
-      if (dbJobs && dbJobs.length > 0) {
+    if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) {
+      // v0 preview sandbox: show sample data so the page is usable in demos
+      setJobs(allAvailableJobs);
+      setJobsLoading(false);
+      return;
+    }
+    setJobsLoading(true);
+    getOpenJobs().then(({ jobs: dbJobs, error }) => {
+      if (error) {
+        setJobsError(error);
+      } else if (Array.isArray(dbJobs)) {
         const mapped: AvailableJob[] = dbJobs.map((j: any) => ({
           id: j.id,
           title: j.title,
           description: j.description,
           location: j.location,
-          budget: j.budget_min && j.budget_max ? `$${j.budget_min}–$${j.budget_max}` : j.budget_min ? `$${j.budget_min}+` : "Negotiable",
-          timeline: "Flexible",
+          budget: j.budget_min && j.budget_max
+            ? `$${Number(j.budget_min).toLocaleString()}–$${Number(j.budget_max).toLocaleString()}`
+            : j.budget_min
+            ? `$${Number(j.budget_min).toLocaleString()}+`
+            : "Negotiable",
+          timeline: j.urgency ?? "Flexible",
           postedAt: new Date(j.created_at),
-          category: j.category,
-          urgency: "medium" as const,
-          bidsCount: j.bids?.[0]?.count ?? 0,
+          category: j.category ?? "General",
+          urgency: (j.urgency === "urgent" ? "high" : j.urgency === "soon" ? "medium" : "low") as "low" | "medium" | "high",
+          bidsCount: 0,
           homeownerName: j.profiles?.full_name
             ? j.profiles.full_name.split(" ")[0] + " " + (j.profiles.full_name.split(" ")[1]?.[0] ?? "") + "."
             : "Homeowner",
+          propertyType: "Home",
+          preferredContact: "Platform",
+          imageCount: (j.images ?? []).length,
         }));
         setJobs(mapped);
       }
+      setJobsLoading(false);
     });
   }, []);
   const [selectedJob, setSelectedJob] = useState<AvailableJob | null>(null);
@@ -325,10 +346,11 @@ export default function ContractorJobsMarketplace() {
   const didProcessParams = useRef(false);
   useEffect(() => {
     if (didProcessParams.current) return;
+    if (jobs.length === 0) return; // wait until jobs are loaded
     const jobId = searchParams.get("jobId");
     const action = searchParams.get("action");
     if (jobId) {
-      const matchedJob = allAvailableJobs.find((j) => j.id === jobId);
+      const matchedJob = jobs.find((j) => j.id === jobId);
       if (matchedJob) {
         didProcessParams.current = true;
         setSelectedJob(matchedJob);
@@ -341,7 +363,7 @@ export default function ContractorJobsMarketplace() {
         }
       }
     }
-  }, [searchParams]);
+  }, [searchParams, jobs]);
 
   const handleSelectJob = (job: AvailableJob) => {
     setSelectedJob(job);
@@ -572,12 +594,23 @@ export default function ContractorJobsMarketplace() {
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Jobs List */}
             <div className={`space-y-3 ${showMobileDetail ? "hidden lg:block" : "block"}`}>
-              {filteredJobs.length === 0 ? (
+              {jobsLoading ? (
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card p-8 text-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <p className="mt-3 text-sm text-muted-foreground">Loading available jobs...</p>
+                </div>
+              ) : jobsError ? (
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-destructive/30 bg-destructive/5 p-8 text-center">
+                  <AlertCircle className="h-8 w-8 text-destructive" />
+                  <p className="mt-3 font-medium text-foreground">Failed to load jobs</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{jobsError}</p>
+                </div>
+              ) : filteredJobs.length === 0 ? (
                 <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card p-8 text-center">
                   <Briefcase className="h-12 w-12 text-muted-foreground/50" />
                   <p className="mt-4 font-medium text-foreground">No jobs found</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Try adjusting your filters or check back later
+                    {jobs.length === 0 ? "No open jobs right now. Check back soon." : "Try adjusting your filters."}
                   </p>
                 </div>
               ) : (

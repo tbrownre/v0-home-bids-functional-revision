@@ -77,7 +77,7 @@ export async function getContractorApplications(
 
   const { data, error } = await query;
   if (error) return { applications: null, error: error.message };
-  return { applications: data as ContractorApplication[], error: null };
+  return { applications: (data as unknown) as ContractorApplication[], error: null };
 }
 
 export async function updateContractorStatus(

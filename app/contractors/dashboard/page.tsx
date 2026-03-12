@@ -157,15 +157,35 @@ export default function ContractorDashboard() {
   const [bidsLoading, setBidsLoading] = useState(true);
   const [bidsError, setBidsError] = useState<string | null>(null);
 
-  // Client-side session guard — redirects to sign-in if no valid session exists.
-  // This catches stale/expired sessions that middleware may have passed through.
+  // Client-side session + approval guard.
+  // Checks auth AND contractor_profiles.approval_status so middleware doesn't
+  // need to make a DB query on every request.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.location.hostname.includes("vusercontent.net")) return;
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user }, error }) => {
+    supabase.auth.getUser().then(async ({ data: { user }, error }) => {
       if (error || !user) {
         window.location.replace("/auth/sign-in");
+        return;
+      }
+      // Check approval status
+      const { data: profile } = await supabase
+        .from("contractor_profiles")
+        .select("approval_status")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!profile) {
+        window.location.replace("/");
+        return;
+      }
+      if (profile.approval_status === "pending") {
+        window.location.replace("/contractors/signup/pending");
+        return;
+      }
+      if (profile.approval_status === "rejected") {
+        window.location.replace("/contractors/signup/rejected");
       }
     });
   }, []);
@@ -266,40 +286,13 @@ export default function ContractorDashboard() {
       [jobId]: [...(prev[jobId] || []), msg],
     }));
     setPreviewChatInput("");
-
-    // Simulate homeowner reply
-    setTimeout(() => {
-      const replies = [
-        "Thanks for reaching out! Let me get back to you on that shortly.",
-        "Good question. I'll check and reply within the hour.",
-        "Hi! Yes, I can provide more details. Give me a moment.",
-        "Thanks for asking! I'll send over some photos as well.",
-      ];
-      const reply: JobMessage = {
-        id: (Date.now() + 1).toString(),
-        text: replies[Math.floor(Math.random() * replies.length)],
-        sender: "homeowner",
-        time: new Date(),
-      };
-      setPreviewChatMessages((prev) => ({
-        ...prev,
-        [jobId]: [...(prev[jobId] || []), reply],
-      }));
-    }, 1500);
+    // Real messaging will be handled via the inbox system — no simulated replies.
   };
 
   // Payout calculator state removed — contractors keep 100% with no success fees
-  const [messages, setMessages] = useState<Record<string, Message[]>>({
-    "1": [
-      { id: "m1", text: "Hi, I saw your bid. Can you tell me more about the materials you use?", sender: "homeowner", timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000) },
-      { id: "m2", text: "Of course! We use GAF Timberline HDZ shingles which come with a lifetime warranty. They're highly rated for Texas weather.", sender: "contractor", timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000) },
-      { id: "m3", text: "That sounds great. When could you start?", sender: "homeowner", timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000) },
-    ],
-    "2": [
-      { id: "m4", text: "Your portfolio looks impressive! Do you handle the permitting?", sender: "homeowner", timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-      { id: "m5", text: "Yes, we handle all permits and inspections. It's included in our service.", sender: "contractor", timestamp: new Date(Date.now() - 23 * 60 * 60 * 1000) },
-    ],
-  });
+  // Messages start empty — never seed with fake threads tied to hardcoded bid IDs.
+  // Real message history is not yet persisted server-side; this is a UI-only state.
+  const [messages, setMessages] = useState<Record<string, Message[]>>({});
 
   // Edit form state
   const [editAmount, setEditAmount] = useState("");
@@ -431,15 +424,16 @@ export default function ContractorDashboard() {
     value: bidsByStatus[key].reduce((sum, b) => sum + b.bidAmount, 0),
   });
 
-  const stats: Record<string, { count: number; value: number }> & { totalPipeline: number } = {
+  const stats = {
     open: statOf("open"),
     in_progress: statOf("in_progress"),
     completed: statOf("completed"),
     not_selected: statOf("not_selected"),
-    totalPipeline:
-      bidsByStatus.open.reduce((sum, b) => sum + b.bidAmount, 0) +
-      bidsByStatus.in_progress.reduce((sum, b) => sum + b.bidAmount, 0),
   };
+
+  const totalPipeline =
+    bidsByStatus.open.reduce((sum, b) => sum + b.bidAmount, 0) +
+    bidsByStatus.in_progress.reduce((sum, b) => sum + b.bidAmount, 0);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -472,7 +466,7 @@ export default function ContractorDashboard() {
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wider text-primary/70">Total Pipeline Value</p>
                   <p className="mt-1 text-2xl font-bold text-foreground sm:text-3xl">
-                    ${stats.totalPipeline.toLocaleString()}
+                    ${totalPipeline.toLocaleString()}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -573,10 +567,10 @@ export default function ContractorDashboard() {
                       <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground sm:text-xs">Pipeline Breakdown</p>
                       <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted">
                         {stats.open.value > 0 && (
-                          <div className="bg-blue-500 transition-all" style={{ width: `${(stats.open.value / (stats.totalPipeline || 1)) * 100}%` }} title={`Open: $${stats.open.value.toLocaleString()}`} />
+                          <div className="bg-blue-500 transition-all" style={{ width: `${(stats.open.value / (totalPipeline || 1)) * 100}%` }} title={`Open: $${stats.open.value.toLocaleString()}`} />
                         )}
                         {stats.in_progress.value > 0 && (
-                          <div className="bg-amber-500 transition-all" style={{ width: `${(stats.in_progress.value / (stats.totalPipeline || 1)) * 100}%` }} title={`In Progress: $${stats.in_progress.value.toLocaleString()}`} />
+                          <div className="bg-amber-500 transition-all" style={{ width: `${(stats.in_progress.value / (totalPipeline || 1)) * 100}%` }} title={`In Progress: $${stats.in_progress.value.toLocaleString()}`} />
                         )}
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-3">

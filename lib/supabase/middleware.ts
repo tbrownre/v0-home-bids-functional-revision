@@ -62,37 +62,16 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Contractor dashboard: require auth + approved status
-  if (request.nextUrl.pathname.startsWith('/contractors/dashboard') || 
-      request.nextUrl.pathname.startsWith('/contractors/bids')) {
+  // Contractor dashboard: require auth only.
+  // Approval status check is done client-side in the dashboard page's useEffect
+  // to avoid a DB query on every request in the middleware hot path.
+  if (
+    request.nextUrl.pathname.startsWith('/contractors/dashboard') ||
+    request.nextUrl.pathname.startsWith('/contractors/bids')
+  ) {
     if (!user) {
       const url = request.nextUrl.clone()
       url.pathname = '/auth/sign-in'
-      return NextResponse.redirect(url)
-    }
-    // Check approval status
-    const { data: contractorProfile } = await supabase
-      .from('contractor_profiles')
-      .select('approval_status')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (!contractorProfile) {
-      // Not a contractor at all — redirect home
-      const url = request.nextUrl.clone()
-      url.pathname = '/'
-      return NextResponse.redirect(url)
-    }
-
-    if (contractorProfile.approval_status === 'pending') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/contractors/signup/pending'
-      return NextResponse.redirect(url)
-    }
-
-    if (contractorProfile.approval_status === 'rejected') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/contractors/signup/rejected'
       return NextResponse.redirect(url)
     }
   }
