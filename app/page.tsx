@@ -149,7 +149,6 @@ export default function HomePage() {
       });
 
       const { data } = supabase.auth.onAuthStateChange((event, session) => {
-        console.log("[v0] onAuthStateChange event:", event, "| currentStep:", currentStepRef.current, "| showJobsBoard:", showJobsBoardRef.current, "| creating:", creatingNewJobRef.current, "| restored:", jobsBoardRestoredForSession.current);
         // Ignore INITIAL_SESSION — we handle that in getUser() above to avoid
         // double-restore on first paint.
         if (event === "INITIAL_SESSION") return;
@@ -268,50 +267,9 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, [currentStep, showJobsBoard, examplePrompts.length]);
 
-  const [userJobs, setUserJobs] = useState<Job[]>([
-    {
-      id: "1",
-      description: "Roof replacement - 2000 sq ft shingled roof",
-      status: "receiving_bids",
-      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      bidsCount: 3,
-    },
-    {
-      id: "2",
-      description: "HVAC system repair - central air not cooling",
-      status: "receiving_bids",
-      createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      bidsCount: 0,
-    },
-    {
-      id: "3",
-      description: "Kitchen remodel - full renovation with new cabinets",
-      status: "contractor_selected",
-      createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-      bidsCount: 5,
-    },
-    {
-      id: "4",
-      description: "Fence repair - 3 broken panels from wind damage",
-      status: "in_progress",
-      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-      bidsCount: 4,
-    },
-    {
-      id: "5",
-      description: "Bathroom tile replacement and waterproofing",
-      status: "receiving_bids",
-      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-      bidsCount: 2,
-    },
-    {
-      id: "6",
-      description: "Garage door spring replacement and alignment",
-      status: "completed",
-      createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-      bidsCount: 3,
-    },
-  ]);
+  // Start with empty jobs — real data is loaded from Supabase in the effect below.
+  // Never seed with mock data: new users would see phantom jobs they never created.
+  const [userJobs, setUserJobs] = useState<Job[]>([]);
   const [jobDescription, setJobDescription] = useState("");
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [contactInfo, setContactInfo] = useState<ContactInfo>({
@@ -447,7 +405,6 @@ export default function HomePage() {
 
   const handleFinalSubmit = useCallback(async () => {
     if (submittingJob) return; // double-submit guard
-    console.log("[v0] handleFinalSubmit called. submittingJob:", submittingJob);
     setSubmittingJob(true);
     setSubmitJobError("");
 
@@ -751,8 +708,8 @@ export default function HomePage() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <Link
-            href="/"
+          <button
+            type="button"
             onClick={handleBackToHome}
             className="relative z-10 -ml-4 block cursor-pointer p-2 md:-ml-6"
             aria-label="HomeBids - Go to home"
@@ -766,7 +723,7 @@ export default function HomePage() {
               priority
               unoptimized
             />
-          </Link>
+          </button>
         </div>
 
         {/* Step Content */}
