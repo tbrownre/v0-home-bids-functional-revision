@@ -424,15 +424,16 @@ export default function ContractorDashboard() {
     value: bidsByStatus[key].reduce((sum, b) => sum + b.bidAmount, 0),
   });
 
-  const stats: Record<string, { count: number; value: number }> & { totalPipeline: number } = {
+  const stats = {
     open: statOf("open"),
     in_progress: statOf("in_progress"),
     completed: statOf("completed"),
     not_selected: statOf("not_selected"),
-    totalPipeline:
-      bidsByStatus.open.reduce((sum, b) => sum + b.bidAmount, 0) +
-      bidsByStatus.in_progress.reduce((sum, b) => sum + b.bidAmount, 0),
   };
+
+  const totalPipeline =
+    bidsByStatus.open.reduce((sum, b) => sum + b.bidAmount, 0) +
+    bidsByStatus.in_progress.reduce((sum, b) => sum + b.bidAmount, 0);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -465,7 +466,7 @@ export default function ContractorDashboard() {
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wider text-primary/70">Total Pipeline Value</p>
                   <p className="mt-1 text-2xl font-bold text-foreground sm:text-3xl">
-                    ${stats.totalPipeline.toLocaleString()}
+                    ${totalPipeline.toLocaleString()}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -566,10 +567,10 @@ export default function ContractorDashboard() {
                       <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground sm:text-xs">Pipeline Breakdown</p>
                       <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted">
                         {stats.open.value > 0 && (
-                          <div className="bg-blue-500 transition-all" style={{ width: `${(stats.open.value / (stats.totalPipeline || 1)) * 100}%` }} title={`Open: $${stats.open.value.toLocaleString()}`} />
+                          <div className="bg-blue-500 transition-all" style={{ width: `${(stats.open.value / (totalPipeline || 1)) * 100}%` }} title={`Open: $${stats.open.value.toLocaleString()}`} />
                         )}
                         {stats.in_progress.value > 0 && (
-                          <div className="bg-amber-500 transition-all" style={{ width: `${(stats.in_progress.value / (stats.totalPipeline || 1)) * 100}%` }} title={`In Progress: $${stats.in_progress.value.toLocaleString()}`} />
+                          <div className="bg-amber-500 transition-all" style={{ width: `${(stats.in_progress.value / (totalPipeline || 1)) * 100}%` }} title={`In Progress: $${stats.in_progress.value.toLocaleString()}`} />
                         )}
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-3">
