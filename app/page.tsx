@@ -154,21 +154,27 @@ export default function HomePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle URL query params and restore jobs board for signed-in users
+  // Handle URL query params and restore jobs board for signed-in users.
+  // IMPORTANT: never auto-show the jobs board while the user is mid-form
+  // (currentStep !== "describe") or has just completed a submission
+  // (currentStep === "success") — doing so causes a flicker/reload loop.
   useEffect(() => {
     if (searchParams.get("newJob") === "true") {
-      // User clicked "Post a job" - show the new job form
       setShowJobsBoard(false);
       setCreatingNewJob(true);
       router.replace("/", { scroll: false });
     } else if (searchParams.get("showJobs") === "true") {
       setShowJobsBoard(true);
       router.replace("/", { scroll: false });
-    } else if (isSignedIn && !showJobsBoard && !creatingNewJob) {
-      // If already signed in as homeowner (e.g. navigated back), restore the jobs board
+    } else if (
+      isSignedIn &&
+      !showJobsBoard &&
+      !creatingNewJob &&
+      currentStep === "describe"   // ← only restore when user is on the idle landing screen
+    ) {
       setShowJobsBoard(true);
     }
-  }, [searchParams, router, isSignedIn, showJobsBoard, creatingNewJob]);
+  }, [searchParams, router, isSignedIn, showJobsBoard, creatingNewJob, currentStep]);
 
   const examplePrompts = [
     "We have a leak under our kitchen sink that's been getting worse over the past few days. Looking for a licensed plumber to inspect and repair it within the next week.",
@@ -436,6 +442,8 @@ export default function HomePage() {
       return;
     }
 
+    // Pre-populate the jobs board with the new job so it's visible immediately
+    // when the dashboard mounts — no extra fetch needed.
     const newJob: Job = {
       id: jobResult.job?.id ?? String(Date.now()),
       description: jobDescription.trim(),
@@ -444,9 +452,23 @@ export default function HomePage() {
       bidsCount: 0,
     };
     setUserJobs((prev) => [newJob, ...prev]);
+
+    // Reset form state fully so the restore-jobs-board useEffect doesn't race.
     setShowPasswordModal(false);
     setSubmittingJob(false);
-    setCurrentStep("success");
+    setCreatingNewJob(false);
+    setJobDescription("");
+    setTimeline("");
+    setBudget("");
+    setContactInfo({ firstName: "", lastName: "", email: "", phone: "", address: "", city: "", state: "", zip: "" });
+    setPassword("");
+    setConfirmPassword("");
+    setUploadedImages([]);
+    setCurrentStep("describe");
+
+    // Navigate once, cleanly, to the homeowner dashboard.
+    // showJobs=true triggers the restore useEffect on the next paint.
+    setShowJobsBoard(true);
   }, [submittingJob, jobDescription, contactInfo, password, budget]);
 
   const handleBackToHome = useCallback(() => {
@@ -486,6 +508,8 @@ export default function HomePage() {
   const handleTextareaChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setJobDescription(e.target.value);
+      // Mark user as mid-flow so the jobs-board restore useEffect doesn't interrupt.
+      if (e.target.value.trim()) setCreatingNewJob(true);
       // Auto-resize textarea
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
