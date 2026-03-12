@@ -5,7 +5,7 @@ import Link from "next/link"
 import React from "react";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -90,7 +90,6 @@ interface Job {
 
 export default function HomePage() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const [currentStep, setCurrentStep] = useState<Step>("describe");
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [showJobsBoard, setShowJobsBoard] = useState(false);
@@ -102,9 +101,12 @@ export default function HomePage() {
   const homeownerUnreadCount = 0; // inbox wired separately
 
   // Ref-based flags so the restore logic never creates a dep-loop.
-  // showJobsBoardRef mirrors showJobsBoard state but is readable synchronously.
+  // Each ref mirrors its corresponding state value but is readable synchronously
+  // inside async callbacks and event listeners without stale closure issues.
   const showJobsBoardRef = useRef(false);
   const creatingNewJobRef = useRef(false);
+  // currentStepRef mirrors currentStep so auth listeners can check it without deps.
+  const currentStepRef = useRef<Step>("describe");
   // jobsBoardRestoredForSession: once we auto-show the jobs board for a session,
   // we never auto-show it again — preventing re-trigger on any re-render.
   const jobsBoardRestoredForSession = useRef(false);
@@ -129,8 +131,15 @@ export default function HomePage() {
           } else {
             setIsSignedIn(true);
             setIsContractor(false);
-            // Auto-restore jobs board on initial load if user is not mid-form.
-            if (!creatingNewJobRef.current && !showJobsBoardRef.current && !jobsBoardRestoredForSession.current) {
+            // Auto-restore jobs board on initial load only when the user is on
+            // the idle landing screen ("describe"). Never interrupt a form flow,
+            // the success step, or any other active step.
+            if (
+              !creatingNewJobRef.current &&
+              !showJobsBoardRef.current &&
+              !jobsBoardRestoredForSession.current &&
+              currentStepRef.current === "describe"
+            ) {
               jobsBoardRestoredForSession.current = true;
               showJobsBoardRef.current = true;
               setShowJobsBoard(true);
@@ -140,6 +149,7 @@ export default function HomePage() {
       });
 
       const { data } = supabase.auth.onAuthStateChange((event, session) => {
+        console.log("[v0] onAuthStateChange event:", event, "| currentStep:", currentStepRef.current, "| showJobsBoard:", showJobsBoardRef.current, "| creating:", creatingNewJobRef.current, "| restored:", jobsBoardRestoredForSession.current);
         // Ignore INITIAL_SESSION — we handle that in getUser() above to avoid
         // double-restore on first paint.
         if (event === "INITIAL_SESSION") return;
@@ -153,7 +163,15 @@ export default function HomePage() {
             setIsContractor(false);
             // Only auto-restore on a fresh sign-in, not on token refresh or
             // any event that fires during an active form flow or post-submit.
-            if (event === "SIGNED_IN" && !creatingNewJobRef.current && !showJobsBoardRef.current && !jobsBoardRestoredForSession.current) {
+            // currentStepRef must be "describe" — never interrupt the success
+            // screen or any mid-form step with a jobs-board redirect.
+            if (
+              event === "SIGNED_IN" &&
+              !creatingNewJobRef.current &&
+              !showJobsBoardRef.current &&
+              !jobsBoardRestoredForSession.current &&
+              currentStepRef.current === "describe"
+            ) {
               jobsBoardRestoredForSession.current = true;
               showJobsBoardRef.current = true;
               setShowJobsBoard(true);
@@ -197,6 +215,13 @@ export default function HomePage() {
   // searchParams is stable from Next.js — safe as the only dep here.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  // setCurrentStepSafe: always call this instead of setCurrentStep directly
+  // so that currentStepRef stays in sync with the React state value.
+  const setCurrentStepSafe = useCallback((step: Step) => {
+    currentStepRef.current = step;
+    setCurrentStep(step);
+  }, []);
 
   const examplePrompts = [
     "We have a leak under our kitchen sink that's been getting worse over the past few days. Looking for a licensed plumber to inspect and repair it within the next week.",
@@ -389,28 +414,28 @@ export default function HomePage() {
 
   const handleNextStep = useCallback(() => {
     if (currentStep === "describe" && jobDescription.trim()) {
-      setCurrentStep("timeline");
+      setCurrentStepSafe("timeline");
     } else if (currentStep === "timeline" && timeline.trim()) {
-      setCurrentStep("photos");
+      setCurrentStepSafe("photos");
     } else if (currentStep === "photos") {
-      setCurrentStep("contact");
+      setCurrentStepSafe("contact");
     } else if (currentStep === "contact" && isContactValid) {
-      setCurrentStep("trial");
+      setCurrentStepSafe("trial");
     }
-  }, [currentStep, jobDescription, timeline, isContactValid]);
+  }, [currentStep, jobDescription, timeline, isContactValid, setCurrentStepSafe]);
 
   const handleBackStep = useCallback(() => {
     if (currentStep === "timeline") {
-      setCurrentStep("describe");
+      setCurrentStepSafe("describe");
     } else if (currentStep === "photos") {
-      setCurrentStep("timeline");
+      setCurrentStepSafe("timeline");
     } else if (currentStep === "contact") {
-      setCurrentStep("photos");
+      setCurrentStepSafe("photos");
     } else if (currentStep === "trial") {
       setShowTrialCheckout(false);
-      setCurrentStep("contact");
+      setCurrentStepSafe("contact");
     }
-  }, [currentStep]);
+  }, [currentStep, setCurrentStepSafe]);
 
   const handleSubmitJob = useCallback(() => {
     // Show password modal before final submission
@@ -422,6 +447,7 @@ export default function HomePage() {
 
   const handleFinalSubmit = useCallback(async () => {
     if (submittingJob) return; // double-submit guard
+    console.log("[v0] handleFinalSubmit called. submittingJob:", submittingJob);
     setSubmittingJob(true);
     setSubmitJobError("");
 
@@ -443,9 +469,13 @@ export default function HomePage() {
       }
       // Can't create the job yet — no confirmed session. Show success and
       // let the webhook (fired by signUpHomeowner) capture the intent.
+      // CRITICAL: lock jobsBoardRestoredForSession NOW so that the SIGNED_IN
+      // auth event (fired by Supabase after signup) cannot hijack the success
+      // screen by auto-showing the jobs board.
+      jobsBoardRestoredForSession.current = true;
+      setCurrentStepSafe("success");
       setShowPasswordModal(false);
       setSubmittingJob(false);
-      setCurrentStep("success");
       return;
     }
 
@@ -494,9 +524,9 @@ export default function HomePage() {
     setPassword("");
     setConfirmPassword("");
     setUploadedImages([]);
-    setCurrentStep("describe");
+    setCurrentStepSafe("describe");
     setShowJobsBoard(true);
-  }, [submittingJob, jobDescription, contactInfo, password, budget]);
+  }, [submittingJob, jobDescription, contactInfo, password, budget, setCurrentStepSafe]);
 
   const handleBackToHome = useCallback(() => {
     setJobDescription("");
@@ -517,12 +547,12 @@ export default function HomePage() {
     setBudget("");
     setIsRecurringJob(false);
     setRequiresInPerson(null);
-    setCurrentStep("describe");
     showJobsBoardRef.current = false;
     creatingNewJobRef.current = true;
+    setCurrentStepSafe("describe");
     setShowJobsBoard(false);
     setCreatingNewJob(true);
-  }, []);
+  }, [setCurrentStepSafe]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -537,8 +567,13 @@ export default function HomePage() {
   const handleTextareaChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setJobDescription(e.target.value);
-      // Mark user as mid-flow so the jobs-board restore useEffect doesn't interrupt.
-      if (e.target.value.trim()) setCreatingNewJob(true);
+      // Mark user as mid-flow so the jobs-board auth-restore never fires while
+      // they are actively typing. Sync both state AND the ref so the auth
+      // listener (which reads the ref, not state) sees the correct value.
+      if (e.target.value.trim()) {
+        creatingNewJobRef.current = true;
+        setCreatingNewJob(true);
+      }
       // Auto-resize textarea
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
@@ -574,12 +609,12 @@ export default function HomePage() {
     setBudget("");
     setIsRecurringJob(false);
     setRequiresInPerson(null);
-    setCurrentStep("describe");
     showJobsBoardRef.current = false;
     creatingNewJobRef.current = true;
+    setCurrentStepSafe("describe");
     setShowJobsBoard(false);
     setCreatingNewJob(true);
-  }, []);
+  }, [setCurrentStepSafe]);
 
   const handleYourJobsClick = useCallback(() => {
     if (isSignedIn) {
@@ -597,10 +632,10 @@ export default function HomePage() {
     creatingNewJobRef.current = false;
     jobsBoardRestoredForSession.current = false;
     setShowJobsBoard(false);
-    setCurrentStep("describe");
+    setCurrentStepSafe("describe");
     setJobDescription("");
     performSignOut();
-  }, []);
+  }, [setCurrentStepSafe]);
 
   return (
     <div className="flex h-screen bg-background">
@@ -1718,8 +1753,10 @@ export default function HomePage() {
                     </Button>
                     <Button
                       onClick={() => {
+                        showJobsBoardRef.current = true;
+                        jobsBoardRestoredForSession.current = true;
+                        setCurrentStepSafe("describe");
                         setShowJobsBoard(true);
-                        setCurrentStep("describe");
                       }}
                       className="gap-2 bg-green-600 text-white shadow-lg shadow-green-600/30 hover:bg-green-500"
                       size="lg"
@@ -1740,6 +1777,9 @@ export default function HomePage() {
         open={showSignInModal}
         onOpenChange={setShowSignInModal}
         onSignIn={() => {
+          // Keep refs in sync so the auth listener doesn't fire a redundant restore.
+          showJobsBoardRef.current = true;
+          jobsBoardRestoredForSession.current = true;
           setShowJobsBoard(true);
         }}
       />
