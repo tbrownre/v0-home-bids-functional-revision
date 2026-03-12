@@ -77,7 +77,10 @@ export async function getContractorApplications(
 
   const { data, error } = await query;
   if (error) return { applications: null, error: error.message };
-  return { applications: data as ContractorApplication[], error: null };
+  // Cast through `unknown` because Supabase infers `profiles` as an array from
+  // the join syntax, but the actual runtime value is a single object (or null)
+  // due to the foreign-key relationship being one-to-one.
+  return { applications: data as unknown as ContractorApplication[], error: null };
 }
 
 export async function updateContractorStatus(
