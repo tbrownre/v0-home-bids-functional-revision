@@ -101,6 +101,14 @@ export default function HomePage() {
   const [isContractor, setIsContractor] = useState(false);
   const homeownerUnreadCount = 0; // inbox wired separately
 
+  // Ref-based flags so the restore logic never creates a dep-loop.
+  // showJobsBoardRef mirrors showJobsBoard state but is readable synchronously.
+  const showJobsBoardRef = useRef(false);
+  const creatingNewJobRef = useRef(false);
+  // jobsBoardRestoredForSession: once we auto-show the jobs board for a session,
+  // we never auto-show it again — preventing re-trigger on any re-render.
+  const jobsBoardRestoredForSession = useRef(false);
+
   useEffect(() => {
     // Skip Supabase entirely in the v0 preview sandbox
     if (typeof window === "undefined") return;
@@ -121,13 +129,19 @@ export default function HomePage() {
           } else {
             setIsSignedIn(true);
             setIsContractor(false);
+            // Auto-restore jobs board on initial load if user is not mid-form.
+            if (!creatingNewJobRef.current && !showJobsBoardRef.current && !jobsBoardRestoredForSession.current) {
+              jobsBoardRestoredForSession.current = true;
+              showJobsBoardRef.current = true;
+              setShowJobsBoard(true);
+            }
           }
         }
       });
 
       const { data } = supabase.auth.onAuthStateChange((event, session) => {
         // Ignore INITIAL_SESSION — we handle that in getUser() above to avoid
-        // double-redirect on first paint.
+        // double-restore on first paint.
         if (event === "INITIAL_SESSION") return;
 
         if (session?.user) {
@@ -137,10 +151,19 @@ export default function HomePage() {
           } else {
             setIsSignedIn(true);
             setIsContractor(false);
+            // Only auto-restore on a fresh sign-in, not on token refresh or
+            // any event that fires during an active form flow or post-submit.
+            if (event === "SIGNED_IN" && !creatingNewJobRef.current && !showJobsBoardRef.current && !jobsBoardRestoredForSession.current) {
+              jobsBoardRestoredForSession.current = true;
+              showJobsBoardRef.current = true;
+              setShowJobsBoard(true);
+            }
           }
         } else {
           setIsSignedIn(false);
           setIsContractor(false);
+          showJobsBoardRef.current = false;
+          jobsBoardRestoredForSession.current = false;
           setShowJobsBoard(false);
         }
       });
@@ -149,32 +172,31 @@ export default function HomePage() {
       // Silently no-op if Supabase is unavailable (e.g. preview sandbox)
     }
     return () => subscription?.unsubscribe();
-  // router intentionally omitted — we use window.location.replace to avoid
-  // capturing a stale router reference across renders.
+  // Empty deps: this effect sets up auth listeners once on mount only.
+  // All restore logic uses refs, not state, to avoid dep-loop re-runs.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle URL query params and restore jobs board for signed-in users.
-  // IMPORTANT: never auto-show the jobs board while the user is mid-form
-  // (currentStep !== "describe") or has just completed a submission
-  // (currentStep === "success") — doing so causes a flicker/reload loop.
+  // Handle ?newJob and ?showJobs URL params only — no auto-restore logic here.
+  // Keeping router out of the deps array since Next.js router has an unstable
+  // reference that would cause this effect to re-run on every render.
   useEffect(() => {
-    if (searchParams.get("newJob") === "true") {
+    const newJob = searchParams.get("newJob");
+    const showJobs = searchParams.get("showJobs");
+    if (newJob === "true") {
+      showJobsBoardRef.current = false;
+      creatingNewJobRef.current = true;
       setShowJobsBoard(false);
       setCreatingNewJob(true);
-      router.replace("/", { scroll: false });
-    } else if (searchParams.get("showJobs") === "true") {
+      window.history.replaceState(null, "", "/");
+    } else if (showJobs === "true") {
+      showJobsBoardRef.current = true;
       setShowJobsBoard(true);
-      router.replace("/", { scroll: false });
-    } else if (
-      isSignedIn &&
-      !showJobsBoard &&
-      !creatingNewJob &&
-      currentStep === "describe"   // ← only restore when user is on the idle landing screen
-    ) {
-      setShowJobsBoard(true);
+      window.history.replaceState(null, "", "/");
     }
-  }, [searchParams, router, isSignedIn, showJobsBoard, creatingNewJob, currentStep]);
+  // searchParams is stable from Next.js — safe as the only dep here.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const examplePrompts = [
     "We have a leak under our kitchen sink that's been getting worse over the past few days. Looking for a licensed plumber to inspect and repair it within the next week.",
@@ -442,8 +464,7 @@ export default function HomePage() {
       return;
     }
 
-    // Pre-populate the jobs board with the new job so it's visible immediately
-    // when the dashboard mounts — no extra fetch needed.
+    // Pre-populate the jobs board with the new job so it's visible immediately.
     const newJob: Job = {
       id: jobResult.job?.id ?? String(Date.now()),
       description: jobDescription.trim(),
@@ -453,7 +474,16 @@ export default function HomePage() {
     };
     setUserJobs((prev) => [newJob, ...prev]);
 
-    // Reset form state fully so the restore-jobs-board useEffect doesn't race.
+    // Update refs synchronously BEFORE any state changes so the auth listener
+    // and restore logic cannot fire an auto-restore while we're mid-transition.
+    creatingNewJobRef.current = false;
+    showJobsBoardRef.current = true;
+    jobsBoardRestoredForSession.current = true;
+
+    // Reset form state and navigate to dashboard in one React batch.
+    // Critically: do NOT reset currentStep here — leave it alone so no
+    // restore-logic condition ("describe" + not creatingNewJob) becomes
+    // briefly true and triggers a second setShowJobsBoard call.
     setShowPasswordModal(false);
     setSubmittingJob(false);
     setCreatingNewJob(false);
@@ -465,9 +495,6 @@ export default function HomePage() {
     setConfirmPassword("");
     setUploadedImages([]);
     setCurrentStep("describe");
-
-    // Navigate once, cleanly, to the homeowner dashboard.
-    // showJobs=true triggers the restore useEffect on the next paint.
     setShowJobsBoard(true);
   }, [submittingJob, jobDescription, contactInfo, password, budget]);
 
@@ -491,6 +518,8 @@ export default function HomePage() {
     setIsRecurringJob(false);
     setRequiresInPerson(null);
     setCurrentStep("describe");
+    showJobsBoardRef.current = false;
+    creatingNewJobRef.current = true;
     setShowJobsBoard(false);
     setCreatingNewJob(true);
   }, []);
@@ -546,12 +575,16 @@ export default function HomePage() {
     setIsRecurringJob(false);
     setRequiresInPerson(null);
     setCurrentStep("describe");
+    showJobsBoardRef.current = false;
+    creatingNewJobRef.current = true;
     setShowJobsBoard(false);
     setCreatingNewJob(true);
   }, []);
 
   const handleYourJobsClick = useCallback(() => {
     if (isSignedIn) {
+      showJobsBoardRef.current = true;
+      creatingNewJobRef.current = false;
       setShowJobsBoard(true);
       setCreatingNewJob(false);
     } else {
@@ -559,9 +592,10 @@ export default function HomePage() {
     }
   }, [isSignedIn]);
 
-
-
   const handleSignOut = useCallback(() => {
+    showJobsBoardRef.current = false;
+    creatingNewJobRef.current = false;
+    jobsBoardRestoredForSession.current = false;
     setShowJobsBoard(false);
     setCurrentStep("describe");
     setJobDescription("");
