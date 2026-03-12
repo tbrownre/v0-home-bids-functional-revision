@@ -157,15 +157,35 @@ export default function ContractorDashboard() {
   const [bidsLoading, setBidsLoading] = useState(true);
   const [bidsError, setBidsError] = useState<string | null>(null);
 
-  // Client-side session guard — redirects to sign-in if no valid session exists.
-  // This catches stale/expired sessions that middleware may have passed through.
+  // Client-side session + approval guard.
+  // Checks auth AND contractor_profiles.approval_status so middleware doesn't
+  // need to make a DB query on every request.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.location.hostname.includes("vusercontent.net")) return;
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user }, error }) => {
+    supabase.auth.getUser().then(async ({ data: { user }, error }) => {
       if (error || !user) {
         window.location.replace("/auth/sign-in");
+        return;
+      }
+      // Check approval status
+      const { data: profile } = await supabase
+        .from("contractor_profiles")
+        .select("approval_status")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!profile) {
+        window.location.replace("/");
+        return;
+      }
+      if (profile.approval_status === "pending") {
+        window.location.replace("/contractors/signup/pending");
+        return;
+      }
+      if (profile.approval_status === "rejected") {
+        window.location.replace("/contractors/signup/rejected");
       }
     });
   }, []);
@@ -266,40 +286,13 @@ export default function ContractorDashboard() {
       [jobId]: [...(prev[jobId] || []), msg],
     }));
     setPreviewChatInput("");
-
-    // Simulate homeowner reply
-    setTimeout(() => {
-      const replies = [
-        "Thanks for reaching out! Let me get back to you on that shortly.",
-        "Good question. I'll check and reply within the hour.",
-        "Hi! Yes, I can provide more details. Give me a moment.",
-        "Thanks for asking! I'll send over some photos as well.",
-      ];
-      const reply: JobMessage = {
-        id: (Date.now() + 1).toString(),
-        text: replies[Math.floor(Math.random() * replies.length)],
-        sender: "homeowner",
-        time: new Date(),
-      };
-      setPreviewChatMessages((prev) => ({
-        ...prev,
-        [jobId]: [...(prev[jobId] || []), reply],
-      }));
-    }, 1500);
+    // Real messaging will be handled via the inbox system — no simulated replies.
   };
 
   // Payout calculator state removed — contractors keep 100% with no success fees
-  const [messages, setMessages] = useState<Record<string, Message[]>>({
-    "1": [
-      { id: "m1", text: "Hi, I saw your bid. Can you tell me more about the materials you use?", sender: "homeowner", timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000) },
-      { id: "m2", text: "Of course! We use GAF Timberline HDZ shingles which come with a lifetime warranty. They're highly rated for Texas weather.", sender: "contractor", timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000) },
-      { id: "m3", text: "That sounds great. When could you start?", sender: "homeowner", timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000) },
-    ],
-    "2": [
-      { id: "m4", text: "Your portfolio looks impressive! Do you handle the permitting?", sender: "homeowner", timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-      { id: "m5", text: "Yes, we handle all permits and inspections. It's included in our service.", sender: "contractor", timestamp: new Date(Date.now() - 23 * 60 * 60 * 1000) },
-    ],
-  });
+  // Messages start empty — never seed with fake threads tied to hardcoded bid IDs.
+  // Real message history is not yet persisted server-side; this is a UI-only state.
+  const [messages, setMessages] = useState<Record<string, Message[]>>({});
 
   // Edit form state
   const [editAmount, setEditAmount] = useState("");

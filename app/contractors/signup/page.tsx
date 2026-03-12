@@ -1,7 +1,5 @@
 "use client";
 
-import React from "react"
-
 import { useState } from "react";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";

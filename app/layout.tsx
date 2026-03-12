@@ -43,7 +43,6 @@ export const metadata: Metadata = {
     ],
     apple: '/apple-icon.jpg',
   },
-    generator: 'v0.app'
 }
 
 export default function RootLayout({

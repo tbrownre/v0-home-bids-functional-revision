@@ -1,9 +1,6 @@
 "use client";
 
-import Link from "next/link"
-
-import React from "react";
-
+import Link from "next/link";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -318,8 +315,12 @@ export default function HomePage() {
   useEffect(() => {
     if (!isSignedIn) return;
     if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
-    getHomeownerJobs().then(({ jobs: dbJobs }) => {
-      if (dbJobs && dbJobs.length > 0) {
+    getHomeownerJobs().then(({ jobs: dbJobs, error }) => {
+      // Always replace local state with the authoritative DB result — even an
+      // empty array is correct (e.g. a brand-new user who just signed up).
+      // The previous guard `if (dbJobs.length > 0)` silently swallowed the
+      // first-posted job for new users whose DB returned a single row.
+      if (!error && Array.isArray(dbJobs)) {
         setUserJobs(dbJobs.map((j: any) => ({
           id: j.id,
           description: j.description,
@@ -436,13 +437,28 @@ export default function HomePage() {
       return;
     }
 
+    // Map the budget option string to numeric min/max values for the DB.
+    // budget is a string key like "500-2500", "under500", "10000+", etc.
+    // Never call Number() directly on it — that strips separators incorrectly.
+    const budgetRangeMap: Record<string, { min?: number; max?: number }> = {
+      under500:    { max: 500 },
+      "500-2500":  { min: 500,   max: 2500 },
+      "2500-5000": { min: 2500,  max: 5000 },
+      "5000-10000":{ min: 5000,  max: 10000 },
+      "10000+":    { min: 10000 },
+      unsure:      {},
+      insurance:   {},
+    };
+    const budgetRange = budgetRangeMap[budget] ?? {};
+
     // Existing signed-in user — create the job directly
     const jobResult = await createJob({
       title: jobDescription.slice(0, 80),
       description: jobDescription,
       category: "General",
       location: `${contactInfo.city}, ${contactInfo.state}`,
-      budget_min: budget ? Number(budget.replace(/\D/g, "")) : undefined,
+      budget_min: budgetRange.min,
+      budget_max: budgetRange.max,
     });
 
     if (jobResult.error) {
@@ -924,12 +940,7 @@ export default function HomePage() {
                       </motion.div>
                     </AnimatePresence>
                   </div>
-                  {/* Progress dots */}
-                  <div className="mt-4 flex items-center gap-1">
-                    {examplePrompts.slice(0, 5).map((_, i) => (
-                      null
-                    ))}
-                  </div>
+
                 </div>
               </motion.div>
             )}
@@ -1710,10 +1721,14 @@ export default function HomePage() {
                     </Button>
                     <Button
                       onClick={() => {
+                        // Set board first, THEN reset step — order matters.
+                        // If step resets to "describe" before showJobsBoard is
+                        // true, AnimatePresence briefly renders the describe
+                        // screen before the board replaces it.
                         showJobsBoardRef.current = true;
                         jobsBoardRestoredForSession.current = true;
-                        setCurrentStepSafe("describe");
                         setShowJobsBoard(true);
+                        setCurrentStepSafe("describe");
                       }}
                       className="gap-2 bg-green-600 text-white shadow-lg shadow-green-600/30 hover:bg-green-500"
                       size="lg"
@@ -1799,7 +1814,7 @@ export default function HomePage() {
               <Button
                 className="h-12 w-full gap-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30 hover:from-green-400 hover:to-emerald-500"
                 onClick={handleFinalSubmit}
-                disabled={submittingJob || !password.trim() || !confirmPassword.trim() || password !== confirmPassword}
+                disabled={submittingJob || !password.trim() || password.length < 6 || !confirmPassword.trim() || password !== confirmPassword}
               >
                 {submittingJob ? (
                   <>
