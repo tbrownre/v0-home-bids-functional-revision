@@ -2,6 +2,13 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
+  // In demo mode the Supabase env vars are not required — skip all auth logic
+  // entirely and pass the request through. Without this guard, createServerClient
+  // throws when the env vars are undefined, crashing the middleware on every request.
+  if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
