@@ -468,30 +468,33 @@ export default function BidsPage() {
                 const hasUnread = bidMessages.length > 0 && !bidMessages[bidMessages.length - 1].isOwn;
                 
                 return (
-                  <motion.button
+                  // motion.div — NOT motion.button — so the favorite <button> inside is valid HTML
+                  <motion.div
                     key={bid.id}
-                    type="button"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                     onClick={() => handleSelectBid(bid)}
-                    className={`relative w-full rounded-xl p-4 text-left transition-all ${
-                      selectedBid?.id === bid.id 
-                        ? "bg-primary/10 ring-2 ring-primary shadow-sm" 
+                    onKeyDown={(e) => e.key === "Enter" && handleSelectBid(bid)}
+                    role="button"
+                    tabIndex={0}
+                    className={`relative w-full cursor-pointer rounded-xl p-4 text-left transition-all ${
+                      selectedBid?.id === bid.id
+                        ? "bg-primary/10 ring-2 ring-primary shadow-sm"
                         : "bg-card hover:bg-muted/50 border border-border hover:border-primary/30 hover:shadow-sm"
                     }`}
                   >
-                    {/* Favorite button */}
+                    {/* Favorite button — valid because the outer element is a div, not a button */}
                     <button
                       type="button"
                       onClick={(e) => toggleFavorite(e, bid.id)}
                       className="absolute right-3 top-3 z-10 flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-background/90 backdrop-blur-sm border border-border/50 shadow-sm transition-all hover:scale-110 hover:bg-background active:scale-95"
                       aria-label={favoriteBids.has(bid.id) ? "Remove from favorites" : "Add to favorites"}
                     >
-                      <Heart 
+                      <Heart
                         className={`h-4 w-4 transition-colors ${
-                          favoriteBids.has(bid.id) 
-                            ? "fill-red-500 text-red-500" 
+                          favoriteBids.has(bid.id)
+                            ? "fill-red-500 text-red-500"
                             : "text-muted-foreground hover:text-red-400"
                         }`}
                       />
@@ -596,7 +599,7 @@ export default function BidsPage() {
                         )}
                       </div>
                     )}
-                  </motion.button>
+                  </motion.div>
                 );
               })}
             </div>

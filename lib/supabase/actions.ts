@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { isDemoEmail } from "@/lib/demo-guard";
 const MAKE_WEBHOOK_URL = "https://hook.us2.make.com/1v7w6jnit6c3cbddxsqeyrobgnf21su9";
 
 function getConfirmUrl() {
@@ -188,6 +189,25 @@ export async function createJob(formData: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  // Demo accounts: return a mock job without writing to the DB.
+  if (isDemoEmail(user.email)) {
+    return {
+      success: true,
+      job: {
+        id: `demo-job-${Date.now()}`,
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        location: formData.location,
+        budget_min: formData.budget_min ?? null,
+        budget_max: formData.budget_max ?? null,
+        status: "open",
+        created_at: new Date().toISOString(),
+        homeowner_id: user.id,
+      },
+    };
+  }
+
   const { data, error } = await supabase
     .from("jobs")
     .insert({
@@ -343,6 +363,23 @@ export async function submitBid(formData: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  // Demo accounts: return a mock bid without writing to the DB.
+  if (isDemoEmail(user.email)) {
+    return {
+      success: true,
+      bid: {
+        id: `demo-bid-${Date.now()}`,
+        job_id: formData.job_id,
+        contractor_id: user.id,
+        amount: formData.amount,
+        message: formData.message,
+        timeline: formData.timeline ?? null,
+        status: "pending",
+        created_at: new Date().toISOString(),
+      },
+    };
+  }
+
   const { data, error } = await supabase
     .from("bids")
     .insert({
@@ -365,6 +402,11 @@ export async function acceptBid(bidId: string, jobId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
+
+  // Demo accounts: mock success without mutating any real data.
+  if (isDemoEmail(user.email)) {
+    return { success: true };
+  }
 
   // Mark selected bid as accepted, others as rejected
   const { error: rejectError } = await supabase
@@ -412,6 +454,11 @@ export async function sendMessage(formData: {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
+
+  // Demo accounts: mock success without writing to the messages table.
+  if (isDemoEmail(user.email)) {
+    return { success: true };
+  }
 
   const { error } = await supabase.from("messages").insert({
     job_id: formData.job_id,
