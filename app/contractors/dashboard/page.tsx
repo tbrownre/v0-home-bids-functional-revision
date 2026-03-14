@@ -51,8 +51,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { getContractorBids } from "@/lib/supabase/actions";
-import { isDemoMode } from "@/lib/demo/config";
-import * as demoServices from "@/lib/demo/services";
 import { createClient } from "@/lib/supabase/client";
 
 interface ActiveBid {
@@ -199,8 +197,7 @@ export default function ContractorDashboard() {
       return;
     }
     setBidsLoading(true);
-    const loader = isDemoMode() ? demoServices.getContractorBids : getContractorBids;
-    loader().then(({ bids: rawBids, error }) => {
+    getContractorBids().then(({ bids: rawBids, error }) => {
       if (error) {
         setBidsError(error);
       } else {

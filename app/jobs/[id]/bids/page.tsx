@@ -27,8 +27,6 @@ import {
 } from "lucide-react";
 import { selectBidAsWinner } from "@/lib/job-store";
 import { acceptBid as acceptBidAction, getJobBids } from "@/lib/supabase/actions";
-import { isDemoMode } from "@/lib/demo/config";
-import * as demoServices from "@/lib/demo/services";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -298,11 +296,12 @@ export default function BidsPage() {
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
   const [messages, setMessages] = useState<Record<string, Message[]>>(sampleMessages);
 
+  // Fetch real bids for this job using the decoupled getJobBids action.
+  // Falls back to sampleBids if no real bids are found (demo/preview mode).
   useEffect(() => {
     if (!jobId) return;
     if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
-    const loader = isDemoMode() || jobId.startsWith("demo-") ? demoServices.getJobBids : getJobBids;
-    loader(jobId).then(({ bids: realBids, error }) => {
+    getJobBids(jobId).then(({ bids: realBids, error }) => {
       if (error) {
         console.error("[BidsPage] Failed to load bids:", error);
         return; // Keep sample bids as fallback
@@ -468,21 +467,17 @@ export default function BidsPage() {
                 const bidMessages = messages[bid.id] || [];
                 const hasUnread = bidMessages.length > 0 && !bidMessages[bidMessages.length - 1].isOwn;
                 
-                // Outer element is intentionally motion.div (not motion.button)
-                // so that the inner favorite <button> is not a button-in-button.
                 return (
-                  <motion.div
+                  <motion.button
                     key={bid.id}
+                    type="button"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                     onClick={() => handleSelectBid(bid)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => e.key === "Enter" && handleSelectBid(bid)}
-                    className={`relative w-full cursor-pointer rounded-xl p-4 text-left transition-all ${
-                      selectedBid?.id === bid.id
-                        ? "bg-primary/10 ring-2 ring-primary shadow-sm"
+                    className={`relative w-full rounded-xl p-4 text-left transition-all ${
+                      selectedBid?.id === bid.id 
+                        ? "bg-primary/10 ring-2 ring-primary shadow-sm" 
                         : "bg-card hover:bg-muted/50 border border-border hover:border-primary/30 hover:shadow-sm"
                     }`}
                   >
@@ -601,7 +596,7 @@ export default function BidsPage() {
                         )}
                       </div>
                     )}
-                  </motion.div>
+                  </motion.button>
                 );
               })}
             </div>
