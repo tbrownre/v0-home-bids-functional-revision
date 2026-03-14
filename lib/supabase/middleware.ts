@@ -2,6 +2,13 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
+  // In demo mode the Supabase env vars are not required — skip all auth logic
+  // entirely and pass the request through. Without this guard, createServerClient
+  // throws when the env vars are undefined, crashing the middleware on every request.
+  if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -63,11 +70,14 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Contractor dashboard: require auth only.
+  // In demo mode, skip auth entirely — the pages load seeded data without a session.
   // Approval status check is done client-side in the dashboard page's useEffect
   // to avoid a DB query on every request in the middleware hot path.
+  const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
   if (
-    request.nextUrl.pathname.startsWith('/contractors/dashboard') ||
-    request.nextUrl.pathname.startsWith('/contractors/bids')
+    !isDemo &&
+    (request.nextUrl.pathname.startsWith('/contractors/dashboard') ||
+      request.nextUrl.pathname.startsWith('/contractors/bids'))
   ) {
     if (!user) {
       const url = request.nextUrl.clone()

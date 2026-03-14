@@ -46,6 +46,9 @@ import { SubscriptionCheckout } from "@/components/subscription-checkout";
 import { getJobStatus, subscribe, isJobArchived, type JobStatusOwner, getJobStatusLabel } from "@/lib/job-store";
 import { signUpHomeowner, createJob, getHomeownerJobs } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
+import { isDemoMode } from "@/lib/demo/config";
+import * as demoServices from "@/lib/demo/services";
+import { useDemoTimeline } from "@/lib/demo/use-demo-timeline";
 
 // Centralized sign-out: clears Supabase session then hard-navigates to home.
 async function performSignOut() {
@@ -311,15 +314,35 @@ export default function HomePage() {
     return unsubscribe;
   }, []);
 
-  // Load real jobs from Supabase — only when the user is confirmed signed-in.
+  // Load jobs — demo mode uses seeded data; production uses Supabase.
   useEffect(() => {
+    const loader = isDemoMode() ? demoServices.getHomeownerJobs : getHomeownerJobs;
+
+    if (isDemoMode()) {
+      // In demo mode: always show jobs board with seeded data, no auth needed.
+      loader().then(({ jobs: dbJobs }) => {
+        if (Array.isArray(dbJobs)) {
+          setUserJobs(dbJobs.map((j: any) => ({
+            id: j.id,
+            description: j.description,
+            status: (j.status === "open" ? "receiving_bids" : j.status) as JobStatusOwner,
+            createdAt: new Date(j.created_at),
+            bidsCount: j.bids?.[0]?.count ?? 0,
+          })));
+        }
+        // Auto-open the jobs board so demo viewers land on it immediately.
+        showJobsBoardRef.current = true;
+        jobsBoardRestoredForSession.current = true;
+        setIsSignedIn(true);
+        setShowJobsBoard(true);
+      });
+      return;
+    }
+
+    // Production: only load when confirmed signed-in.
     if (!isSignedIn) return;
     if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
     getHomeownerJobs().then(({ jobs: dbJobs, error }) => {
-      // Always replace local state with the authoritative DB result — even an
-      // empty array is correct (e.g. a brand-new user who just signed up).
-      // The previous guard `if (dbJobs.length > 0)` silently swallowed the
-      // first-posted job for new users whose DB returned a single row.
       if (!error && Array.isArray(dbJobs)) {
         setUserJobs(dbJobs.map((j: any) => ({
           id: j.id,
@@ -330,6 +353,7 @@ export default function HomePage() {
         })));
       }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSignedIn]);
 
   const handleImageUpload = useCallback(
@@ -404,10 +428,34 @@ export default function HomePage() {
   const [submitJobError, setSubmitJobError] = useState("");
   const [submittingJob, setSubmittingJob] = useState(false);
 
+  // Demo timeline — fires scripted inbox notifications after a demo job post.
+  const [demoTimelineTriggered, setDemoTimelineTriggered] = useState(false);
+  useDemoTimeline(demoTimelineTriggered);
+
   const handleFinalSubmit = useCallback(async () => {
     if (submittingJob) return; // double-submit guard
     setSubmittingJob(true);
     setSubmitJobError("");
+
+    // Demo mode: skip auth + DB entirely.
+    if (isDemoMode()) {
+      const newJob: Job = {
+        id: `demo-job-${Date.now()}`,
+        description: jobDescription.trim(),
+        status: "receiving_bids",
+        createdAt: new Date(),
+        bidsCount: 0,
+      };
+      setUserJobs((prev) => [newJob, ...prev]);
+      creatingNewJobRef.current = false;
+      showJobsBoardRef.current = true;
+      jobsBoardRestoredForSession.current = true;
+      setCurrentStepSafe("success");
+      setShowPasswordModal(false);
+      setSubmittingJob(false);
+      setDemoTimelineTriggered(true);
+      return;
+    }
 
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
