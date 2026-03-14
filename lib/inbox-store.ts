@@ -282,32 +282,12 @@ export function markAsRead(id: string, isContractor: boolean) {
   notify();
 }
 
-/**
- * addDemoNotification — used by the demo timeline hook and control panel to
- * push live notifications during a demo session without touching Supabase.
- * Always adds to the homeowner stream (demo persona is homeowner by default).
- */
-export function addDemoNotification(notification: InboxNotification) {
-  homeownerState = [notification, ...homeownerState];
-  notify();
-}
-
 export function markAllAsRead(isContractor: boolean) {
   if (isContractor) {
     contractorState = contractorState.map((n) => ({ ...n, read: true }));
   } else {
     homeownerState = homeownerState.map((n) => ({ ...n, read: true }));
   }
-  notify();
-}
-
-/**
- * resetDemoNotifications — restores the inbox to its seeded state.
- * Used by the demo control panel's "Reset Demo Data" action.
- */
-export function resetDemoNotifications() {
-  homeownerState = [...homeownerNotifications];
-  contractorState = [...contractorNotifications];
   notify();
 }
 

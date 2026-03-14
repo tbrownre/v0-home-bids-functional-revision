@@ -5,9 +5,6 @@ import { Analytics } from '@vercel/analytics/next'
 import { ScrollRestoration } from '@/components/scroll-restoration'
 import { Footer } from '@/components/footer'
 import { ScrollToTop } from '@/components/scroll-to-top'
-import { isDemoMode } from '@/lib/demo/config'
-import { DemoBanner } from '@/components/demo-banner'
-import { DemoControlPanel } from '@/components/demo-control-panel'
 import './globals.css'
 
 const redHatDisplay = Red_Hat_Display({ subsets: ["latin"], weight: ["300", "400", "500", "600", "700", "800", "900"] });
@@ -57,11 +54,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={`font-sans antialiased`}>
         <ScrollRestoration />
-        {isDemoMode() && <DemoBanner />}
         {children}
         <Footer />
         <ScrollToTop />
-        {isDemoMode() && <DemoControlPanel />}
         <Analytics />
       </body>
     </html>

@@ -27,8 +27,6 @@ import {
 } from "lucide-react";
 import { selectBidAsWinner } from "@/lib/job-store";
 import { acceptBid as acceptBidAction, getJobBids } from "@/lib/supabase/actions";
-import { isDemoMode } from "@/lib/demo/config";
-import * as demoServices from "@/lib/demo/services";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -298,11 +296,12 @@ export default function BidsPage() {
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
   const [messages, setMessages] = useState<Record<string, Message[]>>(sampleMessages);
 
+  // Fetch real bids for this job using the decoupled getJobBids action.
+  // Falls back to sampleBids if no real bids are found (demo/preview mode).
   useEffect(() => {
     if (!jobId) return;
     if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
-    const loader = isDemoMode() || jobId.startsWith("demo-") ? demoServices.getJobBids : getJobBids;
-    loader(jobId).then(({ bids: realBids, error }) => {
+    getJobBids(jobId).then(({ bids: realBids, error }) => {
       if (error) {
         console.error("[BidsPage] Failed to load bids:", error);
         return; // Keep sample bids as fallback
@@ -469,41 +468,34 @@ export default function BidsPage() {
                 const hasUnread = bidMessages.length > 0 && !bidMessages[bidMessages.length - 1].isOwn;
                 
                 return (
-                  <motion.li
+                  <motion.button
                     key={bid.id}
+                    type="button"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className={`relative list-none rounded-xl transition-all ${
-                      selectedBid?.id === bid.id
-                        ? "bg-primary/10 ring-2 ring-primary shadow-sm"
+                    onClick={() => handleSelectBid(bid)}
+                    className={`relative w-full rounded-xl p-4 text-left transition-all ${
+                      selectedBid?.id === bid.id 
+                        ? "bg-primary/10 ring-2 ring-primary shadow-sm" 
                         : "bg-card hover:bg-muted/50 border border-border hover:border-primary/30 hover:shadow-sm"
                     }`}
                   >
-                    {/* Favorite button — sibling to the clickable div, never nested inside it */}
+                    {/* Favorite button */}
                     <button
                       type="button"
                       onClick={(e) => toggleFavorite(e, bid.id)}
                       className="absolute right-3 top-3 z-10 flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-background/90 backdrop-blur-sm border border-border/50 shadow-sm transition-all hover:scale-110 hover:bg-background active:scale-95"
                       aria-label={favoriteBids.has(bid.id) ? "Remove from favorites" : "Add to favorites"}
                     >
-                      <Heart
+                      <Heart 
                         className={`h-4 w-4 transition-colors ${
-                          favoriteBids.has(bid.id)
-                            ? "fill-red-500 text-red-500"
+                          favoriteBids.has(bid.id) 
+                            ? "fill-red-500 text-red-500" 
                             : "text-muted-foreground hover:text-red-400"
                         }`}
                       />
                     </button>
-
-                    {/* Clickable body — div so the favorite <button> above is a sibling, not a child */}
-                    <div
-                      onClick={() => handleSelectBid(bid)}
-                      onKeyDown={(e) => e.key === "Enter" && handleSelectBid(bid)}
-                      role="button"
-                      tabIndex={0}
-                      className="w-full cursor-pointer p-4 text-left"
-                    >
 
                     {/* Unread message indicator */}
                     {hasUnread && (
@@ -604,8 +596,7 @@ export default function BidsPage() {
                         )}
                       </div>
                     )}
-                    </div>{/* end clickable div */}
-                  </motion.li>
+                  </motion.button>
                 );
               })}
             </div>
