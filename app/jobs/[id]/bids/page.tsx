@@ -468,6 +468,8 @@ export default function BidsPage() {
                 const bidMessages = messages[bid.id] || [];
                 const hasUnread = bidMessages.length > 0 && !bidMessages[bidMessages.length - 1].isOwn;
                 
+                // Outer element is intentionally motion.div (not motion.button)
+                // so that the inner favorite <button> is not a button-in-button.
                 return (
                   <motion.div
                     key={bid.id}
