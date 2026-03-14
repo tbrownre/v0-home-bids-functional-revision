@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { signIn } from "@/lib/supabase/actions";
+import { DEMO_HOMEOWNER_EMAIL, DEMO_CONTRACTOR_EMAIL, DEMO_PASSWORD } from "@/lib/demo-guard";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
@@ -92,7 +93,30 @@ export default function SignInPage() {
               Sign In
             </Button>
           </form>
-          <div className="mt-6 space-y-2 text-center text-sm text-muted-foreground">
+          {/* Demo accounts */}
+          <div className="mt-5 rounded-lg border border-dashed border-border bg-muted/40 px-4 py-3">
+            <p className="mb-2.5 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Try a demo account
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setEmail(DEMO_HOMEOWNER_EMAIL); setPassword(DEMO_PASSWORD); }}
+                className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                Homeowner demo
+              </button>
+              <button
+                type="button"
+                onClick={() => { setEmail(DEMO_CONTRACTOR_EMAIL); setPassword(DEMO_PASSWORD); }}
+                className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                Contractor demo
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-5 space-y-2 text-center text-sm text-muted-foreground">
             <p>
               New homeowner?{" "}
               <Link href="/auth/sign-up/homeowner" className="font-medium text-primary hover:underline">
