@@ -9,7 +9,7 @@
 
 export const DEMO_HOMEOWNER_EMAIL = "demo.homeowner@homebids.io";
 export const DEMO_CONTRACTOR_EMAIL = "demo.contractor@homebids.io";
-export const DEMO_PASSWORD = "HomeBids2024!";
+export const DEMO_PASSWORD = "HomeBidsDemo!24";
 
 const DEMO_EMAILS = new Set([DEMO_HOMEOWNER_EMAIL, DEMO_CONTRACTOR_EMAIL]);
 
