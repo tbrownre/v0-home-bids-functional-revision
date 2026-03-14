@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { getOpenJobs, submitBid } from "@/lib/supabase/actions";
+import { isDemoMode } from "@/lib/demo/config";
+import * as demoServices from "@/lib/demo/services";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
@@ -267,16 +269,16 @@ export default function ContractorJobsMarketplace() {
   const [jobsLoading, setJobsLoading] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
 
-  // Fetch real open jobs from Supabase — always replace local state.
+  // Fetch open jobs — demo mode uses seeded data; production uses Supabase.
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) {
-      // v0 preview sandbox: show sample data so the page is usable in demos
       setJobs(allAvailableJobs);
       setJobsLoading(false);
       return;
     }
     setJobsLoading(true);
-    getOpenJobs().then(({ jobs: dbJobs, error }) => {
+    const loader = isDemoMode() ? demoServices.getOpenJobs : getOpenJobs;
+    loader().then(({ jobs: dbJobs, error }) => {
       if (error) {
         setJobsError(error);
       } else if (Array.isArray(dbJobs)) {
