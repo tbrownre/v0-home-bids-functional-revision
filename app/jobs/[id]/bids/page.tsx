@@ -27,6 +27,8 @@ import {
 } from "lucide-react";
 import { selectBidAsWinner } from "@/lib/job-store";
 import { acceptBid as acceptBidAction, getJobBids } from "@/lib/supabase/actions";
+import { isDemoMode } from "@/lib/demo/config";
+import * as demoServices from "@/lib/demo/services";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -296,12 +298,11 @@ export default function BidsPage() {
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
   const [messages, setMessages] = useState<Record<string, Message[]>>(sampleMessages);
 
-  // Fetch real bids for this job using the decoupled getJobBids action.
-  // Falls back to sampleBids if no real bids are found (demo/preview mode).
   useEffect(() => {
     if (!jobId) return;
     if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
-    getJobBids(jobId).then(({ bids: realBids, error }) => {
+    const loader = isDemoMode() || jobId.startsWith("demo-") ? demoServices.getJobBids : getJobBids;
+    loader(jobId).then(({ bids: realBids, error }) => {
       if (error) {
         console.error("[BidsPage] Failed to load bids:", error);
         return; // Keep sample bids as fallback

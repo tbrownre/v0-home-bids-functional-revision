@@ -67,6 +67,23 @@ export async function getMessages() {
   return { messages: demoMessages, error: null };
 }
 
+export async function getJobById(id: string) {
+  const job = demoJobs.find((j) => j.id === id) ?? null;
+  if (!job) return { job: null, error: "Job not found" };
+  return { job: { ...job, bids: Array(job.bids[0]?.count ?? 0).fill({}) }, bidsCount: job.bids[0]?.count ?? 0, error: null };
+}
+
+export async function getJobBids(jobId: string) {
+  const bids = demoBids
+    .filter((b) => b.job_id === jobId)
+    .map((b) => ({
+      ...b,
+      business_name: b.business_name,
+      profiles: { id: b.contractor_id, full_name: b.business_name, avatar_url: null },
+    }));
+  return { bids, error: null };
+}
+
 export async function signUpHomeowner(_formData: {
   email: string;
   password: string;
