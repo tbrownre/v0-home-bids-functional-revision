@@ -468,16 +468,18 @@ export default function BidsPage() {
                 const hasUnread = bidMessages.length > 0 && !bidMessages[bidMessages.length - 1].isOwn;
                 
                 return (
-                  <motion.button
+                  <motion.div
                     key={bid.id}
-                    type="button"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                     onClick={() => handleSelectBid(bid)}
-                    className={`relative w-full rounded-xl p-4 text-left transition-all ${
-                      selectedBid?.id === bid.id 
-                        ? "bg-primary/10 ring-2 ring-primary shadow-sm" 
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => e.key === "Enter" && handleSelectBid(bid)}
+                    className={`relative w-full cursor-pointer rounded-xl p-4 text-left transition-all ${
+                      selectedBid?.id === bid.id
+                        ? "bg-primary/10 ring-2 ring-primary shadow-sm"
                         : "bg-card hover:bg-muted/50 border border-border hover:border-primary/30 hover:shadow-sm"
                     }`}
                   >
@@ -596,7 +598,7 @@ export default function BidsPage() {
                         )}
                       </div>
                     )}
-                  </motion.button>
+                  </motion.div>
                 );
               })}
             </div>
