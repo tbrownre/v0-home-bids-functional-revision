@@ -380,6 +380,19 @@ export async function submitBid(formData: {
     };
   }
 
+  // Duplicate-bid guard: one active bid per contractor per job.
+  const { data: existing } = await supabase
+    .from("bids")
+    .select("id")
+    .eq("job_id", formData.job_id)
+    .eq("contractor_id", user.id)
+    .not("status", "eq", "withdrawn")
+    .maybeSingle();
+
+  if (existing) {
+    return { error: "You have already submitted a bid on this job." };
+  }
+
   const { data, error } = await supabase
     .from("bids")
     .insert({
@@ -390,10 +403,23 @@ export async function submitBid(formData: {
       timeline: formData.timeline ?? null,
       status: "pending",
     })
-    .select()
+    .select("*, jobs(title, homeowner_id)")
     .single();
 
   if (error) return { error: error.message };
+
+  // Notify homeowner via webhook so they receive an email/notification.
+  await fireWebhook("bid.submitted", {
+    bid_id: data.id,
+    job_id: formData.job_id,
+    job_title: (data.jobs as any)?.title ?? "",
+    homeowner_id: (data.jobs as any)?.homeowner_id ?? "",
+    contractor_id: user.id,
+    amount: formData.amount,
+    message: formData.message,
+    timeline: formData.timeline ?? null,
+  });
+
   revalidatePath(`/jobs/${formData.job_id}/bids`);
   return { success: true, bid: data };
 }
@@ -416,14 +442,26 @@ export async function acceptBid(bidId: string, jobId: string) {
     .neq("id", bidId);
   if (rejectError) return { error: rejectError.message };
 
-  const { error: acceptError } = await supabase
+  const { data: acceptedBid, error: acceptError } = await supabase
     .from("bids")
     .update({ status: "accepted" })
-    .eq("id", bidId);
+    .eq("id", bidId)
+    .select("contractor_id, amount, jobs(title)")
+    .single();
   if (acceptError) return { error: acceptError.message };
 
-  // Update job status
+  // Update job status to in_progress
   await supabase.from("jobs").update({ status: "in_progress" }).eq("id", jobId);
+
+  // Notify winning contractor and homeowner via webhook.
+  await fireWebhook("bid.accepted", {
+    bid_id: bidId,
+    job_id: jobId,
+    job_title: (acceptedBid?.jobs as any)?.title ?? "",
+    contractor_id: acceptedBid?.contractor_id ?? "",
+    homeowner_id: user.id,
+    amount: acceptedBid?.amount ?? 0,
+  });
 
   revalidatePath(`/jobs/${jobId}/bids`);
   return { success: true };
@@ -477,12 +515,34 @@ export async function getMessages() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated", messages: [] };
 
-  const { data, error } = await supabase
+  // Step 1: Fetch messages + job title. Avoid named FK aliases that can silently
+  // return null when the constraint name doesn't match the Supabase-generated name.
+  const { data: messages, error } = await supabase
     .from("messages")
-    .select("*, jobs(title), sender:profiles!messages_sender_id_fkey(full_name)")
+    .select("*, jobs(title)")
     .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
     .order("created_at", { ascending: false });
 
   if (error) return { error: error.message, messages: [] };
-  return { messages: data ?? [] };
+  if (!messages || messages.length === 0) return { messages: [] };
+
+  // Step 2: Resolve unique sender names from profiles in a single query.
+  const senderIds = [...new Set(messages.map((m) => m.sender_id).filter(Boolean))];
+  let profileMap: Record<string, string> = {};
+  if (senderIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", senderIds);
+    if (profiles) {
+      profileMap = Object.fromEntries(profiles.map((p) => [p.id, p.full_name ?? ""]));
+    }
+  }
+
+  const enriched = messages.map((m) => ({
+    ...m,
+    sender: { full_name: profileMap[m.sender_id] ?? "Unknown" },
+  }));
+
+  return { messages: enriched };
 }
