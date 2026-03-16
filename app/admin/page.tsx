@@ -23,6 +23,9 @@ import {
   Loader2,
   AlertCircle,
   RefreshCw,
+  Home,
+  ListChecks,
+  CreditCard,
 } from "lucide-react";
 import {
   getContractorApplications,
@@ -362,7 +365,10 @@ export default function AdminPage() {
   const [filter, setFilter] = useState<Filter>("pending");
   const [search, setSearch] = useState("");
   const [applications, setApplications] = useState<ContractorApplication[]>([]);
-  const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
+  const [stats, setStats] = useState({
+    total: 0, pending: 0, approved: 0, rejected: 0,
+    totalHomeowners: 0, totalJobs: 0, openJobs: 0, activeSubscriptions: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<ContractorApplication | null>(null);
@@ -436,12 +442,20 @@ export default function AdminPage() {
 
   return (
     <main className="mx-auto max-w-7xl px-6 py-8">
-      {/* Stats */}
+      {/* Contractor application stats */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Total" value={stats.total} icon={Users} color="bg-muted text-muted-foreground" />
+        <StatCard label="Total Contractors" value={stats.total} icon={Users} color="bg-muted text-muted-foreground" />
         <StatCard label="Pending Review" value={stats.pending} icon={Clock} color="bg-amber-100 text-amber-700" />
         <StatCard label="Approved" value={stats.approved} icon={CheckCircle2} color="bg-green-100 text-green-700" />
         <StatCard label="Rejected" value={stats.rejected} icon={XCircle} color="bg-red-100 text-red-700" />
+      </div>
+
+      {/* Platform-wide stats */}
+      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <StatCard label="Homeowners" value={stats.totalHomeowners} icon={Home} color="bg-blue-100 text-blue-700" />
+        <StatCard label="Total Jobs" value={stats.totalJobs} icon={ListChecks} color="bg-muted text-muted-foreground" />
+        <StatCard label="Open Jobs" value={stats.openJobs} icon={Briefcase} color="bg-violet-100 text-violet-700" />
+        <StatCard label="Active Subscriptions" value={stats.activeSubscriptions} icon={CreditCard} color="bg-green-100 text-green-700" />
       </div>
 
       <div className="mt-8 flex flex-col gap-6 lg:flex-row">

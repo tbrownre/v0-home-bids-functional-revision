@@ -7,6 +7,7 @@ import {
 } from '@stripe/react-stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
 import { startSubscriptionCheckout } from '@/app/actions/stripe'
+import { createClient } from '@/lib/supabase/client'
 import { CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -20,6 +21,17 @@ interface SubscriptionCheckoutProps {
 
 export function SubscriptionCheckout({ planId, onSuccess, onCancel }: SubscriptionCheckoutProps) {
   const [isComplete, setIsComplete] = useState(false)
+  const [userId, setUserId] = useState<string | undefined>(undefined)
+
+  // Resolve the current user once so the fetchClientSecret callback can
+  // include it in the Stripe session metadata for the webhook to use.
+  useEffect(() => {
+    createClient().then((sb) =>
+      sb.auth.getUser().then(({ data }) => {
+        if (data.user) setUserId(data.user.id)
+      })
+    )
+  }, [])
 
   // Keep the latest onSuccess in a ref so the stable onComplete callback
   // can call it without ever changing its own identity — Stripe forbids
@@ -28,8 +40,8 @@ export function SubscriptionCheckout({ planId, onSuccess, onCancel }: Subscripti
   useEffect(() => { onSuccessRef.current = onSuccess }, [onSuccess])
 
   const fetchClientSecret = useCallback(
-    () => startSubscriptionCheckout(planId),
-    [planId],
+    () => startSubscriptionCheckout(planId, userId),
+    [planId, userId],
   )
 
   // Stable reference — created once per mount, never recreated.

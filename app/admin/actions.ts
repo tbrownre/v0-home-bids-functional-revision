@@ -99,22 +99,49 @@ export async function updateContractorStatus(
 }
 
 export async function getAdminStats(): Promise<{
+  // Contractor application counts
   total: number;
   pending: number;
   approved: number;
   rejected: number;
+  // Platform-wide metrics
+  totalHomeowners: number;
+  totalJobs: number;
+  openJobs: number;
+  activeSubscriptions: number;
 }> {
-  try { await requireAdmin(); } catch { return { total: 0, pending: 0, approved: 0, rejected: 0 }; }
+  const fallback = {
+    total: 0, pending: 0, approved: 0, rejected: 0,
+    totalHomeowners: 0, totalJobs: 0, openJobs: 0, activeSubscriptions: 0,
+  };
+  try { await requireAdmin(); } catch { return fallback; }
   const supabase = createServiceClient();
-  const { data } = await supabase
-    .from("contractor_profiles")
-    .select("approval_status");
 
-  const rows = data ?? [];
+  const [
+    { data: contractorRows },
+    { count: homeownerCount },
+    { count: totalJobs },
+    { count: openJobs },
+    { count: activeSubscriptions },
+  ] = await Promise.all([
+    supabase.from("contractor_profiles").select("approval_status"),
+    supabase.from("profiles").select("id", { count: "exact", head: true })
+      .eq("user_type", "homeowner"),
+    supabase.from("jobs").select("id", { count: "exact", head: true }),
+    supabase.from("jobs").select("id", { count: "exact", head: true }).eq("status", "open"),
+    supabase.from("subscriptions").select("id", { count: "exact", head: true })
+      .eq("status", "active"),
+  ]);
+
+  const rows = contractorRows ?? [];
   return {
     total: rows.length,
     pending: rows.filter((r) => r.approval_status === "pending").length,
     approved: rows.filter((r) => r.approval_status === "approved").length,
     rejected: rows.filter((r) => r.approval_status === "rejected").length,
+    totalHomeowners: homeownerCount ?? 0,
+    totalJobs: totalJobs ?? 0,
+    openJobs: openJobs ?? 0,
+    activeSubscriptions: activeSubscriptions ?? 0,
   };
 }
