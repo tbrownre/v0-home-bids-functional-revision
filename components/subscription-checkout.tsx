@@ -26,11 +26,10 @@ export function SubscriptionCheckout({ planId, onSuccess, onCancel }: Subscripti
   // Resolve the current user once so the fetchClientSecret callback can
   // include it in the Stripe session metadata for the webhook to use.
   useEffect(() => {
-    createClient().then((sb) =>
-      sb.auth.getUser().then(({ data }) => {
-        if (data.user) setUserId(data.user.id)
-      })
-    )
+    const sb = createClient()
+    sb.auth.getUser().then(({ data }) => {
+      if (data.user) setUserId(data.user.id)
+    })
   }, [])
 
   // Keep the latest onSuccess in a ref so the stable onComplete callback
