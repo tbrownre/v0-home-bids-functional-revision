@@ -90,15 +90,18 @@ async function handleCheckoutCompleted(
     ? session.subscription
     : session.subscription?.id ?? null
 
-  // Fetch full subscription to get current_period dates and status.
-  // stripe.subscriptions.retrieve() returns Response<Subscription> in Stripe v17+.
-  // Cast via unknown to the underlying Subscription shape we actually need.
+  // Fetch full subscription to get period dates and status.
+  // As of the 2025-03-31.basil API, current_period_end moved to items.data[x].current_period_end.
   let periodEnd: string | null = null
   let subStatus: string = 'active'
   if (subscriptionId) {
-    const sub = (await stripe.subscriptions.retrieve(subscriptionId)) as unknown as Stripe.Subscription
-    periodEnd = new Date(sub.current_period_end * 1000).toISOString()
+    const sub = await stripe.subscriptions.retrieve(subscriptionId, {
+      expand: ['items'],
+    })
     subStatus = sub.status
+    const firstItem = sub.items?.data?.[0] as any
+    const rawEnd = firstItem?.current_period_end ?? null
+    periodEnd = rawEnd ? new Date(rawEnd * 1000).toISOString() : null
   }
 
   // Upsert subscription record.
@@ -146,7 +149,10 @@ async function handleSubscriptionUpdated(
   const userId = subscription.metadata?.userId
   if (!userId) return
 
-  const periodEnd = new Date(subscription.current_period_end * 1000).toISOString()
+  // current_period_end moved to items level in the 2025-03-31.basil API.
+  const firstItem = (subscription.items?.data?.[0] as any)
+  const rawEnd = firstItem?.current_period_end ?? null
+  const periodEnd = rawEnd ? new Date(rawEnd * 1000).toISOString() : null
 
   const { error: updError } = await supabase
     .from('subscriptions')
