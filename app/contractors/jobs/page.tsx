@@ -279,48 +279,47 @@ export default function ContractorJobsMarketplace() {
     }
 
     // Check if logged in as demo contractor, then serve demo data.
-    createClient().then((supabase) =>
-      supabase.auth.getUser().then(async ({ data: { user } }) => {
-        if (user?.email === DEMO_CONTRACTOR_EMAIL) {
-          const { jobs: demoJobs } = await getDemoOpenJobs();
-          setJobs(demoJobs as AvailableJob[]);
-          setJobsLoading(false);
-          return;
-        }
-        // Real contractor — load from Supabase.
-        setJobsLoading(true);
-        getOpenJobs().then(({ jobs: dbJobs, error }) => {
-          if (error) {
-            setJobsError(error);
-          } else if (Array.isArray(dbJobs)) {
-            const mapped: AvailableJob[] = dbJobs.map((j: any) => ({
-              id: j.id,
-              title: j.title,
-              description: j.description,
-              location: j.location,
-              budget: j.budget_min && j.budget_max
-                ? `$${Number(j.budget_min).toLocaleString()}–$${Number(j.budget_max).toLocaleString()}`
-                : j.budget_min
-                ? `$${Number(j.budget_min).toLocaleString()}+`
-                : "Negotiable",
-              timeline: j.urgency ?? "Flexible",
-              postedAt: new Date(j.created_at),
-              category: j.category ?? "General",
-              urgency: (j.urgency === "urgent" ? "high" : j.urgency === "soon" ? "medium" : "low") as "low" | "medium" | "high",
-              bidsCount: 0,
-              homeownerName: j.profiles?.full_name
-                ? j.profiles.full_name.split(" ")[0] + " " + (j.profiles.full_name.split(" ")[1]?.[0] ?? "") + "."
-                : "Homeowner",
-              propertyType: "Home",
-              preferredContact: "Platform",
-              imageCount: (j.images ?? []).length,
-            }));
-            setJobs(mapped);
-          }
-          setJobsLoading(false);
-        });
-      })
-    );
+    // createClient() is synchronous — do NOT call .then() on it.
+    ;(async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email === DEMO_CONTRACTOR_EMAIL) {
+        const { jobs: demoJobs } = await getDemoOpenJobs();
+        setJobs(demoJobs as AvailableJob[]);
+        setJobsLoading(false);
+        return;
+      }
+      // Real contractor — load from Supabase.
+      const { jobs: dbJobs, error } = await getOpenJobs();
+      if (error) {
+        setJobsError(error);
+      } else if (Array.isArray(dbJobs)) {
+        const mapped: AvailableJob[] = dbJobs.map((j: any) => ({
+          id: j.id,
+          title: j.title,
+          description: j.description,
+          location: j.location,
+          budget: j.budget_min && j.budget_max
+            ? `$${Number(j.budget_min).toLocaleString()}–$${Number(j.budget_max).toLocaleString()}`
+            : j.budget_min
+            ? `$${Number(j.budget_min).toLocaleString()}+`
+            : "Negotiable",
+          timeline: j.urgency ?? "Flexible",
+          postedAt: new Date(j.created_at),
+          category: j.category ?? "General",
+          urgency: (j.urgency === "urgent" ? "high" : j.urgency === "soon" ? "medium" : "low") as "low" | "medium" | "high",
+          bidsCount: 0,
+          homeownerName: j.profiles?.full_name
+            ? j.profiles.full_name.split(" ")[0] + " " + (j.profiles.full_name.split(" ")[1]?.[0] ?? "") + "."
+            : "Homeowner",
+          propertyType: "Home",
+          preferredContact: "Platform",
+          imageCount: (j.images ?? []).length,
+        }));
+        setJobs(mapped);
+      }
+      setJobsLoading(false);
+    })();
   }, []);
   const [selectedJob, setSelectedJob] = useState<AvailableJob | null>(null);
   const [showMobileDetail, setShowMobileDetail] = useState(false);

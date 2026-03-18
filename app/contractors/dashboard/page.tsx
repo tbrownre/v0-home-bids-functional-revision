@@ -200,25 +200,25 @@ export default function ContractorDashboard() {
     setBidsLoading(true);
 
     // Demo contractor — load rich pre-seeded bid pipeline from local data.
-    createClient().then((supabase) =>
-      supabase.auth.getUser().then(async ({ data: { user } }) => {
-        if (user?.email === DEMO_CONTRACTOR_EMAIL) {
-          const { bids: demoBids } = await getDemoContractorBids();
-          setBids((demoBids ?? []).map((b) => mapBidFromDb(b as Record<string, unknown>)));
-          setBidsLoading(false);
-          return;
-        }
-        // Real contractor — load from Supabase.
-        getContractorBids().then(({ bids: rawBids, error }) => {
-          if (error) {
-            setBidsError(error);
-          } else {
-            setBids((rawBids ?? []).map((b) => mapBidFromDb(b as Record<string, unknown>)));
-          }
-          setBidsLoading(false);
-        });
-      })
-    );
+    // createClient() is synchronous — do NOT call .then() on it.
+    ;(async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email === DEMO_CONTRACTOR_EMAIL) {
+        const { bids: demoBids } = await getDemoContractorBids();
+        setBids((demoBids ?? []).map((b) => mapBidFromDb(b as Record<string, unknown>)));
+        setBidsLoading(false);
+        return;
+      }
+      // Real contractor — load from Supabase.
+      const { bids: rawBids, error } = await getContractorBids();
+      if (error) {
+        setBidsError(error);
+      } else {
+        setBids((rawBids ?? []).map((b) => mapBidFromDb(b as Record<string, unknown>)));
+      }
+      setBidsLoading(false);
+    })();
   }, []);
   const [selectedBid, setSelectedBid] = useState<ActiveBid | null>(null);
   const [showMobileDetail, setShowMobileDetail] = useState(false);
