@@ -120,11 +120,12 @@ async function handleCheckoutCompleted(
   }
 
   // If this is a contractor, mark them as approved in contractor_profiles.
+  // contractor_profiles.id = auth.users.id (there is no user_id column).
   if (userType === 'contractor') {
     const { error: cpError } = await supabase
       .from('contractor_profiles')
-      .update({ status: 'approved' })
-      .eq('user_id', userId)
+      .update({ approval_status: 'approved', is_approved: true })
+      .eq('id', userId)
 
     if (cpError) {
       console.error('[stripe-webhook] Failed to approve contractor_profile:', cpError)
@@ -145,7 +146,7 @@ async function handleSubscriptionUpdated(
 
   const periodEnd = new Date(subscription.current_period_end * 1000).toISOString()
 
-  await supabase
+  const { error: updError } = await supabase
     .from('subscriptions')
     .update({
       status: subscription.status,
@@ -153,6 +154,11 @@ async function handleSubscriptionUpdated(
       current_period_end: periodEnd,
     })
     .eq('user_id', userId)
+
+  if (updError) {
+    console.error('[stripe-webhook] Failed to update subscription:', updError)
+    throw updError
+  }
 }
 
 async function handleSubscriptionDeleted(
@@ -163,8 +169,13 @@ async function handleSubscriptionDeleted(
   const userId = subscription.metadata?.userId
   if (!userId) return
 
-  await supabase
+  const { error: delError } = await supabase
     .from('subscriptions')
     .update({ status: 'canceled' })
     .eq('user_id', userId)
+
+  if (delError) {
+    console.error('[stripe-webhook] Failed to cancel subscription:', delError)
+    throw delError
+  }
 }
