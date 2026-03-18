@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { getOpenJobs, submitBid } from "@/lib/supabase/actions";
+import { getOpenJobs as getDemoOpenJobs } from "@/lib/demo/services";
+import { DEMO_CONTRACTOR_EMAIL } from "@/lib/demo-guard";
+import { createClient } from "@/lib/supabase/client";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
@@ -267,16 +270,27 @@ export default function ContractorJobsMarketplace() {
   const [jobsLoading, setJobsLoading] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
 
-  // Fetch real open jobs from Supabase — always replace local state.
+  // Fetch open jobs — demo contractor sees rich pre-seeded data; real contractors hit Supabase.
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) {
-      // v0 preview sandbox: show sample data so the page is usable in demos
       setJobs(allAvailableJobs);
       setJobsLoading(false);
       return;
     }
-    setJobsLoading(true);
-    getOpenJobs().then(({ jobs: dbJobs, error }) => {
+
+    // Check if logged in as demo contractor, then serve demo data.
+    // createClient() is synchronous — do NOT call .then() on it.
+    ;(async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email === DEMO_CONTRACTOR_EMAIL) {
+        const { jobs: demoJobs } = await getDemoOpenJobs();
+        setJobs(demoJobs as AvailableJob[]);
+        setJobsLoading(false);
+        return;
+      }
+      // Real contractor — load from Supabase.
+      const { jobs: dbJobs, error } = await getOpenJobs();
       if (error) {
         setJobsError(error);
       } else if (Array.isArray(dbJobs)) {
@@ -305,7 +319,7 @@ export default function ContractorJobsMarketplace() {
         setJobs(mapped);
       }
       setJobsLoading(false);
-    });
+    })();
   }, []);
   const [selectedJob, setSelectedJob] = useState<AvailableJob | null>(null);
   const [showMobileDetail, setShowMobileDetail] = useState(false);

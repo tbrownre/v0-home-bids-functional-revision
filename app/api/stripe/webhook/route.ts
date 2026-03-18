@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 /**
  * Service-role Supabase client — only used server-side in this route handler.
@@ -70,7 +70,8 @@ export async function POST(request: NextRequest) {
 
 async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
-  supabase: ReturnType<typeof createClient>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any>,
 ) {
   const userId = session.metadata?.userId
   const planId = session.metadata?.planId
@@ -136,7 +137,8 @@ async function handleCheckoutCompleted(
 
 async function handleSubscriptionUpdated(
   subscription: Stripe.Subscription,
-  supabase: ReturnType<typeof createClient>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any>,
 ) {
   const userId = subscription.metadata?.userId
   if (!userId) return
@@ -155,7 +157,8 @@ async function handleSubscriptionUpdated(
 
 async function handleSubscriptionDeleted(
   subscription: Stripe.Subscription,
-  supabase: ReturnType<typeof createClient>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any>,
 ) {
   const userId = subscription.metadata?.userId
   if (!userId) return
