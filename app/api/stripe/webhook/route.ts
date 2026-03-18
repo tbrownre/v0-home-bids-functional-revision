@@ -91,10 +91,12 @@ async function handleCheckoutCompleted(
     : session.subscription?.id ?? null
 
   // Fetch full subscription to get current_period dates and status.
+  // stripe.subscriptions.retrieve() returns Response<Subscription> in Stripe v17+.
+  // Cast via unknown to the underlying Subscription shape we actually need.
   let periodEnd: string | null = null
   let subStatus: string = 'active'
   if (subscriptionId) {
-    const sub = await stripe.subscriptions.retrieve(subscriptionId)
+    const sub = (await stripe.subscriptions.retrieve(subscriptionId)) as unknown as Stripe.Subscription
     periodEnd = new Date(sub.current_period_end * 1000).toISOString()
     subStatus = sub.status
   }

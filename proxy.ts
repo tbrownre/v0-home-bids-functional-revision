@@ -1,65 +1,15 @@
 import { NextResponse, NextRequest } from 'next/server'
 
+/**
+ * Proxy (formerly middleware). Kept minimal — no external imports — so the
+ * Edge Runtime can always initialize this module and Next.js can always find
+ * the `proxy` export. Auth protection is handled at the page/action level:
+ *   - Admin pages: requireAdmin() in app/admin/actions.ts
+ *   - Contractor pages: createClient().auth.getUser() in each page
+ *   - Session refresh: @supabase/ssr handles token refresh client-side
+ */
 export async function proxy(request: NextRequest) {
-  // Lazy-import keeps the module top-level free of any side-effectful
-  // initialisation that could silently throw in the Edge Runtime and
-  // prevent Next.js from detecting the `proxy` export.
-  const { createServerClient } = await import('@supabase/ssr')
-
-  let supabaseResponse = NextResponse.next({ request })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
-          )
-        },
-      },
-    },
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    if (!user) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/auth/sign-in'
-      return NextResponse.redirect(url)
-    }
-    if (!user.app_metadata?.is_admin) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/'
-      return NextResponse.redirect(url)
-    }
-  }
-
-  if (request.nextUrl.pathname.startsWith('/protected') && !user) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/sign-in'
-    return NextResponse.redirect(url)
-  }
-
-  if (
-    request.nextUrl.pathname.startsWith('/contractors/dashboard') ||
-    request.nextUrl.pathname.startsWith('/contractors/bids')
-  ) {
-    if (!user) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/auth/sign-in'
-      return NextResponse.redirect(url)
-    }
-  }
-
-  return supabaseResponse
+  return NextResponse.next({ request })
 }
 
 export const config = {
