@@ -317,8 +317,10 @@ export default function HomePage() {
   }, []);
 
   // Load jobs — demo accounts get rich pre-seeded data; real users hit Supabase.
+  // Wait until userEmail is resolved (non-null) before deciding which path to take,
+  // so isDemoEmail never mis-fires when email hasn't loaded yet.
   useEffect(() => {
-    if (!isSignedIn) return;
+    if (!isSignedIn || userEmail === null) return;
     if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
 
     const loadJobs = isDemoEmail(userEmail)

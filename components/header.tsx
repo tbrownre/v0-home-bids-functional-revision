@@ -230,7 +230,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
                   )}
 
                   <Link
-                    href={isContractor ? "/contractors/bids" : "/?showJobs=true"}
+                    href={isContractor ? "/contractors/dashboard" : "/?showJobs=true"}
                     className={menuItemClass}
                     onClick={closeMenu}
                   >

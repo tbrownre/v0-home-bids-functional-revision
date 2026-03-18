@@ -16,12 +16,11 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSignIn(emailVal: string, passwordVal: string) {
     setLoading(true);
     setError("");
 
-    const result = await signIn(email, password);
+    const result = await signIn(emailVal, passwordVal);
 
     if (result.error) {
       // Unconfirmed email — send to verify-email with resend CTA
@@ -29,7 +28,9 @@ export default function SignInPage() {
         result.error.toLowerCase().includes("email not confirmed") ||
         result.error.toLowerCase().includes("not confirmed")
       ) {
-        window.location.href = `/auth/verify-email?status=pending&email=${encodeURIComponent(email)}`;
+        // setLoading(false) before redirect so spinner doesn't linger if slow
+        setLoading(false);
+        window.location.href = `/auth/verify-email?status=pending&email=${encodeURIComponent(emailVal)}`;
         return;
       }
       setError(result.error);
@@ -44,6 +45,11 @@ export default function SignInPage() {
     } else {
       window.location.replace("/?showJobs=true");
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await handleSignIn(email, password);
   }
 
   return (
@@ -101,15 +107,25 @@ export default function SignInPage() {
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => { setEmail(DEMO_HOMEOWNER_EMAIL); setPassword(DEMO_PASSWORD); }}
-                className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                disabled={loading}
+                onClick={() => {
+                  setEmail(DEMO_HOMEOWNER_EMAIL);
+                  setPassword(DEMO_PASSWORD);
+                  handleSignIn(DEMO_HOMEOWNER_EMAIL, DEMO_PASSWORD);
+                }}
+                className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
               >
                 Homeowner demo
               </button>
               <button
                 type="button"
-                onClick={() => { setEmail(DEMO_CONTRACTOR_EMAIL); setPassword(DEMO_PASSWORD); }}
-                className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                disabled={loading}
+                onClick={() => {
+                  setEmail(DEMO_CONTRACTOR_EMAIL);
+                  setPassword(DEMO_PASSWORD);
+                  handleSignIn(DEMO_CONTRACTOR_EMAIL, DEMO_PASSWORD);
+                }}
+                className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
               >
                 Contractor demo
               </button>
