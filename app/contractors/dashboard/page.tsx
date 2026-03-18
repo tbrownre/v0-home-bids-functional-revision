@@ -52,6 +52,8 @@ import {
 import Link from "next/link";
 import { getContractorBids } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
+import { getContractorBids as getDemoContractorBids } from "@/lib/demo/services";
+import { DEMO_CONTRACTOR_EMAIL } from "@/lib/demo-guard";
 
 interface ActiveBid {
   id: string;
@@ -191,20 +193,32 @@ export default function ContractorDashboard() {
   }, []);
 
   useEffect(() => {
-    // Skip in v0 preview sandbox
     if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) {
       setBidsLoading(false);
       return;
     }
     setBidsLoading(true);
-    getContractorBids().then(({ bids: rawBids, error }) => {
-      if (error) {
-        setBidsError(error);
-      } else {
-        setBids((rawBids ?? []).map((b) => mapBidFromDb(b as Record<string, unknown>)));
-      }
-      setBidsLoading(false);
-    });
+
+    // Demo contractor — load rich pre-seeded bid pipeline from local data.
+    createClient().then((supabase) =>
+      supabase.auth.getUser().then(async ({ data: { user } }) => {
+        if (user?.email === DEMO_CONTRACTOR_EMAIL) {
+          const { bids: demoBids } = await getDemoContractorBids();
+          setBids((demoBids ?? []).map((b) => mapBidFromDb(b as Record<string, unknown>)));
+          setBidsLoading(false);
+          return;
+        }
+        // Real contractor — load from Supabase.
+        getContractorBids().then(({ bids: rawBids, error }) => {
+          if (error) {
+            setBidsError(error);
+          } else {
+            setBids((rawBids ?? []).map((b) => mapBidFromDb(b as Record<string, unknown>)));
+          }
+          setBidsLoading(false);
+        });
+      })
+    );
   }, []);
   const [selectedBid, setSelectedBid] = useState<ActiveBid | null>(null);
   const [showMobileDetail, setShowMobileDetail] = useState(false);

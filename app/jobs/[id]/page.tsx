@@ -27,6 +27,7 @@ import { Header } from "@/components/header";
 import { completeJob, archiveJob, type JobStatusOwner } from "@/lib/job-store";
 import { Label } from "@/components/ui/label";
 import { getJobById } from "@/lib/supabase/actions";
+import { getJobById as getDemoJobById } from "@/lib/demo/services";
 
 interface Message {
   id: string;
@@ -81,7 +82,9 @@ export default function JobDetailsPage() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    getJobById(id).then(({ job, error }) => {
+    const isDemoJob = id.startsWith("demo-job-");
+    const fetchJob = isDemoJob ? getDemoJobById(id) : getJobById(id);
+    fetchJob.then(({ job, error }) => {
       if (error || !job) {
         setFetchError(error ?? "Job not found");
       } else {

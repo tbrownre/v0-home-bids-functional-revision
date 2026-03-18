@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { selectBidAsWinner } from "@/lib/job-store";
 import { acceptBid as acceptBidAction, getJobBids } from "@/lib/supabase/actions";
+import { getJobBids as getDemoJobBids } from "@/lib/demo/services";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -296,34 +297,40 @@ export default function BidsPage() {
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
   const [messages, setMessages] = useState<Record<string, Message[]>>(sampleMessages);
 
-  // Fetch real bids for this job using the decoupled getJobBids action.
-  // Falls back to sampleBids if no real bids are found (demo/preview mode).
+  // Fetch bids — demo jobs load rich pre-seeded data; real jobs hit Supabase.
   useEffect(() => {
     if (!jobId) return;
     if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
-    getJobBids(jobId).then(({ bids: realBids, error }) => {
+
+    const isDemoJob = jobId.startsWith("demo-job-");
+    const fetchBids = isDemoJob ? getDemoJobBids(jobId) : getJobBids(jobId);
+
+    fetchBids.then(({ bids: rawBids, error }) => {
       if (error) {
         console.error("[BidsPage] Failed to load bids:", error);
-        return; // Keep sample bids as fallback
+        return;
       }
-      if (realBids && realBids.length > 0) {
-        const mapped: Bid[] = realBids.map((b: any) => ({
+      if (rawBids && rawBids.length > 0) {
+        const mapped: Bid[] = rawBids.map((b: any) => ({
           id: b.id,
-          companyName: b.business_name ?? "Contractor",
-          companyLogo: "/images/contractor-placeholder.png",
-          price: b.amount,
+          companyName: b.companyName ?? b.business_name ?? "Contractor",
+          companyLogo: b.companyLogo ?? "/images/contractor-placeholder.png",
+          price: b.price ?? b.amount ?? 0,
           timeline: b.timeline ?? "Flexible",
-          rating: 0,
-          reviewCount: 0,
-          message: b.message ?? "",
-          verified: false,
-          yearsInBusiness: 0,
-          location: "",
-          phone: "",
-          email: "",
-          website: "",
-          completedJobs: 0,
-          responseTime: "",
+          rating: b.rating ?? 0,
+          reviewCount: b.reviewCount ?? 0,
+          message: b.message ?? b.message_text ?? "",
+          verified: b.verified ?? false,
+          yearsInBusiness: b.yearsInBusiness ?? 0,
+          location: b.location ?? "",
+          phone: b.phone ?? "",
+          email: b.email ?? "",
+          website: b.website ?? "",
+          completedJobs: b.completedJobs ?? 0,
+          responseTime: b.responseTime ?? "",
+          financingAvailable: b.financingAvailable,
+          inspectionFee: b.inspectionFee,
+          depositRequired: b.depositRequired,
         }));
         setBids(mapped);
       }

@@ -46,6 +46,8 @@ import { SubscriptionCheckout } from "@/components/subscription-checkout";
 import { getJobStatus, subscribe, isJobArchived, type JobStatusOwner, getJobStatusLabel } from "@/lib/job-store";
 import { signUpHomeowner, createJob, getHomeownerJobs } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
+import { isDemoEmail, DEMO_HOMEOWNER_EMAIL } from "@/lib/demo-guard";
+import { getHomeownerJobs as getDemoHomeownerJobs } from "@/lib/demo/services";
 
 // Centralized sign-out: clears Supabase session then hard-navigates to home.
 async function performSignOut() {
@@ -95,6 +97,7 @@ export default function HomePage() {
   // Auth state from Supabase only
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [isContractor, setIsContractor] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const homeownerUnreadCount = 0; // inbox wired separately
 
   // Ref-based flags so the restore logic never creates a dep-loop.
@@ -128,6 +131,7 @@ export default function HomePage() {
           } else {
             setIsSignedIn(true);
             setIsContractor(false);
+            setUserEmail(user.email ?? null);
             // Auto-restore jobs board on initial load only when the user is on
             // the idle landing screen ("describe"). Never interrupt a form flow,
             // the success step, or any other active step.
@@ -157,6 +161,7 @@ export default function HomePage() {
           } else {
             setIsSignedIn(true);
             setIsContractor(false);
+            setUserEmail(session.user.email ?? null);
             // Only auto-restore on a fresh sign-in, not on token refresh or
             // any event that fires during an active form flow or post-submit.
             // currentStepRef must be "describe" — never interrupt the success
@@ -311,15 +316,18 @@ export default function HomePage() {
     return unsubscribe;
   }, []);
 
-  // Load real jobs from Supabase — only when the user is confirmed signed-in.
+  // Load jobs — demo accounts get rich pre-seeded data; real users hit Supabase.
   useEffect(() => {
     if (!isSignedIn) return;
     if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
-    getHomeownerJobs().then(({ jobs: dbJobs, error }) => {
-      // Always replace local state with the authoritative DB result — even an
+
+    const loadJobs = isDemoEmail(userEmail)
+      ? getDemoHomeownerJobs()
+      : getHomeownerJobs();
+
+    loadJobs.then(({ jobs: dbJobs, error }) => {
+      // Always replace local state with the authoritative result — even an
       // empty array is correct (e.g. a brand-new user who just signed up).
-      // The previous guard `if (dbJobs.length > 0)` silently swallowed the
-      // first-posted job for new users whose DB returned a single row.
       if (!error && Array.isArray(dbJobs)) {
         setUserJobs(dbJobs.map((j: any) => ({
           id: j.id,
@@ -330,7 +338,7 @@ export default function HomePage() {
         })));
       }
     });
-  }, [isSignedIn]);
+  }, [isSignedIn, userEmail]);
 
   const handleImageUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
