@@ -224,35 +224,50 @@ export default function HomePage() {
     setCurrentStep(step);
   }, []);
 
-  const exampleProjects = [
-    { text: "We have a leak under our kitchen sink that's been getting worse over the past few days. Looking for a licensed plumber to inspect and repair it.", category: "Plumbing", location: "Austin, TX", postedAgo: "2 min ago", bids: 3 },
-    { text: "Need pressure washing for our driveway and backyard patio. Both areas have built-up dirt and stains.", category: "Exterior", location: "Round Rock, TX", postedAgo: "5 min ago", bids: 2 },
-    { text: "Several outlets in our living room stopped working suddenly. Looking for an electrician to troubleshoot and repair.", category: "Electrical", location: "Cedar Park, TX", postedAgo: "8 min ago", bids: 4 },
-    { text: "Our AC is running but not cooling the house properly. Airflow feels weak. Need HVAC diagnosis and repair.", category: "HVAC", location: "Pflugerville, TX", postedAgo: "12 min ago", bids: 5 },
-    { text: "Fence has multiple broken panels from recent wind. Looking for repair or partial replacement.", category: "Fencing", location: "Georgetown, TX", postedAgo: "15 min ago", bids: 2 },
-    { text: "Looking for ongoing lawn care including mowing, edging, and weed control. Biweekly service needed.", category: "Lawn Care", location: "Lakeway, TX", postedAgo: "18 min ago", bids: 6 },
-    { text: "The heater won't turn on and the house stays cold. Need HVAC service as soon as possible.", category: "HVAC", location: "Leander, TX", postedAgo: "22 min ago", bids: 3 },
-    { text: "Breaker keeps tripping whenever we use the microwave or toaster at the same time.", category: "Electrical", location: "Bee Cave, TX", postedAgo: "25 min ago", bids: 2 },
-    { text: "Drywall damage in the hallway from a small plumbing leak. Need repair, texture matching, and repainting.", category: "Drywall", location: "Kyle, TX", postedAgo: "30 min ago", bids: 4 },
-    { text: "Large tree in the backyard is leaning and dropping branches. Looking for removal or trimming.", category: "Tree Service", location: "Buda, TX", postedAgo: "35 min ago", bids: 3 },
-    { text: "Garage door opens inconsistently and sometimes gets stuck halfway. Looking for repair service.", category: "Garage Door", location: "Dripping Springs, TX", postedAgo: "40 min ago", bids: 2 },
-    { text: "Low water pressure in two bathrooms and the kitchen. Need a plumber to inspect the system.", category: "Plumbing", location: "Manor, TX", postedAgo: "45 min ago", bids: 5 },
-    { text: "Need a ceiling fan installed in the master bedroom. Existing wiring is in place.", category: "Electrical", location: "Hutto, TX", postedAgo: "50 min ago", bids: 3 },
-    { text: "Several interior doors don't close properly and rub against the frame.", category: "Handyman", location: "Taylor, TX", postedAgo: "55 min ago", bids: 2 },
-    { text: "Seeing ants and spiders inside the house. Looking for pest control service and prevention.", category: "Pest Control", location: "Bastrop, TX", postedAgo: "1 hr ago", bids: 4 },
-    { text: "Roof developed a small leak after recent rainstorms. Need inspection and repair.", category: "Roofing", location: "San Marcos, TX", postedAgo: "1 hr ago", bids: 6 },
+  const examplePrompts = [
+    "We have a leak under our kitchen sink that's been getting worse over the past few days. Looking for a licensed plumber to inspect and repair it within the next week.",
+    "Need pressure washing for our driveway and backyard patio. Both areas have built-up dirt and stains and we'd like pricing and availability.",
+    "Several outlets in our living room stopped working suddenly. Looking for an electrician to troubleshoot, repair, and confirm everything is safe.",
+    "Our AC is running but not cooling the house properly. Airflow feels weak and indoor temps won't drop below 78. Need HVAC diagnosis and repair.",
+    "Fence has multiple broken panels from recent wind. Looking for repair or partial replacement and a cost estimate.",
+    "Looking for ongoing lawn care including mowing, edging, and weed control. Yard is medium-sized and service would be biweekly.",
+    "The heater won't turn on and the house stays cold even when the thermostat is set higher. Need HVAC service as soon as possible.",
+    "Breaker keeps tripping whenever we use the microwave or toaster at the same time. Need an electrician to inspect and resolve.",
+    "Drywall damage in the hallway from a small plumbing leak. Need drywall repair, texture matching, and repainting.",
+    "Large tree in the backyard is leaning and dropping branches. Looking for removal or trimming and safety assessment.",
+    "Garage door opens inconsistently and sometimes gets stuck halfway. Looking for repair service and availability this week.",
+    "Low water pressure in two bathrooms and the kitchen. Need a plumber to inspect the system and recommend a fix.",
+    "Need a ceiling fan installed in the master bedroom. Existing wiring is in place. Looking for pricing and scheduling.",
+    "Several interior doors don't close properly and rub against the frame. Looking for a handyman to realign and fix.",
+    "Seeing ants and spiders inside the house, especially in the kitchen and bathrooms. Looking for pest control service and prevention treatment.",
+    "Roof developed a small leak after recent rainstorms. Need inspection, repair, and estimate for any additional work needed.",
+    "Lights flicker occasionally throughout the house, especially in the evenings. Need an electrician to diagnose and make repairs.",
+    "Interested in seasonal HVAC servicing before summer. Looking for system inspection, cleaning, and performance check.",
+    "Loose handrail on our stairway that needs to be secured for safety. Looking for a quick repair.",
+    "Water heater is inconsistent and sometimes runs out of hot water quickly. Need evaluation for repair or replacement options.",
+    "Looking to mount a 65\" TV in the living room and hide cables inside the wall. Need installation and pricing.",
+    "Main drain appears clogged and is causing slow drainage in multiple sinks. Looking for urgent plumbing service.",
+    "Cracked bathroom tiles near the shower area. Need tile replacement and sealing to prevent water damage.",
+    "AC unit is making loud rattling noises when running. Need someone to inspect and let us know what's wrong.",
+    "Our toilet keeps running and occasionally overflows. Looking for a plumber to fix the issue and provide an estimate.",
+    "Interested in installing outdoor lighting around the front walkway and backyard. Looking for design suggestions and pricing.",
+    "Uneven temperatures throughout the home with some rooms much warmer than others. Need HVAC inspection and airflow recommendations.",
+    "Upgrading an older electrical panel to support new appliances. Looking for a licensed electrician and full quote.",
+    "Noticing wasps near the roofline and backyard. Need pest control inspection and removal as soon as possible.",
+    "Need tree trimming for two mature trees near the driveway. Looking for cleanup included and pricing.",
+    "Front lawn has dead patches and weeds. Looking for lawn restoration and regular maintenance options.",
   ];
 
-  // Rotate example projects to make the site appear active
+  // Rotate example prompts
   useEffect(() => {
     if (currentStep !== "describe" || showJobsBoard) return;
     
     const interval = setInterval(() => {
-      setExampleIndex((prev) => (prev + 1) % exampleProjects.length);
-    }, 3500); // Slightly faster rotation for activity feel
+      setExampleIndex((prev) => (prev + 1) % examplePrompts.length);
+    }, 4000);
 
     return () => clearInterval(interval);
-  }, [currentStep, showJobsBoard, exampleProjects.length]);
+  }, [currentStep, showJobsBoard, examplePrompts.length]);
 
   // Start with empty jobs — real data is loaded from Supabase in the effect below.
   // Never seed with mock data: new users would see phantom jobs they never created.
@@ -930,7 +945,7 @@ export default function HomePage() {
                         className="absolute inset-x-0 top-0 px-4 py-2"
                       >
                         <p className="text-center text-sm italic leading-relaxed text-muted-foreground/80">
-                          &ldquo;{exampleProjects[exampleIndex].text}&rdquo;
+                          &ldquo;{examplePrompts[exampleIndex]}&rdquo;
                         </p>
                       </motion.div>
                     </AnimatePresence>
