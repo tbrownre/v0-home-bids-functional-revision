@@ -71,9 +71,9 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: 'contractor-elite',
     name: 'Elite',
-    description: 'Maximum visibility and lowest bid costs.',
+    description: 'Maximum visibility. Zero dollars per bid.',
     priceInCents: 7900, // $79/month
-    bidFeeInCents: 400, // $4 per bid
+    bidFeeInCents: 0, // $0 per bid
     userType: 'contractor',
     hasTrial: false,
     features: [
@@ -85,8 +85,9 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
       'Job value estimates',
       'Advanced contractor analytics',
       'Elite contractor badge',
+      'Zero cost per bid',
     ],
-    savingsCallout: 'Save 60% on bid fees',
+    savingsCallout: 'Bid unlimited for $79/month',
   },
 ]
 
