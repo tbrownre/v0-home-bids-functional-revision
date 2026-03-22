@@ -914,54 +914,28 @@ export default function HomePage() {
                   *Your contact info is never shared until you approve a bid.
                 </p>
 
-                {/* Rotating Example Projects — shows activity */}
-                <div className="mt-16 flex flex-col items-center">
-                  <div className="mb-4 flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
-                    </span>
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
-                      Live project feed
-                    </p>
-                  </div>
-                  <div className="relative min-h-[7rem] w-full max-w-lg">
+                {/* Rotating Example Prompts */}
+                <div className="mt-20 flex flex-col items-center">
+                  <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
+                    Example projects
+                  </p>
+                  <div className="relative min-h-[4.5rem] w-full max-w-lg sm:min-h-[3.5rem]">
                     <AnimatePresence mode="wait">
                       <motion.div
                         key={exampleIndex}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.25, ease: "easeOut" }}
-                        className="absolute inset-x-0 top-0"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="absolute inset-x-0 top-0 px-4 py-2"
                       >
-                        <div className="mx-auto max-w-md rounded-xl border border-border/60 bg-card/50 p-4 shadow-sm backdrop-blur-sm">
-                          <div className="mb-2 flex items-center justify-between">
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                              <Tag className="h-3 w-3" />
-                              {exampleProjects[exampleIndex].category}
-                            </span>
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Clock className="h-3 w-3" />
-                              {exampleProjects[exampleIndex].postedAgo}
-                            </span>
-                          </div>
-                          <p className="text-sm leading-relaxed text-foreground/90">
-                            &ldquo;{exampleProjects[exampleIndex].text}&rdquo;
-                          </p>
-                          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {exampleProjects[exampleIndex].location}
-                            </span>
-                            <span className="font-medium text-green-600">
-                              {exampleProjects[exampleIndex].bids} bids received
-                            </span>
-                          </div>
-                        </div>
+                        <p className="text-center text-sm italic leading-relaxed text-muted-foreground/80">
+                          &ldquo;{exampleProjects[exampleIndex].text}&rdquo;
+                        </p>
                       </motion.div>
                     </AnimatePresence>
                   </div>
+
                 </div>
               </motion.div>
             )}
