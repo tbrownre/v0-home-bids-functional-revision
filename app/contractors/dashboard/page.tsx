@@ -625,7 +625,7 @@ export default function ContractorDashboard() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: stage.delay }}
-                    className={`rounded-xl border transition-all ${isExpanded ? `${stage.borderActive} ${stage.bgActive}` : `${stage.border} ${stage.bg} ${stage.hoverBorder} hover:shadow-sm`}`}
+                    className={`rounded-xl border transition-all ${stage.key === "completed" ? "col-span-2 lg:col-span-1" : ""} ${isExpanded ? `${stage.borderActive} ${stage.bgActive}` : `${stage.border} ${stage.bg} ${stage.hoverBorder} hover:shadow-sm`}`}
                   >
                     {/* Card header - click to expand/collapse dropdown only */}
                     <div
