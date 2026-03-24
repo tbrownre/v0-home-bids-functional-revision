@@ -52,7 +52,7 @@ import {
 import Link from "next/link";
 import { getContractorBids } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
-import { getContractorBids as getDemoContractorBids } from "@/lib/demo/services";
+import { getContractorBids as getDemoContractorBids, getOpenJobs as getDemoOpenJobs } from "@/lib/demo/services";
 import { DEMO_CONTRACTOR_EMAIL } from "@/lib/demo-guard";
 
 interface ActiveBid {
@@ -207,6 +207,9 @@ export default function ContractorDashboard() {
       if (user?.email === DEMO_CONTRACTOR_EMAIL) {
         const { bids: demoBids } = await getDemoContractorBids();
         setBids((demoBids ?? []).map((b) => mapBidFromDb(b as Record<string, unknown>)));
+        // Load 3 suggested jobs for the demo contractor
+        const { jobs: openJobs } = await getDemoOpenJobs();
+        setSuggestedJobs((openJobs ?? []).slice(0, 3) as AvailableJob[]);
         setBidsLoading(false);
         return;
       }
@@ -220,6 +223,7 @@ export default function ContractorDashboard() {
       setBidsLoading(false);
     })();
   }, []);
+  const [suggestedJobs, setSuggestedJobs] = useState<AvailableJob[]>([]);
   const [selectedBid, setSelectedBid] = useState<ActiveBid | null>(null);
   const [showMobileDetail, setShowMobileDetail] = useState(false);
   const [editingBid, setEditingBid] = useState<ActiveBid | null>(null);
@@ -713,18 +717,64 @@ export default function ContractorDashboard() {
                   <Briefcase className="h-4 w-4 text-primary" />
                   <h3 className="text-sm font-semibold text-foreground sm:text-base">Jobs You Might Like</h3>
                 </div>
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                  Browse all
-                </span>
+                <Link href="/contractors/jobs">
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors cursor-pointer">
+                    Browse all
+                  </span>
+                </Link>
               </div>
-              
-              <div className="rounded-xl border border-dashed border-border p-6 text-center">
-                <Briefcase className="mx-auto h-8 w-8 text-muted-foreground/40" />
-                <p className="mt-3 text-sm text-muted-foreground">Browse open jobs to find your next opportunity</p>
-                <Button asChild className="mt-4" size="sm">
-                  <Link href="/contractors/jobs">View Open Jobs</Link>
-                </Button>
-              </div>
+
+              {suggestedJobs.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border p-6 text-center">
+                  <Briefcase className="mx-auto h-8 w-8 text-muted-foreground/40" />
+                  <p className="mt-3 text-sm text-muted-foreground">Browse open jobs to find your next opportunity</p>
+                  <Button asChild className="mt-4" size="sm">
+                    <Link href="/contractors/jobs">View Open Jobs</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {suggestedJobs.map((job) => {
+                    const urgencyColors = {
+                      high: "bg-red-100 text-red-700",
+                      medium: "bg-amber-100 text-amber-700",
+                      low: "bg-emerald-100 text-emerald-700",
+                    };
+                    return (
+                      <button
+                        key={job.id}
+                        onClick={() => handleOpenJobPreview(job)}
+                        className="w-full rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-primary/40 hover:shadow-sm"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-semibold leading-tight text-foreground line-clamp-1">{job.title}</p>
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${urgencyColors[job.urgency]}`}>
+                            {job.urgency === "high" ? "Urgent" : job.urgency === "medium" ? "Soon" : "Flexible"}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {job.location}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <DollarSign className="h-3 w-3" />
+                            {job.budget}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {job.bidsCount} bid{job.bidsCount !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-xs text-muted-foreground line-clamp-2 leading-relaxed">{job.description}</p>
+                      </button>
+                    );
+                  })}
+                  <Button asChild variant="outline" size="sm" className="w-full mt-1">
+                    <Link href="/contractors/jobs">View All Open Jobs</Link>
+                  </Button>
+                </div>
+              )}
             </motion.div>
           </div>
 
