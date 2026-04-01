@@ -200,7 +200,7 @@ export default function HomeownersPage() {
               {
                 icon: Users,
                 title: "We Reach Out to Contractors for You",
-                desc: "We contact up to 100 matching contractors directly about your project. No need to hunt them down yourself — we bring qualified professionals to your door.",
+                desc: "We automatically contact up to 100 matching contractors about your project. No need to hunt them down yourself.",
               },
               {
                 icon: BarChart2,
