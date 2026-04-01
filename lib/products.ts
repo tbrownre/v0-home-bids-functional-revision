@@ -26,6 +26,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     userType: 'homeowner',
     features: [
       'Post unlimited home projects',
+      'We reach out to up to 100 matching contractors for you',
       'Receive bids from verified contractors',
       'Compare quotes before hiring',
       'Direct messaging with contractors',
