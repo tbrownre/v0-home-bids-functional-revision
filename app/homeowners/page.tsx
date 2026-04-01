@@ -198,6 +198,11 @@ export default function HomeownersPage() {
           <div className="mt-10 grid gap-6 sm:grid-cols-3">
             {[
               {
+                icon: Users,
+                title: "We Reach Out to Contractors for You",
+                desc: "We automatically contact up to 100 matching contractors about your project. No need to hunt them down yourself.",
+              },
+              {
                 icon: BarChart2,
                 title: "Compare Contractors Easily",
                 desc: "Review contractor bids side-by-side including pricing, experience, and project timelines. Make confident decisions without guesswork.",
@@ -206,11 +211,6 @@ export default function HomeownersPage() {
                 icon: MessageSquare,
                 title: "No Spam or Endless Phone Calls",
                 desc: "Your project stays organized inside HomeBids. Contractors communicate with you through private messaging, keeping everything simple and controlled.",
-              },
-              {
-                icon: Users,
-                title: "Post Once, Reach Many Contractors",
-                desc: "Instead of calling multiple companies, HomeBids brings interested contractors directly to you. One post. Multiple bids.",
               },
             ].map((card, i) => (
               <motion.div

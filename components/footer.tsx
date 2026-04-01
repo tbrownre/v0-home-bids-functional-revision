@@ -55,7 +55,7 @@ function FlyoutGroup({ label, items }: { label: string; items: { href?: string; 
                 {item.href ? (
                   <Link
                     href={item.href}
-                    className="block px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    className="block px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground rounded-md"
                     onClick={() => setOpen(false)}
                   >
                     {item.label}
@@ -63,7 +63,7 @@ function FlyoutGroup({ label, items }: { label: string; items: { href?: string; 
                 ) : (
                   <button
                     type="button"
-                    className="block w-full px-4 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    className="block w-full px-4 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground rounded-md"
                     onClick={() => { item.onClick?.(); setOpen(false); }}
                   >
                     {item.label}
