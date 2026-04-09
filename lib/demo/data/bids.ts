@@ -31,6 +31,7 @@ export interface DemoBid {
   business_name: string;
   amount: number;
   message_text: string;
+  featured?: boolean;
 }
 
 const now = Date.now();
@@ -99,6 +100,7 @@ export const demoBidsJob2: DemoBid[] = [
     business_name: "Summit Roofing Pros",
     amount: 12800,
     message_text: "We handle all paperwork with your insurer directly.",
+    featured: true,
   },
   {
     id: "bid-2-2",
