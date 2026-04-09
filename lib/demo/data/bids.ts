@@ -67,6 +67,7 @@ export const demoBidsJob1: DemoBid[] = [
     business_name: "Crafted Interiors Co.",
     amount: 11400,
     message_text: "Happy to bring samples to your home at no charge.",
+    featured: true,
   },
 ];
 
