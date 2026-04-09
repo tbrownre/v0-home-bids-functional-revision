@@ -24,6 +24,7 @@ import {
   Globe,
   Heart,
   CreditCard,
+  Sparkles,
 } from "lucide-react";
 import { selectBidAsWinner } from "@/lib/job-store";
 import { acceptBid as acceptBidAction, getJobBids } from "@/lib/supabase/actions";
@@ -54,7 +55,8 @@ interface Bid {
   financingAvailable?: boolean;
   inspectionFee?: string; // e.g. "Free", "$75", "$150"
   depositRequired?: string; // e.g. "None", "$500", "$1,200"
-  }
+  featured?: boolean;
+}
 
 interface Message {
   id: string;
@@ -470,7 +472,111 @@ export default function BidsPage() {
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Bids List */}
             <div className={`space-y-3 ${showMobileDetail ? "hidden lg:block" : "block"}`}>
-              {bids.map((bid, index) => {
+              {/* Featured Bid - Referred Contractor (demo mode only) */}
+              {bids.length > 0 && bids.some(b => b.featured) && (
+                <>
+                  {bids.filter(b => b.featured).map((bid) => (
+                    <motion.div
+                      key={bid.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0 }}
+                      onClick={() => handleSelectBid(bid)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSelectBid(bid)}
+                      role="button"
+                      tabIndex={0}
+                      className={`relative w-full cursor-pointer rounded-xl p-4 text-left transition-all border-2 border-amber-300/60 bg-gradient-to-r from-amber-50/80 to-orange-50/60 hover:border-amber-400 hover:shadow-md shadow-sm ${
+                        selectedBid?.id === bid.id
+                          ? "ring-2 ring-amber-400"
+                          : ""
+                      }`}
+                    >
+                      {/* Featured Badge */}
+                      <div className="absolute top-3 left-4 inline-flex items-center gap-1.5 rounded-full bg-amber-200/80 px-2.5 py-1 text-xs font-bold text-amber-900">
+                        <Sparkles className="h-3 w-3" />
+                        FEATURED
+                      </div>
+
+                      {/* Favorite button */}
+                      <button
+                        type="button"
+                        onClick={(e) => toggleFavorite(e, bid.id)}
+                        className="absolute right-3 top-3 z-10 flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-background/90 backdrop-blur-sm border border-border/50 shadow-sm transition-all hover:scale-110 hover:bg-background active:scale-95"
+                        aria-label={favoriteBids.has(bid.id) ? "Remove from favorites" : "Add to favorites"}
+                      >
+                        <Heart
+                          className={`h-4 w-4 transition-colors ${
+                            favoriteBids.has(bid.id)
+                              ? "fill-red-500 text-red-500"
+                              : "text-muted-foreground hover:text-red-400"
+                          }`}
+                        />
+                      </button>
+
+                      <div className="flex items-start gap-3 mt-6">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-200/40">
+                          <span className="text-lg font-bold text-amber-800">
+                            {bid.companyName.charAt(0)}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0 pr-8">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-foreground truncate text-sm sm:text-base">
+                              {bid.companyName}
+                            </span>
+                            {bid.verified && (
+                              <span className="shrink-0 flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
+                                <Shield className="h-3 w-3" />
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-amber-800 font-medium mt-1">Referred Contractor</p>
+                          <div className="mt-2 flex items-center gap-2 flex-wrap">
+                            <span className="inline-flex items-center gap-1 rounded-lg bg-green-50 px-2 py-1 text-xs sm:text-sm font-bold text-green-700">
+                              <DollarSign className="h-3 w-3" />
+                              {bid.price.toLocaleString()}
+                            </span>
+                            <span className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2 py-1 text-[10px] sm:text-xs font-medium text-blue-700">
+                              <Clock className="h-3 w-3" />
+                              {bid.timeline}
+                            </span>
+                            {bid.inspectionFee && (
+                              <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] sm:text-xs font-medium ${
+                                bid.inspectionFee === "Free"
+                                  ? "bg-emerald-50 text-emerald-700"
+                                  : "bg-amber-50 text-amber-700"
+                              }`}>
+                                <Shield className="h-3 w-3" />
+                                {bid.inspectionFee === "Free" ? "Free Inspection" : `${bid.inspectionFee} Inspection`}
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-2 flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <div className="flex">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star 
+                                    key={i} 
+                                    className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${i < Math.floor(bid.rating) ? "fill-yellow-400 text-yellow-400" : "fill-muted text-muted"}`} 
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-[10px] sm:text-xs font-medium text-foreground ml-1">{bid.rating}</span>
+                              <span className="text-[10px] sm:text-xs text-muted-foreground">
+                                ({bid.reviewCount})
+                              </span>
+                            </div>
+                            <ChevronRight className={`h-4 w-4 transition-transform ${selectedBid?.id === bid.id ? "text-primary translate-x-0.5" : "text-muted-foreground"}`} />
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </>
+              )}
+
+              {/* Regular Bids */}
+              {bids.filter(b => !b.featured).map((bid, index) => {
                 const bidMessages = messages[bid.id] || [];
                 const hasUnread = bidMessages.length > 0 && !bidMessages[bidMessages.length - 1].isOwn;
                 
