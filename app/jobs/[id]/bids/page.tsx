@@ -333,6 +333,7 @@ export default function BidsPage() {
           financingAvailable: b.financingAvailable,
           inspectionFee: b.inspectionFee,
           depositRequired: b.depositRequired,
+          featured: b.featured ?? false,
         }));
         setBids(mapped);
       }
@@ -485,14 +486,14 @@ export default function BidsPage() {
                       onKeyDown={(e) => e.key === "Enter" && handleSelectBid(bid)}
                       role="button"
                       tabIndex={0}
-                      className={`relative w-full cursor-pointer rounded-xl p-4 text-left transition-all border-2 border-amber-300/60 bg-gradient-to-r from-amber-50/80 to-orange-50/60 hover:border-amber-400 hover:shadow-md shadow-sm ${
+                      className={`relative w-full cursor-pointer rounded-xl p-4 text-left transition-all border-2 border-primary/30 bg-primary/5 hover:border-primary/50 hover:shadow-md shadow-sm ${
                         selectedBid?.id === bid.id
-                          ? "ring-2 ring-amber-400"
+                          ? "ring-2 ring-primary"
                           : ""
                       }`}
                     >
                       {/* Featured Badge */}
-                      <div className="absolute top-3 left-4 inline-flex items-center gap-1.5 rounded-full bg-amber-200/80 px-2.5 py-1 text-xs font-bold text-amber-900">
+                      <div className="absolute top-3 left-4 inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-1 text-xs font-bold text-primary">
                         <Sparkles className="h-3 w-3" />
                         FEATURED
                       </div>
@@ -514,8 +515,8 @@ export default function BidsPage() {
                       </button>
 
                       <div className="flex items-start gap-3 mt-6">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-200/40">
-                          <span className="text-lg font-bold text-amber-800">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15">
+                          <span className="text-lg font-bold text-primary">
                             {bid.companyName.charAt(0)}
                           </span>
                         </div>
@@ -530,7 +531,7 @@ export default function BidsPage() {
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-amber-800 font-medium mt-1">Referred Contractor</p>
+                          <p className="text-xs text-primary font-medium mt-1">Invited to your job</p>
                           <div className="mt-2 flex items-center gap-2 flex-wrap">
                             <span className="inline-flex items-center gap-1 rounded-lg bg-green-50 px-2 py-1 text-xs sm:text-sm font-bold text-green-700">
                               <DollarSign className="h-3 w-3" />
