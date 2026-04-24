@@ -1,20 +1,81 @@
 "use client";
 
-import { ChevronLeft, Star } from "lucide-react";
+import { ChevronLeft, Star, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 interface EarlyAccessContractorFlowProps {
   onBack: () => void;
   onClose: () => void;
 }
 
+const PLANS = [
+  {
+    id: "contractor-starter",
+    name: "Starter",
+    price: "$9.99",
+    perBid: "$10 per bid",
+    description: "Perfect for getting started",
+  },
+  {
+    id: "contractor-pro",
+    name: "Pro",
+    price: "$29",
+    perBid: "$7 per bid",
+    description: "Most popular choice",
+  },
+  {
+    id: "contractor-elite",
+    name: "Elite",
+    price: "$79",
+    perBid: "$0 per bid",
+    description: "Unlimited bidding included",
+  },
+];
+
 export function EarlyAccessContractorFlow({ onBack, onClose }: EarlyAccessContractorFlowProps) {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [user, setUser] = useState<any | null>(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createClient();
+      const { data } = await supabase.auth.getUser();
+      setUser(data?.user);
+    };
+    checkAuth();
+  }, []);
+
+  const handleChoosePlan = async (planId: string) => {
+    setLoadingPlan(planId);
+    
+    // Store early access params in session for checkout/signup
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('earlyAccessParams', JSON.stringify({
+        role: 'contractor',
+        plan: planId,
+        earlyAccess: true,
+      }));
+    }
+    
+    if (!user) {
+      // Not authenticated - redirect to signup with early access params
+      router.push(`/signup?role=contractor&plan=${planId}&early_access=true`);
+    } else {
+      // Already authenticated - redirect to checkout
+      router.push(`/checkout?plan=${planId}&early_access=true&role=contractor`);
+    }
+  };
+
   return (
     <>
       <div className="relative bg-gradient-to-br from-orange-50/50 via-background to-transparent px-6 pt-8 pb-6">
@@ -73,37 +134,22 @@ export function EarlyAccessContractorFlow({ onBack, onClose }: EarlyAccessContra
             Early Access Pricing — Lock this in now
           </p>
           <div className="space-y-3">
-            {[
-              {
-                name: "Starter",
-                price: "$9.99",
-                perBid: "$10 per bid",
-                description: "Perfect for getting started",
-              },
-              {
-                name: "Pro",
-                price: "$29",
-                perBid: "$7 per bid",
-                description: "Most popular choice",
-              },
-              {
-                name: "Elite",
-                price: "$79",
-                perBid: "$0 per bid",
-                description: "Unlimited bidding included",
-              },
-            ].map((plan) => (
+            {PLANS.map((plan) => (
               <div
-                key={plan.name}
+                key={plan.id}
                 className="rounded-lg border border-border p-4 hover:border-primary/30 hover:bg-primary/5 transition-all"
               >
                 <div className="flex items-start justify-between mb-2">
                   <h4 className="font-medium text-foreground">{plan.name}</h4>
-                  <Link href={`/contractors/subscribe?plan=${plan.name.toLowerCase()}&type=early_access`}>
-                    <Button variant="ghost" size="sm">
-                      Choose Plan
-                    </Button>
-                  </Link>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleChoosePlan(plan.id)}
+                    disabled={loadingPlan === plan.id}
+                  >
+                    {loadingPlan === plan.id && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                    {loadingPlan === plan.id ? "Loading..." : "Choose Plan"}
+                  </Button>
                 </div>
                 <div className="flex items-baseline gap-2 mb-2">
                   <span className="text-lg font-bold text-primary">{plan.price}</span>

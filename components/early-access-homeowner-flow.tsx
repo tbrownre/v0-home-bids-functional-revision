@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DialogDescription,
@@ -8,6 +8,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 interface EarlyAccessHomeonerFlowProps {
   onBack: () => void;
@@ -15,6 +18,40 @@ interface EarlyAccessHomeonerFlowProps {
 }
 
 export function EarlyAccessHomeonerFlow({ onBack, onClose }: EarlyAccessHomeonerFlowProps) {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState<any | null>(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createClient();
+      const { data } = await supabase.auth.getUser();
+      setUser(data?.user);
+    };
+    checkAuth();
+  }, []);
+
+  const handleStartTrial = async () => {
+    setIsLoading(true);
+    
+    // Store early access params in session for checkout/signup
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('earlyAccessParams', JSON.stringify({
+        role: 'homeowner',
+        plan: 'homeowner-monthly',
+        earlyAccess: true,
+      }));
+    }
+    
+    if (!user) {
+      // Not authenticated - redirect to signup with early access params
+      router.push("/signup?role=homeowner&plan=homeowner-monthly&early_access=true");
+    } else {
+      // Already authenticated - redirect to checkout
+      router.push("/checkout?plan=homeowner-monthly&early_access=true&role=homeowner");
+    }
+  };
+
   return (
     <>
       <div className="relative bg-gradient-to-br from-blue-50/50 via-background to-transparent px-6 pt-8 pb-6">
@@ -59,11 +96,14 @@ export function EarlyAccessHomeonerFlow({ onBack, onClose }: EarlyAccessHomeoner
           <p className="text-xs text-green-700 font-medium bg-green-100/50 rounded-lg px-3 py-2 mb-4">
             🔒 Lock in this rate before public pricing updates
           </p>
-          <Link href="/homeowners/signup?type=early_access">
-            <Button className="w-full">
-              Start Free Trial
-            </Button>
-          </Link>
+          <Button 
+            onClick={handleStartTrial}
+            disabled={isLoading}
+            className="w-full"
+          >
+            {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isLoading ? "Securing your early access…" : "Start Free Trial"}
+          </Button>
         </div>
 
         {/* Benefits */}
