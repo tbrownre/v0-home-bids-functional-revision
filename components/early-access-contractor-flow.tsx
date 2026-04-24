@@ -64,15 +64,16 @@ export function EarlyAccessContractorFlow({ onBack, onClose }: EarlyAccessContra
         role: 'contractor',
         plan: planId,
         earlyAccess: true,
+        foundingContractor: true,
       }));
     }
     
     if (!user) {
-      // Not authenticated - redirect to signup with early access params
-      router.push(`/signup?role=contractor&plan=${planId}&early_access=true`);
+      // Not authenticated - redirect to subscribe page with plan selected
+      router.push(`/subscribe?type=contractor&plan=${planId}&early_access=true&founding_contractor=true`);
     } else {
       // Already authenticated - redirect to checkout
-      router.push(`/checkout?plan=${planId}&early_access=true&role=contractor`);
+      router.push(`/subscribe?type=contractor&plan=${planId}&early_access=true&founding_contractor=true`);
     }
   };
 
@@ -145,10 +146,10 @@ export function EarlyAccessContractorFlow({ onBack, onClose }: EarlyAccessContra
                     variant="ghost" 
                     size="sm"
                     onClick={() => handleChoosePlan(plan.id)}
-                    disabled={loadingPlan === plan.id}
+                    disabled={loadingPlan !== null}
                   >
                     {loadingPlan === plan.id && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                    {loadingPlan === plan.id ? "Loading..." : "Choose Plan"}
+                    {loadingPlan === plan.id ? "Securing your Founding Contractor access…" : "Choose Plan"}
                   </Button>
                 </div>
                 <div className="flex items-baseline gap-2 mb-2">
