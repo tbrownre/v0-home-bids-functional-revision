@@ -33,6 +33,7 @@ import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ScrollToTop } from "@/components/scroll-to-top";
+import { FoundingContractorBadge } from "@/components/founding-contractor-badge";
 import { Header } from "@/components/header";
 
 interface Bid {
@@ -53,9 +54,10 @@ interface Bid {
   completedJobs: number;
   responseTime: string;
   financingAvailable?: boolean;
-  inspectionFee?: string; // e.g. "Free", "$75", "$150"
-  depositRequired?: string; // e.g. "None", "$500", "$1,200"
+  inspectionFee?: string;
+  depositRequired?: string;
   featured?: boolean;
+  isFoundingContractor?: boolean;
 }
 
 interface Message {
@@ -634,6 +636,7 @@ export default function BidsPage() {
                           <span className="font-semibold text-foreground truncate text-sm sm:text-base">
                             {bid.companyName}
                           </span>
+                          {bid.isFoundingContractor && <FoundingContractorBadge />}
                           {bid.verified && (
                             <span className="shrink-0 flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
                               <Shield className="h-3 w-3" />
