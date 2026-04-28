@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SignInModal } from "@/components/sign-in-modal";
 import { EarlyAccessModal } from "@/components/early-access-modal";
-import { Briefcase, Info, Settings, HelpCircle, Building2, Repeat, AlertTriangle, Shield, Sparkles, MapPin, Clock, Tag } from "lucide-react";
+import { Briefcase, Info, Settings, HelpCircle, Building2, Repeat, AlertTriangle, Shield, Sparkles, MapPin, Clock, Tag, Zap } from "lucide-react";
 import Image from "next/image";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
