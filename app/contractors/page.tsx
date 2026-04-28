@@ -3,7 +3,7 @@
 import React from "react"
 
 import { useState } from "react";
-import { Header } from "@/components/header";
+import { HeaderWithEarlyAccess } from "@/components/header-with-early-access";
 import { signIn as supabaseSignIn } from "@/lib/supabase/actions";
 import { AlertCircle, Loader2 as Loader } from "lucide-react";
 import { ScrollToTop } from "@/components/scroll-to-top";
@@ -93,7 +93,7 @@ export default function ContractorsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <HeaderWithEarlyAccess />
 
       {/* Hero */}
       <section className="px-4 py-20 sm:px-6 lg:px-8">

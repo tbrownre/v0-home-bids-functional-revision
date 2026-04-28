@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Users, Shield, Zap, Heart, MapPin, Star } from "lucide-react";
-import { Header } from "@/components/header";
+import { HeaderWithEarlyAccess } from "@/components/header-with-early-access";
 import { ScrollToTop } from "@/components/scroll-to-top";
 
 const fadeInUp = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5 } };
@@ -12,7 +12,7 @@ const fadeInUp = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <HeaderWithEarlyAccess />
       <main>
 
       {/* Hero */}

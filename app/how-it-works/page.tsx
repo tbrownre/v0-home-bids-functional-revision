@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Header } from "@/components/header";
+import { HeaderWithEarlyAccess } from "@/components/header-with-early-access";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,7 +35,7 @@ export default function HowItWorksPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <HeaderWithEarlyAccess />
 
       {/* ── Hero ── */}
       <section className="px-4 py-16 sm:px-6 lg:px-8">

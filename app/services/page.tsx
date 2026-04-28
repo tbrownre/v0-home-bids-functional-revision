@@ -1,6 +1,6 @@
 "use client";
 
-import { Header } from "@/components/header";
+import { HeaderWithEarlyAccess } from "@/components/header-with-early-access";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -222,7 +222,7 @@ export default function ServicesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <HeaderWithEarlyAccess />
 
       {/* Confetti Animation */}
       <AnimatePresence>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Header } from "@/components/header";
+import { HeaderWithEarlyAccess } from "@/components/header-with-early-access";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -29,7 +29,7 @@ const fadeInUp = {
 export default function HomeownersPage() {
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <HeaderWithEarlyAccess />
 
       {/* ── HERO ─────────────────────────────────────────────── */}
       <section className="px-4 py-20 sm:px-6 lg:px-8">
