@@ -12,14 +12,11 @@ export function PresaleGate() {
 
   useEffect(() => {
     setMounted(true);
-    console.log("[v0] PresaleGate mounted");
 
     // Check if user has already dismissed presale
     if (typeof window !== "undefined") {
       const dismissed = sessionStorage.getItem("presaleDismissed");
       const pillDismissed = sessionStorage.getItem("pillDismissed");
-
-      console.log("[v0] Session state:", { dismissed, pillDismissed });
 
       if (dismissed) {
         // User dismissed modal before - hide modal, maybe show pill
@@ -51,12 +48,9 @@ export function PresaleGate() {
   };
 
   // Don't render until mounted to avoid hydration mismatch
-  // But still show the modal immediately once mounted
   if (!mounted) {
     return null;
   }
-
-  console.log("[v0] PresaleGate rendering:", { showModal, showPill });
 
   return (
     <>

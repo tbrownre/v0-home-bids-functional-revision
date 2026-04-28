@@ -69,8 +69,6 @@ export function FullScreenPresaleModal({ open, onOpenChange }: PresaleModalProps
     }
   };
 
-  console.log("[v0] FullScreenPresaleModal:", { open, step });
-
   if (!open) return null;
 
   return (
