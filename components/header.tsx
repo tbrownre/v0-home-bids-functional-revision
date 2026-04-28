@@ -15,7 +15,7 @@ import {
 } from "@/lib/inbox-store";
 import { createClient } from "@/lib/supabase/client";
 
-interface HeaderProps {
+export interface HeaderProps {
   isContractor?: boolean;
   isSignedIn?: boolean;
   backHref?: string;
