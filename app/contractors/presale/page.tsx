@@ -230,7 +230,7 @@ export default function FoundingContractorPresalePage() {
               You will be charged $10 today and then $10/month. This rate is locked in for life as long as you remain active.
             </p>
 
-            <Link href="/subscribe?type=contractor&plan=contractor-elite&early_access=true&founding_contractor=true">
+            <Link href="/subscribe?type=contractor&plan=contractor-founding&early_access=true&founding_contractor=true">
               <Button 
                 size="lg"
                 className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-6 text-lg"

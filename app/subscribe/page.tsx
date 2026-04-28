@@ -514,7 +514,8 @@ function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan:
   const bidFee = plan.bidFeeInCents > 0 ? `$${(plan.bidFeeInCents / 100).toFixed(0)} per bid` : null;
 
   const ctaLabel =
-    plan.id === "contractor-pro" ? "Upgrade to Pro"
+    plan.id === "contractor-founding" ? "Claim My Founding Spot"
+    : plan.id === "contractor-pro" ? "Upgrade to Pro"
     : plan.id === "contractor-elite" ? "Go Elite"
     : plan.hasTrial === false ? `Get ${plan.name}`
     : "Start Free Trial";
