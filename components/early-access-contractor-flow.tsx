@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, Star, Loader2 } from "lucide-react";
+import { ChevronLeft, Star, Loader2, Check, TrendingUp, Users, BookOpen, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DialogDescription,
@@ -10,41 +10,18 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface EarlyAccessContractorFlowProps {
   onBack: () => void;
   onClose: () => void;
 }
 
-const PLANS = [
-  {
-    id: "contractor-starter",
-    name: "Starter",
-    price: "$9.99",
-    perBid: "$10 per bid",
-    description: "Perfect for getting started",
-  },
-  {
-    id: "contractor-pro",
-    name: "Pro",
-    price: "$29",
-    perBid: "$7 per bid",
-    description: "Most popular choice",
-  },
-  {
-    id: "contractor-elite",
-    name: "Elite",
-    price: "$79",
-    perBid: "$0 per bid",
-    description: "Unlimited bidding included",
-  },
-];
-
 export function EarlyAccessContractorFlow({ onBack, onClose }: EarlyAccessContractorFlowProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [user, setUser] = useState<any | null>(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -55,25 +32,26 @@ export function EarlyAccessContractorFlow({ onBack, onClose }: EarlyAccessContra
     checkAuth();
   }, []);
 
-  const handleChoosePlan = async (planId: string) => {
-    setLoadingPlan(planId);
+  const handleClaimOffer = async () => {
+    if (!agreedToTerms) return;
+    setIsLoading(true);
     
     // Store early access params in session for checkout/signup
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('earlyAccessParams', JSON.stringify({
         role: 'contractor',
-        plan: planId,
+        plan: 'contractor-elite',
         earlyAccess: true,
         foundingContractor: true,
       }));
     }
     
     if (!user) {
-      // Not authenticated - redirect to subscribe page with plan selected
-      router.push(`/subscribe?type=contractor&plan=${planId}&early_access=true&founding_contractor=true`);
+      // Not authenticated - redirect to subscribe page
+      router.push(`/subscribe?type=contractor&plan=contractor-elite&early_access=true&founding_contractor=true`);
     } else {
-      // Already authenticated - redirect to checkout
-      router.push(`/subscribe?type=contractor&plan=${planId}&early_access=true&founding_contractor=true`);
+      // Already authenticated - redirect to subscribe/checkout
+      router.push(`/subscribe?type=contractor&plan=contractor-elite&early_access=true&founding_contractor=true`);
     }
   };
 
@@ -88,91 +66,151 @@ export function EarlyAccessContractorFlow({ onBack, onClose }: EarlyAccessContra
         </button>
         <DialogHeader className="relative">
           <DialogTitle className="text-2xl font-semibold">
-            Early Access for Contractors
+            Founding Contractor Presale
           </DialogTitle>
           <DialogDescription className="text-muted-foreground mt-2">
-            Lock in your pricing and claim Founding Contractor status.
+            Lock in lifetime pricing before we go public.
           </DialogDescription>
         </DialogHeader>
       </div>
 
-      <div className="px-6 py-8 space-y-6">
-        {/* Founding Contractor Section */}
-        <div className="rounded-xl border-2 border-amber-200/50 bg-amber-50/30 p-6">
-          <div className="flex items-center gap-2 mb-2">
-            <Star className="h-5 w-5 text-amber-600" />
-            <h3 className="font-semibold text-foreground">Founding Contractor Status</h3>
+      <div className="px-6 py-8 space-y-6 max-h-[calc(90vh-200px)] overflow-y-auto">
+        {/* Main Offer Card */}
+        <div className="rounded-xl border-2 border-amber-300/60 bg-gradient-to-br from-amber-50/80 to-orange-50/60 p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Star className="h-6 w-6 text-amber-600" />
+              <h3 className="font-bold text-lg text-foreground">Founding Contractor Status</h3>
+            </div>
+            <span className="inline-flex items-center rounded-full bg-amber-200/80 px-3 py-1 text-xs font-bold text-amber-900">
+              LIMITED SPOTS
+            </span>
           </div>
-          <p className="text-sm text-muted-foreground mb-4">
-            Join early and become a Founding Contractor in your area.
+
+          {/* Pricing Highlight */}
+          <div className="mb-6 pt-4 border-t border-amber-200/40">
+            <p className="text-sm text-muted-foreground mb-2">Presale Pricing (Locked for Life)</p>
+            <div className="flex items-baseline gap-3">
+              <span className="text-4xl font-bold text-amber-700">$10</span>
+              <span className="text-muted-foreground">/month</span>
+              <span className="text-sm text-amber-600 line-through">$79/month</span>
+            </div>
+            <p className="text-xs text-amber-700 font-medium mt-2">87% lifetime savings vs. regular pricing</p>
+          </div>
+
+          {/* What You Get */}
+          <div className="space-y-2 mb-6">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Includes</p>
+            <ul className="space-y-2 text-sm">
+              <li className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-amber-600" />
+                <span>Featured placement on homeowner jobs</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-amber-600" />
+                <span>Founding Contractor badge on profile</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-amber-600" />
+                <span>Unlimited bidding (normally $79/mo)</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-amber-600" />
+                <span>3-day free trial</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Bonuses Section */}
+          <div className="rounded-lg bg-white/50 border border-amber-100 p-4 mb-6">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+              + Founding Contractor Bonus Stack
+            </p>
+            <div className="space-y-3">
+              <div className="flex gap-3">
+                <BookOpen className="h-5 w-5 text-orange-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Facebook Group Growth Playbook</p>
+                  <p className="text-xs text-muted-foreground">Complete guide to building your local reputation</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Users className="h-5 w-5 text-orange-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Private Founding Contractor Community</p>
+                  <p className="text-xs text-muted-foreground">Network with elite contractors from your market</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <TrendingUp className="h-5 w-5 text-orange-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Market Dominance Strategy Calls</p>
+                  <p className="text-xs text-muted-foreground">Monthly group coaching on bid strategy & growth</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Lock className="h-5 w-5 text-orange-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Price Lock Guarantee</p>
+                  <p className="text-xs text-muted-foreground">$10/month as long as you stay active</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Urgency Message */}
+          <div className="rounded-lg bg-orange-100/50 border border-orange-200 p-3 mb-6">
+            <p className="text-sm text-orange-900 font-medium">
+              Once your market reaches 50 Founding Contractors, presale closes forever.
+            </p>
+          </div>
+
+          {/* Terms Checkbox */}
+          <div className="flex items-start gap-3 mb-6 p-3 rounded-lg bg-muted/30">
+            <Checkbox 
+              id="presale-terms"
+              checked={agreedToTerms}
+              onCheckedChange={setAgreedToTerms}
+              className="mt-1"
+            />
+            <label htmlFor="presale-terms" className="text-xs text-muted-foreground cursor-pointer">
+              I understand this is a presale offer. I agree to claim Founding Contractor status and lock in $10/month pricing.
+            </label>
+          </div>
+
+          {/* CTA Button */}
+          <Button 
+            onClick={handleClaimOffer}
+            disabled={isLoading || !agreedToTerms}
+            className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+            size="lg"
+          >
+            {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isLoading ? "Claiming your spot…" : "Claim Founding Contractor Status"}
+          </Button>
+
+          <p className="text-xs text-muted-foreground text-center mt-3">
+            Only 60 seconds to complete. Cancel anytime during trial.
           </p>
-          <ul className="space-y-2 text-sm mb-4">
-            <li className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-amber-600" />
-              <span>Featured placement on homeowner jobs</span>
+        </div>
+
+        {/* Why Now Section */}
+        <div className="space-y-3 pt-4 border-t">
+          <p className="text-sm font-semibold text-foreground">Why claim now?</p>
+          <ul className="space-y-2 text-sm text-muted-foreground">
+            <li className="flex gap-2">
+              <span className="text-amber-600 font-bold">1.</span>
+              <span>Limited founding spots — first come, first served per market</span>
             </li>
-            <li className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-amber-600" />
-              <span>Higher visibility on bids</span>
+            <li className="flex gap-2">
+              <span className="text-amber-600 font-bold">2.</span>
+              <span>Price locked for life as long as you stay active</span>
             </li>
-            <li className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-amber-600" />
-              <span>More opportunities before competition increases</span>
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-amber-600" />
-              <span>Founding badge on your profile</span>
+            <li className="flex gap-2">
+              <span className="text-amber-600 font-bold">3.</span>
+              <span>Founding badge gives you instant credibility with homeowners</span>
             </li>
           </ul>
-          <p className="text-xs text-amber-700 font-medium bg-amber-100/50 rounded-lg px-3 py-2">
-            Limited founding spots per market
-          </p>
-        </div>
-
-        {/* Pricing Section */}
-        <div>
-          <p className="text-sm font-semibold text-foreground mb-4">
-            Early Access Pricing — Lock this in now
-          </p>
-          <div className="space-y-3">
-            {PLANS.map((plan) => (
-              <div
-                key={plan.id}
-                className="rounded-lg border border-border p-4 hover:border-primary/30 hover:bg-primary/5 transition-all"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <h4 className="font-medium text-foreground">{plan.name}</h4>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => handleChoosePlan(plan.id)}
-                    disabled={loadingPlan !== null}
-                  >
-                    {loadingPlan === plan.id && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                    {loadingPlan === plan.id ? "Securing your Founding Contractor access…" : "Choose Plan"}
-                  </Button>
-                </div>
-                <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-lg font-bold text-primary">{plan.price}</span>
-                  <span className="text-sm text-muted-foreground">{plan.perBid}</span>
-                </div>
-                <p className="text-xs text-muted-foreground">{plan.description}</p>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2 mt-3">
-            🔒 Your rate is locked as long as you stay active
-          </p>
-        </div>
-
-        {/* Urgency */}
-        <div className="pt-4 border-t space-y-3">
-          <p className="text-sm text-amber-700 font-medium">
-            Once your market fills, Founding status will no longer be available.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Takes less than 60 seconds to get started
-          </p>
         </div>
       </div>
     </>
