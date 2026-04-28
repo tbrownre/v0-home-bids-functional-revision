@@ -10,6 +10,7 @@ import { getPlanById } from '@/lib/products'
 export async function startSubscriptionCheckout(
   planId: string,
   userId?: string,
+  metadata?: { earlyAccess?: boolean; foundingContractor?: boolean },
 ): Promise<string> {
   const plan = getPlanById(planId)
   if (!plan) {
@@ -44,6 +45,8 @@ export async function startSubscriptionCheckout(
         userId: userId ?? '',
         planId,
         userType: plan.userType,
+        ...(metadata?.earlyAccess && { early_access: 'true' }),
+        ...(metadata?.foundingContractor && { founding_contractor: 'true' }),
       },
     },
     // Also store on the session itself for checkout.session.completed events.
@@ -51,6 +54,8 @@ export async function startSubscriptionCheckout(
       userId: userId ?? '',
       planId,
       userType: plan.userType,
+      ...(metadata?.earlyAccess && { early_access: 'true' }),
+      ...(metadata?.foundingContractor && { founding_contractor: 'true' }),
     },
     payment_method_types: [
       'card',

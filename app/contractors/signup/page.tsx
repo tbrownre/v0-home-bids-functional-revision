@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import {
   Wrench,
   MapPin,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 
 type Step = "business" | "contact" | "credentials" | "services" | "review";
@@ -52,7 +54,14 @@ const serviceCategories = [
 
 export default function ContractorSignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState<Step>("business");
+  
+  // Check for early access params
+  const isEarlyAccess = searchParams.get("early_access") === "true";
+  const isFoundingContractor = searchParams.get("founding_contractor") === "true";
+  const planFromParams = searchParams.get("plan");
+  
   const [formData, setFormData] = useState({
     // Business Info
     businessName: "",
@@ -178,7 +187,13 @@ export default function ContractorSignupPage() {
       setSubmitError(result.error);
       return;
     }
-    router.push("/contractors/signup/pending");
+    
+    // If early access founding contractor, redirect to dashboard instead of pending
+    if (isEarlyAccess && isFoundingContractor) {
+      router.push("/contractors/dashboard");
+    } else {
+      router.push("/contractors/signup/pending");
+    }
   };
 
   return (

@@ -76,6 +76,8 @@ async function handleCheckoutCompleted(
   const userId = session.metadata?.userId
   const planId = session.metadata?.planId
   const userType = session.metadata?.userType
+  const earlyAccess = session.metadata?.early_access === 'true'
+  const foundingContractor = session.metadata?.founding_contractor === 'true'
 
   if (!userId) {
     console.warn('[stripe-webhook] checkout.session.completed missing userId metadata — skipping DB write')
@@ -127,9 +129,17 @@ async function handleCheckoutCompleted(
   // If this is a contractor, mark them as approved in contractor_profiles.
   // contractor_profiles.id = auth.users.id (there is no user_id column).
   if (userType === 'contractor') {
+    const updateData: any = { approval_status: 'approved', is_approved: true }
+    
+    // If founding contractor, mark them as such
+    if (foundingContractor) {
+      updateData.is_founding_contractor = true
+      updateData.founding_timestamp = new Date().toISOString()
+    }
+    
     const { error: cpError } = await supabase
       .from('contractor_profiles')
-      .update({ approval_status: 'approved', is_approved: true })
+      .update(updateData)
       .eq('id', userId)
 
     if (cpError) {

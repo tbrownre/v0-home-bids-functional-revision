@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
   EmbeddedCheckout,
   EmbeddedCheckoutProvider,
@@ -8,7 +9,7 @@ import {
 import { loadStripe } from '@stripe/stripe-js'
 import { startSubscriptionCheckout } from '@/app/actions/stripe'
 import { createClient } from '@/lib/supabase/client'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -20,8 +21,10 @@ interface SubscriptionCheckoutProps {
 }
 
 export function SubscriptionCheckout({ planId, onSuccess, onCancel }: SubscriptionCheckoutProps) {
+  const searchParams = useSearchParams()
   const [isComplete, setIsComplete] = useState(false)
   const [userId, setUserId] = useState<string | undefined>(undefined)
+  const [error, setError] = useState<string | null>(null)
 
   // Resolve the current user once so the fetchClientSecret callback can
   // include it in the Stripe session metadata for the webhook to use.
@@ -29,6 +32,9 @@ export function SubscriptionCheckout({ planId, onSuccess, onCancel }: Subscripti
     const sb = createClient()
     sb.auth.getUser().then(({ data }) => {
       if (data.user) setUserId(data.user.id)
+    }).catch(err => {
+      console.error('[SubscriptionCheckout] Auth check failed:', err)
+      setError("We couldn't verify your account. Please try again.")
     })
   }, [])
 
@@ -39,14 +45,40 @@ export function SubscriptionCheckout({ planId, onSuccess, onCancel }: Subscripti
   useEffect(() => { onSuccessRef.current = onSuccess }, [onSuccess])
 
   const fetchClientSecret = useCallback(
-    () => startSubscriptionCheckout(planId, userId),
-    [planId, userId],
+    async () => {
+      try {
+        return await startSubscriptionCheckout(planId, userId, {
+          earlyAccess: searchParams.get('early_access') === 'true',
+          foundingContractor: searchParams.get('founding_contractor') === 'true',
+        })
+      } catch (err) {
+        console.error('[SubscriptionCheckout] Failed to start checkout:', err)
+        setError("We couldn't start checkout. Please try again.")
+        throw err
+      }
+    },
+    [planId, userId, searchParams],
   )
 
   // Stable reference — created once per mount, never recreated.
   const handleComplete = useCallback(() => {
     setIsComplete(true)
   }, [])
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 border border-destructive/30">
+          <AlertCircle className="h-8 w-8 text-destructive" />
+        </div>
+        <h3 className="mt-4 text-xl font-semibold text-foreground">Something went wrong</h3>
+        <p className="mt-2 text-muted-foreground">{error}</p>
+        <Button className="mt-6" onClick={() => window.location.reload()}>
+          Try Again
+        </Button>
+      </div>
+    )
+  }
 
   if (isComplete) {
     return (

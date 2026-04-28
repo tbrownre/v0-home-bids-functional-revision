@@ -28,11 +28,24 @@ export default function SubscribePage() {
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
   const [userType, setUserType] = useState<UserTypeFilter>("homeowner");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const type = searchParams.get("type");
     if (type === "contractor") setUserType("contractor");
     else if (type === "homeowner") setUserType("homeowner");
+
+    // If a plan ID is provided, auto-select it and show checkout
+    const planId = searchParams.get("plan");
+    if (planId) {
+      const plan = [getHomeownerPlan(), ...getContractorPlans()].find(p => p.id === planId);
+      if (plan) {
+        setSelectedPlan(plan);
+        setShowCheckout(true);
+      } else {
+        setError("Please select a contractor plan to continue.");
+      }
+    }
   }, [searchParams]);
 
   const homeownerPlan = getHomeownerPlan();
@@ -46,12 +59,20 @@ export default function SubscribePage() {
 
   const handleSuccess = async () => {
     const isContractor = selectedPlan?.userType === "contractor";
+    const earlyAccess = searchParams.get("early_access") === "true";
+    const foundingContractor = searchParams.get("founding_contractor") === "true";
+    
     setShowCheckout(false);
     if (isContractor && selectedPlan) {
-      // Payment confirmed — now send contractor to complete their profile.
-      router.push(`/contractors/signup?plan=${selectedPlan.id}`);
+      // Payment confirmed — send contractor to complete their profile with early access params
+      const params = new URLSearchParams({
+        plan: selectedPlan.id,
+        ...(earlyAccess && { early_access: "true" }),
+        ...(foundingContractor && { founding_contractor: "true" }),
+      });
+      router.push(`/contractors/signup?${params.toString()}`);
     } else {
-      // Homeowner payment confirmed — go to homepage to post a job.
+      // Homeowner payment confirmed — go to homepage to post a job
       router.push("/");
     }
   };
@@ -449,6 +470,16 @@ export default function SubscribePage() {
       </main>
 
       {/* Checkout Modal */}
+      {error && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="rounded-lg bg-destructive/10 border border-destructive/50 p-6 max-w-md">
+            <h3 className="font-semibold text-destructive mb-2">Error</h3>
+            <p className="text-sm text-muted-foreground mb-4">{error}</p>
+            <Button onClick={() => setError(null)} className="w-full">Dismiss</Button>
+          </div>
+        </div>
+      )}
+      
       <Dialog open={showCheckout} onOpenChange={(open) => { if (!open) setShowCheckout(false); }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl p-0">
           <DialogHeader className="px-6 pt-6">
@@ -483,7 +514,8 @@ function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan:
   const bidFee = plan.bidFeeInCents > 0 ? `$${(plan.bidFeeInCents / 100).toFixed(0)} per bid` : null;
 
   const ctaLabel =
-    plan.id === "contractor-pro" ? "Upgrade to Pro"
+    plan.id === "contractor-founding" ? "Claim My Founding Spot"
+    : plan.id === "contractor-pro" ? "Upgrade to Pro"
     : plan.id === "contractor-elite" ? "Go Elite"
     : plan.hasTrial === false ? `Get ${plan.name}`
     : "Start Free Trial";

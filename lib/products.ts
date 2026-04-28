@@ -90,6 +90,27 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     ],
     savingsCallout: 'Bid unlimited for $79/month',
   },
+  {
+    id: 'contractor-founding',
+    name: 'Founding Contractor',
+    description: 'Presale offer: $10/month locked for life.',
+    priceInCents: 1000, // $10/month
+    bidFeeInCents: 0, // $0 per bid
+    userType: 'contractor',
+    hasTrial: false,
+    features: [
+      'Everything in Elite +',
+      'Unlimited bidding on all projects',
+      'Featured placement on homeowner jobs',
+      'Founding Contractor badge',
+      'Priority support',
+      'Lifetime price lock at $10/month',
+      'Private Founding Contractor community',
+      'Facebook Group growth playbook',
+      'Market dominance strategy calls',
+    ],
+    savingsCallout: 'Lock in $10/month for life (87% off regular pricing)',
+  },
 ]
 
 export function getPlanById(id: string): SubscriptionPlan | undefined {
