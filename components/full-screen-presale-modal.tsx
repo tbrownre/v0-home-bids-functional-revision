@@ -69,10 +69,12 @@ export function FullScreenPresaleModal({ open, onOpenChange }: PresaleModalProps
     }
   };
 
+  console.log("[v0] FullScreenPresaleModal:", { open, step });
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center overflow-y-auto p-4">
       <div className="w-full min-h-screen md:min-h-auto md:max-w-2xl bg-white rounded-lg shadow-2xl">
         {/* Step 1: Hero */}
         {step === "hero" && (

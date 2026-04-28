@@ -5,25 +5,31 @@ import { FullScreenPresaleModal } from "./full-screen-presale-modal";
 import { Zap, X } from "lucide-react";
 
 export function PresaleGate() {
-  const [showModal, setShowModal] = useState(false);
+  // Start with modal open to ensure it shows on first load
+  const [showModal, setShowModal] = useState(true);
   const [showPill, setShowPill] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    console.log("[v0] PresaleGate mounted");
 
     // Check if user has already dismissed presale
     if (typeof window !== "undefined") {
       const dismissed = sessionStorage.getItem("presaleDismissed");
-      const hasSeen = sessionStorage.getItem("presaleSeen");
+      const pillDismissed = sessionStorage.getItem("pillDismissed");
 
-      if (!dismissed && !hasSeen) {
-        // Show full-screen modal on first load
+      console.log("[v0] Session state:", { dismissed, pillDismissed });
+
+      if (dismissed) {
+        // User dismissed modal before - hide modal, maybe show pill
+        setShowModal(false);
+        if (!pillDismissed) {
+          setShowPill(true);
+        }
+      } else {
+        // First visit - show modal
         setShowModal(true);
-        sessionStorage.setItem("presaleSeen", "true");
-      } else if (dismissed && !sessionStorage.getItem("pillDismissed")) {
-        // Show floating pill if user dismissed modal before
-        setShowPill(true);
       }
     }
   }, []);
@@ -44,7 +50,13 @@ export function PresaleGate() {
     }
   };
 
-  if (!mounted) return null;
+  // Don't render until mounted to avoid hydration mismatch
+  // But still show the modal immediately once mounted
+  if (!mounted) {
+    return null;
+  }
+
+  console.log("[v0] PresaleGate rendering:", { showModal, showPill });
 
   return (
     <>
