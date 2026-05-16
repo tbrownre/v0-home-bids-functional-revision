@@ -59,17 +59,11 @@ export default function SubscribePage() {
 
   const handleSuccess = async () => {
     const isContractor = selectedPlan?.userType === "contractor";
-    const earlyAccess = searchParams.get("early_access") === "true";
-    const foundingContractor = searchParams.get("founding_contractor") === "true";
     
     setShowCheckout(false);
     if (isContractor && selectedPlan) {
-      // Payment confirmed — send contractor to complete their profile with early access params
-      const params = new URLSearchParams({
-        plan: selectedPlan.id,
-        ...(earlyAccess && { early_access: "true" }),
-        ...(foundingContractor && { founding_contractor: "true" }),
-      });
+      // Payment confirmed — send contractor to complete their profile
+      const params = new URLSearchParams({ plan: selectedPlan.id });
       router.push(`/contractors/signup?${params.toString()}`);
     } else {
       // Homeowner payment confirmed — go to homepage to post a job
@@ -514,8 +508,7 @@ function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan:
   const bidFee = plan.bidFeeInCents > 0 ? `$${(plan.bidFeeInCents / 100).toFixed(0)} per bid` : null;
 
   const ctaLabel =
-    plan.id === "contractor-founding" ? "Claim My Founding Spot"
-    : plan.id === "contractor-pro" ? "Upgrade to Pro"
+    plan.id === "contractor-pro" ? "Upgrade to Pro"
     : plan.id === "contractor-elite" ? "Go Elite"
     : plan.hasTrial === false ? `Get ${plan.name}`
     : "Start Free Trial";

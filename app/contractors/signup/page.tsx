@@ -57,9 +57,6 @@ export default function ContractorSignupPage() {
   const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState<Step>("business");
   
-  // Check for early access params
-  const isEarlyAccess = searchParams.get("early_access") === "true";
-  const isFoundingContractor = searchParams.get("founding_contractor") === "true";
   const planFromParams = searchParams.get("plan");
   
   const [formData, setFormData] = useState({
@@ -188,12 +185,7 @@ export default function ContractorSignupPage() {
       return;
     }
     
-    // If early access founding contractor, redirect to dashboard instead of pending
-    if (isEarlyAccess && isFoundingContractor) {
-      router.push("/contractors/dashboard");
-    } else {
-      router.push("/contractors/signup/pending");
-    }
+    router.push("/contractors/signup/pending");
   };
 
   return (

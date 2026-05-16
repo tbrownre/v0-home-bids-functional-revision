@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, FileText, Briefcase, HelpCircle, Info, LogIn, LogOut, Plus, Home, ArrowLeft, Bell, DollarSign, MessageCircle, CheckCircle2, Eye, AlertCircle, CreditCard, Tag, Zap } from "lucide-react";
+import { Menu, FileText, Briefcase, HelpCircle, Info, LogIn, LogOut, Plus, Home, ArrowLeft, Bell, DollarSign, MessageCircle, CheckCircle2, Eye, AlertCircle, CreditCard, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SignInModal } from "@/components/sign-in-modal";
 import {
@@ -21,7 +21,6 @@ export interface HeaderProps {
   backHref?: string;
   backLabel?: string;
   onSignIn?: () => void;
-  onEarlyAccess?: () => void;
 }
 
 function getNotificationColor(type: NotificationType) {
@@ -46,7 +45,7 @@ function getNotificationColor(type: NotificationType) {
   }
 }
 
-export function Header({ isContractor: isContractorProp = false, isSignedIn: isSignedInProp = false, backHref, backLabel, onSignIn, onEarlyAccess }: HeaderProps) {
+export function Header({ isContractor: isContractorProp = false, isSignedIn: isSignedInProp = false, backHref, backLabel, onSignIn }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
   const menuRef = useRef<HTMLButtonElement>(null);
@@ -199,16 +198,6 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
                 <Info className="h-4 w-4 shrink-0 text-muted-foreground" />
                 About Us
               </Link>
-
-              {/* Early Access CTA in Mobile Menu */}
-              <button
-                type="button"
-                onClick={() => { closeMenu(); onEarlyAccess?.(); }}
-                className={`${menuItemClass} bg-primary/10 text-primary font-medium hover:bg-primary/20`}
-              >
-                <Zap className="h-4 w-4 shrink-0" />
-                Early Access
-              </button>
 
               {/* Authenticated nav — only shown when logged in */}
               {isLoggedIn && (

@@ -38,7 +38,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SignInModal } from "@/components/sign-in-modal";
-import { EarlyAccessModal } from "@/components/early-access-modal";
 import { Briefcase, Info, Settings, HelpCircle, Building2, Repeat, AlertTriangle, Shield, Sparkles, MapPin, Clock, Tag, Zap } from "lucide-react";
 import Image from "next/image";
 import { ScrollToTop } from "@/components/scroll-to-top";
@@ -97,7 +96,6 @@ export default function HomePage() {
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [showJobsBoard, setShowJobsBoard] = useState(false);
   const [creatingNewJob, setCreatingNewJob] = useState(false);
-  const [showEarlyAccess, setShowEarlyAccess] = useState(false);
   const [showFormFallback, setShowFormFallback] = useState(false);
   const [showDesktopSmsDialog, setShowDesktopSmsDialog] = useState(false);
   const [copiedNumber, setCopiedNumber] = useState(false);
@@ -684,17 +682,16 @@ export default function HomePage() {
                   </Link>
                 </DropdownMenuItem>
 
-                {/* Early Access CTA */}
+                {/* Get Started CTA */}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="flex cursor-pointer items-center gap-2 bg-primary/10 text-primary font-medium hover:bg-primary/20 focus:bg-primary/20"
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    setShowEarlyAccess(true);
-                  }}
-                >
-                  <Zap className="h-4 w-4" />
-                  Early Access
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/subscribe"
+                    className="flex cursor-pointer items-center gap-2 bg-primary/10 text-primary font-medium hover:bg-primary/20 focus:bg-primary/20"
+                  >
+                    <Zap className="h-4 w-4" />
+                    Get Started
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {isSignedIn && (
@@ -1966,9 +1963,6 @@ export default function HomePage() {
       </Dialog>
 
       <ScrollToTop />
-
-      {/* Early Access Modal */}
-      <EarlyAccessModal open={showEarlyAccess} onOpenChange={setShowEarlyAccess} />
 
       {/* Desktop SMS Fallback Dialog */}
       <Dialog open={showDesktopSmsDialog} onOpenChange={setShowDesktopSmsDialog}>
