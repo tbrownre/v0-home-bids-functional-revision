@@ -20,7 +20,6 @@ interface SubscriptionCheckoutProps {
 }
 
 export function SubscriptionCheckout({ planId, onSuccess, onCancel }: SubscriptionCheckoutProps) {
-  const searchParams = useSearchParams()
   const [isComplete, setIsComplete] = useState(false)
   const [userId, setUserId] = useState<string | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
