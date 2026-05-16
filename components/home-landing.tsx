@@ -189,7 +189,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
     <div className="w-full font-sans">
 
       {/* ── HERO ─────────────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-6xl px-4 pb-16 pt-12 sm:px-6 lg:px-8 lg:pt-20">
+      <section className="mx-auto w-full max-w-6xl px-4 pb-16 pt-6 sm:px-6 lg:px-8 lg:pt-12">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
 
           {/* Left — copy + CTAs */}

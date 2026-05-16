@@ -632,7 +632,7 @@ export default function HomePage() {
       {/* Main Content */}
       <main className="relative flex flex-1 flex-col overflow-y-auto">
         {/* Top bar with logo */}
-        <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-3 py-0.5 md:px-6">
+        <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-3 py-0 md:px-6">
           <div className="flex items-center">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
