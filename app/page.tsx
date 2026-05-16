@@ -118,6 +118,9 @@ export default function HomePage() {
   // we never auto-show it again — preventing re-trigger on any re-render.
   const jobsBoardRestoredForSession = useRef(false);
 
+  // Ref to ensure we only ever fire a contractor redirect once per mount.
+  const hasRedirectedContractor = useRef(false);
+
   useEffect(() => {
     // Skip Supabase entirely in the v0 preview sandbox
     if (typeof window === "undefined") return;
@@ -134,7 +137,10 @@ export default function HomePage() {
           const type = user.user_metadata?.user_type;
           if (type === "contractor") {
             // Contractor landed on the homeowner page — redirect once, safely.
-            window.location.replace("/contractors/dashboard");
+            if (!hasRedirectedContractor.current) {
+              hasRedirectedContractor.current = true;
+              window.location.replace("/contractors/dashboard");
+            }
           } else {
             setIsSignedIn(true);
             setIsContractor(false);
@@ -164,7 +170,10 @@ export default function HomePage() {
         if (session?.user) {
           const type = session.user.user_metadata?.user_type;
           if (type === "contractor") {
-            window.location.replace("/contractors/dashboard");
+            if (!hasRedirectedContractor.current) {
+              hasRedirectedContractor.current = true;
+              window.location.replace("/contractors/dashboard");
+            }
           } else {
             setIsSignedIn(true);
             setIsContractor(false);

@@ -165,13 +165,21 @@ export default function ContractorDashboard() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.location.hostname.includes("vusercontent.net")) return;
+
+    let didRedirect = false;
     const supabase = createClient();
+
     supabase.auth.getUser().then(async ({ data: { user }, error }) => {
       if (error || !user) {
-        window.location.replace("/auth/sign-in");
+        if (!didRedirect) { didRedirect = true; window.location.replace("/auth/sign-in"); }
         return;
       }
-      // Check approval status
+
+      // Demo contractor is always considered approved — skip the DB profile check
+      // to prevent the infinite redirect loop (dashboard → pending → home → dashboard).
+      if (user.email === DEMO_CONTRACTOR_EMAIL) return;
+
+      // Check approval status for real contractors only
       const { data: profile } = await supabase
         .from("contractor_profiles")
         .select("approval_status")
@@ -179,15 +187,15 @@ export default function ContractorDashboard() {
         .maybeSingle();
 
       if (!profile) {
-        window.location.replace("/");
+        if (!didRedirect) { didRedirect = true; window.location.replace("/"); }
         return;
       }
       if (profile.approval_status === "pending") {
-        window.location.replace("/contractors/signup/pending");
+        if (!didRedirect) { didRedirect = true; window.location.replace("/contractors/signup/pending"); }
         return;
       }
       if (profile.approval_status === "rejected") {
-        window.location.replace("/contractors/signup/rejected");
+        if (!didRedirect) { didRedirect = true; window.location.replace("/contractors/signup/rejected"); }
       }
     });
   }, []);
