@@ -7,10 +7,8 @@ import { getSmsLink, isMobileDevice, SMS_PHONE_DISPLAY, SMS_PHONE_NUMBER, SMS_BO
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
 import {
   MessageSquare,
-  Copy,
   Check,
   ArrowRight,
-  Smartphone,
   CheckCircle,
   Zap,
   Users,
@@ -222,7 +220,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               <SmartInput onSubmit={() => {}} />
             </div>
 
-            {/* Primary + Secondary CTAs */}
+            {/* Primary CTA */}
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <Button
                 size="lg"
@@ -232,31 +230,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
                 <MessageSquare className="h-5 w-5" />
                 Text us to start your project
               </Button>
-
-              <Button
-                variant="outline"
-                size="lg"
-                className="h-12 gap-2 rounded-full px-6 text-base"
-                onClick={handleCopyNumber}
-              >
-                {numberCopied ? (
-                  <>
-                    <Check className="h-4 w-4 text-green-600" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-4 w-4" />
-                    Copy number
-                  </>
-                )}
-              </Button>
             </div>
-
-            {/* Phone number display */}
-            <p className="mt-3 text-2xl font-bold tracking-wide text-foreground">
-              {SMS_PHONE_DISPLAY}
-            </p>
 
             {/* Microcopy */}
             <p className="mt-2 text-sm text-muted-foreground">
