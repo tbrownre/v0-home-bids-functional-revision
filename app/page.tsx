@@ -49,6 +49,9 @@ import { signUpHomeowner, createJob, getHomeownerJobs } from "@/lib/supabase/act
 import { createClient } from "@/lib/supabase/client";
 import { isDemoEmail, DEMO_HOMEOWNER_EMAIL } from "@/lib/demo-guard";
 import { getHomeownerJobs as getDemoHomeownerJobs } from "@/lib/demo/services";
+import { getSmsLink, isMobileDevice, SMS_PHONE_DISPLAY } from "@/lib/sms-config";
+import { SmsIphonePreview } from "@/components/sms-iphone-preview";
+import { MessageSquare, Copy, Check, Smartphone } from "lucide-react";
 
 // Centralized sign-out: clears Supabase session then hard-navigates to home.
 async function performSignOut() {
@@ -95,6 +98,9 @@ export default function HomePage() {
   const [showJobsBoard, setShowJobsBoard] = useState(false);
   const [creatingNewJob, setCreatingNewJob] = useState(false);
   const [showEarlyAccess, setShowEarlyAccess] = useState(false);
+  const [showFormFallback, setShowFormFallback] = useState(false);
+  const [showDesktopSmsDialog, setShowDesktopSmsDialog] = useState(false);
+  const [copiedNumber, setCopiedNumber] = useState(false);
 
   // Auth state from Supabase only
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -885,7 +891,7 @@ export default function HomePage() {
               </motion.div>
             )}
 
-            {/* Step 1: Describe your project */}
+            {/* Step 1: SMS CTA or Form Fallback */}
             {currentStep === "describe" && !showJobsBoard && (
               <motion.div
                 key="describe"
@@ -895,76 +901,175 @@ export default function HomePage() {
                 transition={{ duration: 0.2 }}
                 className="w-full max-w-2xl px-1 sm:px-0"
               >
-                <div className="text-center">
-                  <h1 className="text-balance text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">
-                    What home project can we help with?
-                  </h1>
-                  
-                </div>
+                {!showFormFallback ? (
+                  <>
+                    {/* SMS CTA Hero */}
+                    <div className="text-center">
+                      <h1 className="text-balance text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">
+                        Text us your project
+                      </h1>
+                      <p className="mt-2 text-balance text-sm text-muted-foreground sm:text-base">
+                        Takes 30 seconds. No app needed.
+                      </p>
+                    </div>
 
-                {/* Input area */}
-                <div className="mt-8 w-full">
-                  <div className="relative rounded-2xl border border-border bg-card shadow-lg sm:rounded-3xl">
-                    {/* Input row */}
-                    <div className="flex items-end gap-2 p-2 sm:p-3">
-                      {/* Text input */}
-                      <textarea
-                        ref={textareaRef}
-                        value={jobDescription}
-                        onChange={handleTextareaChange}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Describe your project..."
-                        className="min-h-[44px] flex-1 resize-none bg-transparent px-1 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none sm:px-2 sm:text-base"
-                        rows={1}
-                      />
-
-                      {/* Submit button */}
+                    {/* Primary SMS Button */}
+                    <div className="mt-8 flex justify-center">
                       <Button
-                        type="button"
-                        size="icon"
-                        className="h-10 w-10 shrink-0 rounded-full"
-                        onClick={handleNextStep}
-                        disabled={!jobDescription.trim()}
-                        aria-label="Continue to photos"
+                        size="lg"
+                        className="h-14 gap-3 rounded-full px-8 text-base font-semibold sm:h-16 sm:px-10 sm:text-lg"
+                        onClick={() => {
+                          if (isMobileDevice()) {
+                            window.location.href = getSmsLink();
+                          } else {
+                            setShowDesktopSmsDialog(true);
+                          }
+                        }}
                       >
-                        <ArrowUp className="h-5 w-5" />
+                        <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6" />
+                        Send us a text
                       </Button>
                     </div>
-                  </div>
-                </div>
 
-                {/* Helper text */}
-                <p className="mt-3 text-center text-xs text-muted-foreground">
-                  <span className="block sm:inline">HomeBids connects you with verified local contractors.</span>{" "}
-                  <span className="block sm:inline">Get multiple bids, compare, and choose.</span>
-                </p>
-                <p className="mt-1 text-center text-[10px] text-muted-foreground/60">
-                  *Your contact info is never shared until you approve a bid.
-                </p>
+                    {/* 3-Step Explanation */}
+                    <div className="mt-12 grid gap-4 sm:grid-cols-3">
+                      {[
+                        {
+                          step: "1",
+                          title: "Text us your issue",
+                          example: "\"My AC isn't cooling\"",
+                        },
+                        {
+                          step: "2",
+                          title: "We ask a few questions",
+                          example: "Zip, timeline, budget",
+                        },
+                        {
+                          step: "3",
+                          title: "Get bids from pros",
+                          example: "Verified local contractors",
+                        },
+                      ].map((item) => (
+                        <div
+                          key={item.step}
+                          className="flex flex-col items-center rounded-2xl border border-border bg-card p-5 text-center"
+                        >
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+                            {item.step}
+                          </div>
+                          <p className="mt-3 text-sm font-semibold text-foreground">
+                            {item.title}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {item.example}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
 
-                {/* Rotating Example Prompts */}
-                <div className="mt-20 flex flex-col items-center">
-                  <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
-                    Example projects
-                  </p>
-                  <div className="relative min-h-[4.5rem] w-full max-w-lg sm:min-h-[3.5rem]">
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={exampleIndex}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className="absolute inset-x-0 top-0 px-4 py-2"
+                    {/* Privacy note */}
+                    <p className="mt-4 text-center text-[10px] text-muted-foreground/60">
+                      *Your contact info is never shared until you approve a bid.
+                    </p>
+
+                    {/* Form fallback link */}
+                    <div className="mt-6 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setShowFormFallback(true)}
+                        className="text-sm text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
                       >
-                        <p className="text-center text-sm italic leading-relaxed text-muted-foreground/80">
-                          &ldquo;{examplePrompts[exampleIndex]}&rdquo;
-                        </p>
-                      </motion.div>
-                    </AnimatePresence>
-                  </div>
+                        Prefer a form? Describe your project here
+                      </button>
+                    </div>
 
-                </div>
+                    {/* iPhone Preview Section */}
+                    <div className="mt-16">
+                      <p className="mb-6 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
+                        See how it works
+                      </p>
+                      <SmsIphonePreview />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Original Form (fallback) */}
+                    <div className="mb-4 flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => setShowFormFallback(false)}
+                        className="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                        Back to SMS
+                      </button>
+                    </div>
+
+                    <div className="text-center">
+                      <h1 className="text-balance text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">
+                        What home project can we help with?
+                      </h1>
+                    </div>
+
+                    {/* Input area */}
+                    <div className="mt-8 w-full">
+                      <div className="relative rounded-2xl border border-border bg-card shadow-lg sm:rounded-3xl">
+                        <div className="flex items-end gap-2 p-2 sm:p-3">
+                          <textarea
+                            ref={textareaRef}
+                            value={jobDescription}
+                            onChange={handleTextareaChange}
+                            onKeyDown={handleKeyDown}
+                            placeholder="Describe your project..."
+                            className="min-h-[44px] flex-1 resize-none bg-transparent px-1 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none sm:px-2 sm:text-base"
+                            rows={1}
+                          />
+                          <Button
+                            type="button"
+                            size="icon"
+                            className="h-10 w-10 shrink-0 rounded-full"
+                            onClick={handleNextStep}
+                            disabled={!jobDescription.trim()}
+                            aria-label="Continue to photos"
+                          >
+                            <ArrowUp className="h-5 w-5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="mt-3 text-center text-xs text-muted-foreground">
+                      <span className="block sm:inline">HomeBids connects you with verified local contractors.</span>{" "}
+                      <span className="block sm:inline">Get multiple bids, compare, and choose.</span>
+                    </p>
+                    <p className="mt-1 text-center text-[10px] text-muted-foreground/60">
+                      *Your contact info is never shared until you approve a bid.
+                    </p>
+
+                    {/* Rotating Example Prompts */}
+                    <div className="mt-20 flex flex-col items-center">
+                      <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
+                        Example projects
+                      </p>
+                      <div className="relative min-h-[4.5rem] w-full max-w-lg sm:min-h-[3.5rem]">
+                        <AnimatePresence mode="wait">
+                          <motion.div
+                            key={exampleIndex}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                            className="absolute inset-x-0 top-0 px-4 py-2"
+                          >
+                            <p className="text-center text-sm italic leading-relaxed text-muted-foreground/80">
+                              &ldquo;{examplePrompts[exampleIndex]}&rdquo;
+                            </p>
+                          </motion.div>
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  </>
+                )}
               </motion.div>
             )}
 
@@ -1864,6 +1969,52 @@ export default function HomePage() {
 
       {/* Early Access Modal */}
       <EarlyAccessModal open={showEarlyAccess} onOpenChange={setShowEarlyAccess} />
+
+      {/* Desktop SMS Fallback Dialog */}
+      <Dialog open={showDesktopSmsDialog} onOpenChange={setShowDesktopSmsDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5" />
+              Text us to get started
+            </DialogTitle>
+            <DialogDescription>
+              Send a text from your phone to start your project. No app or account needed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            <div className="rounded-xl border border-border bg-secondary/50 px-6 py-4 text-center">
+              <p className="text-2xl font-bold tracking-wide text-foreground">
+                {SMS_PHONE_DISPLAY}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => {
+                navigator.clipboard.writeText(SMS_PHONE_DISPLAY);
+                setCopiedNumber(true);
+                setTimeout(() => setCopiedNumber(false), 2000);
+              }}
+            >
+              {copiedNumber ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4" />
+                  Copy number
+                </>
+              )}
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              {"Just text: \"Hey HomeBids, I need help with...\""}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
