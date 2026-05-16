@@ -50,6 +50,7 @@ import { isDemoEmail, DEMO_HOMEOWNER_EMAIL } from "@/lib/demo-guard";
 import { getHomeownerJobs as getDemoHomeownerJobs } from "@/lib/demo/services";
 import { getSmsLink, isMobileDevice, SMS_PHONE_DISPLAY } from "@/lib/sms-config";
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
+import { HomeLanding } from "@/components/home-landing";
 import { MessageSquare, Copy, Check, Smartphone } from "lucide-react";
 
 // Centralized sign-out: clears Supabase session then hard-navigates to home.
@@ -631,7 +632,7 @@ export default function HomePage() {
       {/* Main Content */}
       <main className="relative flex flex-1 flex-col overflow-y-auto">
         {/* Top bar with logo */}
-        <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-3 py-0.5 md:px-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-3 py-0.5 md:px-6">
           <div className="flex items-center">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -768,8 +769,39 @@ export default function HomePage() {
           </button>
         </div>
 
+        {/* Right-side nav — minimal, always visible */}
+        <nav className="hidden items-center gap-1 sm:flex" aria-label="Main navigation">
+          <Link
+            href="/how-it-works"
+            className="rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            How It Works
+          </Link>
+          {isSignedIn ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-sm"
+              onClick={handleYourJobsClick}
+            >
+              <FileText className="h-4 w-4" />
+              My Jobs
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-sm"
+              onClick={() => setShowSignInModal(true)}
+            >
+              <LogIn className="h-4 w-4 mr-1.5" />
+              Login
+            </Button>
+          )}
+        </nav>
+        
         {/* Step Content */}
-        <div className="flex flex-1 flex-col items-center justify-center px-3 pb-8 pt-6 sm:px-4">
+        <div className={`flex flex-1 flex-col ${currentStep === "describe" && !showJobsBoard ? "items-stretch" : "items-center justify-center px-3 pb-8 pt-6 sm:px-4"}`}>
           <AnimatePresence mode="wait">
             {/* Jobs Board View */}
             {showJobsBoard && isSignedIn && (
@@ -888,7 +920,7 @@ export default function HomePage() {
               </motion.div>
             )}
 
-            {/* Step 1: SMS CTA or Form Fallback */}
+            {/* Step 1: Landing page or Form Fallback */}
             {currentStep === "describe" && !showJobsBoard && (
               <motion.div
                 key="describe"
@@ -896,101 +928,14 @@ export default function HomePage() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
-                className="w-full max-w-2xl px-1 sm:px-0"
+                className="w-full"
               >
                 {!showFormFallback ? (
-                  <>
-                    {/* SMS CTA Hero */}
-                    <div className="text-center">
-                      <h1 className="text-balance text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">
-                        Text us your project
-                      </h1>
-                      <p className="mt-2 text-balance text-sm text-muted-foreground sm:text-base">
-                        Takes 30 seconds. No app needed.
-                      </p>
-                    </div>
-
-                    {/* Primary SMS Button */}
-                    <div className="mt-8 flex justify-center">
-                      <Button
-                        size="lg"
-                        className="h-14 gap-3 rounded-full px-8 text-base font-semibold sm:h-16 sm:px-10 sm:text-lg"
-                        onClick={() => {
-                          if (isMobileDevice()) {
-                            window.location.href = getSmsLink();
-                          } else {
-                            setShowDesktopSmsDialog(true);
-                          }
-                        }}
-                      >
-                        <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6" />
-                        Send us a text
-                      </Button>
-                    </div>
-
-                    {/* 3-Step Explanation */}
-                    <div className="mt-12 grid gap-4 sm:grid-cols-3">
-                      {[
-                        {
-                          step: "1",
-                          title: "Text us your issue",
-                          example: "\"My AC isn't cooling\"",
-                        },
-                        {
-                          step: "2",
-                          title: "We ask a few questions",
-                          example: "Zip, timeline, budget",
-                        },
-                        {
-                          step: "3",
-                          title: "Get bids from pros",
-                          example: "Verified local contractors",
-                        },
-                      ].map((item) => (
-                        <div
-                          key={item.step}
-                          className="flex flex-col items-center rounded-2xl border border-border bg-card p-5 text-center"
-                        >
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-                            {item.step}
-                          </div>
-                          <p className="mt-3 text-sm font-semibold text-foreground">
-                            {item.title}
-                          </p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {item.example}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Privacy note */}
-                    <p className="mt-4 text-center text-[10px] text-muted-foreground/60">
-                      *Your contact info is never shared until you approve a bid.
-                    </p>
-
-                    {/* Form fallback link */}
-                    <div className="mt-6 text-center">
-                      <button
-                        type="button"
-                        onClick={() => setShowFormFallback(true)}
-                        className="text-sm text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
-                      >
-                        Prefer a form? Describe your project here
-                      </button>
-                    </div>
-
-                    {/* iPhone Preview Section */}
-                    <div className="mt-16">
-                      <p className="mb-6 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
-                        See how it works
-                      </p>
-                      <SmsIphonePreview />
-                    </div>
-                  </>
+                  <HomeLanding onOpenForm={() => setShowFormFallback(true)} />
                 ) : (
                   <>
                     {/* Original Form (fallback) */}
+                    <div className="mx-auto w-full max-w-2xl px-4 pb-8 pt-6 sm:px-6">
                     <div className="mb-4 flex items-center">
                       <button
                         type="button"
@@ -998,7 +943,7 @@ export default function HomePage() {
                         className="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
                       >
                         <ArrowLeft className="h-4 w-4" />
-                        Back to SMS
+                        Back
                       </button>
                     </div>
 
@@ -1064,6 +1009,7 @@ export default function HomePage() {
                           </motion.div>
                         </AnimatePresence>
                       </div>
+                    </div>
                     </div>
                   </>
                 )}
