@@ -202,11 +202,22 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
               role="menu"
               className="absolute left-3 top-14 z-50 w-56 rounded-xl border border-border bg-background p-1.5 shadow-lg"
             >
-              {/* Public nav */}
-              <Link href="/" className={menuItemClass} onClick={closeMenu}>
-                <Home className="h-4 w-4 shrink-0 text-muted-foreground" />
-                Home
-              </Link>
+              {/* Public nav — when logged in, Home becomes Dashboard and Pricing/About Us are hidden */}
+              {isLoggedIn ? (
+                <Link
+                  href={isContractor ? "/contractors/dashboard" : "/"}
+                  className={`${menuItemClass} font-medium`}
+                  onClick={closeMenu}
+                >
+                  <Home className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  Dashboard
+                </Link>
+              ) : (
+                <Link href="/" className={menuItemClass} onClick={closeMenu}>
+                  <Home className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  Home
+                </Link>
+              )}
               <Link href="/services" className={menuItemClass} onClick={closeMenu}>
                 <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
                 Services
@@ -215,14 +226,18 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
                 <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
                 How It Works
               </Link>
-              <Link href="/subscribe" className={menuItemClass} onClick={closeMenu}>
-                <Tag className="h-4 w-4 shrink-0 text-muted-foreground" />
-                Pricing
-              </Link>
-              <Link href="/about" className={menuItemClass} onClick={closeMenu}>
-                <Info className="h-4 w-4 shrink-0 text-muted-foreground" />
-                About Us
-              </Link>
+              {!isLoggedIn && (
+                <>
+                  <Link href="/subscribe" className={menuItemClass} onClick={closeMenu}>
+                    <Tag className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    Pricing
+                  </Link>
+                  <Link href="/about" className={menuItemClass} onClick={closeMenu}>
+                    <Info className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    About Us
+                  </Link>
+                </>
+              )}
 
               {/* Authenticated nav — only shown when logged in */}
               {isLoggedIn && (
