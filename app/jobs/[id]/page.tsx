@@ -407,12 +407,12 @@ export default function JobDetailsPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Message Service Professional */}
+            {/* Message All Bidders */}
             <div className="rounded-2xl border border-border bg-card">
               <div className="flex items-center gap-2 border-b border-border p-4">
                 <MessageCircle className="h-5 w-5 text-primary" />
                 <h3 className="text-sm font-semibold text-foreground">
-                  Message Service Professional
+                  Message All Bidders
                 </h3>
                 <span className="ml-auto flex h-2 w-2 rounded-full bg-green-500" />
               </div>
