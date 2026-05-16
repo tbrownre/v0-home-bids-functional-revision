@@ -33,6 +33,7 @@ import {
   updateContractorStatus,
   type ContractorApplication,
 } from "./actions";
+import { USE_MOCK_DATA } from "@/lib/mock-auth";
 
 type Filter = "all" | "pending" | "approved" | "rejected";
 
@@ -378,6 +379,18 @@ export default function AdminPage() {
   const fetchData = async () => {
     setLoading(true);
     setError(null);
+
+    if (USE_MOCK_DATA) {
+      // Mock admin — show empty applications list with plausible stats.
+      setApplications([]);
+      setStats({
+        total: 24, pending: 3, approved: 19, rejected: 2,
+        totalHomeowners: 87, totalJobs: 142, openJobs: 38, activeSubscriptions: 61,
+      });
+      setLoading(false);
+      return;
+    }
+
     const [appsResult, statsResult] = await Promise.all([
       getContractorApplications(filter),
       getAdminStats(),

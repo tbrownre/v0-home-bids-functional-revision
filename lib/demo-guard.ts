@@ -11,6 +11,11 @@ export const DEMO_HOMEOWNER_EMAIL = "demo.homeowner@homebids.io";
 export const DEMO_CONTRACTOR_EMAIL = "demo.contractor@homebids.io";
 export const DEMO_PASSWORD = "HomeBidsDemo!24";
 
+// New mock-mode emails — kept alongside the legacy ones for compatibility
+export const MOCK_HOMEOWNER_EMAIL = "homeowner@homebids.demo";
+export const MOCK_CONTRACTOR_EMAIL = "contractor@homebids.demo";
+export const MOCK_ADMIN_EMAIL = "admin@homebids.demo";
+
 const DEMO_EMAILS = new Set([DEMO_HOMEOWNER_EMAIL, DEMO_CONTRACTOR_EMAIL]);
 
 /**

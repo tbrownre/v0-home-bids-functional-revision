@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AlertCircle, Loader2 } from "lucide-react";
 import { signIn } from "@/lib/supabase/actions";
 import { DEMO_HOMEOWNER_EMAIL, DEMO_CONTRACTOR_EMAIL, DEMO_PASSWORD } from "@/lib/demo-guard";
+import { mockSignIn, USE_MOCK_DATA, MOCK_USERS } from "@/lib/mock-auth";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
@@ -20,15 +21,30 @@ export default function SignInPage() {
     setLoading(true);
     setError("");
 
+    if (USE_MOCK_DATA) {
+      const result = mockSignIn(emailVal, passwordVal);
+      if (result.error || !result.user) {
+        setError(result.error ?? "Sign in failed.");
+        setLoading(false);
+        return;
+      }
+      if (result.user.role === "contractor") {
+        window.location.replace("/contractors/dashboard");
+      } else if (result.user.role === "admin") {
+        window.location.replace("/admin");
+      } else {
+        window.location.replace("/?showJobs=true");
+      }
+      return;
+    }
+
     const result = await signIn(emailVal, passwordVal);
 
     if (result.error) {
-      // Unconfirmed email — send to verify-email with resend CTA
       if (
         result.error.toLowerCase().includes("email not confirmed") ||
         result.error.toLowerCase().includes("not confirmed")
       ) {
-        // setLoading(false) before redirect so spinner doesn't linger if slow
         setLoading(false);
         window.location.href = `/auth/verify-email?status=pending&email=${encodeURIComponent(emailVal)}`;
         return;
@@ -38,8 +54,6 @@ export default function SignInPage() {
       return;
     }
 
-    // Hard navigation so the middleware runs and the session cookie is available
-    // before the destination page attempts to read auth state.
     if (result.userType === "contractor") {
       window.location.replace("/contractors/dashboard");
     } else {
@@ -99,7 +113,6 @@ export default function SignInPage() {
               Sign In
             </Button>
           </form>
-          {/* Demo accounts */}
           <div className="mt-5 rounded-lg border border-dashed border-border bg-muted/40 px-4 py-3">
             <p className="mb-2.5 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Try a demo account
@@ -109,9 +122,10 @@ export default function SignInPage() {
                 type="button"
                 disabled={loading}
                 onClick={() => {
-                  setEmail(DEMO_HOMEOWNER_EMAIL);
-                  setPassword(DEMO_PASSWORD);
-                  handleSignIn(DEMO_HOMEOWNER_EMAIL, DEMO_PASSWORD);
+                  const email = "homeowner@homebids.demo";
+                  setEmail(email);
+                  setPassword("demo");
+                  handleSignIn(email, "demo");
                 }}
                 className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
               >
@@ -121,9 +135,10 @@ export default function SignInPage() {
                 type="button"
                 disabled={loading}
                 onClick={() => {
-                  setEmail(DEMO_CONTRACTOR_EMAIL);
-                  setPassword(DEMO_PASSWORD);
-                  handleSignIn(DEMO_CONTRACTOR_EMAIL, DEMO_PASSWORD);
+                  const email = "contractor@homebids.demo";
+                  setEmail(email);
+                  setPassword("demo");
+                  handleSignIn(email, "demo");
                 }}
                 className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
               >

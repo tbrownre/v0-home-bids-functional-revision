@@ -28,6 +28,7 @@ import { completeJob, archiveJob, type JobStatusOwner } from "@/lib/job-store";
 import { Label } from "@/components/ui/label";
 import { getJobById } from "@/lib/supabase/actions";
 import { getJobById as getDemoJobById } from "@/lib/demo/services";
+import { USE_MOCK_DATA } from "@/lib/mock-auth";
 
 interface Message {
   id: string;
@@ -82,7 +83,8 @@ export default function JobDetailsPage() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    const isDemoJob = id.startsWith("demo-job-");
+    // In mock mode always use demo service; otherwise detect by ID prefix.
+    const isDemoJob = USE_MOCK_DATA || id.startsWith("demo-job-");
     const fetchJob = isDemoJob ? getDemoJobById(id) : getJobById(id);
     fetchJob.then(({ job, error }) => {
       if (error || !job) {

@@ -14,6 +14,7 @@ import {
   type NotificationType,
 } from "@/lib/inbox-store";
 import { createClient } from "@/lib/supabase/client";
+import { getMockUser, mockSignOut, USE_MOCK_DATA } from "@/lib/mock-auth";
 
 export interface HeaderProps {
   isContractor?: boolean;
@@ -101,15 +102,35 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [menuOpen]);
 
-  // Auth state from Supabase
-  const [isSignedIn, setIsSignedIn] = useState(isSignedInProp);
-  const [isContractor, setIsContractor] = useState(isContractorProp);
+  // Auth state
+  const [isSignedIn, setIsSignedIn] = useState(() => {
+    if (USE_MOCK_DATA && typeof window !== "undefined") {
+      const user = getMockUser();
+      return isSignedInProp || (user?.role === "homeowner" || user?.role === "admin") ? true : false;
+    }
+    return isSignedInProp;
+  });
+  const [isContractor, setIsContractor] = useState(() => {
+    if (USE_MOCK_DATA && typeof window !== "undefined") {
+      const user = getMockUser();
+      return isContractorProp || user?.role === "contractor";
+    }
+    return isContractorProp;
+  });
   const isLoggedIn = isContractor || isSignedIn;
 
   useEffect(() => {
-    // Skip Supabase entirely in the v0 preview sandbox — it blocks external fetch
     if (typeof window === "undefined") return;
-    if (window.location.hostname.includes("vusercontent.net")) return;
+
+    if (USE_MOCK_DATA) {
+      const user = getMockUser();
+      if (user) {
+        setIsSignedIn(user.role !== "contractor");
+        setIsContractor(user.role === "contractor");
+      }
+      return;
+    }
+
     let subscription: { unsubscribe: () => void } | null = null;
     try {
       const supabase = createClient();
@@ -139,6 +160,10 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
 
   const handleSignOut = async () => {
     closeMenu();
+    if (USE_MOCK_DATA) {
+      mockSignOut();
+      return;
+    }
     const supabase = createClient();
     await supabase.auth.signOut();
     window.location.href = "/";

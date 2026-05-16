@@ -46,22 +46,17 @@ import { SubscriptionCheckout } from "@/components/subscription-checkout";
 import { getJobStatus, subscribe, isJobArchived, type JobStatusOwner, getJobStatusLabel } from "@/lib/job-store";
 import { signUpHomeowner, createJob, getHomeownerJobs } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
-import { isDemoEmail, DEMO_HOMEOWNER_EMAIL } from "@/lib/demo-guard";
+import { isDemoEmail, DEMO_HOMEOWNER_EMAIL, DEMO_CONTRACTOR_EMAIL } from "@/lib/demo-guard";
 import { getHomeownerJobs as getDemoHomeownerJobs } from "@/lib/demo/services";
+import { getMockUser, mockSignOut, USE_MOCK_DATA } from "@/lib/mock-auth";
 import { getSmsLink, isMobileDevice, SMS_PHONE_DISPLAY } from "@/lib/sms-config";
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
 import { HomeLanding } from "@/components/home-landing";
 import { MessageSquare, Copy, Check, Smartphone } from "lucide-react";
 
-// Centralized sign-out: clears Supabase session then hard-navigates to home.
+// Centralized sign-out: uses mock auth in demo mode.
 async function performSignOut() {
-  try {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-  } catch {
-    // ignore — we still navigate away
-  }
-  window.location.href = "/";
+  mockSignOut();
 }
 
 interface UploadedImage {
@@ -119,29 +114,62 @@ export default function HomePage() {
   const jobsBoardRestoredForSession = useRef(false);
 
   useEffect(() => {
-    // Skip Supabase entirely in the v0 preview sandbox
     if (typeof window === "undefined") return;
-    if (window.location.hostname.includes("vusercontent.net")) return;
 
+    if (USE_MOCK_DATA) {
+      // Mock mode — read session synchronously, no network call.
+      const user = getMockUser();
+      if (user) {
+        if (user.role === "contractor") {
+          window.location.replace("/contractors/dashboard");
+          return;
+        }
+        if (user.role === "admin") {
+          window.location.replace("/admin");
+          return;
+        }
+        setIsSignedIn(true);
+        setIsContractor(false);
+        setUserEmail(user.email);
+        if (
+          !creatingNewJobRef.current &&
+          !showJobsBoardRef.current &&
+          !jobsBoardRestoredForSession.current &&
+          currentStepRef.current === "describe"
+        ) {
+          jobsBoardRestoredForSession.current = true;
+          showJobsBoardRef.current = true;
+          setShowJobsBoard(true);
+        }
+      }
+      return;
+    }
+
+    // Live mode — Supabase auth (kept for production)
     let subscription: { unsubscribe: () => void } | null = null;
     try {
       const supabase = createClient();
-
-      // Initialise state from the current session on mount, then listen for changes.
-      // Using getUser() (not getSession()) so the server always validates the token.
-      supabase.auth.getUser().then(({ data: { user } }) => {
+      supabase.auth.getUser().then(async ({ data: { user } }) => {
         if (user) {
           const type = user.user_metadata?.user_type;
           if (type === "contractor") {
-            // Contractor landed on the homeowner page — redirect once, safely.
-            window.location.replace("/contractors/dashboard");
+            const { data: profile } = await supabase
+              .from("contractor_profiles")
+              .select("approval_status")
+              .eq("id", user.id)
+              .maybeSingle();
+            const isApproved = profile?.approval_status === "approved";
+            const isDemoAccount = user.email === DEMO_CONTRACTOR_EMAIL;
+            if (isApproved || isDemoAccount) {
+              window.location.replace("/contractors/dashboard");
+            } else if (profile?.approval_status === "pending") {
+              window.location.replace("/contractors/signup/pending");
+            }
+            return;
           } else {
             setIsSignedIn(true);
             setIsContractor(false);
             setUserEmail(user.email ?? null);
-            // Auto-restore jobs board on initial load only when the user is on
-            // the idle landing screen ("describe"). Never interrupt a form flow,
-            // the success step, or any other active step.
             if (
               !creatingNewJobRef.current &&
               !showJobsBoardRef.current &&
@@ -155,24 +183,28 @@ export default function HomePage() {
           }
         }
       });
-
-      const { data } = supabase.auth.onAuthStateChange((event, session) => {
-        // Ignore INITIAL_SESSION — we handle that in getUser() above to avoid
-        // double-restore on first paint.
+      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === "INITIAL_SESSION") return;
-
         if (session?.user) {
           const type = session.user.user_metadata?.user_type;
           if (type === "contractor") {
-            window.location.replace("/contractors/dashboard");
+            const { data: profile } = await supabase
+              .from("contractor_profiles")
+              .select("approval_status")
+              .eq("id", session.user.id)
+              .maybeSingle();
+            const isApproved = profile?.approval_status === "approved";
+            const isDemoAccount = session.user.email === DEMO_CONTRACTOR_EMAIL;
+            if (isApproved || isDemoAccount) {
+              window.location.replace("/contractors/dashboard");
+            } else if (profile?.approval_status === "pending") {
+              window.location.replace("/contractors/signup/pending");
+            }
+            return;
           } else {
             setIsSignedIn(true);
             setIsContractor(false);
             setUserEmail(session.user.email ?? null);
-            // Only auto-restore on a fresh sign-in, not on token refresh or
-            // any event that fires during an active form flow or post-submit.
-            // currentStepRef must be "describe" — never interrupt the success
-            // screen or any mid-form step with a jobs-board redirect.
             if (
               event === "SIGNED_IN" &&
               !creatingNewJobRef.current &&
@@ -195,11 +227,9 @@ export default function HomePage() {
       });
       subscription = data.subscription;
     } catch {
-      // Silently no-op if Supabase is unavailable (e.g. preview sandbox)
+      // Silently no-op if Supabase is unavailable
     }
     return () => subscription?.unsubscribe();
-  // Empty deps: this effect sets up auth listeners once on mount only.
-  // All restore logic uses refs, not state, to avoid dep-loop re-runs.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -323,20 +353,17 @@ export default function HomePage() {
     return unsubscribe;
   }, []);
 
-  // Load jobs — demo accounts get rich pre-seeded data; real users hit Supabase.
-  // Wait until userEmail is resolved (non-null) before deciding which path to take,
-  // so isDemoEmail never mis-fires when email hasn't loaded yet.
+  // Load jobs — mock mode always uses pre-seeded demo data.
   useEffect(() => {
     if (!isSignedIn || userEmail === null) return;
-    if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
 
-    const loadJobs = isDemoEmail(userEmail)
+    const loadJobs = USE_MOCK_DATA
       ? getDemoHomeownerJobs()
-      : getHomeownerJobs();
+      : isDemoEmail(userEmail)
+        ? getDemoHomeownerJobs()
+        : getHomeownerJobs();
 
     loadJobs.then(({ jobs: dbJobs, error }) => {
-      // Always replace local state with the authoritative result — even an
-      // empty array is correct (e.g. a brand-new user who just signed up).
       if (!error && Array.isArray(dbJobs)) {
         setUserJobs(dbJobs.map((j: any) => ({
           id: j.id,
@@ -422,15 +449,42 @@ export default function HomePage() {
   const [submittingJob, setSubmittingJob] = useState(false);
 
   const handleFinalSubmit = useCallback(async () => {
-    if (submittingJob) return; // double-submit guard
+    if (submittingJob) return;
     setSubmittingJob(true);
     setSubmitJobError("");
+
+    if (USE_MOCK_DATA) {
+      // Mock mode — save a fake job to local state, no backend call.
+      const newJob: Job = {
+        id: `mock-new-${Date.now()}`,
+        description: jobDescription.trim(),
+        status: "receiving_bids",
+        createdAt: new Date(),
+        bidsCount: 0,
+      };
+      setUserJobs((prev) => [newJob, ...prev]);
+      creatingNewJobRef.current = false;
+      showJobsBoardRef.current = true;
+      jobsBoardRestoredForSession.current = true;
+      setShowPasswordModal(false);
+      setSubmittingJob(false);
+      setCreatingNewJob(false);
+      setJobDescription("");
+      setTimeline("");
+      setBudget("");
+      setContactInfo({ firstName: "", lastName: "", email: "", phone: "", address: "", city: "", state: "", zip: "" });
+      setPassword("");
+      setConfirmPassword("");
+      setUploadedImages([]);
+      setCurrentStepSafe("describe");
+      setShowJobsBoard(true);
+      return;
+    }
 
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      // New user — sign up. Email confirmation required before they can log in.
       const signUpResult = await signUpHomeowner({
         email: contactInfo.email,
         password,
@@ -442,11 +496,6 @@ export default function HomePage() {
         setSubmittingJob(false);
         return;
       }
-      // Can't create the job yet — no confirmed session. Show success and
-      // let the webhook (fired by signUpHomeowner) capture the intent.
-      // CRITICAL: lock jobsBoardRestoredForSession NOW so that the SIGNED_IN
-      // auth event (fired by Supabase after signup) cannot hijack the success
-      // screen by auto-showing the jobs board.
       jobsBoardRestoredForSession.current = true;
       setCurrentStepSafe("success");
       setShowPasswordModal(false);
@@ -454,9 +503,6 @@ export default function HomePage() {
       return;
     }
 
-    // Map the budget option string to numeric min/max values for the DB.
-    // budget is a string key like "500-2500", "under500", "10000+", etc.
-    // Never call Number() directly on it — that strips separators incorrectly.
     const budgetRangeMap: Record<string, { min?: number; max?: number }> = {
       under500:    { max: 500 },
       "500-2500":  { min: 500,   max: 2500 },
@@ -468,7 +514,6 @@ export default function HomePage() {
     };
     const budgetRange = budgetRangeMap[budget] ?? {};
 
-    // Existing signed-in user — create the job directly
     const jobResult = await createJob({
       title: jobDescription.slice(0, 80),
       description: jobDescription,

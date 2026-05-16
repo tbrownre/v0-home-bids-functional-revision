@@ -6,6 +6,7 @@ import { getOpenJobs, submitBid } from "@/lib/supabase/actions";
 import { getOpenJobs as getDemoOpenJobs } from "@/lib/demo/services";
 import { DEMO_CONTRACTOR_EMAIL } from "@/lib/demo-guard";
 import { createClient } from "@/lib/supabase/client";
+import { USE_MOCK_DATA } from "@/lib/mock-auth";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
@@ -270,8 +271,16 @@ export default function ContractorJobsMarketplace() {
   const [jobsLoading, setJobsLoading] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
 
-  // Fetch open jobs — demo contractor sees rich pre-seeded data; real contractors hit Supabase.
+  // Fetch open jobs — mock mode always uses demo data.
   useEffect(() => {
+    if (USE_MOCK_DATA) {
+      getDemoOpenJobs().then(({ jobs: demoJobs }) => {
+        setJobs(demoJobs as AvailableJob[]);
+        setJobsLoading(false);
+      });
+      return;
+    }
+
     if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) {
       setJobs(allAvailableJobs);
       setJobsLoading(false);
@@ -279,7 +288,6 @@ export default function ContractorJobsMarketplace() {
     }
 
     // Check if logged in as demo contractor, then serve demo data.
-    // createClient() is synchronous — do NOT call .then() on it.
     ;(async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
