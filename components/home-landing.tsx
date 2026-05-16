@@ -217,11 +217,6 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               right contractors for you.
             </p>
 
-            {/* Smart input */}
-            <div className="mt-8">
-              <SmartInput onSubmit={() => {}} />
-            </div>
-
             {/* Primary + Secondary CTAs */}
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <Button

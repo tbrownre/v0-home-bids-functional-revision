@@ -769,37 +769,6 @@ export default function HomePage() {
           </button>
         </div>
 
-        {/* Right-side nav — minimal, always visible */}
-        <nav className="hidden items-center gap-1 sm:flex" aria-label="Main navigation">
-          <Link
-            href="/how-it-works"
-            className="rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            How It Works
-          </Link>
-          {isSignedIn ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-sm"
-              onClick={handleYourJobsClick}
-            >
-              <FileText className="h-4 w-4" />
-              My Jobs
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-sm"
-              onClick={() => setShowSignInModal(true)}
-            >
-              <LogIn className="h-4 w-4 mr-1.5" />
-              Login
-            </Button>
-          )}
-        </nav>
-        
         {/* Step Content */}
         <div className={`flex flex-1 flex-col ${currentStep === "describe" && !showJobsBoard ? "items-stretch" : "items-center justify-center px-3 pb-8 pt-6 sm:px-4"}`}>
           <AnimatePresence mode="wait">
