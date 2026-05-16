@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { signIn } from "@/lib/supabase/actions";
+import { mockSignIn, USE_MOCK_DATA } from "@/lib/mock-auth";
 
 interface SignInModalProps {
   open: boolean;
@@ -43,10 +44,28 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
     setLoading(true);
     setError("");
 
+    if (USE_MOCK_DATA) {
+      const result = mockSignIn(email, password);
+      if (result.error || !result.user) {
+        setError(result.error ?? "Sign in failed.");
+        setLoading(false);
+        return;
+      }
+      onSignIn?.(result.user.role === "contractor" ? "contractor" : "homeowner");
+      handleClose();
+      if (result.user.role === "contractor") {
+        window.location.replace("/contractors/dashboard");
+      } else if (result.user.role === "admin") {
+        window.location.replace("/admin");
+      } else {
+        window.location.replace("/?showJobs=true");
+      }
+      return;
+    }
+
     const result = await signIn(email, password);
 
     if (result.error) {
-      // Unconfirmed email — redirect to verify-email page with resend CTA
       if (
         result.error.toLowerCase().includes("email not confirmed") ||
         result.error.toLowerCase().includes("not confirmed")
@@ -64,8 +83,6 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
     onSignIn?.(userType);
     handleClose();
 
-    // Hard navigation so middleware flushes the new session cookie before
-    // the destination page attempts auth state reads.
     if (userType === "contractor") {
       window.location.replace("/contractors/dashboard");
     } else {

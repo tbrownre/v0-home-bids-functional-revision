@@ -54,6 +54,7 @@ import { getContractorBids } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
 import { getContractorBids as getDemoContractorBids, getOpenJobs as getDemoOpenJobs } from "@/lib/demo/services";
 import { DEMO_CONTRACTOR_EMAIL } from "@/lib/demo-guard";
+import { getMockUser, mockSignOut, USE_MOCK_DATA } from "@/lib/mock-auth";
 
 interface ActiveBid {
   id: string;
@@ -159,33 +160,31 @@ export default function ContractorDashboard() {
   const [bidsLoading, setBidsLoading] = useState(true);
   const [bidsError, setBidsError] = useState<string | null>(null);
 
-  // Client-side session + approval guard.
-  // Checks auth AND contractor_profiles.approval_status so middleware doesn't
-  // need to make a DB query on every request.
+  // Auth guard — mock mode skips all Supabase calls and never redirects.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (window.location.hostname.includes("vusercontent.net")) return;
+    if (USE_MOCK_DATA) {
+      const user = getMockUser();
+      if (!user) {
+        window.location.replace("/auth/sign-in");
+      }
+      // Contractor is authenticated in mock mode — nothing else to check.
+      return;
+    }
 
     let didRedirect = false;
     const supabase = createClient();
-
     supabase.auth.getUser().then(async ({ data: { user }, error }) => {
       if (error || !user) {
         if (!didRedirect) { didRedirect = true; window.location.replace("/auth/sign-in"); }
         return;
       }
-
-      // Demo contractor is always considered approved — skip the DB profile check
-      // to prevent the infinite redirect loop (dashboard → pending → home → dashboard).
       if (user.email === DEMO_CONTRACTOR_EMAIL) return;
-
-      // Check approval status for real contractors only
       const { data: profile } = await supabase
         .from("contractor_profiles")
         .select("approval_status")
         .eq("id", user.id)
         .maybeSingle();
-
       if (!profile) {
         if (!didRedirect) { didRedirect = true; window.location.replace("/"); }
         return;
@@ -200,28 +199,34 @@ export default function ContractorDashboard() {
     });
   }, []);
 
+  // Load bids — mock mode always uses pre-seeded demo data, no Supabase call.
   useEffect(() => {
-    if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) {
-      setBidsLoading(false);
-      return;
-    }
     setBidsLoading(true);
-
-    // Demo contractor — load rich pre-seeded bid pipeline from local data.
-    // createClient() is synchronous — do NOT call .then() on it.
     ;(async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email === DEMO_CONTRACTOR_EMAIL) {
+      if (USE_MOCK_DATA) {
         const { bids: demoBids } = await getDemoContractorBids();
         setBids((demoBids ?? []).map((b) => mapBidFromDb(b as Record<string, unknown>)));
-        // Load 3 suggested jobs for the demo contractor
         const { jobs: openJobs } = await getDemoOpenJobs();
         setSuggestedJobs((openJobs ?? []).slice(0, 3) as AvailableJob[]);
         setBidsLoading(false);
         return;
       }
-      // Real contractor — load from Supabase.
+
+      if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) {
+        setBidsLoading(false);
+        return;
+      }
+
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email === DEMO_CONTRACTOR_EMAIL) {
+        const { bids: demoBids } = await getDemoContractorBids();
+        setBids((demoBids ?? []).map((b) => mapBidFromDb(b as Record<string, unknown>)));
+        const { jobs: openJobs } = await getDemoOpenJobs();
+        setSuggestedJobs((openJobs ?? []).slice(0, 3) as AvailableJob[]);
+        setBidsLoading(false);
+        return;
+      }
       const { bids: rawBids, error } = await getContractorBids();
       if (error) {
         setBidsError(error);

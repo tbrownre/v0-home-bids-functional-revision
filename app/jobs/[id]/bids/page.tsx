@@ -29,6 +29,7 @@ import {
 import { selectBidAsWinner } from "@/lib/job-store";
 import { acceptBid as acceptBidAction, getJobBids } from "@/lib/supabase/actions";
 import { getJobBids as getDemoJobBids } from "@/lib/demo/services";
+import { USE_MOCK_DATA } from "@/lib/mock-auth";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -300,12 +301,11 @@ export default function BidsPage() {
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
   const [messages, setMessages] = useState<Record<string, Message[]>>(sampleMessages);
 
-  // Fetch bids — demo jobs load rich pre-seeded data; real jobs hit Supabase.
+  // Fetch bids — mock mode always uses demo service.
   useEffect(() => {
     if (!jobId) return;
-    if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
 
-    const isDemoJob = jobId.startsWith("demo-job-");
+    const isDemoJob = USE_MOCK_DATA || jobId.startsWith("demo-job-");
     const fetchBids = isDemoJob ? getDemoJobBids(jobId) : getJobBids(jobId);
 
     fetchBids.then(({ bids: rawBids, error }) => {
