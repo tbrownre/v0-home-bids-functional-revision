@@ -46,7 +46,7 @@ import { SubscriptionCheckout } from "@/components/subscription-checkout";
 import { getJobStatus, subscribe, isJobArchived, type JobStatusOwner, getJobStatusLabel } from "@/lib/job-store";
 import { signUpHomeowner, createJob, getHomeownerJobs } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
-import { isDemoEmail, DEMO_HOMEOWNER_EMAIL } from "@/lib/demo-guard";
+import { isDemoEmail, DEMO_HOMEOWNER_EMAIL, DEMO_CONTRACTOR_EMAIL } from "@/lib/demo-guard";
 import { getHomeownerJobs as getDemoHomeownerJobs } from "@/lib/demo/services";
 import { getSmsLink, isMobileDevice, SMS_PHONE_DISPLAY } from "@/lib/sms-config";
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
@@ -118,9 +118,6 @@ export default function HomePage() {
   // we never auto-show it again — preventing re-trigger on any re-render.
   const jobsBoardRestoredForSession = useRef(false);
 
-  // Ref to ensure we only ever fire a contractor redirect once per mount.
-  const hasRedirectedContractor = useRef(false);
-
   useEffect(() => {
     // Skip Supabase entirely in the v0 preview sandbox
     if (typeof window === "undefined") return;
@@ -132,15 +129,30 @@ export default function HomePage() {
 
       // Initialise state from the current session on mount, then listen for changes.
       // Using getUser() (not getSession()) so the server always validates the token.
-      supabase.auth.getUser().then(({ data: { user } }) => {
+      supabase.auth.getUser().then(async ({ data: { user } }) => {
         if (user) {
           const type = user.user_metadata?.user_type;
           if (type === "contractor") {
-            // Contractor landed on the homeowner page — redirect once, safely.
-            if (!hasRedirectedContractor.current) {
-              hasRedirectedContractor.current = true;
+            // Before redirecting to dashboard, verify the contractor is approved.
+            // Without this check, unapproved contractors bounce forever between
+            // "/" (which sees contractor → redirect to dashboard) and
+            // "/contractors/dashboard" (which sees unapproved → redirect to /).
+            const { data: profile } = await supabase
+              .from("contractor_profiles")
+              .select("approval_status")
+              .eq("id", user.id)
+              .maybeSingle();
+
+            const isApproved = profile?.approval_status === "approved";
+            const isDemoAccount = user.email === DEMO_CONTRACTOR_EMAIL;
+
+            if (isApproved || isDemoAccount) {
               window.location.replace("/contractors/dashboard");
+            } else if (profile?.approval_status === "pending") {
+              window.location.replace("/contractors/signup/pending");
             }
+            // If no profile or rejected, just let them stay on the homepage.
+            return;
           } else {
             setIsSignedIn(true);
             setIsContractor(false);
@@ -162,7 +174,7 @@ export default function HomePage() {
         }
       });
 
-      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
         // Ignore INITIAL_SESSION — we handle that in getUser() above to avoid
         // double-restore on first paint.
         if (event === "INITIAL_SESSION") return;
@@ -170,10 +182,22 @@ export default function HomePage() {
         if (session?.user) {
           const type = session.user.user_metadata?.user_type;
           if (type === "contractor") {
-            if (!hasRedirectedContractor.current) {
-              hasRedirectedContractor.current = true;
+            // Same approval check as above — only redirect approved contractors.
+            const { data: profile } = await supabase
+              .from("contractor_profiles")
+              .select("approval_status")
+              .eq("id", session.user.id)
+              .maybeSingle();
+
+            const isApproved = profile?.approval_status === "approved";
+            const isDemoAccount = session.user.email === DEMO_CONTRACTOR_EMAIL;
+
+            if (isApproved || isDemoAccount) {
               window.location.replace("/contractors/dashboard");
+            } else if (profile?.approval_status === "pending") {
+              window.location.replace("/contractors/signup/pending");
             }
+            return;
           } else {
             setIsSignedIn(true);
             setIsContractor(false);
