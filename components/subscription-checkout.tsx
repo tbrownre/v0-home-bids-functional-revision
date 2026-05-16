@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import {
   EmbeddedCheckout,
   EmbeddedCheckoutProvider,
@@ -21,7 +20,6 @@ interface SubscriptionCheckoutProps {
 }
 
 export function SubscriptionCheckout({ planId, onSuccess, onCancel }: SubscriptionCheckoutProps) {
-  const searchParams = useSearchParams()
   const [isComplete, setIsComplete] = useState(false)
   const [userId, setUserId] = useState<string | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
@@ -47,17 +45,14 @@ export function SubscriptionCheckout({ planId, onSuccess, onCancel }: Subscripti
   const fetchClientSecret = useCallback(
     async () => {
       try {
-        return await startSubscriptionCheckout(planId, userId, {
-          earlyAccess: searchParams.get('early_access') === 'true',
-          foundingContractor: searchParams.get('founding_contractor') === 'true',
-        })
+        return await startSubscriptionCheckout(planId, userId)
       } catch (err) {
         console.error('[SubscriptionCheckout] Failed to start checkout:', err)
         setError("We couldn't start checkout. Please try again.")
         throw err
       }
     },
-    [planId, userId, searchParams],
+    [planId, userId],
   )
 
   // Stable reference — created once per mount, never recreated.

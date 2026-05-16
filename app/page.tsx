@@ -38,7 +38,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SignInModal } from "@/components/sign-in-modal";
-import { EarlyAccessModal } from "@/components/early-access-modal";
 import { Briefcase, Info, Settings, HelpCircle, Building2, Repeat, AlertTriangle, Shield, Sparkles, MapPin, Clock, Tag, Zap } from "lucide-react";
 import Image from "next/image";
 import { ScrollToTop } from "@/components/scroll-to-top";
@@ -49,6 +48,10 @@ import { signUpHomeowner, createJob, getHomeownerJobs } from "@/lib/supabase/act
 import { createClient } from "@/lib/supabase/client";
 import { isDemoEmail, DEMO_HOMEOWNER_EMAIL } from "@/lib/demo-guard";
 import { getHomeownerJobs as getDemoHomeownerJobs } from "@/lib/demo/services";
+import { getSmsLink, isMobileDevice, SMS_PHONE_DISPLAY } from "@/lib/sms-config";
+import { SmsIphonePreview } from "@/components/sms-iphone-preview";
+import { HomeLanding } from "@/components/home-landing";
+import { MessageSquare, Copy, Check, Smartphone } from "lucide-react";
 
 // Centralized sign-out: clears Supabase session then hard-navigates to home.
 async function performSignOut() {
@@ -94,7 +97,9 @@ export default function HomePage() {
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [showJobsBoard, setShowJobsBoard] = useState(false);
   const [creatingNewJob, setCreatingNewJob] = useState(false);
-  const [showEarlyAccess, setShowEarlyAccess] = useState(false);
+  const [showFormFallback, setShowFormFallback] = useState(false);
+  const [showDesktopSmsDialog, setShowDesktopSmsDialog] = useState(false);
+  const [copiedNumber, setCopiedNumber] = useState(false);
 
   // Auth state from Supabase only
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -627,7 +632,7 @@ export default function HomePage() {
       {/* Main Content */}
       <main className="relative flex flex-1 flex-col overflow-y-auto">
         {/* Top bar with logo */}
-        <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-3 py-0.5 md:px-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-3 py-0 md:px-6">
           <div className="flex items-center">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -678,17 +683,16 @@ export default function HomePage() {
                   </Link>
                 </DropdownMenuItem>
 
-                {/* Early Access CTA */}
+                {/* Get Started CTA */}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="flex cursor-pointer items-center gap-2 bg-primary/10 text-primary font-medium hover:bg-primary/20 focus:bg-primary/20"
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    setShowEarlyAccess(true);
-                  }}
-                >
-                  <Zap className="h-4 w-4" />
-                  Early Access
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/subscribe"
+                    className="flex cursor-pointer items-center gap-2 bg-primary/10 text-primary font-medium hover:bg-primary/20 focus:bg-primary/20"
+                  >
+                    <Zap className="h-4 w-4" />
+                    Get Started
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {isSignedIn && (
@@ -766,7 +770,7 @@ export default function HomePage() {
         </div>
 
         {/* Step Content */}
-        <div className="flex flex-1 flex-col items-center justify-center px-3 pb-8 pt-6 sm:px-4">
+        <div className={`flex flex-1 flex-col ${currentStep === "describe" && !showJobsBoard ? "items-stretch" : "items-center justify-center px-3 pb-8 pt-6 sm:px-4"}`}>
           <AnimatePresence mode="wait">
             {/* Jobs Board View */}
             {showJobsBoard && isSignedIn && (
@@ -885,7 +889,7 @@ export default function HomePage() {
               </motion.div>
             )}
 
-            {/* Step 1: Describe your project */}
+            {/* Step 1: Landing page or Form Fallback */}
             {currentStep === "describe" && !showJobsBoard && (
               <motion.div
                 key="describe"
@@ -893,78 +897,91 @@ export default function HomePage() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
-                className="w-full max-w-2xl px-1 sm:px-0"
+                className="w-full"
               >
-                <div className="text-center">
-                  <h1 className="text-balance text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">
-                    What home project can we help with?
-                  </h1>
-                  
-                </div>
-
-                {/* Input area */}
-                <div className="mt-8 w-full">
-                  <div className="relative rounded-2xl border border-border bg-card shadow-lg sm:rounded-3xl">
-                    {/* Input row */}
-                    <div className="flex items-end gap-2 p-2 sm:p-3">
-                      {/* Text input */}
-                      <textarea
-                        ref={textareaRef}
-                        value={jobDescription}
-                        onChange={handleTextareaChange}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Describe your project..."
-                        className="min-h-[44px] flex-1 resize-none bg-transparent px-1 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none sm:px-2 sm:text-base"
-                        rows={1}
-                      />
-
-                      {/* Submit button */}
-                      <Button
+                {!showFormFallback ? (
+                  <HomeLanding onOpenForm={() => setShowFormFallback(true)} />
+                ) : (
+                  <>
+                    {/* Original Form (fallback) */}
+                    <div className="mx-auto w-full max-w-2xl px-4 pb-8 pt-6 sm:px-6">
+                    <div className="mb-4 flex items-center">
+                      <button
                         type="button"
-                        size="icon"
-                        className="h-10 w-10 shrink-0 rounded-full"
-                        onClick={handleNextStep}
-                        disabled={!jobDescription.trim()}
-                        aria-label="Continue to photos"
+                        onClick={() => setShowFormFallback(false)}
+                        className="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
                       >
-                        <ArrowUp className="h-5 w-5" />
-                      </Button>
+                        <ArrowLeft className="h-4 w-4" />
+                        Back
+                      </button>
                     </div>
-                  </div>
-                </div>
 
-                {/* Helper text */}
-                <p className="mt-3 text-center text-xs text-muted-foreground">
-                  <span className="block sm:inline">HomeBids connects you with verified local contractors.</span>{" "}
-                  <span className="block sm:inline">Get multiple bids, compare, and choose.</span>
-                </p>
-                <p className="mt-1 text-center text-[10px] text-muted-foreground/60">
-                  *Your contact info is never shared until you approve a bid.
-                </p>
+                    <div className="text-center">
+                      <h1 className="text-balance text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">
+                        What home project can we help with?
+                      </h1>
+                    </div>
 
-                {/* Rotating Example Prompts */}
-                <div className="mt-20 flex flex-col items-center">
-                  <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
-                    Example projects
-                  </p>
-                  <div className="relative min-h-[4.5rem] w-full max-w-lg sm:min-h-[3.5rem]">
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={exampleIndex}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className="absolute inset-x-0 top-0 px-4 py-2"
-                      >
-                        <p className="text-center text-sm italic leading-relaxed text-muted-foreground/80">
-                          &ldquo;{examplePrompts[exampleIndex]}&rdquo;
-                        </p>
-                      </motion.div>
-                    </AnimatePresence>
-                  </div>
+                    {/* Input area */}
+                    <div className="mt-8 w-full">
+                      <div className="relative rounded-2xl border border-border bg-card shadow-lg sm:rounded-3xl">
+                        <div className="flex items-end gap-2 p-2 sm:p-3">
+                          <textarea
+                            ref={textareaRef}
+                            value={jobDescription}
+                            onChange={handleTextareaChange}
+                            onKeyDown={handleKeyDown}
+                            placeholder="Describe your project..."
+                            className="min-h-[44px] flex-1 resize-none bg-transparent px-1 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none sm:px-2 sm:text-base"
+                            rows={1}
+                          />
+                          <Button
+                            type="button"
+                            size="icon"
+                            className="h-10 w-10 shrink-0 rounded-full"
+                            onClick={handleNextStep}
+                            disabled={!jobDescription.trim()}
+                            aria-label="Continue to photos"
+                          >
+                            <ArrowUp className="h-5 w-5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
 
-                </div>
+                    <p className="mt-3 text-center text-xs text-muted-foreground">
+                      <span className="block sm:inline">HomeBids connects you with verified local contractors.</span>{" "}
+                      <span className="block sm:inline">Get multiple bids, compare, and choose.</span>
+                    </p>
+                    <p className="mt-1 text-center text-[10px] text-muted-foreground/60">
+                      *Your contact info is never shared until you approve a bid.
+                    </p>
+
+                    {/* Rotating Example Prompts */}
+                    <div className="mt-20 flex flex-col items-center">
+                      <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
+                        Example projects
+                      </p>
+                      <div className="relative min-h-[4.5rem] w-full max-w-lg sm:min-h-[3.5rem]">
+                        <AnimatePresence mode="wait">
+                          <motion.div
+                            key={exampleIndex}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                            className="absolute inset-x-0 top-0 px-4 py-2"
+                          >
+                            <p className="text-center text-sm italic leading-relaxed text-muted-foreground/80">
+                              &ldquo;{examplePrompts[exampleIndex]}&rdquo;
+                            </p>
+                          </motion.div>
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                    </div>
+                  </>
+                )}
               </motion.div>
             )}
 
@@ -1862,8 +1879,51 @@ export default function HomePage() {
 
       <ScrollToTop />
 
-      {/* Early Access Modal */}
-      <EarlyAccessModal open={showEarlyAccess} onOpenChange={setShowEarlyAccess} />
+      {/* Desktop SMS Fallback Dialog */}
+      <Dialog open={showDesktopSmsDialog} onOpenChange={setShowDesktopSmsDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5" />
+              Text us to get started
+            </DialogTitle>
+            <DialogDescription>
+              Send a text from your phone to start your project. No app or account needed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            <div className="rounded-xl border border-border bg-secondary/50 px-6 py-4 text-center">
+              <p className="text-2xl font-bold tracking-wide text-foreground">
+                {SMS_PHONE_DISPLAY}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => {
+                navigator.clipboard.writeText(SMS_PHONE_DISPLAY);
+                setCopiedNumber(true);
+                setTimeout(() => setCopiedNumber(false), 2000);
+              }}
+            >
+              {copiedNumber ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4" />
+                  Copy number
+                </>
+              )}
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              {"Just text: \"Hey HomeBids, I need help with...\""}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
