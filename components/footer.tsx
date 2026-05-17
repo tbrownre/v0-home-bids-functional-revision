@@ -80,8 +80,10 @@ function FlyoutGroup({ label, items }: { label: string; items: { href?: string; 
 
 export function Footer() {
   const pathname = usePathname();
-  // Don't render footer on admin routes — admin has its own layout
-  if (pathname?.startsWith("/admin")) return null;
+  // Don't render footer on admin routes — admin has its own layout.
+  // Also suppress on "/" — that page uses h-screen and renders Footer
+  // directly inside its own scrollable <main> container.
+  if (pathname?.startsWith("/admin") || pathname === "/") return null;
 
   const [showContact, setShowContact] = useState(false);
   const [contactType, setContactType] = useState<"homeowner" | "contractor">("homeowner");
