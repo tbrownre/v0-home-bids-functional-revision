@@ -839,9 +839,11 @@ export default function HomePage() {
                       Track your projects and manage bids
                     </p>
                   </div>
-                  <Button onClick={resetForm} className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    New Job
+                  <Button asChild className="gap-2">
+                    <Link href="/new-job">
+                      <Plus className="h-4 w-4" />
+                      New Job
+                    </Link>
                   </Button>
                 </div>
 
@@ -857,9 +859,11 @@ export default function HomePage() {
                       Post your first job to start receiving bids from local
                       contractors
                     </p>
-                    <Button onClick={resetForm} className="mt-6 gap-2">
-                      <Plus className="h-4 w-4" />
-                      Post Your First Job
+                    <Button asChild className="mt-6 gap-2">
+                      <Link href="/new-job">
+                        <Plus className="h-4 w-4" />
+                        Post Your First Job
+                      </Link>
                     </Button>
                   </div>
                 ) : (
@@ -1799,13 +1803,15 @@ export default function HomePage() {
                   </p>
                   <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
                     <Button
-                      onClick={resetForm}
+                      asChild
                       variant="outline"
                       className="gap-2 border-green-300 bg-transparent text-green-700 hover:bg-green-50 hover:text-green-800"
                       size="lg"
                     >
-                      <Plus className="h-4 w-4" />
-                      Post Another Job
+                      <Link href="/new-job">
+                        <Plus className="h-4 w-4" />
+                        Post Another Job
+                      </Link>
                     </Button>
                     <Button
                       onClick={() => {
