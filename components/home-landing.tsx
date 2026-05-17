@@ -218,8 +218,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
             </h1>
 
             <p className="mt-6 max-w-lg text-pretty text-lg leading-relaxed text-muted-foreground">
-              Send a quick message and our AI will gather everything and find the
-              right contractors for you.
+              Start with a quick text. Answer a few simple questions—we&apos;ll bring you multiple bids from contractors ready to win your job.
             </p>
 
             {/* Primary + Secondary CTAs */}
