@@ -66,8 +66,8 @@ export default function SubscribePage() {
       const params = new URLSearchParams({ plan: selectedPlan.id });
       router.push(`/contractors/signup?${params.toString()}`);
     } else {
-      // Homeowner payment confirmed — go to homepage to post a job
-      router.push("/");
+      // Homeowner payment confirmed — send them to post their first job
+      router.push("/new-job");
     }
   };
 

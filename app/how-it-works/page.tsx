@@ -242,7 +242,7 @@ export default function HowItWorksPage() {
                   Start your post in minutes and begin comparing contractor interest in one place.
                 </p>
                 <Button size="lg" variant="secondary" className="mt-6" asChild>
-                  <Link href="/subscribe?type=homeowner">
+                  <Link href="/new-job">
                     Post Your Project
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
