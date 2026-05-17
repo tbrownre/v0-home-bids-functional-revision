@@ -206,10 +206,12 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               </span>
             </div>
 
-            <h1 className="text-balance text-4xl font-bold leading-[1.1] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              Text us your project.{" "}
-              <span className="block">Get multiple</span>
-              <span className="block">contractor bids.</span>
+            <h1 className="text-4xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]">
+              Text us your project.
+              <br />
+              Contractors bid.
+              <br />
+              <span className="text-[#00c951]">Compare. Choose. Done.</span>
             </h1>
 
             <p className="mt-6 max-w-lg text-pretty text-lg leading-relaxed text-muted-foreground">
