@@ -291,7 +291,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               {
                 step: "01",
                 title: "Text us your project",
-                body: "No apps, no sign-ups. Just send a quick text message.",
+                body: "Start for free. Just send a quick text message.",
                 icon: <MessageSquare className="h-5 w-5" />,
               },
               {
