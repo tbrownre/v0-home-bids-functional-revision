@@ -230,7 +230,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
                 <>
                   <Link href="/?showJobs=true" className={`${menuItemClass} font-medium`} onClick={closeMenu}>
                     <Home className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    Dashboard
+                    Your Jobs
                   </Link>
                   <Link href="/inbox?type=homeowner" className={menuItemClass} onClick={closeMenu}>
                     <MessageCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
