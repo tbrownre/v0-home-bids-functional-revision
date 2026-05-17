@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 interface Message {
   sender: "user" | "ai";
   text: string;
-  delay: number; // ms after the previous message finishes appearing
+  delay: number;
 }
 
 const CONVERSATION: Message[] = [
@@ -19,8 +19,8 @@ const CONVERSATION: Message[] = [
   { sender: "ai",   text: "3 bids incoming. You'll hear back shortly!", delay: 500 },
 ];
 
-const TYPING_DURATION = 1100; // how long the typing indicator shows before AI message appears
-const RESTART_DELAY  = 4200; // pause at end before looping
+const TYPING_DURATION = 1100;
+const RESTART_DELAY  = 4200;
 
 function TypingDots() {
   return (
@@ -40,8 +40,15 @@ function TypingDots() {
 export function SmsIphonePreview() {
   const [visible, setVisible] = useState<number[]>([]);
   const [typing, setTyping]   = useState(false);
-  const phaseRef  = useRef(0);
-  const timerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollRef  = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom whenever messages or typing state changes
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [visible, typing]);
 
   const clear = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -52,14 +59,11 @@ export function SmsIphonePreview() {
     timerRef.current = setTimeout(fn, ms);
   };
 
-  // Kick off the whole sequence
   const runStep = (idx: number) => {
     if (idx >= CONVERSATION.length) {
-      // All done — wait then restart
       schedule(() => {
         setVisible([]);
         setTyping(false);
-        phaseRef.current = 0;
         schedule(() => runStep(0), 500);
       }, RESTART_DELAY);
       return;
@@ -68,7 +72,6 @@ export function SmsIphonePreview() {
     const msg = CONVERSATION[idx];
 
     if (msg.sender === "ai") {
-      // Show typing indicator, then reveal message
       schedule(() => {
         setTyping(true);
         schedule(() => {
@@ -93,61 +96,83 @@ export function SmsIphonePreview() {
 
   return (
     <div className="flex items-center justify-center">
-      <div className="relative w-[272px] sm:w-[296px]">
-        {/* iPhone shell */}
-        <div className="overflow-hidden rounded-[2.8rem] border-[5px] border-foreground/10 bg-card shadow-2xl shadow-foreground/8" style={{ height: 520 }}>
-
-          {/* Dynamic island */}
-          <div className="flex justify-center bg-card pt-3 pb-0.5">
-            <div className="h-[22px] w-[90px] rounded-full bg-foreground/90" />
+      {/* Outer glow / shadow ring */}
+      <div className="relative w-[272px] sm:w-[300px]">
+        {/* iPhone shell — fixed height, flex column so sections stack cleanly */}
+        <div
+          className="flex flex-col overflow-hidden rounded-[3rem] bg-white"
+          style={{
+            height: 560,
+            border: "6px solid #1a1a1a",
+            boxShadow: "0 0 0 1px rgba(255,255,255,0.06), 0 30px 60px -12px rgba(0,0,0,0.45), 0 0 0 0.5px #3a3a3a inset",
+          }}
+        >
+          {/* ── Dynamic Island ── */}
+          <div className="flex shrink-0 justify-center bg-white pt-3 pb-1">
+            <div
+              className="flex h-[28px] w-[110px] items-center justify-center rounded-full"
+              style={{ background: "#111" }}
+            >
+              {/* Front camera dot */}
+              <div className="h-[9px] w-[9px] rounded-full bg-[#1a1a1a] ring-1 ring-[#333]" />
+            </div>
           </div>
 
-          {/* Status bar */}
-          <div className="flex items-center justify-between bg-card px-5 py-1">
-            <span className="text-[11px] font-semibold text-foreground/80">9:41</span>
-            <div className="flex items-center gap-1.5">
-              {/* Signal bars */}
+          {/* ── Status bar ── */}
+          <div className="flex shrink-0 items-center justify-between bg-white px-6 pb-1">
+            <span className="text-[12px] font-semibold text-black/85">9:41</span>
+            <div className="flex items-center gap-[5px]">
+              {/* Signal */}
               <div className="flex items-end gap-[2px]">
                 {[3, 5, 7, 9].map((h, i) => (
-                  <div key={i} className="w-[3px] rounded-[1px] bg-foreground/70" style={{ height: h }} />
+                  <div key={i} className="w-[3px] rounded-[1px] bg-black/75" style={{ height: h }} />
                 ))}
               </div>
-              {/* WiFi icon */}
-              <svg viewBox="0 0 16 12" className="h-3 w-4 text-foreground/70" fill="currentColor">
-                <path d="M8 9.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm-3.5-2.5a5 5 0 0 1 7 0l-1.4 1.4a3 3 0 0 0-4.2 0L4.5 7zm-2.8-2.8a9 9 0 0 1 12.6 0l-1.4 1.4a7 7 0 0 0-9.8 0L1.7 4.2z"/>
+              {/* WiFi */}
+              <svg viewBox="0 0 17 13" className="h-[11px] w-[14px] fill-black/75">
+                <path d="M8.5 10a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm-3.7-2.6a5.2 5.2 0 0 1 7.4 0L10.8 8.8a3.1 3.1 0 0 0-4.6 0L4.8 7.4zm-2.9-2.9a9.3 9.3 0 0 1 13.2 0l-1.4 1.4a7.2 7.2 0 0 0-10.4 0L1.9 4.5z" />
               </svg>
               {/* Battery */}
-              <div className="relative flex h-[10px] w-[20px] items-center">
-                <div className="h-full w-[18px] rounded-[2px] border border-foreground/60">
-                  <div className="m-[1px] h-[6px] w-[13px] rounded-[1px] bg-foreground/70" />
+              <div className="relative flex h-[11px] w-[22px] items-center">
+                <div className="flex h-full w-[19px] items-center rounded-[2.5px] border border-black/50 px-[1.5px]">
+                  <div className="h-[6px] w-[13px] rounded-[1px] bg-black/75" />
                 </div>
-                <div className="absolute -right-[3px] h-[5px] w-[2px] rounded-r-[1px] bg-foreground/50" />
+                <div className="absolute -right-[3px] h-[5px] w-[2px] rounded-r-sm bg-black/40" />
               </div>
             </div>
           </div>
 
-          {/* Chat header */}
-          <div className="flex items-center gap-2.5 border-b border-border/40 bg-card px-4 pb-2.5 pt-1">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground">
-              <span className="text-[11px] font-bold text-background">HB</span>
-            </div>
-            <div className="min-w-0">
-              <p className="text-[13px] font-semibold leading-tight text-foreground">HomeBids AI</p>
-              <p className="text-[10px] text-muted-foreground">
-                {typing ? (
-                  <span className="text-green-600 dark:text-green-400">typing...</span>
-                ) : (
-                  "iMessage"
-                )}
-              </p>
+          {/* ── iMessage chat header ── */}
+          <div className="flex shrink-0 flex-col items-center gap-0.5 border-b border-black/8 bg-white px-4 pb-2.5 pt-1">
+            {/* Chevron + contact name row */}
+            <div className="flex w-full items-center">
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-[#007AFF] stroke-2">
+                <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <div className="flex flex-1 flex-col items-center">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-sm">
+                  <span className="text-[12px] font-bold text-white">HB</span>
+                </div>
+                <p className="mt-0.5 text-[12px] font-semibold text-black leading-tight">HomeBids AI</p>
+                <p className="text-[10px] leading-tight text-green-500 font-medium">
+                  {typing ? "typing..." : "Active Now"}
+                </p>
+              </div>
+              {/* Spacer to balance the chevron */}
+              <div className="h-4 w-4" />
             </div>
           </div>
 
-          {/* Message list — fixed height, scrolls internally */}
-          <div className="flex h-[260px] flex-col justify-end gap-1.5 overflow-y-auto bg-background px-3 py-3 min-h-0">
+          {/* ── Message list — fills remaining height, scrolls internally ── */}
+          <div
+            ref={scrollRef}
+            className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-white px-3 py-3"
+            style={{ scrollbarWidth: "none" }}
+          >
             <AnimatePresence mode="popLayout">
-              {CONVERSATION.filter((_, i) => visible.includes(i)).map((msg, _, arr) => {
+              {CONVERSATION.filter((_, i) => visible.includes(i)).map((msg) => {
                 const globalIdx = CONVERSATION.indexOf(msg);
+                const isUser = msg.sender === "user";
                 return (
                   <motion.div
                     key={`msg-${globalIdx}`}
@@ -156,13 +181,13 @@ export function SmsIphonePreview() {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ type: "spring", stiffness: 480, damping: 28 }}
-                    className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+                    className={`flex ${isUser ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[82%] break-words rounded-2xl px-3 py-2 text-[13px] leading-snug ${
-                        msg.sender === "user"
-                          ? "rounded-br-[4px] bg-[#007AFF] text-white"
-                          : "rounded-bl-[4px] bg-secondary text-secondary-foreground"
+                      className={`max-w-[78%] break-words rounded-2xl px-3 py-[7px] text-[13px] leading-snug ${
+                        isUser
+                          ? "rounded-br-[5px] bg-[#007AFF] text-white"
+                          : "rounded-bl-[5px] bg-[#E9E9EB] text-black"
                       }`}
                     >
                       {msg.text}
@@ -183,7 +208,7 @@ export function SmsIphonePreview() {
                   transition={{ type: "spring", stiffness: 400, damping: 26 }}
                   className="flex justify-start"
                 >
-                  <div className="rounded-2xl rounded-bl-[4px] bg-secondary px-3 py-2">
+                  <div className="rounded-2xl rounded-bl-[5px] bg-[#E9E9EB] px-3 py-[7px]">
                     <TypingDots />
                   </div>
                 </motion.div>
@@ -191,24 +216,37 @@ export function SmsIphonePreview() {
             </AnimatePresence>
           </div>
 
-          {/* Input bar */}
-          <div className="flex items-center gap-2 border-t border-border/40 bg-card px-3 py-2">
-            <div className="flex-1 rounded-full border border-border/50 bg-background px-3 py-1.5 text-[11px] text-muted-foreground/60">
-              iMessage
+          {/* ── Input bar ── */}
+          <div className="flex shrink-0 items-center gap-2 border-t border-black/8 bg-white px-3 py-2">
+            {/* + button */}
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#E9E9EB]">
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 stroke-[#8E8E93] fill-none stroke-2">
+                <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+              </svg>
             </div>
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#007AFF]">
-              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5">
+            {/* Input pill */}
+            <div className="flex flex-1 items-center rounded-full border border-[#C7C7CC] bg-white px-3 py-1.5">
+              <span className="text-[11px] text-[#8E8E93]">iMessage</span>
+            </div>
+            {/* Send button */}
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#007AFF]">
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-white stroke-[2.5]">
                 <path d="M12 19V5M5 12l7-7 7 7" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
           </div>
 
-          {/* Home indicator */}
-          <div className="flex justify-center bg-card pb-2 pt-1">
-            <div className="h-[4px] w-28 rounded-full bg-foreground/15" />
+          {/* ── Home indicator ── */}
+          <div className="flex shrink-0 justify-center bg-white pb-2 pt-1">
+            <div className="h-[4px] w-28 rounded-full bg-black/15" />
           </div>
-
         </div>
+
+        {/* Side buttons (visual only) */}
+        <div className="absolute -left-[7px] top-[100px] h-[32px] w-[4px] rounded-l-full bg-[#1a1a1a]" />
+        <div className="absolute -left-[7px] top-[148px] h-[56px] w-[4px] rounded-l-full bg-[#1a1a1a]" />
+        <div className="absolute -left-[7px] top-[216px] h-[56px] w-[4px] rounded-l-full bg-[#1a1a1a]" />
+        <div className="absolute -right-[7px] top-[160px] h-[72px] w-[4px] rounded-r-full bg-[#1a1a1a]" />
       </div>
     </div>
   );
