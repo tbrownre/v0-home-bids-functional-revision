@@ -186,10 +186,9 @@ export default function JobDetailsPage() {
     <div className="min-h-screen bg-background">
       <Header backHref="/?showJobs=true" backLabel="Back to Jobs" isSignedIn />
 
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        <div className="grid gap-8 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            {/* Job Header */}
+      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+        <div>
+          <div>
             <div className="rounded-2xl border border-border bg-card p-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
@@ -350,10 +349,6 @@ export default function JobDetailsPage() {
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
           </div>
         </div>
       </main>
