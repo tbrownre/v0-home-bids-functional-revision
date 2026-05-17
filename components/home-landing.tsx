@@ -210,9 +210,9 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
             </button>
 
             <h1 className="text-4xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]">
-              Text your project.
+              Text us your project.
               <br />
-              Contractors compete.
+              Contractors bid.
               <br />
               <span className="text-[#00c951]">Compare. Choose. Done.</span>
             </h1>
