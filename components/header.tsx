@@ -228,11 +228,19 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
               {/* Nav items — logged in homeowner */}
               {isLoggedIn && !isContractor && (
                 <>
-                  <Link href="/?showJobs=true" className={`${menuItemClass} font-medium`} onClick={closeMenu}>
-                    <Home className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <Link
+                    href="/?showJobs=true"
+                    className={`${menuItemClass}${(pathname === "/" || pathname === "/homeowners") ? " bg-muted font-medium" : ""}`}
+                    onClick={closeMenu}
+                  >
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                     Your Jobs
                   </Link>
-                  <Link href="/inbox?type=homeowner" className={menuItemClass} onClick={closeMenu}>
+                  <Link
+                    href="/inbox?type=homeowner"
+                    className={`${menuItemClass}${pathname === "/inbox" ? " bg-muted font-medium" : ""}`}
+                    onClick={closeMenu}
+                  >
                     <MessageCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <span className="flex-1">Messages</span>
                     {unreadCount > 0 && (
@@ -241,9 +249,13 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
                       </span>
                     )}
                   </Link>
-                  <Link href="/?showJobs=true" className={menuItemClass} onClick={closeMenu}>
-                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    My Projects
+                  <Link
+                    href="/profile"
+                    className={`${menuItemClass}${pathname === "/profile" ? " bg-muted font-medium" : ""}`}
+                    onClick={closeMenu}
+                  >
+                    <Home className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    Profile
                   </Link>
                   <div className={separatorClass} />
                   <button type="button" onClick={handleSignOut} className={`${menuItemClass} text-red-600 hover:text-red-600`}>
