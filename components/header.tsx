@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, Bell } from "lucide-react";
+import { Menu, FileText, Briefcase, HelpCircle, Info, LogIn, LogOut, Plus, Home, ArrowLeft, Bell, DollarSign, MessageCircle, CheckCircle2, Eye, AlertCircle, CreditCard, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SignInModal } from "@/components/sign-in-modal";
 import {
@@ -202,7 +202,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
               role="menu"
               className="absolute left-3 top-14 z-50 w-56 rounded-xl border border-border bg-background p-1.5 shadow-lg"
             >
-              {/* Public nav — when logged in, Home becomes Dashboard */}
+              {/* Public nav — when logged in, Home becomes Dashboard and Pricing/About Us are hidden */}
               {isLoggedIn ? (
                 <Link
                   href={isContractor ? "/contractors/dashboard" : "/"}
@@ -218,10 +218,26 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
                   Home
                 </Link>
               )}
+              <Link href="/services" className={menuItemClass} onClick={closeMenu}>
+                <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
+                Services
+              </Link>
               <Link href="/how-it-works" className={menuItemClass} onClick={closeMenu}>
                 <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
                 How It Works
               </Link>
+              {!isLoggedIn && (
+                <>
+                  <Link href="/subscribe" className={menuItemClass} onClick={closeMenu}>
+                    <Tag className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    Pricing
+                  </Link>
+                  <Link href="/about" className={menuItemClass} onClick={closeMenu}>
+                    <Info className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    About Us
+                  </Link>
+                </>
+              )}
 
               {/* Authenticated nav — only shown when logged in */}
               {isLoggedIn && (
@@ -247,7 +263,12 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
                       <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
                       Available Jobs
                     </Link>
-                  ) : null}
+                  ) : (
+                    <Link href="/" className={menuItemClass} onClick={closeMenu}>
+                      <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      Post a Job
+                    </Link>
+                  )}
 
                   <Link
                     href={isContractor ? "/contractors/dashboard" : "/?showJobs=true"}
