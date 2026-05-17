@@ -743,16 +743,6 @@ export default function HomePage() {
                         About Us
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link
-                        href="/subscribe"
-                        className="flex cursor-pointer items-center gap-2 bg-primary/10 text-primary font-medium hover:bg-primary/20 focus:bg-primary/20"
-                      >
-                        <Zap className="h-4 w-4" />
-                        Get Started
-                      </Link>
-                    </DropdownMenuItem>
                   </>
                 )}
 
@@ -773,30 +763,12 @@ export default function HomePage() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="flex cursor-pointer items-center gap-2"
-                      onSelect={() => resetForm()}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Post a Job
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="flex cursor-pointer items-center gap-2"
                       onSelect={() => handleYourJobsClick()}
                     >
                       <FileText className="h-4 w-4" />
                       Your Jobs
                     </DropdownMenuItem>
                   </>
-                )}
-
-                {/* Post a Job visible when not signed in too */}
-                {!isSignedIn && (
-                  <DropdownMenuItem
-                    className="flex cursor-pointer items-center gap-2"
-                    onSelect={() => resetForm()}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Post a Job
-                  </DropdownMenuItem>
                 )}
 
                 <DropdownMenuSeparator />

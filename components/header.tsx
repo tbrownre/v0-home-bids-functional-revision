@@ -263,12 +263,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
                       <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
                       Available Jobs
                     </Link>
-                  ) : (
-                    <Link href="/" className={menuItemClass} onClick={closeMenu}>
-                      <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      Post a Job
-                    </Link>
-                  )}
+                  ) : null}
 
                   <Link
                     href={isContractor ? "/contractors/dashboard" : "/?showJobs=true"}
