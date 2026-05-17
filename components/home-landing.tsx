@@ -400,7 +400,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             {[
               "Takes under 60 seconds",
-              "No account required",
+              "Free to try",
               "Info stays private",
             ].map((item) => (
               <span key={item} className="flex items-center gap-1.5 text-sm text-muted-foreground">
