@@ -696,13 +696,25 @@ export default function HomePage() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-52">
-                {/* Public navigation */}
-                <DropdownMenuItem asChild>
-                  <Link href="/" className="flex cursor-pointer items-center gap-2">
+                {/* Home / Dashboard */}
+                {isSignedIn ? (
+                  <DropdownMenuItem
+                    className="flex cursor-pointer items-center gap-2 font-medium"
+                    onSelect={() => handleYourJobsClick()}
+                  >
                     <Home className="h-4 w-4" />
-                    Home
-                  </Link>
-                </DropdownMenuItem>
+                    Dashboard
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem asChild>
+                    <Link href="/" className="flex cursor-pointer items-center gap-2">
+                      <Home className="h-4 w-4" />
+                      Home
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+
+                {/* Always-visible links */}
                 <DropdownMenuItem asChild>
                   <Link href="/services" className="flex cursor-pointer items-center gap-2">
                     <Briefcase className="h-4 w-4" />
@@ -715,61 +727,78 @@ export default function HomePage() {
                     How It Works
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/subscribe" className="flex cursor-pointer items-center gap-2">
-                    <Tag className="h-4 w-4" />
-                    Pricing
-                  </Link>
-                </DropdownMenuItem>
 
-                <DropdownMenuItem asChild>
-                  <Link href="/about" className="flex cursor-pointer items-center gap-2">
-                    <Info className="h-4 w-4" />
-                    About Us
-                  </Link>
-                </DropdownMenuItem>
-
-                {/* Get Started CTA */}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link
-                    href="/subscribe"
-                    className="flex cursor-pointer items-center gap-2 bg-primary/10 text-primary font-medium hover:bg-primary/20 focus:bg-primary/20"
-                  >
-                    <Zap className="h-4 w-4" />
-                    Get Started
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {isSignedIn && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/inbox?type=homeowner" className="flex cursor-pointer items-center gap-2">
-                      <Bell className="h-4 w-4" />
-                      <span className="flex-1">Notifications</span>
-                      {homeownerUnreadCount > 0 && (
-                        <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                          {homeownerUnreadCount > 9 ? "9+" : homeownerUnreadCount}
-                        </span>
-                      )}
-                    </Link>
-                  </DropdownMenuItem>
+                {/* Public-only links */}
+                {!isSignedIn && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/subscribe" className="flex cursor-pointer items-center gap-2">
+                        <Tag className="h-4 w-4" />
+                        Pricing
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/about" className="flex cursor-pointer items-center gap-2">
+                        <Info className="h-4 w-4" />
+                        About Us
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link
+                        href="/subscribe"
+                        className="flex cursor-pointer items-center gap-2 bg-primary/10 text-primary font-medium hover:bg-primary/20 focus:bg-primary/20"
+                      >
+                        <Zap className="h-4 w-4" />
+                        Get Started
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
                 )}
-                <DropdownMenuItem
-                  className="flex cursor-pointer items-center gap-2"
-                  onSelect={() => resetForm()}
-                >
-                  <Plus className="h-4 w-4" />
-                  Post a Job
-                </DropdownMenuItem>
+
+                {/* Authenticated-only links */}
                 {isSignedIn && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/inbox?type=homeowner" className="flex cursor-pointer items-center gap-2">
+                        <Bell className="h-4 w-4" />
+                        <span className="flex-1">Notifications</span>
+                        {homeownerUnreadCount > 0 && (
+                          <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                            {homeownerUnreadCount > 9 ? "9+" : homeownerUnreadCount}
+                          </span>
+                        )}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="flex cursor-pointer items-center gap-2"
+                      onSelect={() => resetForm()}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Post a Job
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="flex cursor-pointer items-center gap-2"
+                      onSelect={() => handleYourJobsClick()}
+                    >
+                      <FileText className="h-4 w-4" />
+                      Your Jobs
+                    </DropdownMenuItem>
+                  </>
+                )}
+
+                {/* Post a Job visible when not signed in too */}
+                {!isSignedIn && (
                   <DropdownMenuItem
                     className="flex cursor-pointer items-center gap-2"
-                    onSelect={() => handleYourJobsClick()}
+                    onSelect={() => resetForm()}
                   >
-                    <FileText className="h-4 w-4" />
-                    Your Jobs
+                    <Plus className="h-4 w-4" />
+                    Post a Job
                   </DropdownMenuItem>
                 )}
+
                 <DropdownMenuSeparator />
                 {isSignedIn ? (
                   <DropdownMenuItem
