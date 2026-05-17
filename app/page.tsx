@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,6 @@ import {
   LogIn,
   LogOut,
   User,
-  Bell,
 } from "lucide-react";
 import {
   Dialog,
@@ -53,7 +52,8 @@ import { getMockUser, mockSignOut, USE_MOCK_DATA } from "@/lib/mock-auth";
 import { getSmsLink, isMobileDevice, SMS_PHONE_DISPLAY } from "@/lib/sms-config";
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
 import { HomeLanding } from "@/components/home-landing";
-import { MessageSquare, Copy, Check, Smartphone } from "lucide-react";
+import { MessageSquare, Copy, Check, Smartphone, MessageCircle, PlusCircle } from "lucide-react";
+import { homeownerNavItems, isNavItemActive } from "@/lib/navigation";
 
 // Centralized sign-out: uses mock auth in demo mode.
 async function performSignOut() {
@@ -89,6 +89,7 @@ interface Job {
 
 export default function HomePage() {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const [currentStep, setCurrentStep] = useState<Step>("describe");
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [showJobsBoard, setShowJobsBoard] = useState(false);
@@ -696,104 +697,73 @@ export default function HomePage() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-52">
-                {/* Home / Dashboard */}
-                {isSignedIn ? (
-                  <DropdownMenuItem
-                    className="flex cursor-pointer items-center gap-2 font-medium"
-                    onSelect={() => handleYourJobsClick()}
-                  >
-                    <Home className="h-4 w-4" />
-                    Dashboard
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem asChild>
-                    <Link href="/" className="flex cursor-pointer items-center gap-2">
-                      <Home className="h-4 w-4" />
-                      Home
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-
-                {/* Always-visible links */}
-                <DropdownMenuItem asChild>
-                  <Link href="/services" className="flex cursor-pointer items-center gap-2">
-                    <Briefcase className="h-4 w-4" />
-                    Services
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/how-it-works" className="flex cursor-pointer items-center gap-2">
-                    <HelpCircle className="h-4 w-4" />
-                    How It Works
-                  </Link>
-                </DropdownMenuItem>
-
-                {/* Public-only links */}
+                {/* Logged-out nav */}
                 {!isSignedIn && (
                   <>
                     <DropdownMenuItem asChild>
-                      <Link href="/subscribe" className="flex cursor-pointer items-center gap-2">
-                        <Tag className="h-4 w-4" />
-                        Pricing
+                      <Link href="/" className="flex cursor-pointer items-center gap-2">
+                        <Home className="h-4 w-4" />
+                        Home
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/about" className="flex cursor-pointer items-center gap-2">
-                        <Info className="h-4 w-4" />
-                        About Us
+                      <Link href="/how-it-works" className="flex cursor-pointer items-center gap-2">
+                        <HelpCircle className="h-4 w-4" />
+                        How It Works
                       </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="flex cursor-pointer items-center gap-2"
+                      onSelect={(e) => { e.preventDefault(); setShowSignInModal(true); }}
+                    >
+                      <LogIn className="h-4 w-4" />
+                      Sign In
                     </DropdownMenuItem>
                   </>
                 )}
 
-                {/* Authenticated-only links */}
-                {isSignedIn && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/inbox?type=homeowner" className="flex cursor-pointer items-center gap-2">
-                        <Bell className="h-4 w-4" />
-                        <span className="flex-1">Notifications</span>
-                        {homeownerUnreadCount > 0 && (
+                {/* Logged-in homeowner nav — single source of truth via homeownerNavItems */}
+                {isSignedIn && homeownerNavItems.map((item) => {
+                  const active = isNavItemActive(item, pathname);
+                  const isInbox = item.match?.includes("/inbox");
+                  return (
+                    <DropdownMenuItem
+                      key={item.label}
+                      className={`flex cursor-pointer items-center gap-2${active ? " bg-muted font-medium" : ""}`}
+                      asChild
+                    >
+                      <Link href={item.href}>
+                        {item.label === "Home"         && <Home          className="h-4 w-4" />}
+                        {item.label === "Services"     && <Briefcase     className="h-4 w-4" />}
+                        {item.label === "How It Works" && <HelpCircle    className="h-4 w-4" />}
+                        {item.label === "Your Jobs"    && <FileText      className="h-4 w-4" />}
+                        {item.label === "Inbox"        && <MessageCircle className="h-4 w-4" />}
+                        {item.label === "Profile"      && <Home          className="h-4 w-4" />}
+                        {item.label === "New Job"      && <PlusCircle    className="h-4 w-4" />}
+                        <span className="flex-1">{item.label}</span>
+                        {isInbox && homeownerUnreadCount > 0 && (
                           <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
                             {homeownerUnreadCount > 9 ? "9+" : homeownerUnreadCount}
                           </span>
                         )}
                       </Link>
                     </DropdownMenuItem>
+                  );
+                })}
+
+                {/* Sign Out — always last for homeowner */}
+                {isSignedIn && (
+                  <>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="flex cursor-pointer items-center gap-2"
-                      onSelect={() => handleYourJobsClick()}
+                      className="flex cursor-pointer items-center gap-2 text-red-600 focus:text-red-600"
+                      onSelect={(e) => { e.preventDefault(); handleSignOut(); }}
                     >
-                      <FileText className="h-4 w-4" />
-                      Your Jobs
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
                     </DropdownMenuItem>
                   </>
-                )}
-
-                <DropdownMenuSeparator />
-                {isSignedIn ? (
-                  <DropdownMenuItem
-                    className="flex cursor-pointer items-center gap-2 text-red-600 focus:text-red-600"
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      handleSignOut();
-                    }}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign Out
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem
-                    className="flex cursor-pointer items-center gap-2"
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      setShowSignInModal(true);
-                    }}
-                  >
-                    <LogIn className="h-4 w-4" />
-                    Sign In
-                  </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
