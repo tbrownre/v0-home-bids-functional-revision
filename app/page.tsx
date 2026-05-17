@@ -664,6 +664,21 @@ export default function HomePage() {
     }
   }, [isSignedIn]);
 
+  // Clicking "Home" always returns to the job-input form, dismissing the jobs board.
+  const handleHomeClick = useCallback(() => {
+    showJobsBoardRef.current = false;
+    creatingNewJobRef.current = false;
+    setShowJobsBoard(false);
+    setCurrentStepSafe("describe");
+  }, [setCurrentStepSafe]);
+
+  // Listen for "hb:home" dispatched by header.tsx when the homeowner clicks "Home".
+  useEffect(() => {
+    const onHome = () => handleHomeClick();
+    window.addEventListener("hb:home", onHome);
+    return () => window.removeEventListener("hb:home", onHome);
+  }, [handleHomeClick]);
+
   const handleSignOut = useCallback(() => {
     showJobsBoardRef.current = false;
     creatingNewJobRef.current = false;
@@ -727,6 +742,22 @@ export default function HomePage() {
                 {isSignedIn && homeownerNavItems.map((item) => {
                   const active = isNavItemActive(item, pathname);
                   const isInbox = item.match?.includes("/inbox");
+                  const isHome = item.label === "Home";
+
+                  // "Home" uses onSelect to reset state even when already on "/"
+                  if (isHome) {
+                    return (
+                      <DropdownMenuItem
+                        key={item.label}
+                        className={`flex cursor-pointer items-center gap-2${active ? " bg-muted font-medium" : ""}`}
+                        onSelect={(e) => { e.preventDefault(); handleHomeClick(); }}
+                      >
+                        <Home className="h-4 w-4" />
+                        <span className="flex-1">{item.label}</span>
+                      </DropdownMenuItem>
+                    );
+                  }
+
                   return (
                     <DropdownMenuItem
                       key={item.label}
@@ -734,7 +765,6 @@ export default function HomePage() {
                       asChild
                     >
                       <Link href={item.href}>
-                        {item.label === "Home"         && <Home          className="h-4 w-4" />}
                         {item.label === "Services"     && <Briefcase     className="h-4 w-4" />}
                         {item.label === "How It Works" && <HelpCircle    className="h-4 w-4" />}
                         {item.label === "Your Jobs"    && <FileText      className="h-4 w-4" />}

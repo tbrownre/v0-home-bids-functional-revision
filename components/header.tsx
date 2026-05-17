@@ -234,12 +234,19 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
                   {homeownerNavItems.map((item) => {
                     const active = isNavItemActive(item, pathname);
                     const isInbox = item.match?.includes("/inbox");
+                    const isHome = item.label === "Home";
                     return (
                       <Link
                         key={item.label}
                         href={item.href}
                         className={`${menuItemClass}${active ? " bg-muted font-medium" : ""}`}
-                        onClick={closeMenu}
+                        onClick={(e) => {
+                          if (isHome) {
+                            // Always dispatch reset event so page.tsx can clear showJobsBoard
+                            window.dispatchEvent(new CustomEvent("hb:home"));
+                          }
+                          closeMenu();
+                        }}
                       >
                         {item.label === "Home"         && <Home         className="h-4 w-4 shrink-0 text-muted-foreground" />}
                         {item.label === "Services"     && <Briefcase    className="h-4 w-4 shrink-0 text-muted-foreground" />}
