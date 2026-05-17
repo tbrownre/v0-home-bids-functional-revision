@@ -218,7 +218,8 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
             </h1>
 
             <p className="mt-6 max-w-lg text-pretty text-lg leading-relaxed text-muted-foreground">
-              Start with a quick text. Answer a few simple questions—we&apos;ll bring you multiple bids from contractors ready to win your job.
+              Send a quick message and our AI will gather everything and find the
+              right contractors for you.
             </p>
 
             {/* Primary + Secondary CTAs */}
@@ -398,7 +399,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             {[
-              "Takes less than 60 seconds to start getting bids",
+              "Takes under 60 seconds",
               "Free to try",
               "Info stays private",
             ].map((item) => (
