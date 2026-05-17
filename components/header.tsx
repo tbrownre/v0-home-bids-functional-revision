@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle } from "lucide-react";
-import { homeownerNavItems, isNavItemActive } from "@/lib/navigation";
+import { homeownerNavItems, loggedOutNavItems, isNavItemActive } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
 import { SignInModal } from "@/components/sign-in-modal";
 import {
@@ -206,14 +206,16 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
               {/* Nav items — logged out */}
               {!isLoggedIn && (
                 <>
-                  <Link href="/" className={menuItemClass} onClick={closeMenu}>
-                    <Home className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    Home
-                  </Link>
-                  <Link href="/how-it-works" className={menuItemClass} onClick={closeMenu}>
-                    <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    How It Works
-                  </Link>
+                  {loggedOutNavItems.map((item) => (
+                    <Link key={item.label} href={item.href} className={menuItemClass} onClick={closeMenu}>
+                      {item.label === "Home"         && <Home       className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "Services"     && <Briefcase  className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "How It Works" && <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "Pricing"      && <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "About Us"     && <Home       className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label}
+                    </Link>
+                  ))}
                   <div className={separatorClass} />
                   <button
                     type="button"

@@ -53,7 +53,7 @@ import { getSmsLink, isMobileDevice, SMS_PHONE_DISPLAY } from "@/lib/sms-config"
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
 import { HomeLanding } from "@/components/home-landing";
 import { MessageSquare, Copy, Check, Smartphone, MessageCircle, PlusCircle } from "lucide-react";
-import { homeownerNavItems, isNavItemActive } from "@/lib/navigation";
+import { homeownerNavItems, loggedOutNavItems, isNavItemActive } from "@/lib/navigation";
 
 // Centralized sign-out: uses mock auth in demo mode.
 async function performSignOut() {
@@ -700,18 +700,18 @@ export default function HomePage() {
                 {/* Logged-out nav */}
                 {!isSignedIn && (
                   <>
-                    <DropdownMenuItem asChild>
-                      <Link href="/" className="flex cursor-pointer items-center gap-2">
-                        <Home className="h-4 w-4" />
-                        Home
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/how-it-works" className="flex cursor-pointer items-center gap-2">
-                        <HelpCircle className="h-4 w-4" />
-                        How It Works
-                      </Link>
-                    </DropdownMenuItem>
+                    {loggedOutNavItems.map((item) => (
+                      <DropdownMenuItem key={item.label} asChild>
+                        <Link href={item.href} className="flex cursor-pointer items-center gap-2">
+                          {item.label === "Home"         && <Home       className="h-4 w-4" />}
+                          {item.label === "Services"     && <Briefcase  className="h-4 w-4" />}
+                          {item.label === "How It Works" && <HelpCircle className="h-4 w-4" />}
+                          {item.label === "Pricing"      && <HelpCircle className="h-4 w-4" />}
+                          {item.label === "About Us"     && <Home       className="h-4 w-4" />}
+                          {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="flex cursor-pointer items-center gap-2"

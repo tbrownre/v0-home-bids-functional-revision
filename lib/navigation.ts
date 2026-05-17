@@ -4,6 +4,16 @@ export interface NavItem {
   match?: string[];
 }
 
+// Single source of truth for signed-out navigation.
+// "Sign In" is intentionally excluded — it is rendered separately after a divider.
+export const loggedOutNavItems: NavItem[] = [
+  { label: "Home",         href: "/" },
+  { label: "Services",     href: "/services" },
+  { label: "How It Works", href: "/how-it-works" },
+  { label: "Pricing",      href: "/pricing" },
+  { label: "About Us",     href: "/about" },
+];
+
 // Single source of truth for homeowner logged-in navigation.
 // Sign Out is intentionally excluded — it must be appended as an action, not a link.
 export const homeownerNavItems: NavItem[] = [
