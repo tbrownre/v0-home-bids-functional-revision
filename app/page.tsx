@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
@@ -744,41 +744,42 @@ export default function HomePage() {
                   const isInbox = item.match?.includes("/inbox");
                   const isHome = item.label === "Home";
 
-                  // "Home" uses onSelect to reset state even when already on "/"
-                  if (isHome) {
-                    return (
-                      <DropdownMenuItem
-                        key={item.label}
-                        className={`flex cursor-pointer items-center gap-2${active ? " bg-muted font-medium" : ""}`}
-                        onSelect={(e) => { e.preventDefault(); handleHomeClick(); }}
-                      >
-                        <Home className="h-4 w-4" />
-                        <span className="flex-1">{item.label}</span>
-                      </DropdownMenuItem>
-                    );
-                  }
-
                   return (
-                    <DropdownMenuItem
-                      key={item.label}
-                      className={`flex cursor-pointer items-center gap-2${active ? " bg-muted font-medium" : ""}`}
-                      asChild
-                    >
-                      <Link href={item.href}>
-                        {item.label === "Services"     && <Briefcase     className="h-4 w-4" />}
-                        {item.label === "How It Works" && <HelpCircle    className="h-4 w-4" />}
-                        {item.label === "Your Jobs"    && <FileText      className="h-4 w-4" />}
-                        {item.label === "Inbox"        && <MessageCircle className="h-4 w-4" />}
-                        {item.label === "Profile"      && <Home          className="h-4 w-4" />}
-                        {item.label === "New Job"      && <PlusCircle    className="h-4 w-4" />}
-                        <span className="flex-1">{item.label}</span>
-                        {isInbox && homeownerUnreadCount > 0 && (
-                          <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                            {homeownerUnreadCount > 9 ? "9+" : homeownerUnreadCount}
-                          </span>
-                        )}
-                      </Link>
-                    </DropdownMenuItem>
+                    <React.Fragment key={item.label}>
+                      {/* Divider between marketing nav and app nav */}
+                      {item.label === "Your Jobs" && <DropdownMenuSeparator />}
+
+                      {/* "Home" uses onSelect to reset state even when already on "/" */}
+                      {isHome ? (
+                        <DropdownMenuItem
+                          className={`flex cursor-pointer items-center gap-2${active ? " bg-muted font-medium" : ""}`}
+                          onSelect={(e) => { e.preventDefault(); handleHomeClick(); }}
+                        >
+                          <Home className="h-4 w-4" />
+                          <span className="flex-1">{item.label}</span>
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem
+                          className={`flex cursor-pointer items-center gap-2${active ? " bg-muted font-medium" : ""}`}
+                          asChild
+                        >
+                          <Link href={item.href}>
+                            {item.label === "Services"     && <Briefcase     className="h-4 w-4" />}
+                            {item.label === "How It Works" && <HelpCircle    className="h-4 w-4" />}
+                            {item.label === "Your Jobs"    && <FileText      className="h-4 w-4" />}
+                            {item.label === "Inbox"        && <MessageCircle className="h-4 w-4" />}
+                            {item.label === "Profile"      && <Home          className="h-4 w-4" />}
+                            {item.label === "New Job"      && <PlusCircle    className="h-4 w-4" />}
+                            <span className="flex-1">{item.label}</span>
+                            {isInbox && homeownerUnreadCount > 0 && (
+                              <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                                {homeownerUnreadCount > 9 ? "9+" : homeownerUnreadCount}
+                              </span>
+                            )}
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                    </React.Fragment>
                   );
                 })}
 
