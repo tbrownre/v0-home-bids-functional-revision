@@ -80,8 +80,9 @@ function FlyoutGroup({ label, items }: { label: string; items: { href?: string; 
 
 export function Footer() {
   const pathname = usePathname();
-  // Don't render footer on admin routes — admin has its own layout.
-  if (pathname?.startsWith("/admin")) return null;
+  // Don't render from the root layout on admin (own layout) or on "/" (home
+  // page renders Footer inside its own scrollable <main> container).
+  if (pathname?.startsWith("/admin") || pathname === "/") return null;
 
   const [showContact, setShowContact] = useState(false);
   const [contactType, setContactType] = useState<"homeowner" | "contractor">("homeowner");
@@ -103,7 +104,7 @@ export function Footer() {
 
   return (
     <>
-      <footer className="relative z-50 border-t border-border bg-background overflow-visible">
+      <footer className="border-t border-border bg-background overflow-visible">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
           {/* Mobile: stacked centered layout */}
