@@ -198,13 +198,16 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
           >
-            {/* Badge */}
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5">
+            {/* Badge — clickable to start SMS */}
+            <button
+              onClick={handlePrimaryClick}
+              className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 transition-all hover:border-primary hover:bg-primary/5 active:scale-95"
+            >
               <Zap className="h-3.5 w-3.5 text-foreground" />
               <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
                 AI-Powered · Text to Start
               </span>
-            </div>
+            </button>
 
             <h1 className="text-4xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]">
               Text us your project.
