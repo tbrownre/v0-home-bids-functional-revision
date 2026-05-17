@@ -29,12 +29,17 @@ function SmartInput({
   const [value, setValue] = useState("");
   const [copied, setCopied] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+  }, []);
 
   const handleAction = useCallback(() => {
     const trimmed = value.trim();
 
-    if (isMobileDevice()) {
+    if (isMobile) {
       const body = trimmed
         ? encodeURIComponent(`Hi, I need help with ${trimmed}`)
         : encodeURIComponent(SMS_BODY_PREFIX + "...");
@@ -48,7 +53,7 @@ function SmartInput({
       onSubmit(trimmed);
       setTimeout(() => setCopied(false), 3000);
     }
-  }, [value, onSubmit]);
+  }, [value, isMobile, onSubmit]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && value.trim()) {
@@ -77,7 +82,7 @@ function SmartInput({
             onClick={handleAction}
             disabled={!value.trim() && !submitted}
           >
-            {isMobileDevice() ? (
+            {isMobile ? (
               <>
                 <MessageSquare className="h-4 w-4" />
                 Text us
@@ -170,6 +175,11 @@ interface HomeLandingProps {
 
 export function HomeLanding({ onOpenForm }: HomeLandingProps) {
   const [numberCopied, setNumberCopied] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+  }, []);
 
   const handleCopyNumber = useCallback(() => {
     navigator.clipboard.writeText(SMS_PHONE_DISPLAY).catch(() => {});
@@ -178,12 +188,12 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
   }, []);
 
   const handlePrimaryClick = useCallback(() => {
-    if (isMobileDevice()) {
+    if (isMobile) {
       window.location.href = getSmsLink();
     } else {
       handleCopyNumber();
     }
-  }, [handleCopyNumber]);
+  }, [isMobile, handleCopyNumber]);
 
   return (
     <div className="w-full font-sans">
@@ -291,7 +301,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               {
                 step: "01",
                 title: "Text us your project",
-                body: "No apps, no sign-ups. Just send a quick text message.",
+                body: "Start for free. Just send a quick text message.",
                 icon: <MessageSquare className="h-5 w-5" />,
               },
               {
@@ -379,7 +389,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               onClick={handlePrimaryClick}
             >
               <MessageSquare className="h-5 w-5" />
-              {isMobileDevice() ? "Text Us Now" : "Copy Number"}
+              {isMobile ? "Text Us Now" : "Copy Number"}
             </Button>
             <Button
               variant="ghost"

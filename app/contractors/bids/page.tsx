@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getContractorBids } from "@/lib/supabase/actions";
+import { getContractorBids as getDemoContractorBids } from "@/lib/demo/services";
+import { USE_MOCK_DATA } from "@/lib/mock-auth";
 
 interface ActiveBid {
   id: string;
@@ -114,20 +116,27 @@ export default function ContractorBidsPage() {
   const detailPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Skip in v0 preview sandbox
-    if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) {
-      setBidsLoading(false);
-      return;
-    }
     setBidsLoading(true);
-    getContractorBids().then(({ bids: rawBids, error }) => {
+    ;(async () => {
+      if (USE_MOCK_DATA) {
+        const { bids: demoBids } = await getDemoContractorBids();
+        setAllBids((demoBids ?? []).map((b) => mapBidFromDb(b as Record<string, unknown>)));
+        setBidsLoading(false);
+        return;
+      }
+      // Skip in v0 preview sandbox
+      if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) {
+        setBidsLoading(false);
+        return;
+      }
+      const { bids: rawBids, error } = await getContractorBids();
       if (error) {
         setBidsError(error);
       } else {
         setAllBids((rawBids ?? []).map((b) => mapBidFromDb(b as Record<string, unknown>)));
       }
       setBidsLoading(false);
-    });
+    })();
   }, []);
 
   const statusOrder: Record<string, number> = { open: 0, in_progress: 1, completed: 2, not_selected: 3 };
