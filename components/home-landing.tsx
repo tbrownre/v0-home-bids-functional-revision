@@ -260,7 +260,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
 
             {/* Microcopy */}
             <p className="mt-2 text-sm text-muted-foreground">
-              Takes less than 60 seconds &middot; No forms &middot; No hassle
+              Takes less than 60 seconds
             </p>
 
             {/* Live activity */}
@@ -370,7 +370,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
             Ready to get your first bids?
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            No apps. No forms. Just text us.
+            No apps. Just text us.
           </p>
 
           <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
