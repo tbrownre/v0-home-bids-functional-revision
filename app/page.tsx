@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useRef, useCallback, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import React, { useState, useRef, useCallback, useEffect } from "react";
+import { useSearchParams, usePathname } from "next/navigation";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,6 @@ import {
   LogIn,
   LogOut,
   User,
-  Bell,
 } from "lucide-react";
 import {
   Dialog,
@@ -53,7 +52,8 @@ import { getMockUser, mockSignOut, USE_MOCK_DATA } from "@/lib/mock-auth";
 import { getSmsLink, isMobileDevice, SMS_PHONE_DISPLAY } from "@/lib/sms-config";
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
 import { HomeLanding } from "@/components/home-landing";
-import { MessageSquare, Copy, Check, Smartphone } from "lucide-react";
+import { MessageSquare, Copy, Check, Smartphone, MessageCircle, PlusCircle } from "lucide-react";
+import { homeownerNavItems, loggedOutNavItems, isNavItemActive } from "@/lib/navigation";
 
 // Centralized sign-out: uses mock auth in demo mode.
 async function performSignOut() {
@@ -89,6 +89,7 @@ interface Job {
 
 export default function HomePage() {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const [currentStep, setCurrentStep] = useState<Step>("describe");
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [showJobsBoard, setShowJobsBoard] = useState(false);
@@ -663,6 +664,21 @@ export default function HomePage() {
     }
   }, [isSignedIn]);
 
+  // Clicking "Home" always returns to the job-input form, dismissing the jobs board.
+  const handleHomeClick = useCallback(() => {
+    showJobsBoardRef.current = false;
+    creatingNewJobRef.current = false;
+    setShowJobsBoard(false);
+    setCurrentStepSafe("describe");
+  }, [setCurrentStepSafe]);
+
+  // Listen for "hb:home" dispatched by header.tsx when the homeowner clicks "Home".
+  useEffect(() => {
+    const onHome = () => handleHomeClick();
+    window.addEventListener("hb:home", onHome);
+    return () => window.removeEventListener("hb:home", onHome);
+  }, [handleHomeClick]);
+
   const handleSignOut = useCallback(() => {
     showJobsBoardRef.current = false;
     creatingNewJobRef.current = false;
@@ -696,104 +712,89 @@ export default function HomePage() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-52">
-                {/* Home / Dashboard */}
-                {isSignedIn ? (
-                  <DropdownMenuItem
-                    className="flex cursor-pointer items-center gap-2 font-medium"
-                    onSelect={() => handleYourJobsClick()}
-                  >
-                    <Home className="h-4 w-4" />
-                    Dashboard
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem asChild>
-                    <Link href="/" className="flex cursor-pointer items-center gap-2">
-                      <Home className="h-4 w-4" />
-                      Home
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-
-                {/* Always-visible links */}
-                <DropdownMenuItem asChild>
-                  <Link href="/services" className="flex cursor-pointer items-center gap-2">
-                    <Briefcase className="h-4 w-4" />
-                    Services
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/how-it-works" className="flex cursor-pointer items-center gap-2">
-                    <HelpCircle className="h-4 w-4" />
-                    How It Works
-                  </Link>
-                </DropdownMenuItem>
-
-                {/* Public-only links */}
+                {/* Logged-out nav */}
                 {!isSignedIn && (
                   <>
-                    <DropdownMenuItem asChild>
-                      <Link href="/subscribe" className="flex cursor-pointer items-center gap-2">
-                        <Tag className="h-4 w-4" />
-                        Pricing
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/about" className="flex cursor-pointer items-center gap-2">
-                        <Info className="h-4 w-4" />
-                        About Us
-                      </Link>
+                    {loggedOutNavItems.map((item) => (
+                      <DropdownMenuItem key={item.label} asChild>
+                        <Link href={item.href} className="flex cursor-pointer items-center gap-2">
+                          {item.label === "Home"         && <Home       className="h-4 w-4" />}
+                          {item.label === "Services"     && <Briefcase  className="h-4 w-4" />}
+                          {item.label === "How It Works" && <HelpCircle className="h-4 w-4" />}
+                          {item.label === "Pricing"      && <HelpCircle className="h-4 w-4" />}
+                          {item.label === "About Us"     && <Home       className="h-4 w-4" />}
+                          {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="flex cursor-pointer items-center gap-2"
+                      onSelect={(e) => { e.preventDefault(); setShowSignInModal(true); }}
+                    >
+                      <LogIn className="h-4 w-4" />
+                      Sign In
                     </DropdownMenuItem>
                   </>
                 )}
 
-                {/* Authenticated-only links */}
+                {/* Logged-in homeowner nav — single source of truth via homeownerNavItems */}
+                {isSignedIn && homeownerNavItems.map((item) => {
+                  const active = isNavItemActive(item, pathname);
+                  const isInbox = item.match?.includes("/inbox");
+                  const isHome = item.label === "Home";
+
+                  return (
+                    <React.Fragment key={item.label}>
+                      {/* Divider between marketing nav and app nav */}
+                      {item.label === "Your Jobs" && <DropdownMenuSeparator />}
+
+                      {/* "Home" uses onSelect to reset state even when already on "/" */}
+                      {isHome ? (
+                        <DropdownMenuItem
+                          className={`flex cursor-pointer items-center gap-2${active ? " bg-muted font-medium" : ""}`}
+                          onSelect={(e) => { e.preventDefault(); handleHomeClick(); }}
+                        >
+                          <Home className="h-4 w-4" />
+                          <span className="flex-1">{item.label}</span>
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem
+                          className={`flex cursor-pointer items-center gap-2${active ? " bg-muted font-medium" : ""}`}
+                          asChild
+                        >
+                          <Link href={item.href}>
+                            {item.label === "Services"     && <Briefcase     className="h-4 w-4" />}
+                            {item.label === "How It Works" && <HelpCircle    className="h-4 w-4" />}
+                            {item.label === "Your Jobs"    && <FileText      className="h-4 w-4" />}
+                            {item.label === "Inbox"        && <MessageCircle className="h-4 w-4" />}
+                            {item.label === "Profile"      && <Home          className="h-4 w-4" />}
+                            {item.label === "New Job"      && <PlusCircle    className="h-4 w-4" />}
+                            <span className="flex-1">{item.label}</span>
+                            {isInbox && homeownerUnreadCount > 0 && (
+                              <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                                {homeownerUnreadCount > 9 ? "9+" : homeownerUnreadCount}
+                              </span>
+                            )}
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+
+                {/* Sign Out — always last for homeowner */}
                 {isSignedIn && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/inbox?type=homeowner" className="flex cursor-pointer items-center gap-2">
-                        <Bell className="h-4 w-4" />
-                        <span className="flex-1">Notifications</span>
-                        {homeownerUnreadCount > 0 && (
-                          <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                            {homeownerUnreadCount > 9 ? "9+" : homeownerUnreadCount}
-                          </span>
-                        )}
-                      </Link>
-                    </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="flex cursor-pointer items-center gap-2"
-                      onSelect={() => handleYourJobsClick()}
+                      className="flex cursor-pointer items-center gap-2 text-red-600 focus:text-red-600"
+                      onSelect={(e) => { e.preventDefault(); handleSignOut(); }}
                     >
-                      <FileText className="h-4 w-4" />
-                      Your Jobs
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
                     </DropdownMenuItem>
                   </>
-                )}
-
-                <DropdownMenuSeparator />
-                {isSignedIn ? (
-                  <DropdownMenuItem
-                    className="flex cursor-pointer items-center gap-2 text-red-600 focus:text-red-600"
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      handleSignOut();
-                    }}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign Out
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem
-                    className="flex cursor-pointer items-center gap-2"
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      setShowSignInModal(true);
-                    }}
-                  >
-                    <LogIn className="h-4 w-4" />
-                    Sign In
-                  </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>

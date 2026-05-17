@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect, useRef, useSyncExternalStore } from "react";
+import React, { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer } from "lucide-react";
+import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle } from "lucide-react";
+import { homeownerNavItems, loggedOutNavItems, isNavItemActive } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
 import { SignInModal } from "@/components/sign-in-modal";
 import {
@@ -205,14 +206,16 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
               {/* Nav items — logged out */}
               {!isLoggedIn && (
                 <>
-                  <Link href="/" className={menuItemClass} onClick={closeMenu}>
-                    <Home className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    Home
-                  </Link>
-                  <Link href="/how-it-works" className={menuItemClass} onClick={closeMenu}>
-                    <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    How It Works
-                  </Link>
+                  {loggedOutNavItems.map((item) => (
+                    <Link key={item.label} href={item.href} className={menuItemClass} onClick={closeMenu}>
+                      {item.label === "Home"         && <Home       className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "Services"     && <Briefcase  className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "How It Works" && <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "Pricing"      && <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "About Us"     && <Home       className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label}
+                    </Link>
+                  ))}
                   <div className={separatorClass} />
                   <button
                     type="button"
@@ -228,35 +231,43 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
               {/* Nav items — logged in homeowner */}
               {isLoggedIn && !isContractor && (
                 <>
-                  <Link
-                    href="/?showJobs=true"
-                    className={`${menuItemClass}${(pathname === "/" || pathname === "/homeowners") ? " bg-muted font-medium" : ""}`}
-                    onClick={closeMenu}
-                  >
-                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    Your Jobs
-                  </Link>
-                  <Link
-                    href="/inbox?type=homeowner"
-                    className={`${menuItemClass}${pathname === "/inbox" ? " bg-muted font-medium" : ""}`}
-                    onClick={closeMenu}
-                  >
-                    <MessageCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="flex-1">Messages</span>
-                    {unreadCount > 0 && (
-                      <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
-                  </Link>
-                  <Link
-                    href="/profile"
-                    className={`${menuItemClass}${pathname === "/profile" ? " bg-muted font-medium" : ""}`}
-                    onClick={closeMenu}
-                  >
-                    <Home className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    Profile
-                  </Link>
+                  {homeownerNavItems.map((item) => {
+                    const active = isNavItemActive(item, pathname);
+                    const isInbox = item.match?.includes("/inbox");
+                    const isHome = item.label === "Home";
+                    return (
+                      <React.Fragment key={item.label}>
+                        {/* Divider between marketing nav and app nav */}
+                        {item.label === "Your Jobs" && (
+                          <div className="my-2 border-t border-border" />
+                        )}
+                        <Link
+                          href={item.href}
+                          className={`${menuItemClass}${active ? " bg-muted font-medium" : ""}`}
+                          onClick={(e) => {
+                            if (isHome) {
+                              window.dispatchEvent(new CustomEvent("hb:home"));
+                            }
+                            closeMenu();
+                          }}
+                        >
+                          {item.label === "Home"         && <Home          className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                          {item.label === "Services"     && <Briefcase     className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                          {item.label === "How It Works" && <HelpCircle    className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                          {item.label === "Your Jobs"    && <FileText      className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                          {item.label === "Inbox"        && <MessageCircle className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                          {item.label === "Profile"      && <Home          className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                          {item.label === "New Job"      && <PlusCircle    className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                          <span className="flex-1">{item.label}</span>
+                          {isInbox && unreadCount > 0 && (
+                            <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                              {unreadCount > 9 ? "9+" : unreadCount}
+                            </span>
+                          )}
+                        </Link>
+                      </React.Fragment>
+                    );
+                  })}
                   <div className={separatorClass} />
                   <button type="button" onClick={handleSignOut} className={`${menuItemClass} text-red-600 hover:text-red-600`}>
                     <LogOut className="h-4 w-4 shrink-0" />

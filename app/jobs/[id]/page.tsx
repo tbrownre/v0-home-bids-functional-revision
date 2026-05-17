@@ -12,8 +12,6 @@ import {
   DollarSign,
   CheckCircle2,
   XCircle,
-  MessageCircle,
-  Send,
   FileText,
   AlertTriangle,
   ImageIcon as LucideImage,
@@ -29,15 +27,6 @@ import { Label } from "@/components/ui/label";
 import { getJobById } from "@/lib/supabase/actions";
 import { getJobById as getDemoJobById } from "@/lib/demo/services";
 import { USE_MOCK_DATA } from "@/lib/mock-auth";
-
-interface Message {
-  id: string;
-  text: string;
-  imageUrl?: string;
-  timestamp: Date;
-  isOwn: boolean;
-  senderName: string;
-}
 
 // Shape of a job record returned from Supabase
 interface JobRecord {
@@ -116,24 +105,7 @@ export default function JobDetailsPage() {
   const [reviewText, setReviewText] = useState("");
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [showLeaveReview, setShowLeaveReview] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [pendingImage, setPendingImage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasLoadedRef = useRef(false);
-
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPendingImage(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -144,14 +116,6 @@ export default function JobDetailsPage() {
     }, 300);
     return () => clearTimeout(t);
   }, []);
-
-  useEffect(() => {
-    if (!hasLoadedRef.current) return;
-    const chatContainer = messagesEndRef.current?.parentElement;
-    if (chatContainer) {
-      chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
-  }, [messages]);
 
   if (loading) {
     return (
@@ -208,23 +172,6 @@ export default function JobDetailsPage() {
     setShowDeclineConfirm(false);
   };
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim() && !pendingImage) return;
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: String(prev.length + 1),
-        text: newMessage.trim(),
-        imageUrl: pendingImage || undefined,
-        timestamp: new Date(),
-        isOwn: true,
-        senderName: "You",
-      },
-    ]);
-    setNewMessage("");
-    setPendingImage(null);
-  };
-
   const statusConfig: Record<string, { label: string; className: string }> = {
     receiving_bids: { label: "Receiving Bids", className: "bg-green-100 text-green-800" },
     contractor_selected: { label: "Contractor Selected", className: "bg-orange-100 text-orange-800" },
@@ -239,10 +186,9 @@ export default function JobDetailsPage() {
     <div className="min-h-screen bg-background">
       <Header backHref="/?showJobs=true" backLabel="Back to Jobs" isSignedIn />
 
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        <div className="grid gap-8 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            {/* Job Header */}
+      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+        <div>
+          <div>
             <div className="rounded-2xl border border-border bg-card p-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
@@ -402,129 +348,6 @@ export default function JobDetailsPage() {
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Message All Bidders */}
-            <div className="rounded-2xl border border-border bg-card">
-              <div className="flex items-center gap-2 border-b border-border p-4">
-                <MessageCircle className="h-5 w-5 text-primary" />
-                <h3 className="text-sm font-semibold text-foreground">
-                  Message All Bidders
-                </h3>
-                <span className="ml-auto flex h-2 w-2 rounded-full bg-green-500" />
-              </div>
-              <div className="max-h-72 overflow-y-auto p-4">
-                <div className="space-y-3">
-                  {messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={`flex ${msg.isOwn ? "justify-end" : "justify-start"}`}
-                    >
-                      <div
-                        className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 ${
-                          msg.isOwn
-                            ? "rounded-br-md bg-primary text-primary-foreground"
-                            : "rounded-bl-md bg-muted text-foreground"
-                        }`}
-                      >
-                        <p className="text-[11px] font-medium opacity-70">{msg.senderName}</p>
-                        {msg.imageUrl && (
-                          <div className="mt-1.5 overflow-hidden rounded-lg">
-                            <img
-                              src={msg.imageUrl}
-                              alt="Shared image"
-                              className="max-h-48 w-full object-cover"
-                            />
-                          </div>
-                        )}
-                        {msg.text && <p className="mt-0.5 text-sm leading-relaxed">{msg.text}</p>}
-                        <p className="mt-1 text-right text-[10px] opacity-50">
-                          {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                  <div ref={messagesEndRef} />
-                </div>
-              </div>
-              <div className="border-t border-border p-3">
-                {pendingImage && (
-                  <div className="mb-2 relative inline-block">
-                    <img
-                      src={pendingImage}
-                      alt="Pending attachment"
-                      className="h-20 w-20 rounded-lg object-cover border border-border"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setPendingImage(null)}
-                      className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs"
-                      aria-label="Remove image"
-                    >
-                      <XCircle className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    className="hidden"
-                    aria-label="Attach image"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 shrink-0 rounded-xl text-muted-foreground hover:text-foreground"
-                    onClick={() => fileInputRef.current?.click()}
-                    aria-label="Attach image"
-                  >
-                    <LucideImage className="h-4 w-4" />
-                  </Button>
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    placeholder="Type a message..."
-                    className="flex-1 rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={!newMessage.trim() && !pendingImage}
-                    size="icon"
-                    className="h-10 w-10 shrink-0 rounded-xl"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-
-
-            {/* Need Help */}
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Need Help?
-              </h3>
-              <p className="mt-3 text-sm text-muted-foreground">
-                If you have any questions about your job or need assistance, our support team is here to help.
-              </p>
-              <Button variant="outline" className="mt-4 w-full bg-transparent" asChild>
-                <a href="mailto:support@homebids.io">Contact Support</a>
-              </Button>
             </div>
           </div>
         </div>
