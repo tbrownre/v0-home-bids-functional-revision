@@ -95,7 +95,7 @@ export function SmsIphonePreview() {
     <div className="flex items-center justify-center">
       <div className="relative w-[272px] sm:w-[296px]">
         {/* iPhone shell */}
-        <div className="overflow-hidden rounded-[2.8rem] border-[5px] border-foreground/10 bg-card shadow-2xl shadow-foreground/8">
+        <div className="overflow-hidden rounded-[2.8rem] border-[5px] border-foreground/10 bg-card shadow-2xl shadow-foreground/8" style={{ height: 520 }}>
 
           {/* Dynamic island */}
           <div className="flex justify-center bg-card pt-3 pb-0.5">
@@ -143,8 +143,8 @@ export function SmsIphonePreview() {
             </div>
           </div>
 
-          {/* Message list */}
-          <div className="flex min-h-[260px] flex-col justify-end gap-1.5 bg-background px-3 py-3">
+          {/* Message list — fixed height, scrolls internally */}
+          <div className="flex h-[260px] flex-col justify-end gap-1.5 overflow-y-auto bg-background px-3 py-3 min-h-0">
             <AnimatePresence mode="popLayout">
               {CONVERSATION.filter((_, i) => visible.includes(i)).map((msg, _, arr) => {
                 const globalIdx = CONVERSATION.indexOf(msg);
@@ -159,7 +159,7 @@ export function SmsIphonePreview() {
                     className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[82%] rounded-2xl px-3 py-2 text-[13px] leading-snug ${
+                      className={`max-w-[82%] break-words rounded-2xl px-3 py-2 text-[13px] leading-snug ${
                         msg.sender === "user"
                           ? "rounded-br-[4px] bg-[#007AFF] text-white"
                           : "rounded-bl-[4px] bg-secondary text-secondary-foreground"
