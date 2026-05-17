@@ -187,4 +187,11 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Ensure all clickable elements always show pointer cursor */
+  button,
+  a,
+  [role="button"],
+  [onclick] {
+    cursor: pointer !important;
+  }
 }

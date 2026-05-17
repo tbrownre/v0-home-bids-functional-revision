@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1827,6 +1828,7 @@ export default function HomePage() {
             )}
           </AnimatePresence>
         </div>
+        <Footer />
       </main>
 
       {/* Sign In Modal */}
