@@ -27,29 +27,9 @@ import {
   Shield,
   ArrowRight,
   HelpCircle,
-  Send,
-  MessageCircle,
 } from "lucide-react";
 
 export default function ApplicationPendingPage() {
-  const [showContact, setShowContact] = useState(false);
-  const [contactName, setContactName] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-  const [contactMessage, setContactMessage] = useState("");
-  const [contactSubmitted, setContactSubmitted] = useState(false);
-
-  const handleContactSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setContactSubmitted(true);
-  };
-
-  const resetContactForm = () => {
-    setContactName("");
-    setContactEmail("");
-    setContactMessage("");
-    setContactSubmitted(false);
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -200,115 +180,8 @@ export default function ApplicationPendingPage() {
               </Link>
             </Button>
           </motion.div>
-
-          {/* Contact Support */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-            className="mt-10 text-center"
-          >
-            <p className="text-sm text-muted-foreground">
-              Have questions about your application?{" "}
-              <button
-                type="button"
-                onClick={() => setShowContact(true)}
-                className="text-primary hover:underline font-medium"
-              >
-                Contact our support team
-              </button>
-            </p>
-          </motion.div>
         </div>
       </main>
-
-      {/* Contact Support Modal */}
-      <Dialog open={showContact} onOpenChange={(open) => {
-        setShowContact(open);
-        if (!open) resetContactForm();
-      }}>
-        <DialogContent className="sm:max-w-md p-0 overflow-hidden">
-          {!contactSubmitted ? (
-            <>
-              <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-6 pt-8 pb-6">
-                <DialogHeader className="relative">
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/20">
-                    <MessageCircle className="h-7 w-7 text-primary" />
-                  </div>
-                  <DialogTitle className="text-center text-xl font-semibold">
-                    Contact Support
-                  </DialogTitle>
-                  <DialogDescription className="text-center text-muted-foreground">
-                    Have questions about your application? We are here to help.
-                  </DialogDescription>
-                </DialogHeader>
-              </div>
-              <div className="px-6 pb-6">
-                <form onSubmit={handleContactSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="support-name" className="text-sm font-medium">Name</Label>
-                    <Input
-                      id="support-name"
-                      value={contactName}
-                      onChange={(e) => setContactName(e.target.value)}
-                      placeholder="Your name"
-                      className="h-11"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="support-email" className="text-sm font-medium">Email</Label>
-                    <Input
-                      id="support-email"
-                      type="email"
-                      value={contactEmail}
-                      onChange={(e) => setContactEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      className="h-11"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="support-message" className="text-sm font-medium">Message</Label>
-                    <Textarea
-                      id="support-message"
-                      value={contactMessage}
-                      onChange={(e) => setContactMessage(e.target.value)}
-                      placeholder="Tell us about your question or concern..."
-                      className="min-h-[100px]"
-                      required
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full h-11 gap-2"
-                    disabled={!contactName.trim() || !contactEmail.trim() || !contactMessage.trim()}
-                  >
-                    <Send className="h-4 w-4" />
-                    Send Message
-                  </Button>
-                </form>
-              </div>
-            </>
-          ) : (
-            <div className="px-6 py-10 text-center">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
-                <CheckCircle2 className="h-7 w-7 text-green-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-foreground">Message Sent</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Our support team will get back to you within 24 hours. Check your email for a response.
-              </p>
-              <Button
-                className="mt-6"
-                onClick={() => setShowContact(false)}
-              >
-                Done
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       <ScrollToTop />
     </div>
