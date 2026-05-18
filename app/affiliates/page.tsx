@@ -34,31 +34,60 @@ const stagger = {
   show: { transition: { staggerChildren: 0.1 } },
 };
 
+// ─── Smooth animated number hook ──────────────────────────────────────
+function useAnimatedNumber(target: number, duration = 600): number {
+  const [displayed, setDisplayed] = useState(target);
+  const startRef = useRef<number | null>(null);
+  const fromRef = useRef(target);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const from = fromRef.current;
+    if (from === target) return;
+
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    startRef.current = null;
+
+    const animate = (timestamp: number) => {
+      if (startRef.current === null) startRef.current = timestamp;
+      const elapsed = timestamp - startRef.current;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayed(Math.round(from + (target - from) * eased));
+
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(animate);
+      } else {
+        fromRef.current = target;
+        rafRef.current = null;
+      }
+    };
+
+    rafRef.current = requestAnimationFrame(animate);
+    return () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current); };
+  }, [target, duration]);
+
+  return displayed;
+}
+
 // ─── Earnings counter ─────────────────────────────────────────────────
 const COUNTER_STEPS = [0, 347, 1284, 4920, 11760, 28440];
 
 function EarningsCounter() {
   const [index, setIndex] = useState(0);
-  const [visible, setVisible] = useState(true);
+  const animated = useAnimatedNumber(COUNTER_STEPS[index], 900);
 
   useEffect(() => {
-    const tick = () => {
-      setVisible(false);
-      setTimeout(() => {
-        setIndex((i) => (i + 1) % COUNTER_STEPS.length);
-        setVisible(true);
-      }, 300);
-    };
-    const id = setInterval(tick, 1200);
+    const id = setInterval(() => {
+      setIndex((i) => (i + 1) % COUNTER_STEPS.length);
+    }, 2200);
     return () => clearInterval(id);
   }, []);
 
   return (
-    <span
-      className="inline-block tabular-nums transition-all duration-300"
-      style={{ opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(6px)" }}
-    >
-      ${COUNTER_STEPS[index].toLocaleString()}
+    <span className="inline-block tabular-nums">
+      ${animated.toLocaleString()}
     </span>
   );
 }
@@ -155,6 +184,11 @@ function EarningsSimulator() {
     contractors * ctPlan.value * COMMISSION_RATE;
   const annual = monthly * 12;
 
+  const animatedMonthly = useAnimatedNumber(Math.round(monthly), 500);
+  const animatedAnnual = useAnimatedNumber(Math.round(annual), 500);
+  const animatedHO = useAnimatedNumber(homeowners, 200);
+  const animatedCT = useAnimatedNumber(contractors, 200);
+
   return (
     <div className="mx-auto max-w-2xl rounded-3xl border border-border bg-card p-8 shadow-sm">
       {/* Inputs */}
@@ -165,7 +199,9 @@ function EarningsSimulator() {
             <label className="text-sm font-semibold text-foreground">
               Homeowners referred
             </label>
-            <span className="text-lg font-bold tabular-nums text-foreground">{homeowners}</span>
+            <span className="w-12 text-right text-lg font-bold tabular-nums text-foreground">
+              {animatedHO}
+            </span>
           </div>
           <input
             type="range"
@@ -187,7 +223,9 @@ function EarningsSimulator() {
             <label className="text-sm font-semibold text-foreground">
               Contractors referred
             </label>
-            <span className="text-lg font-bold tabular-nums text-foreground">{contractors}</span>
+            <span className="w-12 text-right text-lg font-bold tabular-nums text-foreground">
+              {animatedCT}
+            </span>
           </div>
           <input
             type="range"
@@ -225,22 +263,22 @@ function EarningsSimulator() {
         </span>
       </div>
 
-      {/* Output */}
+      {/* Output — fixed min-height prevents layout shift */}
       <div className="mt-6 grid grid-cols-2 gap-4">
-        <div className="rounded-2xl bg-muted px-6 py-5 text-center">
+        <div className="flex min-h-[96px] flex-col items-center justify-center rounded-2xl bg-muted px-6 py-5 text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Est. Monthly Recurring
           </p>
-          <p className="mt-2 text-3xl font-bold tracking-tight text-foreground">
-            ${Math.round(monthly).toLocaleString()}
+          <p className="mt-2 min-w-[6ch] text-3xl font-bold tabular-nums tracking-tight text-foreground">
+            ${animatedMonthly.toLocaleString()}
           </p>
         </div>
-        <div className="rounded-2xl bg-foreground px-6 py-5 text-center">
+        <div className="flex min-h-[96px] flex-col items-center justify-center rounded-2xl bg-foreground px-6 py-5 text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary-foreground/70">
             Est. Annual Recurring
           </p>
-          <p className="mt-2 text-3xl font-bold tracking-tight text-primary-foreground">
-            ${Math.round(annual).toLocaleString()}
+          <p className="mt-2 min-w-[6ch] text-3xl font-bold tabular-nums tracking-tight text-primary-foreground">
+            ${animatedAnnual.toLocaleString()}
           </p>
         </div>
       </div>
