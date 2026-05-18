@@ -690,7 +690,7 @@ export default function HomePage() {
   }, [setCurrentStepSafe]);
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen flex-col bg-background">
       {/* Main Content */}
       <main className="relative flex flex-1 flex-col overflow-y-auto">
         {/* Top bar with logo */}
@@ -1837,9 +1837,10 @@ export default function HomePage() {
           </AnimatePresence>
         </div>
 
-        {/* Footer — only shown on the landing view (not during form steps or jobs board) */}
-        {currentStep === "describe" && !showJobsBoard && <Footer />}
       </main>
+
+      {/* Footer — sits at the bottom of the flex column, always visible */}
+      <Footer />
 
       {/* Sign In Modal */}
       <SignInModal
