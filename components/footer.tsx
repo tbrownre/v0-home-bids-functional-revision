@@ -81,7 +81,7 @@ function FlyoutGroup({ label, items }: { label: string; items: { href?: string; 
 export function Footer() {
   const pathname = usePathname();
   // Don't render from the root layout on admin (own layout) or on "/" (home
-  // page renders Footer inside its own scrollable <main> container).
+  // page renders Footer directly inside its own flex layout container).
   if (pathname?.startsWith("/admin") || pathname === "/") return null;
 
   const [showContact, setShowContact] = useState(false);
