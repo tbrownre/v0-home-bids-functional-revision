@@ -1836,7 +1836,9 @@ export default function HomePage() {
             )}
           </AnimatePresence>
         </div>
-        <Footer />
+
+        {/* Footer — only shown on the landing view (not during form steps or jobs board) */}
+        {currentStep === "describe" && !showJobsBoard && <Footer />}
       </main>
 
       {/* Sign In Modal */}
