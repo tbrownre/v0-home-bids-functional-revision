@@ -35,7 +35,7 @@ const stagger = {
 };
 
 // ─── Earnings counter ─────────────────────────────────────────────────
-const COUNTER_STEPS = [0, 10, 47, 183, 642, 1204];
+const COUNTER_STEPS = [0, 347, 1284, 4920, 11760, 28440];
 
 function EarningsCounter() {
   const [index, setIndex] = useState(0);
@@ -64,32 +64,60 @@ function EarningsCounter() {
 }
 
 // ─── Floating social proof ────────────────────────────────────────────
-const NOTIFICATIONS = [
-  { name: "John", amount: 47, delay: 3000 },
-  { name: "Sarah", amount: 112, delay: 7400 },
-  { name: "Mike", amount: 389, delay: 11800 },
-  { name: "Emily", amount: 214, delay: 16200 },
-  { name: "David", amount: 503, delay: 20600 },
+const NOTIFICATION_MESSAGES = [
+  "Alex just earned $1,240",
+  "Sarah just earned $1,875",
+  "Michael just earned $2,310",
+  "Jessica just earned $3,420",
+  "Chris just earned $4,180",
+  "Amanda just earned $5,760",
+  "Ryan just earned $2,950",
+  "Lauren just earned $6,430",
+  "Brandon just earned $7,125",
+  "Ashley just earned $3,880",
+  "Jason just earned $8,240",
+  "Megan just earned $1,690",
+  "Tyler just earned $4,950",
+  "Brittany just earned $5,210",
+  "Kevin just earned $9,875",
+  "Nicole just earned $2,760",
+  "Daniel just earned $6,890",
+  "Rachel just earned $3,140",
+  "Justin just earned $7,640",
+  "Emily just earned $4,720",
+  "Matt just earned $1,995",
+  "Olivia just earned $8,910",
+  "Andrew just earned $5,480",
+  "Samantha just earned $2,425",
+  "Jordan just earned $6,275",
+  "Taylor just earned $3,995",
+  "Morgan just earned $9,240",
+  "Casey just earned $4,360",
+  "Dylan just earned $7,890",
+  "Brooke just earned $5,995",
 ];
 
-function FloatingNotification({ name, amount, delay }: { name: string; amount: number; delay: number }) {
-  const [show, setShow] = useState(false);
+function FloatingSocialProof() {
+  const [current, setCurrent] = useState<string | null>(null);
+  const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    const INTERVAL = 25000;
-    const show_ = () => {
-      setShow(true);
-      setTimeout(() => setShow(false), 3200);
+    // First show after 4s, then cycle every 7s: 3s visible + 4s hidden
+    const show = () => {
+      setCurrent(NOTIFICATION_MESSAGES[index % NOTIFICATION_MESSAGES.length]);
+      setIndex((i) => i + 1);
+      setTimeout(() => setCurrent(null), 3200);
     };
-    const first = setTimeout(show_, delay);
-    const loop = setInterval(show_, INTERVAL);
+    const first = setTimeout(show, 4000);
+    const loop = setInterval(show, 7000);
     return () => { clearTimeout(first); clearInterval(loop); };
-  }, [delay]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
-      animate={show ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
+      animate={current ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
       className="pointer-events-none fixed bottom-20 left-4 z-50 flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-lg"
     >
@@ -97,83 +125,129 @@ function FloatingNotification({ name, amount, delay }: { name: string; amount: n
         <DollarSign className="h-4 w-4" />
       </div>
       <p className="text-sm font-medium text-foreground">
-        {name} just earned <span className="font-bold text-green-600">${amount}</span>
+        {current?.split(" just earned ")[0]}{" "}
+        <span className="text-muted-foreground">just earned</span>{" "}
+        <span className="font-bold text-green-600">
+          {current?.split(" just earned ")[1]}
+        </span>
       </p>
     </motion.div>
   );
 }
 
 // ─── Earnings simulator ───────────────────────────────────────────────
-// $30/mo homeowner subscription × 20% = $6/mo per HO referral
-// $70/mo contractor subscription × 20% = $14/mo per CT referral
-const HO_MONTHLY = 6;
-const CT_MONTHLY = 14;
+const HO_MONTHLY_PRICE = 9.99;
+const CONTRACTOR_PLAN_OPTIONS = [
+  { label: "$9.99/mo",  value: 9.99 },
+  { label: "$29/mo",   value: 29 },
+  { label: "$79/mo",   value: 79 },
+];
+const COMMISSION_RATE = 0.2;
 
 function EarningsSimulator() {
-  const [homeowners, setHomeowners] = useState(5);
-  const [contractors, setContractors] = useState(5);
-  const monthly = homeowners * HO_MONTHLY + contractors * CT_MONTHLY;
+  const [homeowners, setHomeowners] = useState(25);
+  const [contractors, setContractors] = useState(25);
+  const [ctPlanIndex, setCtPlanIndex] = useState(1); // default $29/mo
+
+  const ctPlan = CONTRACTOR_PLAN_OPTIONS[ctPlanIndex];
+  const monthly =
+    homeowners * HO_MONTHLY_PRICE * COMMISSION_RATE +
+    contractors * ctPlan.value * COMMISSION_RATE;
   const annual = monthly * 12;
 
   return (
     <div className="mx-auto max-w-2xl rounded-3xl border border-border bg-card p-8 shadow-sm">
+      {/* Inputs */}
       <div className="grid gap-8 sm:grid-cols-2">
+        {/* Homeowners */}
         <div>
-          <label className="block text-sm font-semibold text-foreground">
-            Homeowners referred / month
-          </label>
-          <div className="mt-3 flex items-center gap-4">
-            <input
-              type="range"
-              min={0}
-              max={50}
-              value={homeowners}
-              onChange={(e) => setHomeowners(Number(e.target.value))}
-              className="h-2 w-full cursor-pointer accent-foreground"
-            />
-            <span className="w-8 text-right text-lg font-bold tabular-nums text-foreground">
-              {homeowners}
-            </span>
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold text-foreground">
+              Homeowners referred
+            </label>
+            <span className="text-lg font-bold tabular-nums text-foreground">{homeowners}</span>
           </div>
+          <input
+            type="range"
+            min={0}
+            max={1000}
+            step={1}
+            value={homeowners}
+            onChange={(e) => setHomeowners(Number(e.target.value))}
+            className="mt-3 h-2 w-full cursor-pointer accent-foreground"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            @ ${HO_MONTHLY_PRICE}/mo plan
+          </p>
         </div>
+
+        {/* Contractors */}
         <div>
-          <label className="block text-sm font-semibold text-foreground">
-            Contractors referred / month
-          </label>
-          <div className="mt-3 flex items-center gap-4">
-            <input
-              type="range"
-              min={0}
-              max={50}
-              value={contractors}
-              onChange={(e) => setContractors(Number(e.target.value))}
-              className="h-2 w-full cursor-pointer accent-foreground"
-            />
-            <span className="w-8 text-right text-lg font-bold tabular-nums text-foreground">
-              {contractors}
-            </span>
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold text-foreground">
+              Contractors referred
+            </label>
+            <span className="text-lg font-bold tabular-nums text-foreground">{contractors}</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={1000}
+            step={1}
+            value={contractors}
+            onChange={(e) => setContractors(Number(e.target.value))}
+            className="mt-3 h-2 w-full cursor-pointer accent-foreground"
+          />
+          {/* Contractor plan selector */}
+          <div className="mt-3 flex gap-2">
+            {CONTRACTOR_PLAN_OPTIONS.map((opt, i) => (
+              <button
+                key={opt.label}
+                type="button"
+                onClick={() => setCtPlanIndex(i)}
+                className={`flex-1 rounded-xl border px-2 py-1.5 text-xs font-semibold transition-colors ${
+                  ctPlanIndex === i
+                    ? "border-foreground bg-foreground text-primary-foreground"
+                    : "border-border bg-background text-muted-foreground hover:border-foreground/40"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="mt-8 grid grid-cols-2 gap-4">
+      {/* Commission badge */}
+      <div className="mt-6 flex items-center justify-center gap-2">
+        <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
+          20% lifetime commission — locked in forever
+        </span>
+      </div>
+
+      {/* Output */}
+      <div className="mt-6 grid grid-cols-2 gap-4">
         <div className="rounded-2xl bg-muted px-6 py-5 text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Monthly</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Est. Monthly Recurring
+          </p>
           <p className="mt-2 text-3xl font-bold tracking-tight text-foreground">
-            ${monthly.toLocaleString()}
+            ${Math.round(monthly).toLocaleString()}
           </p>
         </div>
         <div className="rounded-2xl bg-foreground px-6 py-5 text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary-foreground/70">Annual</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary-foreground/70">
+            Est. Annual Recurring
+          </p>
           <p className="mt-2 text-3xl font-bold tracking-tight text-primary-foreground">
-            ${annual.toLocaleString()}
+            ${Math.round(annual).toLocaleString()}
           </p>
         </div>
       </div>
 
       <p className="mt-5 text-center text-sm text-muted-foreground">
-        Just {homeowners} homeowners + {contractors} contractors/month ={" "}
-        <strong className="text-foreground">${monthly.toLocaleString()}/mo recurring</strong>
+        Because commissions are lifetime, every referral can keep paying you{" "}
+        <strong className="text-foreground">month after month.</strong>
       </p>
     </div>
   );
@@ -210,32 +284,32 @@ const LEVELS = [
   {
     level: 1,
     title: "Starter Affiliate",
-    range: "0–9 referrals",
-    perks: ["Personal dashboard", "20% lifetime commissions", "Community access"],
+    range: "1–10 referrals",
+    perks: ["Affiliate starter badge", "Share scripts", "Local posting playbook"],
     dark: false,
     featured: false,
   },
   {
     level: 2,
     title: "Growth Partner",
-    range: "10–49 referrals",
-    perks: ["Priority support", "Early feature access", "Partner badge"],
+    range: "11–50 referrals",
+    perks: ["Priority affiliate support", "Bonus swipe files", "Featured partner shoutout"],
     dark: false,
     featured: false,
   },
   {
     level: 3,
-    title: "Power Affiliate",
-    range: "50–199 referrals",
-    perks: ["Increased visibility", "Exclusive bonuses", "Direct account manager"],
+    title: "Power Partner",
+    range: "51–150 referrals",
+    perks: ["Apple Watch bonus eligibility", "Private growth strategy call", "Early access to new affiliate tools"],
     dark: true,
     featured: false,
   },
   {
     level: 4,
-    title: "Founding Legend",
-    range: "200+ referrals",
-    perks: ["Permanent recognition", "Revenue sharing talks", "Co-marketing opportunities"],
+    title: "Elite Partner",
+    range: "151+ referrals",
+    perks: ["Premium prize eligibility", "VIP partner status", "Advanced dashboard access", "Exclusive HomeBids partner opportunities"],
     dark: true,
     featured: true,
   },
@@ -247,10 +321,8 @@ export default function AffiliatesPage() {
     <div className="min-h-screen bg-background">
       <HeaderWithEarlyAccess />
 
-      {/* Floating social proof notifications */}
-      {NOTIFICATIONS.map((n) => (
-        <FloatingNotification key={n.name} name={n.name} amount={n.amount} delay={n.delay} />
-      ))}
+      {/* Floating social proof notification */}
+      <FloatingSocialProof />
 
       {/* ── Hero ──────────────────────────────────────────────────────── */}
       <section className="px-4 pb-20 pt-20 sm:px-6 lg:px-8">
@@ -289,6 +361,9 @@ export default function AffiliatesPage() {
                   <EarningsCounter />
                 </span>
                 <span className="ml-1 text-base font-medium text-muted-foreground">/month</span>
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground/70">
+                Your referrals can compound across homeowners and contractors — month after month.
               </p>
             </motion.div>
 
@@ -516,10 +591,13 @@ export default function AffiliatesPage() {
         <div className="mx-auto max-w-2xl">
           <motion.div variants={fadeUp} className="text-center">
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              What Could You Earn?
+              What Could 1,000 Referrals Become?
             </h2>
             <p className="mt-3 text-muted-foreground">
-              Move the sliders and watch your income grow in real time.
+              Homeowners are fixed. Contractors can scale up to higher monthly plans — and you earn 20% for life.
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              The more contractors you refer, the more powerful the upside becomes.
             </p>
           </motion.div>
           <motion.div variants={fadeUp} className="mt-10">
@@ -536,7 +614,7 @@ export default function AffiliatesPage() {
               Your Affiliate Journey
             </h2>
             <p className="mt-3 text-muted-foreground">
-              Progress through levels. Unlock advantages. Founding Affiliates get permanent recognition.
+              Progress through levels and unlock exclusive rewards as you grow.
             </p>
           </motion.div>
 
@@ -554,7 +632,7 @@ export default function AffiliatesPage() {
               >
                 {lvl.featured && (
                   <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-foreground px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary-foreground">
-                    Most Prestigious
+                    Most Rewarding
                   </span>
                 )}
                 <div
