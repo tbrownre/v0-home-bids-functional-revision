@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { motion, useInView } from "framer-motion";
+import { motion, useInView, AnimatePresence } from "framer-motion";
 import { HeaderWithEarlyAccess } from "@/components/header-with-early-access";
 import { Button } from "@/components/ui/button";
 import {
@@ -127,40 +127,54 @@ const NOTIFICATION_MESSAGES = [
 ];
 
 function FloatingSocialProof() {
-  const [current, setCurrent] = useState<string | null>(null);
-  const [index, setIndex] = useState(0);
+  // { text, id } — id changes each cycle so AnimatePresence remounts cleanly
+  const [toast, setToast] = useState<{ text: string; id: number } | null>(null);
+  const indexRef = useRef(0);
+  const idRef = useRef(0);
 
   useEffect(() => {
-    // First show after 4s, then cycle every 7s: 3s visible + 4s hidden
     const show = () => {
-      setCurrent(NOTIFICATION_MESSAGES[index % NOTIFICATION_MESSAGES.length]);
-      setIndex((i) => i + 1);
-      setTimeout(() => setCurrent(null), 3200);
+      const text = NOTIFICATION_MESSAGES[indexRef.current % NOTIFICATION_MESSAGES.length];
+      indexRef.current += 1;
+      idRef.current += 1;
+      setToast({ text, id: idRef.current });
+
+      // Hide after 3.6 s
+      setTimeout(() => setToast(null), 3600);
     };
+
+    // First popup after 4 s, then every 8 s (3.6 s visible + 4.4 s gap)
     const first = setTimeout(show, 4000);
-    const loop = setInterval(show, 7000);
+    const loop  = setInterval(show, 8000);
     return () => { clearTimeout(first); clearInterval(loop); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={current ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
-      transition={{ duration: 0.35, ease: "easeOut" }}
-      className="pointer-events-none fixed bottom-20 left-4 z-50 flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-lg"
-    >
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">
-        <DollarSign className="h-4 w-4" />
-      </div>
-      <p className="text-sm font-medium text-foreground">
-        {current?.split(" just earned ")[0]}{" "}
-        <span className="text-muted-foreground">just earned</span>{" "}
-        <span className="font-bold text-green-600">
-          {current?.split(" just earned ")[1]}
-        </span>
-      </p>
-    </motion.div>
+    <div className="pointer-events-none fixed bottom-6 left-4 z-50 sm:bottom-8 sm:left-6">
+      <AnimatePresence mode="wait">
+        {toast && (
+          <motion.div
+            key={toast.id}
+            initial={{ opacity: 0, y: 12, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0,  scale: 1    }}
+            exit={{    opacity: 0, y: -8, scale: 0.96 }}
+            transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+            className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-xl shadow-black/5"
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100">
+              <DollarSign className="h-4 w-4 text-green-600" />
+            </div>
+            <p className="whitespace-nowrap text-sm font-medium text-foreground">
+              <span>{toast.text.split(" just earned ")[0]}</span>{" "}
+              <span className="font-normal text-muted-foreground">just earned</span>{" "}
+              <span className="font-bold text-green-600">
+                {toast.text.split(" just earned ")[1]}
+              </span>
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
