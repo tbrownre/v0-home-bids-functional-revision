@@ -11,6 +11,7 @@ export const loggedOutNavItems: NavItem[] = [
   { label: "Services",     href: "/services" },
   { label: "How It Works", href: "/how-it-works" },
   { label: "Pricing",      href: "/pricing" },
+  { label: "Affiliates",   href: "/affiliates" },
   { label: "About Us",     href: "/about" },
 ];
 
