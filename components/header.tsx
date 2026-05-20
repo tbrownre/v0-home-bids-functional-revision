@@ -175,7 +175,8 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
 
   return (
     <header className="shrink-0 border-b border-border bg-background">
-      <div className="mx-auto flex items-center justify-between px-3 py-2 md:px-4">
+      <div className="mx-auto grid grid-cols-[1fr_auto_1fr] items-center px-3 py-2 md:px-4">
+
         {/* Left: menu button + optional back link */}
         <div className="flex items-center gap-1">
           {/* Trigger */}
@@ -183,12 +184,12 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
             ref={menuRef as React.RefObject<HTMLButtonElement>}
             type="button"
             onClick={() => !closing && setMenuOpen((o) => !o)}
-            className={`relative flex h-12 w-12 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground${closing ? " pointer-events-none" : ""}`}
+            className={`relative flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground${closing ? " pointer-events-none" : ""}`}
             aria-label={`Menu${unreadCount > 0 ? ` (${unreadCount} notifications)` : ""}`}
             aria-expanded={menuOpen}
             aria-haspopup="true"
           >
-            <Menu className="h-6 w-6" />
+            <Menu className="h-5 w-5" />
             {isLoggedIn && unreadCount > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                 {unreadCount > 9 ? "9+" : unreadCount}
@@ -310,29 +311,33 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
             </div>
           )}
 
+        </div>
+
+        {/* Center: Logo — always visually centered in the header */}
+        <Link href="/" className="flex items-center justify-center" onClick={closeMenu}>
+          <Image
+            src="/images/homebids-logo-new.png"
+            alt="HomeBids"
+            width={480}
+            height={120}
+            className="object-contain"
+            style={{ height: "clamp(56px, 10vw, 80px)", width: "auto" }}
+            priority
+          />
+        </Link>
+
+        {/* Right: spacer that mirrors the left column to keep logo truly centered */}
+        <div className="flex items-center justify-end">
           {backHref && (
             <Link
               href={backHref}
-              className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              onClick={closeMenu}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">{backLabel || "Back"}</span>
             </Link>
           )}
         </div>
-
-        {/* Logo — explicit dimensions prevent layout shift during hydration */}
-        <Link href="/" className="flex items-center" onClick={closeMenu}>
-          <Image
-            src="/images/homebids-logo-new.png"
-            alt="HomeBids"
-            width={640}
-            height={160}
-            className="h-40 w-auto object-contain md:h-48"
-            priority
-          />
-        </Link>
       </div>
 
       {/* Sign In Modal */}
