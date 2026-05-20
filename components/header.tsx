@@ -183,12 +183,12 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
             ref={menuRef as React.RefObject<HTMLButtonElement>}
             type="button"
             onClick={() => !closing && setMenuOpen((o) => !o)}
-            className={`relative flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground${closing ? " pointer-events-none" : ""}`}
+            className={`relative flex h-12 w-12 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground${closing ? " pointer-events-none" : ""}`}
             aria-label={`Menu${unreadCount > 0 ? ` (${unreadCount} notifications)` : ""}`}
             aria-expanded={menuOpen}
             aria-haspopup="true"
           >
-            <Menu className="h-4 w-4" />
+            <Menu className="h-6 w-6" />
             {isLoggedIn && unreadCount > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                 {unreadCount > 9 ? "9+" : unreadCount}
@@ -329,7 +329,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
             alt="HomeBids"
             width={702}
             height={176}
-            className="h-[5rem] w-auto -translate-x-4 object-contain md:h-[6rem] md:-translate-x-6"
+            className="h-[10rem] w-auto -translate-x-4 object-contain md:h-[12rem] md:-translate-x-6"
             priority
             unoptimized
           />
