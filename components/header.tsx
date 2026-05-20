@@ -322,16 +322,15 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
           )}
         </div>
 
-        {/* Logo */}
+        {/* Logo — explicit dimensions prevent layout shift during hydration */}
         <Link href="/" className="flex items-center" onClick={closeMenu}>
           <Image
             src="/images/homebids-logo-new.png"
             alt="HomeBids"
-            width={702}
-            height={176}
-            className="h-[10rem] w-auto object-contain md:h-[12rem]"
+            width={640}
+            height={160}
+            className="h-40 w-auto object-contain md:h-48"
             priority
-            unoptimized
           />
         </Link>
       </div>
