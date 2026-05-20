@@ -129,7 +129,7 @@ export default function VerifyEmailPage() {
             </Link>
             <span className="text-xs">
               Need help?{" "}
-              <Link href="/contact" className="hover:text-foreground underline">
+              <Link href="/about" className="hover:text-foreground underline">
                 Contact support
               </Link>
             </span>

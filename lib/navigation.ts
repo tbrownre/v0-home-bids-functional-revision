@@ -10,7 +10,7 @@ export const loggedOutNavItems: NavItem[] = [
   { label: "Home",         href: "/" },
   { label: "Services",     href: "/services" },
   { label: "How It Works", href: "/how-it-works" },
-  { label: "Pricing",      href: "/pricing" },
+  { label: "Pricing",      href: "/subscribe" },
   { label: "About Us",     href: "/about" },
 ];
 
