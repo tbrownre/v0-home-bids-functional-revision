@@ -15,12 +15,9 @@ import {
   ArrowLeft,
   ImagePlus,
   X,
-  Menu,
   Home,
   Upload,
   CheckCircle2,
-  LogIn,
-  LogOut,
   User,
 } from "lucide-react";
 import {
@@ -30,15 +27,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { SignInModal } from "@/components/sign-in-modal";
-import { Briefcase, Info, Settings, HelpCircle, Building2, Repeat, AlertTriangle, Shield, Sparkles, MapPin, Clock, Tag, Zap } from "lucide-react";
+import { Info, Settings, Building2, Repeat, AlertTriangle, Shield, Sparkles, MapPin, Clock, Tag, Zap } from "lucide-react";
 import Image from "next/image";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
@@ -53,7 +43,7 @@ import { getSmsLink, isMobileDevice, SMS_PHONE_DISPLAY } from "@/lib/sms-config"
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
 import { HomeLanding } from "@/components/home-landing";
 import { MessageSquare, Copy, Check, Smartphone, MessageCircle, PlusCircle } from "lucide-react";
-import { homeownerNavItems, loggedOutNavItems, isNavItemActive } from "@/lib/navigation";
+import { Header } from "@/components/header";
 
 // Centralized sign-out: uses mock auth in demo mode.
 async function performSignOut() {
@@ -691,132 +681,10 @@ export default function HomePage() {
 
   return (
     <div className="flex h-screen flex-col bg-background">
+      <Header isSignedIn={isSignedIn} onSignIn={() => setShowSignInModal(true)} />
+
       {/* Main Content */}
       <main className="relative flex flex-1 flex-col overflow-y-auto">
-        {/* Top bar with logo */}
-        <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-3 py-0 md:px-6">
-          <div className="flex items-center">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="relative flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  aria-label={`Menu${isSignedIn && homeownerUnreadCount > 0 ? ` (${homeownerUnreadCount} notifications)` : ""}`}
-                >
-                  <Menu className="h-4 w-4" />
-                  {isSignedIn && homeownerUnreadCount > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                      {homeownerUnreadCount > 9 ? "9+" : homeownerUnreadCount}
-                    </span>
-                  )}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-52">
-                {/* Logged-out nav */}
-                {!isSignedIn && (
-                  <>
-                    {loggedOutNavItems.map((item) => (
-                      <DropdownMenuItem key={item.label} asChild>
-                        <Link href={item.href} className="flex cursor-pointer items-center gap-2">
-                          {item.label === "Home"         && <Home       className="h-4 w-4" />}
-                          {item.label === "Services"     && <Briefcase  className="h-4 w-4" />}
-                          {item.label === "How It Works" && <HelpCircle className="h-4 w-4" />}
-                          {item.label === "Pricing"      && <HelpCircle className="h-4 w-4" />}
-                          {item.label === "About Us"     && <Home       className="h-4 w-4" />}
-                          {item.label}
-                        </Link>
-                      </DropdownMenuItem>
-                    ))}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="flex cursor-pointer items-center gap-2"
-                      onSelect={(e) => { e.preventDefault(); setShowSignInModal(true); }}
-                    >
-                      <LogIn className="h-4 w-4" />
-                      Sign In
-                    </DropdownMenuItem>
-                  </>
-                )}
-
-                {/* Logged-in homeowner nav — single source of truth via homeownerNavItems */}
-                {isSignedIn && homeownerNavItems.map((item) => {
-                  const active = isNavItemActive(item, pathname);
-                  const isInbox = item.match?.includes("/inbox");
-                  const isHome = item.label === "Home";
-
-                  return (
-                    <React.Fragment key={item.label}>
-                      {/* Divider between marketing nav and app nav */}
-                      {item.label === "Your Jobs" && <DropdownMenuSeparator />}
-
-                      {/* "Home" uses onSelect to reset state even when already on "/" */}
-                      {isHome ? (
-                        <DropdownMenuItem
-                          className={`flex cursor-pointer items-center gap-2${active ? " bg-muted font-medium" : ""}`}
-                          onSelect={(e) => { e.preventDefault(); handleHomeClick(); }}
-                        >
-                          <Home className="h-4 w-4" />
-                          <span className="flex-1">{item.label}</span>
-                        </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem
-                          className={`flex cursor-pointer items-center gap-2${active ? " bg-muted font-medium" : ""}`}
-                          asChild
-                        >
-                          <Link href={item.href}>
-                            {item.label === "Services"     && <Briefcase     className="h-4 w-4" />}
-                            {item.label === "How It Works" && <HelpCircle    className="h-4 w-4" />}
-                            {item.label === "Your Jobs"    && <FileText      className="h-4 w-4" />}
-                            {item.label === "Inbox"        && <MessageCircle className="h-4 w-4" />}
-                            {item.label === "Profile"      && <Home          className="h-4 w-4" />}
-                            {item.label === "New Job"      && <PlusCircle    className="h-4 w-4" />}
-                            <span className="flex-1">{item.label}</span>
-                            {isInbox && homeownerUnreadCount > 0 && (
-                              <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                                {homeownerUnreadCount > 9 ? "9+" : homeownerUnreadCount}
-                              </span>
-                            )}
-                          </Link>
-                        </DropdownMenuItem>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-
-                {/* Sign Out — always last for homeowner */}
-                {isSignedIn && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="flex cursor-pointer items-center gap-2 text-red-600 focus:text-red-600"
-                      onSelect={(e) => { e.preventDefault(); handleSignOut(); }}
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Sign Out
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-          <button
-            type="button"
-            onClick={handleBackToHome}
-            className="relative z-10 -ml-4 block cursor-pointer p-2 md:-ml-6"
-            aria-label="HomeBids - Go to home"
-          >
-            <Image
-              src="/images/homebids-logo-new.png"
-              alt="HomeBids"
-              width={702}
-              height={176}
-              className="h-[5rem] w-auto object-contain md:h-[6rem]"
-              priority
-              unoptimized
-            />
-          </button>
-        </div>
-
         {/* Step Content */}
         <div className={`flex flex-1 flex-col ${currentStep === "describe" && !showJobsBoard ? "items-stretch" : "items-center justify-center px-3 pb-8 pt-6 sm:px-4"}`}>
           <AnimatePresence mode="wait">
@@ -1839,7 +1707,7 @@ export default function HomePage() {
 
       </main>
 
-      {/* Footer — sits at the bottom of the flex column, always visible */}
+      {/* Footer — rendered here (not from layout) because the h-screen wrapper prevents the layout footer from being reachable */}
       <Footer />
 
       {/* Sign In Modal */}
