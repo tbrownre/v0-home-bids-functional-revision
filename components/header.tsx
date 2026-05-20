@@ -175,7 +175,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
 
   return (
     <header className="shrink-0 border-b border-border bg-background">
-      <div className="mx-auto grid grid-cols-[1fr_auto_1fr] items-center px-4 py-3 md:px-6 md:py-4">
+      <div className="mx-auto grid grid-cols-[1fr_auto_1fr] items-center px-4 md:px-6">
 
         {/* Left: menu button + optional back link */}
         <div className="flex items-center gap-1">
