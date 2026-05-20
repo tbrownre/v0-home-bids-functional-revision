@@ -175,7 +175,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
 
   return (
     <header className="shrink-0 border-b border-border bg-background">
-      <div className="mx-auto flex items-center justify-between px-3 py-0.5 md:px-4">
+      <div className="mx-auto flex items-center justify-between px-3 py-2 md:px-4">
         {/* Left: menu button + optional back link */}
         <div className="flex items-center gap-1">
           {/* Trigger */}
@@ -329,7 +329,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
             alt="HomeBids"
             width={702}
             height={176}
-            className="h-[10rem] w-auto -translate-x-4 object-contain md:h-[12rem] md:-translate-x-6"
+            className="h-[10rem] w-auto object-contain md:h-[12rem]"
             priority
             unoptimized
           />
