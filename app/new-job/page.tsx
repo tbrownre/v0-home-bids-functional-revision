@@ -28,16 +28,113 @@ const VALUE_GRID = [
 type Role = "user" | "ai";
 interface ChatMsg { role: Role; text: string; }
 
-const CHAT_MESSAGES: ChatMsg[] = [
-  { role: "user", text: "I need help replacing my AC unit" },
-  { role: "ai",   text: "Got it — what's your zip code?" },
-  { role: "user", text: "90210" },
-  { role: "ai",   text: "Analyzing your area…" },
-  { role: "ai",   text: "Do you have a preferred budget?" },
-  { role: "user", text: "Flexible, but under $5,000 ideally" },
-  { role: "ai",   text: "Finding top contractors near you…" },
-  { role: "ai",   text: "We're notifying 12 qualified contractors now." },
+const SCENARIOS: ChatMsg[][] = [
+  // 1. HVAC replacement
+  [
+    { role: "user", text: "Hey, my AC stopped blowing cold air completely." },
+    { role: "ai",   text: "Got you — is the outdoor unit running at all?" },
+    { role: "user", text: "Fan spins but nothing's cooling." },
+    { role: "ai",   text: "Sounds like refrigerant or compressor. How old is it?" },
+    { role: "user", text: "About 14 years." },
+    { role: "ai",   text: "I'll match you with 3 local HVAC pros for free estimates." },
+    { role: "ai",   text: "Bids on the way — usually within a few hours!" },
+  ],
+  // 2. Roof leak repair
+  [
+    { role: "user", text: "We have a ceiling leak after the last storm." },
+    { role: "ai",   text: "Is water dripping or just a stain right now?" },
+    { role: "user", text: "Stain, but it got worse with more rain." },
+    { role: "ai",   text: "Got it. Do you know how old your roof is?" },
+    { role: "user", text: "Maybe 12-15 years. Previous owners." },
+    { role: "ai",   text: "I'll find certified roofers near you to inspect and bid." },
+    { role: "ai",   text: "Sending your project to qualified contractors now." },
+  ],
+  // 3. Kitchen remodel
+  [
+    { role: "user", text: "Just bought the house — kitchen needs a full update." },
+    { role: "ai",   text: "Exciting! Cabinets, counters, appliances — or all of it?" },
+    { role: "user", text: "All of it. New layout too if possible." },
+    { role: "ai",   text: "Love it. Rough budget range in mind?" },
+    { role: "user", text: "Somewhere between $30k–$50k." },
+    { role: "ai",   text: "Perfect scope. Lining up 3 kitchen remodelers for you." },
+    { role: "ai",   text: "No phone tag — they come to you with bids!" },
+  ],
+  // 4. Bathroom remodel
+  [
+    { role: "user", text: "Master bath is outdated. Need to know costs." },
+    { role: "ai",   text: "Cosmetic refresh or full gut and rebuild?" },
+    { role: "user", text: "Full gut — new tile, vanity, walk-in shower." },
+    { role: "ai",   text: "Any timeline? Upcoming events or guests?" },
+    { role: "user", text: "Want it done before the holidays." },
+    { role: "ai",   text: "Totally doable. Finding contractors with open availability." },
+    { role: "ai",   text: "Bath remodelers notified — bids incoming!" },
+  ],
+  // 5. Landscaping cleanup
+  [
+    { role: "user", text: "Backyard is completely overgrown. Need a full cleanup." },
+    { role: "ai",   text: "Mostly weeds and shrubs, or are there trees too?" },
+    { role: "user", text: "Shrubs, weeds, and a couple small dead trees." },
+    { role: "ai",   text: "Ballpark lot size? Helps me match the right crew." },
+    { role: "user", text: "About a quarter acre." },
+    { role: "ai",   text: "I'll get local landscapers competing for your project." },
+    { role: "ai",   text: "Multiple quotes — no cold calls needed on your end." },
+  ],
+  // 6. Interior painting
+  [
+    { role: "user", text: "Need the whole interior repainted. About 2,200 sq ft." },
+    { role: "ai",   text: "All rooms, or skipping ceilings and trim?" },
+    { role: "user", text: "Everything including trim. Walls need lots of prep." },
+    { role: "ai",   text: "Colors picked out or still deciding?" },
+    { role: "user", text: "Have the colors, just need someone reliable." },
+    { role: "ai",   text: "I'll line up 3 painters who handle full prep and cleanup." },
+    { role: "ai",   text: "Compare bids and choose the best fit — easy!" },
+  ],
+  // 7. Pool repair
+  [
+    { role: "user", text: "Pool pump died and I think there's a small leak." },
+    { role: "ai",   text: "Water level dropping noticeably day to day?" },
+    { role: "user", text: "About half an inch per day." },
+    { role: "ai",   text: "Worth getting checked. In-ground or above-ground?" },
+    { role: "user", text: "In-ground gunite. About 15 years old." },
+    { role: "ai",   text: "I'll find pool pros for both pump and leak detection." },
+    { role: "ai",   text: "Multiple bids incoming — no chasing required!" },
+  ],
+  // 8. Flooring installation
+  [
+    { role: "user", text: "Want to replace carpet with hardwood on the main floor." },
+    { role: "ai",   text: "Rough square footage? Any stairs involved?" },
+    { role: "user", text: "Around 1,400 sq ft. Open plan, no stairs." },
+    { role: "ai",   text: "Solid hardwood, engineered, or open to both?" },
+    { role: "user", text: "Open to both. Trying to stay under $15k." },
+    { role: "ai",   text: "Very doable. Sending this to flooring pros near you." },
+    { role: "ai",   text: "Compare bids side-by-side and pick your favorite!" },
+  ],
+  // 9. Water heater replacement
+  [
+    { role: "user", text: "Water heater is 18 years old and starting to rust." },
+    { role: "ai",   text: "Smart move! Tank or open to going tankless?" },
+    { role: "user", text: "Open to tankless if the cost makes sense." },
+    { role: "ai",   text: "Current fuel source — gas or electric?" },
+    { role: "user", text: "Natural gas." },
+    { role: "ai",   text: "I'll get bids for both options so you can compare." },
+    { role: "ai",   text: "Local plumbers notified — quotes coming your way!" },
+  ],
+  // 10. Electrical panel upgrade
+  [
+    { role: "user", text: "Breakers keep tripping. Panel might be too old." },
+    { role: "ai",   text: "What amperage is your current panel, if you know?" },
+    { role: "user", text: "100 amp. House was built in 1978." },
+    { role: "ai",   text: "Likely time for 200A upgrade. Adding EV charger too?" },
+    { role: "user", text: "Yes, exactly what I was thinking." },
+    { role: "ai",   text: "Great combo. Finding licensed electricians near you." },
+    { role: "ai",   text: "Verified pros notified — bids on the way!" },
+  ],
 ];
+
+// Pick a random scenario on each render cycle
+function pickScenario(): ChatMsg[] {
+  return SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
+}
 
 // slight human variance helper
 function jitter(base: number, range = 200) {
@@ -45,36 +142,37 @@ function jitter(base: number, range = 200) {
 }
 
 // ── typing animation hook ──────────────────────────────────────────────────────
-function useChat(messages: ChatMsg[]) {
+function useChat() {
+  const [messages, setMessages] = useState<ChatMsg[]>(() => pickScenario());
   const [visible, setVisible] = useState<ChatMsg[]>([]);
   const [typing, setTyping] = useState(false);
   const indexRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    function step() {
+    function step(msgs: ChatMsg[]) {
       const i = indexRef.current;
-      if (i >= messages.length) {
-        // loop: wait 3 s then restart
+      if (i >= msgs.length) {
+        // loop: wait 3s then pick a new scenario and restart
         timerRef.current = setTimeout(() => {
+          const next = pickScenario();
+          setMessages(next);
           setVisible([]);
           indexRef.current = 0;
-          timerRef.current = setTimeout(step, 600);
+          timerRef.current = setTimeout(() => step(next), 600);
         }, 3000);
         return;
       }
 
-      const msg = messages[i];
+      const msg = msgs[i];
 
       if (msg.role === "user") {
-        // user messages appear immediately (no typing indicator)
         timerRef.current = setTimeout(() => {
           setVisible((v) => [...v, msg]);
           indexRef.current++;
-          timerRef.current = setTimeout(step, jitter(700, 300));
+          timerRef.current = setTimeout(() => step(msgs), jitter(700, 300));
         }, i === 0 ? 800 : jitter(600, 300));
       } else {
-        // AI: show typing indicator first
         timerRef.current = setTimeout(() => {
           setTyping(true);
           const typingDuration = jitter(1100, 400);
@@ -82,13 +180,13 @@ function useChat(messages: ChatMsg[]) {
             setTyping(false);
             setVisible((v) => [...v, msg]);
             indexRef.current++;
-            timerRef.current = setTimeout(step, jitter(500, 200));
+            timerRef.current = setTimeout(() => step(msgs), jitter(500, 200));
           }, typingDuration);
         }, jitter(500, 200));
       }
     }
 
-    step();
+    step(messages);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -98,7 +196,7 @@ function useChat(messages: ChatMsg[]) {
 
 // ── iPhone frame ───────────────────────────────────────────────────────────────
 function IPhoneMockup() {
-  const { visible, typing } = useChat(CHAT_MESSAGES);
+  const { visible, typing } = useChat();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // auto-scroll inside phone only

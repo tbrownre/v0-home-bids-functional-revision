@@ -9,18 +9,117 @@ interface Message {
   delay: number;
 }
 
-const CONVERSATION: Message[] = [
-  { sender: "user", text: "I need help with AC repair", delay: 400 },
-  { sender: "ai",   text: "Got it. Is your AC not cooling or making noise?", delay: 600 },
-  { sender: "user", text: "Not cooling", delay: 900 },
-  { sender: "ai",   text: "Thanks — what's your zip code so I can find local contractors?", delay: 700 },
-  { sender: "user", text: "85254", delay: 800 },
-  { sender: "ai",   text: "On it. Finding the best contractors near you...", delay: 650 },
-  { sender: "ai",   text: "3 bids incoming. You'll hear back shortly!", delay: 500 },
+// 10 rotating homeowner project scenarios
+const SCENARIOS: Message[][] = [
+  // 1. HVAC replacement
+  [
+    { sender: "user", text: "Hey, my AC stopped blowing cold air completely.", delay: 400 },
+    { sender: "ai",   text: "Got you — is the outdoor unit running at all, or is everything off?", delay: 650 },
+    { sender: "user", text: "The fan spins but nothing's cooling.", delay: 800 },
+    { sender: "ai",   text: "That sounds like a refrigerant or compressor issue. How old is the system?", delay: 700 },
+    { sender: "user", text: "About 14 years I think.", delay: 750 },
+    { sender: "ai",   text: "Got it. I'll match you with 3 local HVAC pros for free estimates.", delay: 650 },
+    { sender: "ai",   text: "Bids on the way — usually within a few hours!", delay: 500 },
+  ],
+  // 2. Roof leak repair
+  [
+    { sender: "user", text: "We have a leak in our ceiling after the last storm.", delay: 400 },
+    { sender: "ai",   text: "Ugh, that's stressful. Is water actively dripping or just a stain?", delay: 700 },
+    { sender: "user", text: "Stain right now, but it got worse with the last rain.", delay: 850 },
+    { sender: "ai",   text: "Makes sense. Do you know roughly how old your roof is?", delay: 650 },
+    { sender: "user", text: "Maybe 12-15 years. Previous owners' install.", delay: 800 },
+    { sender: "ai",   text: "I'll find certified roofers near you who can inspect and bid the repair.", delay: 700 },
+    { sender: "ai",   text: "Sending your project to qualified contractors now.", delay: 500 },
+  ],
+  // 3. Kitchen remodel
+  [
+    { sender: "user", text: "We just bought our house and the kitchen needs a full update.", delay: 400 },
+    { sender: "ai",   text: "Exciting! Are we talking cabinets, counters, appliances — or the whole thing?", delay: 700 },
+    { sender: "user", text: "All of it. New layout too if possible.", delay: 800 },
+    { sender: "ai",   text: "Love it. Do you have a rough budget range in mind?", delay: 650 },
+    { sender: "user", text: "Somewhere between $30k-$50k.", delay: 750 },
+    { sender: "ai",   text: "Perfect scope. I'll line up 3 kitchen remodelers for competitive bids.", delay: 700 },
+    { sender: "ai",   text: "No phone tag needed — they'll come to you!", delay: 500 },
+  ],
+  // 4. Bathroom remodel
+  [
+    { sender: "user", text: "Our master bath is outdated. Trying to figure out costs.", delay: 400 },
+    { sender: "ai",   text: "Happy to help. Is this a cosmetic refresh or full gut and rebuild?", delay: 700 },
+    { sender: "user", text: "Full gut — new tile, vanity, walk-in shower.", delay: 850 },
+    { sender: "ai",   text: "Nice scope. What's your rough timeline — any upcoming events?", delay: 650 },
+    { sender: "user", text: "Want it done before the holidays if possible.", delay: 800 },
+    { sender: "ai",   text: "Totally doable. I'll find contractors with availability this season.", delay: 700 },
+    { sender: "ai",   text: "Reaching out to local bath remodelers now — bids incoming!", delay: 500 },
+  ],
+  // 5. Landscaping cleanup
+  [
+    { sender: "user", text: "Backyard is completely overgrown. Need a full cleanup.", delay: 400 },
+    { sender: "ai",   text: "Gotcha! Is this mainly weeds and overgrowth, or are there trees involved too?", delay: 700 },
+    { sender: "user", text: "Mostly shrubs and weeds. A couple small dead trees.", delay: 850 },
+    { sender: "ai",   text: "Good to know. Ballpark lot size? Helps me match the right crew.", delay: 650 },
+    { sender: "user", text: "About a quarter acre.", delay: 750 },
+    { sender: "ai",   text: "Perfect — I'll get local landscapers bidding on this for you.", delay: 700 },
+    { sender: "ai",   text: "You'll have multiple quotes without making a single call.", delay: 500 },
+  ],
+  // 6. Interior painting
+  [
+    { sender: "user", text: "Need the whole interior of my home repainted. About 2,200 sq ft.", delay: 400 },
+    { sender: "ai",   text: "Great project! All rooms, or skipping any — like ceilings or trim?", delay: 700 },
+    { sender: "user", text: "Everything including trim. Walls need a lot of prep work too.", delay: 850 },
+    { sender: "ai",   text: "Noted. Do you have colors picked out or still deciding?", delay: 650 },
+    { sender: "user", text: "Have the colors, just need someone reliable.", delay: 800 },
+    { sender: "ai",   text: "I'll line up 3 painters who handle full prep and cleanup.", delay: 700 },
+    { sender: "ai",   text: "Bids coming your way — compare and choose the best fit!", delay: 500 },
+  ],
+  // 7. Pool repair
+  [
+    { sender: "user", text: "Pool pump died and I think there's a small leak somewhere.", delay: 400 },
+    { sender: "ai",   text: "Frustrating combo! Is the water level dropping noticeably day to day?", delay: 700 },
+    { sender: "user", text: "About half an inch per day, which seems like a lot.", delay: 850 },
+    { sender: "ai",   text: "That's worth getting checked. In-ground or above-ground pool?", delay: 650 },
+    { sender: "user", text: "In-ground, gunite. About 15 years old.", delay: 800 },
+    { sender: "ai",   text: "Got it. I'll find pool specialists who handle both pump and leak detection.", delay: 700 },
+    { sender: "ai",   text: "Multiple bids incoming — no need to track anyone down yourself!", delay: 500 },
+  ],
+  // 8. Flooring installation
+  [
+    { sender: "user", text: "Want to replace carpet with hardwood throughout the main floor.", delay: 400 },
+    { sender: "ai",   text: "Nice upgrade! Rough square footage, and any stairs involved?", delay: 700 },
+    { sender: "user", text: "Around 1,400 sq ft. No stairs, just open plan.", delay: 850 },
+    { sender: "ai",   text: "Easy scope. Any preference — solid hardwood, engineered, or open to both?", delay: 650 },
+    { sender: "user", text: "Open to both. Trying to stay under $15k.", delay: 800 },
+    { sender: "ai",   text: "That's very doable. I'll send this to flooring pros near you.", delay: 700 },
+    { sender: "ai",   text: "Expect competitive bids — compare side-by-side and pick your favorite!", delay: 500 },
+  ],
+  // 9. Water heater replacement
+  [
+    { sender: "user", text: "Water heater is 18 years old and starting to rust. Time to replace.", delay: 400 },
+    { sender: "ai",   text: "Smart move before it becomes an emergency! Tank or tankless?", delay: 700 },
+    { sender: "user", text: "Currently tank. Open to going tankless if the cost makes sense.", delay: 850 },
+    { sender: "ai",   text: "Good thinking. What's your current fuel source — gas or electric?", delay: 650 },
+    { sender: "user", text: "Natural gas.", delay: 800 },
+    { sender: "ai",   text: "Perfect. I'll get you bids for both options so you can compare.", delay: 700 },
+    { sender: "ai",   text: "Local plumbers notified — bids coming your way shortly!", delay: 500 },
+  ],
+  // 10. Electrical panel upgrade
+  [
+    { sender: "user", text: "Circuit breakers keep tripping. I think the panel is too old.", delay: 400 },
+    { sender: "ai",   text: "That's worth addressing — safety first. What amperage is the current panel?", delay: 700 },
+    { sender: "user", text: "100 amp I think. House was built in 1978.", delay: 850 },
+    { sender: "ai",   text: "Likely time for an upgrade to 200A. Adding any new circuits for EV or appliances?", delay: 700 },
+    { sender: "user", text: "Was thinking an EV charger too, yeah.", delay: 800 },
+    { sender: "ai",   text: "Great combo project. I'll find licensed electricians who handle panel upgrades.", delay: 700 },
+    { sender: "ai",   text: "Sending to verified local pros now — bids on the way!", delay: 500 },
+  ],
 ];
 
 const TYPING_DURATION = 1100;
 const RESTART_DELAY  = 4200;
+
+// Pick a random scenario on each mount (different per page load)
+function pickScenario(): Message[] {
+  return SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
+}
 
 function TypingDots() {
   return (
@@ -38,6 +137,8 @@ function TypingDots() {
 }
 
 export function SmsIphonePreview() {
+  // Stable scenario for this mount; rotates to the next one after each full cycle
+  const [conversation, setConversation] = useState<Message[]>(() => pickScenario());
   const [visible, setVisible] = useState<number[]>([]);
   const [typing, setTyping]   = useState(false);
   const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -59,17 +160,20 @@ export function SmsIphonePreview() {
     timerRef.current = setTimeout(fn, ms);
   };
 
-  const runStep = (idx: number) => {
-    if (idx >= CONVERSATION.length) {
+  const runStep = (conv: Message[], idx: number) => {
+    if (idx >= conv.length) {
       schedule(() => {
         setVisible([]);
         setTyping(false);
-        schedule(() => runStep(0), 500);
+        // Pick the next scenario (different from current) after the restart delay
+        const next = pickScenario();
+        setConversation(next);
+        schedule(() => runStep(next, 0), 500);
       }, RESTART_DELAY);
       return;
     }
 
-    const msg = CONVERSATION[idx];
+    const msg = conv[idx];
 
     if (msg.sender === "ai") {
       schedule(() => {
@@ -77,19 +181,19 @@ export function SmsIphonePreview() {
         schedule(() => {
           setTyping(false);
           setVisible((v) => [...v, idx]);
-          schedule(() => runStep(idx + 1), msg.delay);
+          schedule(() => runStep(conv, idx + 1), msg.delay);
         }, TYPING_DURATION);
       }, msg.delay);
     } else {
       schedule(() => {
         setVisible((v) => [...v, idx]);
-        schedule(() => runStep(idx + 1), msg.delay);
+        schedule(() => runStep(conv, idx + 1), msg.delay);
       }, msg.delay);
     }
   };
 
   useEffect(() => {
-    schedule(() => runStep(0), 600);
+    schedule(() => runStep(conversation, 0), 600);
     return clear;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -170,8 +274,8 @@ export function SmsIphonePreview() {
             style={{ scrollbarWidth: "none" }}
           >
             <AnimatePresence mode="popLayout">
-              {CONVERSATION.filter((_, i) => visible.includes(i)).map((msg) => {
-                const globalIdx = CONVERSATION.indexOf(msg);
+              {conversation.filter((_, i) => visible.includes(i)).map((msg) => {
+                const globalIdx = conversation.indexOf(msg);
                 const isUser = msg.sender === "user";
                 return (
                   <motion.div
