@@ -80,9 +80,8 @@ function FlyoutGroup({ label, items }: { label: string; items: { href?: string; 
 
 export function Footer() {
   const pathname = usePathname();
-  // Don't render from the root layout on admin pages (own layout) or "/" (home
-  // page renders Footer inside its own flex column since h-screen prevents the layout footer from being visible).
-  if (pathname?.startsWith("/admin") || pathname === "/") return null;
+  // Admin pages have their own layout with a footer — skip from root layout there.
+  if (pathname?.startsWith("/admin")) return null;
 
   const [showContact, setShowContact] = useState(false);
   const [contactType, setContactType] = useState<"homeowner" | "contractor">("homeowner");

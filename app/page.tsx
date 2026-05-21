@@ -3,7 +3,6 @@
 import Link from "next/link";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
-import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -687,11 +686,11 @@ export default function HomePage() {
   }, [setCurrentStepSafe]);
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-background">
       <Header isSignedIn={isSignedIn} onSignIn={() => setShowSignInModal(true)} />
 
       {/* Main Content */}
-      <main className="relative flex flex-1 flex-col overflow-y-auto">
+      <main className="relative flex flex-1 flex-col">
         {/* Step Content */}
         <div className={`flex flex-1 flex-col ${currentStep === "describe" && !showJobsBoard ? "items-stretch" : "items-center justify-center px-3 pb-8 pt-6 sm:px-4"}`}>
           <AnimatePresence mode="wait">
@@ -1713,9 +1712,6 @@ export default function HomePage() {
         </div>
 
       </main>
-
-      {/* Footer — rendered here (not from layout) because the h-screen wrapper prevents the layout footer from being reachable */}
-      <Footer />
 
       {/* Sign In Modal */}
       <SignInModal
