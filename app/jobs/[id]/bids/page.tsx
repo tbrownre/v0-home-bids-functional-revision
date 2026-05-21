@@ -496,7 +496,7 @@ export default function BidsPage() {
                 </div>
                 <div className="rounded-xl bg-muted/50 p-3">
                   <p className="text-xs text-muted-foreground">Timeline</p>
-                  <p className="mt-1 text-sm font-semibold text-foreground">{ownContractorBid.proposedTimeline}</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{ownContractorBid.timeline}</p>
                 </div>
                 <div className="rounded-xl bg-muted/50 p-3">
                   <p className="text-xs text-muted-foreground">Status</p>
@@ -511,10 +511,10 @@ export default function BidsPage() {
                   </p>
                 </div>
               </div>
-              {ownContractorBid.notes && (
+              {ownContractorBid.message && (
                 <div className="mt-4 rounded-xl bg-muted/50 p-3">
                   <p className="text-xs text-muted-foreground">Your Message to Homeowner</p>
-                  <p className="mt-1 text-sm text-foreground leading-relaxed">{ownContractorBid.notes}</p>
+                  <p className="mt-1 text-sm text-foreground leading-relaxed">{ownContractorBid.message}</p>
                 </div>
               )}
             </div>
