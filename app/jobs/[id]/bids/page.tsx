@@ -29,7 +29,8 @@ import {
 import { selectBidAsWinner } from "@/lib/job-store";
 import { acceptBid as acceptBidAction, getJobBids } from "@/lib/supabase/actions";
 import { getJobBids as getDemoJobBids } from "@/lib/demo/services";
-import { USE_MOCK_DATA } from "@/lib/mock-auth";
+import { USE_MOCK_DATA, getMockUser } from "@/lib/mock-auth";
+import { demoContractorBids } from "@/lib/demo/data/contractor-bids";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -297,6 +298,15 @@ const sampleMessages: Record<string, Message[]> = {
 export default function BidsPage() {
   const searchParams = useSearchParams();
   const { id: jobId } = useParams<{ id: string }>();
+
+  // Determine viewer role — contractors must not see other contractors' bids
+  const currentUser = getMockUser();
+  const isContractor = currentUser?.role === "contractor";
+
+  // Find this contractor's own bid for this job (used in contractor view)
+  const ownContractorBid = isContractor
+    ? demoContractorBids.find((b) => b.job_id === jobId) ?? null
+    : null;
   const [bids, setBids] = useState<Bid[]>(sampleBids);
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
   const [messages, setMessages] = useState<Record<string, Message[]>>(sampleMessages);
@@ -449,7 +459,83 @@ export default function BidsPage() {
     <div className="min-h-screen bg-background">
       <Header isSignedIn />
 
-      <main className="px-4 py-8 sm:px-6 lg:px-8">
+      {/* ── Contractor View: show only own bid, hide all other bids ── */}
+      {isContractor && (
+        <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+          <div className="mb-6">
+            <Link
+              href={`/jobs/${jobId}`}
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Job Details
+            </Link>
+          </div>
+
+          {/* Privacy notice */}
+          <div className="mb-6 rounded-xl border border-border bg-muted/40 p-4">
+            <div className="flex items-start gap-3">
+              <Shield className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                You can view the project details and manage your own bid here. Other contractor bids are private and only visible to the homeowner.
+              </p>
+            </div>
+          </div>
+
+          {/* Own bid summary */}
+          {ownContractorBid ? (
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <h2 className="text-lg font-semibold text-foreground">Your Submitted Bid</h2>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground">Your Bid Amount</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{ownContractorBid.bidAmount}</p>
+                </div>
+                <div className="rounded-xl bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground">Timeline</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{ownContractorBid.proposedTimeline}</p>
+                </div>
+                <div className="rounded-xl bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <p className="mt-1 text-sm font-semibold capitalize text-foreground">
+                    {ownContractorBid.status.replace("_", " ")}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground">Submitted</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">
+                    {ownContractorBid.submittedAt.toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+              {ownContractorBid.notes && (
+                <div className="mt-4 rounded-xl bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground">Your Message to Homeowner</p>
+                  <p className="mt-1 text-sm text-foreground leading-relaxed">{ownContractorBid.notes}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-border bg-card p-6 text-center">
+              <FileText className="mx-auto h-10 w-10 text-muted-foreground" />
+              <h2 className="mt-3 text-base font-semibold text-foreground">No Bid Submitted Yet</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                You have not submitted a bid for this job yet.
+              </p>
+              <Button asChild className="mt-4">
+                <Link href={`/jobs/${jobId}`}>View Job &amp; Submit Bid</Link>
+              </Button>
+            </div>
+          )}
+        </main>
+      )}
+
+      {/* ── Homeowner View: full bid list (unchanged) ── */}
+      {!isContractor && (
+        <main className="px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           {/* Page Header */}
           <div className={`mb-6 ${showMobileDetail ? "hidden lg:block" : "block"}`}>
@@ -1030,7 +1116,8 @@ export default function BidsPage() {
             </div>
           </div>
         </div>
-      </main>
+        </main>
+      )}
 
       {/* Are You Sure Confirmation Dialog */}
       <AnimatePresence>

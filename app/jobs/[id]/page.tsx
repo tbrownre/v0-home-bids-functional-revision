@@ -26,7 +26,7 @@ import { completeJob, archiveJob, type JobStatusOwner } from "@/lib/job-store";
 import { Label } from "@/components/ui/label";
 import { getJobById } from "@/lib/supabase/actions";
 import { getJobById as getDemoJobById } from "@/lib/demo/services";
-import { USE_MOCK_DATA } from "@/lib/mock-auth";
+import { USE_MOCK_DATA, getMockUser } from "@/lib/mock-auth";
 
 // Shape of a job record returned from Supabase
 interface JobRecord {
@@ -146,6 +146,10 @@ export default function JobDetailsPage() {
     (Date.now() - new Date(job.created_at).getTime()) / (1000 * 60 * 60 * 24)
   );
 
+  // Role check — contractors must not be shown the full bid list
+  const currentUser = getMockUser();
+  const isContractor = currentUser?.role === "contractor";
+
   const budget = formatBudget(job.budget_min, job.budget_max);
   const bidsCount = job.bids?.length ?? 0;
 
@@ -247,7 +251,7 @@ export default function JobDetailsPage() {
                 Actions
               </h3>
               <div className="mt-4 flex flex-wrap gap-3">
-                {bidsCount > 0 && status === "receiving_bids" && (
+                {bidsCount > 0 && status === "receiving_bids" && !isContractor && (
                   <Button variant="outline" className="gap-2 bg-transparent" asChild>
                     <Link href={`/jobs/${job.id}/bids`}>
                       <FileText className="h-4 w-4" />
