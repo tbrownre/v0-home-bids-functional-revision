@@ -274,8 +274,8 @@ export function SmsIphonePreview() {
             style={{ scrollbarWidth: "none" }}
           >
             <AnimatePresence mode="popLayout">
-              {CONVERSATION.filter((_, i) => visible.includes(i)).map((msg) => {
-                const globalIdx = CONVERSATION.indexOf(msg);
+              {conversation.filter((_, i) => visible.includes(i)).map((msg) => {
+                const globalIdx = conversation.indexOf(msg);
                 const isUser = msg.sender === "user";
                 return (
                   <motion.div
