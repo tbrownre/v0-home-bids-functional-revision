@@ -5,7 +5,6 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft,
   Calendar,
   MapPin,
   Clock,
@@ -17,6 +16,9 @@ import {
   ImageIcon as LucideImage,
   Star,
   Loader2,
+  MessageCircle,
+  Send,
+  Shield,
 } from "lucide-react";
 import NextImage from "next/image";
 import Link from "next/link";
@@ -24,9 +26,11 @@ import { useParams } from "next/navigation";
 import { Header } from "@/components/header";
 import { completeJob, archiveJob, type JobStatusOwner } from "@/lib/job-store";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { getJobById } from "@/lib/supabase/actions";
 import { getJobById as getDemoJobById } from "@/lib/demo/services";
 import { USE_MOCK_DATA, getMockUser } from "@/lib/mock-auth";
+import { demoContractorBids } from "@/lib/demo/data/contractor-bids";
 
 // Shape of a job record returned from Supabase
 interface JobRecord {
@@ -150,6 +154,25 @@ export default function JobDetailsPage() {
   const currentUser = getMockUser();
   const isContractor = currentUser?.role === "contractor";
 
+  // Contractor's own bid for this job (if any)
+  const ownBid = isContractor
+    ? demoContractorBids.find((b) => b.job_id === id) ?? null
+    : null;
+
+  // Per-job message thread state (contractor ↔ homeowner)
+  interface ChatMsg { id: string; text: string; sender: "contractor" | "homeowner"; time: Date; }
+  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
+  const [chatInput, setChatInput] = useState("");
+
+  const handleSendChat = () => {
+    if (!chatInput.trim()) return;
+    setChatMessages((prev) => [
+      ...prev,
+      { id: `msg-${Date.now()}`, text: chatInput.trim(), sender: "contractor", time: new Date() },
+    ]);
+    setChatInput("");
+  };
+
   const budget = formatBudget(job.budget_min, job.budget_max);
   const bidsCount = job.bids?.length ?? 0;
 
@@ -245,7 +268,8 @@ export default function JobDetailsPage() {
               </div>
             </div>
 
-            {/* Actions */}
+            {/* Actions — homeowner only */}
+            {!isContractor && (
             <div className="mt-6 rounded-2xl border border-border bg-card p-6">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                 Actions
@@ -318,6 +342,7 @@ export default function JobDetailsPage() {
                 HomeBids connects you with contractors. Payments and project agreements occur directly between both parties.
               </p>
             </div>
+            )}
 
             {/* Full Description */}
             <div className="mt-6 rounded-2xl border border-border bg-card p-6">
@@ -353,6 +378,98 @@ export default function JobDetailsPage() {
                 </div>
               )}
             </div>
+
+            {/* Messenger — contractor only, directly below description */}
+            {isContractor && (
+              <div className="mt-6 rounded-2xl border border-border bg-card overflow-hidden">
+                <div className="flex items-center gap-2 border-b border-border px-5 py-3.5">
+                  <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Message the Homeowner
+                  </h3>
+                </div>
+
+                {/* Privacy notice */}
+                <div className="flex items-start gap-2 border-b border-border bg-muted/30 px-5 py-2.5">
+                  <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">
+                    Only you and the homeowner can see this conversation.
+                  </p>
+                </div>
+
+                {/* Message list */}
+                <div className="min-h-[140px] max-h-[260px] overflow-y-auto p-4">
+                  {chatMessages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                        <MessageCircle className="h-5 w-5 text-muted-foreground/50" />
+                      </div>
+                      <p className="mt-3 text-sm font-medium text-foreground">Message the homeowner about this project.</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Ask about scheduling, access, or any project details.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {chatMessages.map((msg) => (
+                        <div key={msg.id} className={`flex ${msg.sender === "contractor" ? "justify-end" : "justify-start"}`}>
+                          <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
+                            msg.sender === "contractor"
+                              ? "rounded-br-md bg-primary text-primary-foreground"
+                              : "rounded-bl-md bg-muted text-foreground"
+                          }`}>
+                            <p className="text-sm leading-relaxed">{msg.text}</p>
+                            <p className={`mt-1 text-[10px] ${msg.sender === "contractor" ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                              {msg.time.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Input */}
+                <div className="border-t border-border p-3">
+                  <form
+                    onSubmit={(e) => { e.preventDefault(); handleSendChat(); }}
+                    className="flex items-end gap-2"
+                  >
+                    <Textarea
+                      placeholder="Type your message..."
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendChat();
+                        }
+                      }}
+                      className="min-h-[42px] max-h-[100px] flex-1 resize-none rounded-2xl px-4 py-2.5 text-sm"
+                      rows={1}
+                    />
+                    <button
+                      type="submit"
+                      disabled={!chatInput.trim()}
+                      className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
+                    >
+                      <Send className="h-4 w-4" />
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Cancel Bid — contractor only, subtle link, only when bid exists */}
+            {isContractor && ownBid && (
+              <div className="mt-6 text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowDeclineConfirm(true)}
+                  className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline transition-colors"
+                >
+                  Cancel Bid
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -380,12 +497,14 @@ export default function JobDetailsPage() {
                   <AlertTriangle className="h-5 w-5 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground">Cancel Job</h3>
+                  <h3 className="text-lg font-semibold text-foreground">{isContractor ? "Cancel Bid" : "Cancel Job"}</h3>
                   <p className="text-sm text-muted-foreground">This action cannot be undone</p>
                 </div>
               </div>
               <p className="mt-4 text-sm text-muted-foreground">
-                Are you sure you want to cancel this job? Contractors will be notified that the job is no longer available.
+                {isContractor
+                  ? "Are you sure you want to cancel your bid on this job? The homeowner will be notified."
+                  : "Are you sure you want to cancel this job? Contractors will be notified that the job is no longer available."}
               </p>
               <div className="mt-6 flex gap-3">
                 <Button
@@ -399,7 +518,7 @@ export default function JobDetailsPage() {
                   className="flex-1 bg-red-600 text-white hover:bg-red-700"
                   onClick={handleDecline}
                 >
-                  Cancel Job
+                  {isContractor ? "Cancel Bid" : "Cancel Job"}
                 </Button>
               </div>
             </motion.div>
