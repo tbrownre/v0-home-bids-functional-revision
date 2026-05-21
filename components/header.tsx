@@ -313,8 +313,8 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
 
         </div>
 
-        {/* Center: Logo — always visually centered in the header */}
-        <Link href="/" className="flex items-center justify-center" onClick={closeMenu}>
+        {/* Center: Logo — always routes to public home, never to a dashboard */}
+        <Link href="/?home=1" className="flex items-center justify-center" onClick={closeMenu}>
           <Image
             src="/images/homebids-logo-new.png"
             alt="HomeBids"
