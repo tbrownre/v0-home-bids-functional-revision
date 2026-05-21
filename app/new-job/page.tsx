@@ -28,106 +28,119 @@ const VALUE_GRID = [
 type Role = "user" | "ai";
 interface ChatMsg { role: Role; text: string; }
 
+// 10 rotating homeowner project scenarios
+// Every homeowner opener: "Hey HomeBids, I need help with…"
+// AI gathers scope naturally — no immediate pricing or contractor promises.
 const SCENARIOS: ChatMsg[][] = [
-  // 1. HVAC replacement
+  // 1. HVAC Repair
   [
-    { role: "user", text: "Hey, my AC stopped blowing cold air completely." },
-    { role: "ai",   text: "Got you — is the outdoor unit running at all?" },
-    { role: "user", text: "Fan spins but nothing's cooling." },
-    { role: "ai",   text: "Sounds like refrigerant or compressor. How old is it?" },
-    { role: "user", text: "About 14 years." },
-    { role: "ai",   text: "I'll match you with 3 local HVAC pros for free estimates." },
-    { role: "ai",   text: "Bids on the way — usually within a few hours!" },
+    { role: "user", text: "Hey HomeBids, I need help with my AC not cooling properly." },
+    { role: "ai",   text: "Happy to help. Is the system still turning on, or is it completely unresponsive?" },
+    { role: "user", text: "It turns on, but the house never really cools down." },
+    { role: "ai",   text: "Got it. About how old is the unit, and when did you first notice the issue?" },
+    { role: "user", text: "It's about 11 years old. Started last week." },
+    { role: "ai",   text: "That helps. Are you in a house, condo, or townhome?" },
+    { role: "user", text: "Single family home, about 2,400 sq ft." },
+    { role: "ai",   text: "Good to know. I have everything I need to find the right pros for this." },
   ],
-  // 2. Roof leak repair
+  // 2. Kitchen Remodel
   [
-    { role: "user", text: "We have a ceiling leak after the last storm." },
-    { role: "ai",   text: "Is water dripping or just a stain right now?" },
-    { role: "user", text: "Stain, but it got worse with more rain." },
-    { role: "ai",   text: "Got it. Do you know how old your roof is?" },
-    { role: "user", text: "Maybe 12-15 years. Previous owners." },
-    { role: "ai",   text: "I'll find certified roofers near you to inspect and bid." },
-    { role: "ai",   text: "Sending your project to qualified contractors now." },
+    { role: "user", text: "Hey HomeBids, I need help remodeling my kitchen." },
+    { role: "ai",   text: "Great project. Are you looking at a full remodel or updating specific things like cabinets and counters?" },
+    { role: "user", text: "Full remodel — cabinets, counters, island, and new appliances." },
+    { role: "ai",   text: "Understood. Do you have a budget range in mind, even a rough one?" },
+    { role: "user", text: "Somewhere between $40k and $60k." },
+    { role: "ai",   text: "That's a solid range for what you're describing. What's your timeline looking like?" },
+    { role: "user", text: "Hoping to start within the next 4-6 weeks." },
+    { role: "ai",   text: "Perfect. I have what I need to connect you with the right contractors." },
   ],
-  // 3. Kitchen remodel
+  // 3. Roof Leak
   [
-    { role: "user", text: "Just bought the house — kitchen needs a full update." },
-    { role: "ai",   text: "Exciting! Cabinets, counters, appliances — or all of it?" },
-    { role: "user", text: "All of it. New layout too if possible." },
-    { role: "ai",   text: "Love it. Rough budget range in mind?" },
-    { role: "user", text: "Somewhere between $30k–$50k." },
-    { role: "ai",   text: "Perfect scope. Lining up 3 kitchen remodelers for you." },
-    { role: "ai",   text: "No phone tag — they come to you with bids!" },
+    { role: "user", text: "Hey HomeBids, I need help with a roof leak after the last storm." },
+    { role: "ai",   text: "Understood — let's get that sorted. Is water actively coming in, or are you seeing staining on the ceiling?" },
+    { role: "user", text: "There's a stain on the ceiling in the master bedroom. It keeps spreading." },
+    { role: "ai",   text: "Makes sense. Do you have any idea how old the roof is?" },
+    { role: "user", text: "I think around 14 years. We bought the house 3 years ago." },
+    { role: "ai",   text: "Good context. Has anyone been up to look at it yet, or is this the first step?" },
+    { role: "user", text: "First step. Haven't touched it yet." },
+    { role: "ai",   text: "That's fine. I have enough to find qualified roofers who can inspect and provide estimates." },
   ],
-  // 4. Bathroom remodel
+  // 4. Bathroom Remodel
   [
-    { role: "user", text: "Master bath is outdated. Need to know costs." },
-    { role: "ai",   text: "Cosmetic refresh or full gut and rebuild?" },
-    { role: "user", text: "Full gut — new tile, vanity, walk-in shower." },
-    { role: "ai",   text: "Any timeline? Upcoming events or guests?" },
-    { role: "user", text: "Want it done before the holidays." },
-    { role: "ai",   text: "Totally doable. Finding contractors with open availability." },
-    { role: "ai",   text: "Bath remodelers notified — bids incoming!" },
+    { role: "user", text: "Hey HomeBids, I need help updating my bathroom." },
+    { role: "ai",   text: "Sure thing. Is this the primary bathroom, a guest bath, or both?" },
+    { role: "user", text: "The master bathroom. It's pretty outdated." },
+    { role: "ai",   text: "What are you hoping to change — tile, vanity, shower, or the whole layout?" },
+    { role: "user", text: "Everything. New tile, walk-in shower, double vanity." },
+    { role: "ai",   text: "Got it, that's a full remodel scope. Any flexibility on timing?" },
+    { role: "user", text: "Ideally done within the next couple months." },
+    { role: "ai",   text: "That's workable. I have what I need to put your project in front of the right contractors." },
   ],
-  // 5. Landscaping cleanup
+  // 5. Pool Cleaning / Weekly Service
   [
-    { role: "user", text: "Backyard is completely overgrown. Need a full cleanup." },
-    { role: "ai",   text: "Mostly weeds and shrubs, or are there trees too?" },
-    { role: "user", text: "Shrubs, weeds, and a couple small dead trees." },
-    { role: "ai",   text: "Ballpark lot size? Helps me match the right crew." },
-    { role: "user", text: "About a quarter acre." },
-    { role: "ai",   text: "I'll get local landscapers competing for your project." },
-    { role: "ai",   text: "Multiple quotes — no cold calls needed on your end." },
+    { role: "user", text: "Hey HomeBids, I need help finding weekly pool service." },
+    { role: "ai",   text: "Of course. Is this for an existing pool that just needs ongoing maintenance?" },
+    { role: "user", text: "Yes, we have an in-ground pool. It's been neglected for a few months." },
+    { role: "ai",   text: "Understood. About how large is the pool, and is it chlorine or saltwater?" },
+    { role: "user", text: "It's around 15,000 gallons. Chlorine." },
+    { role: "ai",   text: "Good to know. Are you looking for full-service weekly visits, or just chemical balancing?" },
+    { role: "user", text: "Full service — cleaning, chemicals, the whole thing." },
+    { role: "ai",   text: "Clear picture. I can find local pool service pros who handle exactly that." },
   ],
-  // 6. Interior painting
+  // 6. Interior Painting
   [
-    { role: "user", text: "Need the whole interior repainted. About 2,200 sq ft." },
-    { role: "ai",   text: "All rooms, or skipping ceilings and trim?" },
-    { role: "user", text: "Everything including trim. Walls need lots of prep." },
-    { role: "ai",   text: "Colors picked out or still deciding?" },
-    { role: "user", text: "Have the colors, just need someone reliable." },
-    { role: "ai",   text: "I'll line up 3 painters who handle full prep and cleanup." },
-    { role: "ai",   text: "Compare bids and choose the best fit — easy!" },
+    { role: "user", text: "Hey HomeBids, I need help painting the inside of my house." },
+    { role: "ai",   text: "Happy to help with that. Are you painting the whole interior or specific rooms?" },
+    { role: "user", text: "The whole thing — living areas, bedrooms, and hallways." },
+    { role: "ai",   text: "Roughly how large is the home?" },
+    { role: "user", text: "About 2,100 square feet." },
+    { role: "ai",   text: "Do you have paint colors already selected, or is that still being decided?" },
+    { role: "user", text: "Colors are picked. Just need a reliable painter." },
+    { role: "ai",   text: "That helps. I have what I need to match you with painters in your area." },
   ],
-  // 7. Pool repair
+  // 7. Landscaping Redesign
   [
-    { role: "user", text: "Pool pump died and I think there's a small leak." },
-    { role: "ai",   text: "Water level dropping noticeably day to day?" },
-    { role: "user", text: "About half an inch per day." },
-    { role: "ai",   text: "Worth getting checked. In-ground or above-ground?" },
-    { role: "user", text: "In-ground gunite. About 15 years old." },
-    { role: "ai",   text: "I'll find pool pros for both pump and leak detection." },
-    { role: "ai",   text: "Multiple bids incoming — no chasing required!" },
+    { role: "user", text: "Hey HomeBids, I need help redesigning my backyard landscaping." },
+    { role: "ai",   text: "Sounds like a great project. What's the current state of the backyard?" },
+    { role: "user", text: "It's pretty bare. Just grass and an old concrete patio." },
+    { role: "ai",   text: "Got it. Are you thinking plants and garden beds, hardscaping, or a full redesign?" },
+    { role: "user", text: "Full redesign — plants, a new patio, maybe some lighting." },
+    { role: "ai",   text: "What's the approximate size of the backyard?" },
+    { role: "user", text: "Maybe 50 by 60 feet." },
+    { role: "ai",   text: "That's a solid scope. I have what I need to connect you with landscape designers nearby." },
   ],
-  // 8. Flooring installation
+  // 8. Water Heater Replacement
   [
-    { role: "user", text: "Want to replace carpet with hardwood on the main floor." },
-    { role: "ai",   text: "Rough square footage? Any stairs involved?" },
-    { role: "user", text: "Around 1,400 sq ft. Open plan, no stairs." },
-    { role: "ai",   text: "Solid hardwood, engineered, or open to both?" },
-    { role: "user", text: "Open to both. Trying to stay under $15k." },
-    { role: "ai",   text: "Very doable. Sending this to flooring pros near you." },
-    { role: "ai",   text: "Compare bids side-by-side and pick your favorite!" },
+    { role: "user", text: "Hey HomeBids, I need help replacing my water heater." },
+    { role: "ai",   text: "Of course. Is it completely out, or still running but showing signs of wear?" },
+    { role: "user", text: "Still running, but it's 17 years old and starting to rust." },
+    { role: "ai",   text: "Smart to get ahead of it. Is it a tank-style or tankless unit?" },
+    { role: "user", text: "Tank-style. Gas powered." },
+    { role: "ai",   text: "Are you open to going tankless, or would you prefer a direct replacement?" },
+    { role: "user", text: "Open to tankless if it makes sense for the price." },
+    { role: "ai",   text: "Good to know. I have everything needed to line up the right plumbers for estimates." },
   ],
-  // 9. Water heater replacement
+  // 9. Flooring Installation
   [
-    { role: "user", text: "Water heater is 18 years old and starting to rust." },
-    { role: "ai",   text: "Smart move! Tank or open to going tankless?" },
-    { role: "user", text: "Open to tankless if the cost makes sense." },
-    { role: "ai",   text: "Current fuel source — gas or electric?" },
-    { role: "user", text: "Natural gas." },
-    { role: "ai",   text: "I'll get bids for both options so you can compare." },
-    { role: "ai",   text: "Local plumbers notified — quotes coming your way!" },
+    { role: "user", text: "Hey HomeBids, I need help installing new flooring in my home." },
+    { role: "ai",   text: "Sure thing. What type of flooring are you replacing, and what rooms are involved?" },
+    { role: "user", text: "Replacing carpet with hardwood throughout the main floor." },
+    { role: "ai",   text: "How many square feet are we looking at, roughly?" },
+    { role: "user", text: "Probably around 1,600 square feet." },
+    { role: "ai",   text: "Do you have a preference between solid hardwood and engineered hardwood?" },
+    { role: "user", text: "No strong preference. Open to seeing what contractors recommend." },
+    { role: "ai",   text: "That flexibility will help get you competitive options. I have what I need." },
   ],
-  // 10. Electrical panel upgrade
+  // 10. Pest Control – Scorpions
   [
-    { role: "user", text: "Breakers keep tripping. Panel might be too old." },
-    { role: "ai",   text: "What amperage is your current panel, if you know?" },
-    { role: "user", text: "100 amp. House was built in 1978." },
-    { role: "ai",   text: "Likely time for 200A upgrade. Adding EV charger too?" },
-    { role: "user", text: "Yes, exactly what I was thinking." },
-    { role: "ai",   text: "Great combo. Finding licensed electricians near you." },
-    { role: "ai",   text: "Verified pros notified — bids on the way!" },
+    { role: "user", text: "Hey HomeBids, I need help getting rid of scorpions around my house." },
+    { role: "ai",   text: "Understood — that's a common issue in certain areas. Are you seeing them inside, outside, or both?" },
+    { role: "user", text: "Mostly outside around the foundation, but a couple have gotten inside." },
+    { role: "ai",   text: "Good to know. Is this a recurring problem or something that started recently?" },
+    { role: "user", text: "It's gotten worse this summer. Finding one or two a week now." },
+    { role: "ai",   text: "Are you looking for a one-time treatment or an ongoing service plan?" },
+    { role: "user", text: "Probably ongoing. I want to stay on top of it." },
+    { role: "ai",   text: "That makes sense for your situation. I have what I need to find pest control pros near you." },
   ],
 ];
 
@@ -170,19 +183,19 @@ function useChat() {
         timerRef.current = setTimeout(() => {
           setVisible((v) => [...v, msg]);
           indexRef.current++;
-          timerRef.current = setTimeout(() => step(msgs), jitter(700, 300));
-        }, i === 0 ? 800 : jitter(600, 300));
+          timerRef.current = setTimeout(() => step(msgs), jitter(900, 300));
+        }, i === 0 ? 1000 : jitter(800, 300));
       } else {
         timerRef.current = setTimeout(() => {
           setTyping(true);
-          const typingDuration = jitter(1100, 400);
+          const typingDuration = jitter(1400, 400);
           timerRef.current = setTimeout(() => {
             setTyping(false);
             setVisible((v) => [...v, msg]);
             indexRef.current++;
-            timerRef.current = setTimeout(() => step(msgs), jitter(500, 200));
+            timerRef.current = setTimeout(() => step(msgs), jitter(700, 200));
           }, typingDuration);
-        }, jitter(500, 200));
+        }, jitter(600, 200));
       }
     }
 
