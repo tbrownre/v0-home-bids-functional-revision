@@ -10,111 +10,123 @@ interface Message {
 }
 
 // 10 rotating homeowner project scenarios
+// Every homeowner opener: "Hey HomeBids, I need help with…"
+// AI gathers scope naturally — no immediate pricing or contractor promises.
 const SCENARIOS: Message[][] = [
-  // 1. HVAC replacement
+  // 1. HVAC Repair
   [
-    { sender: "user", text: "Hey, my AC stopped blowing cold air completely.", delay: 400 },
-    { sender: "ai",   text: "Got you — is the outdoor unit running at all, or is everything off?", delay: 650 },
-    { sender: "user", text: "The fan spins but nothing's cooling.", delay: 800 },
-    { sender: "ai",   text: "That sounds like a refrigerant or compressor issue. How old is the system?", delay: 700 },
-    { sender: "user", text: "About 14 years I think.", delay: 750 },
-    { sender: "ai",   text: "Got it. I'll match you with 3 local HVAC pros for free estimates.", delay: 650 },
-    { sender: "ai",   text: "Bids on the way — usually within a few hours!", delay: 500 },
+    { sender: "user", text: "Hey HomeBids, I need help with my AC not cooling properly.", delay: 600 },
+    { sender: "ai",   text: "Happy to help. Is the system still turning on, or is it completely unresponsive?", delay: 900 },
+    { sender: "user", text: "It turns on, but the house never really cools down.", delay: 700 },
+    { sender: "ai",   text: "Got it. About how old is the unit, and when did you first notice the issue?", delay: 850 },
+    { sender: "user", text: "It's about 11 years old. Started last week.", delay: 700 },
+    { sender: "ai",   text: "That helps. Are you in a house, condo, or townhome?", delay: 900 },
+    { sender: "user", text: "Single family home, about 2,400 sq ft.", delay: 650 },
+    { sender: "ai",   text: "Good to know. I have everything I need to find the right pros for this.", delay: 800 },
   ],
-  // 2. Roof leak repair
+  // 2. Kitchen Remodel
   [
-    { sender: "user", text: "We have a leak in our ceiling after the last storm.", delay: 400 },
-    { sender: "ai",   text: "Ugh, that's stressful. Is water actively dripping or just a stain?", delay: 700 },
-    { sender: "user", text: "Stain right now, but it got worse with the last rain.", delay: 850 },
-    { sender: "ai",   text: "Makes sense. Do you know roughly how old your roof is?", delay: 650 },
-    { sender: "user", text: "Maybe 12-15 years. Previous owners' install.", delay: 800 },
-    { sender: "ai",   text: "I'll find certified roofers near you who can inspect and bid the repair.", delay: 700 },
-    { sender: "ai",   text: "Sending your project to qualified contractors now.", delay: 500 },
+    { sender: "user", text: "Hey HomeBids, I need help remodeling my kitchen.", delay: 600 },
+    { sender: "ai",   text: "Great project. Are you looking at a full remodel or updating specific things like cabinets and counters?", delay: 900 },
+    { sender: "user", text: "Full remodel — cabinets, counters, island, and new appliances.", delay: 700 },
+    { sender: "ai",   text: "Understood. Do you have a budget range in mind, even a rough one?", delay: 850 },
+    { sender: "user", text: "Somewhere between $40k and $60k.", delay: 650 },
+    { sender: "ai",   text: "That's a solid range for what you're describing. What's your timeline looking like?", delay: 900 },
+    { sender: "user", text: "Hoping to start within the next 4-6 weeks.", delay: 700 },
+    { sender: "ai",   text: "Perfect. I have what I need to connect you with the right contractors.", delay: 800 },
   ],
-  // 3. Kitchen remodel
+  // 3. Roof Leak
   [
-    { sender: "user", text: "We just bought our house and the kitchen needs a full update.", delay: 400 },
-    { sender: "ai",   text: "Exciting! Are we talking cabinets, counters, appliances — or the whole thing?", delay: 700 },
-    { sender: "user", text: "All of it. New layout too if possible.", delay: 800 },
-    { sender: "ai",   text: "Love it. Do you have a rough budget range in mind?", delay: 650 },
-    { sender: "user", text: "Somewhere between $30k-$50k.", delay: 750 },
-    { sender: "ai",   text: "Perfect scope. I'll line up 3 kitchen remodelers for competitive bids.", delay: 700 },
-    { sender: "ai",   text: "No phone tag needed — they'll come to you!", delay: 500 },
+    { sender: "user", text: "Hey HomeBids, I need help with a roof leak after the last storm.", delay: 600 },
+    { sender: "ai",   text: "Understood — let's get that sorted. Is water actively coming in, or are you seeing staining on the ceiling?", delay: 900 },
+    { sender: "user", text: "There's a stain on the ceiling in the master bedroom. It keeps spreading.", delay: 700 },
+    { sender: "ai",   text: "Makes sense. Do you have any idea how old the roof is?", delay: 850 },
+    { sender: "user", text: "I think around 14 years. We bought the house 3 years ago.", delay: 700 },
+    { sender: "ai",   text: "Good context. Has anyone been up to look at it yet, or is this the first step?", delay: 900 },
+    { sender: "user", text: "First step. Haven't touched it yet.", delay: 600 },
+    { sender: "ai",   text: "That's fine. I have enough to find qualified roofers who can inspect and provide estimates.", delay: 800 },
   ],
-  // 4. Bathroom remodel
+  // 4. Bathroom Remodel
   [
-    { sender: "user", text: "Our master bath is outdated. Trying to figure out costs.", delay: 400 },
-    { sender: "ai",   text: "Happy to help. Is this a cosmetic refresh or full gut and rebuild?", delay: 700 },
-    { sender: "user", text: "Full gut — new tile, vanity, walk-in shower.", delay: 850 },
-    { sender: "ai",   text: "Nice scope. What's your rough timeline — any upcoming events?", delay: 650 },
-    { sender: "user", text: "Want it done before the holidays if possible.", delay: 800 },
-    { sender: "ai",   text: "Totally doable. I'll find contractors with availability this season.", delay: 700 },
-    { sender: "ai",   text: "Reaching out to local bath remodelers now — bids incoming!", delay: 500 },
+    { sender: "user", text: "Hey HomeBids, I need help updating my bathroom.", delay: 600 },
+    { sender: "ai",   text: "Sure thing. Is this the primary bathroom, a guest bath, or both?", delay: 900 },
+    { sender: "user", text: "The master bathroom. It's pretty outdated.", delay: 650 },
+    { sender: "ai",   text: "What are you hoping to change — tile, vanity, shower, or the whole layout?", delay: 900 },
+    { sender: "user", text: "Everything. New tile, walk-in shower, double vanity.", delay: 700 },
+    { sender: "ai",   text: "Got it, that's a full remodel scope. Any flexibility on timing?", delay: 850 },
+    { sender: "user", text: "Ideally done within the next couple months.", delay: 650 },
+    { sender: "ai",   text: "That's workable. I have what I need to put your project in front of the right contractors.", delay: 800 },
   ],
-  // 5. Landscaping cleanup
+  // 5. Pool Cleaning / Weekly Service
   [
-    { sender: "user", text: "Backyard is completely overgrown. Need a full cleanup.", delay: 400 },
-    { sender: "ai",   text: "Gotcha! Is this mainly weeds and overgrowth, or are there trees involved too?", delay: 700 },
-    { sender: "user", text: "Mostly shrubs and weeds. A couple small dead trees.", delay: 850 },
-    { sender: "ai",   text: "Good to know. Ballpark lot size? Helps me match the right crew.", delay: 650 },
-    { sender: "user", text: "About a quarter acre.", delay: 750 },
-    { sender: "ai",   text: "Perfect — I'll get local landscapers bidding on this for you.", delay: 700 },
-    { sender: "ai",   text: "You'll have multiple quotes without making a single call.", delay: 500 },
+    { sender: "user", text: "Hey HomeBids, I need help finding weekly pool service.", delay: 600 },
+    { sender: "ai",   text: "Of course. Is this for an existing pool that just needs ongoing maintenance?", delay: 900 },
+    { sender: "user", text: "Yes, we have an in-ground pool. It's been neglected for a few months.", delay: 700 },
+    { sender: "ai",   text: "Understood. About how large is the pool, and is it chlorine or saltwater?", delay: 900 },
+    { sender: "user", text: "It's around 15,000 gallons. Chlorine.", delay: 650 },
+    { sender: "ai",   text: "Good to know. Are you looking for full-service weekly visits, or just chemical balancing?", delay: 900 },
+    { sender: "user", text: "Full service — cleaning, chemicals, the whole thing.", delay: 700 },
+    { sender: "ai",   text: "Clear picture. I can find local pool service pros who handle exactly that.", delay: 800 },
   ],
-  // 6. Interior painting
+  // 6. Interior Painting
   [
-    { sender: "user", text: "Need the whole interior of my home repainted. About 2,200 sq ft.", delay: 400 },
-    { sender: "ai",   text: "Great project! All rooms, or skipping any — like ceilings or trim?", delay: 700 },
-    { sender: "user", text: "Everything including trim. Walls need a lot of prep work too.", delay: 850 },
-    { sender: "ai",   text: "Noted. Do you have colors picked out or still deciding?", delay: 650 },
-    { sender: "user", text: "Have the colors, just need someone reliable.", delay: 800 },
-    { sender: "ai",   text: "I'll line up 3 painters who handle full prep and cleanup.", delay: 700 },
-    { sender: "ai",   text: "Bids coming your way — compare and choose the best fit!", delay: 500 },
+    { sender: "user", text: "Hey HomeBids, I need help painting the inside of my house.", delay: 600 },
+    { sender: "ai",   text: "Happy to help with that. Are you painting the whole interior or specific rooms?", delay: 900 },
+    { sender: "user", text: "The whole thing — living areas, bedrooms, and hallways.", delay: 700 },
+    { sender: "ai",   text: "Roughly how large is the home?", delay: 800 },
+    { sender: "user", text: "About 2,100 square feet.", delay: 600 },
+    { sender: "ai",   text: "Do you have paint colors already selected, or is that still being decided?", delay: 900 },
+    { sender: "user", text: "Colors are picked. Just need a reliable painter.", delay: 650 },
+    { sender: "ai",   text: "That helps. I have what I need to match you with painters in your area.", delay: 800 },
   ],
-  // 7. Pool repair
+  // 7. Landscaping Redesign
   [
-    { sender: "user", text: "Pool pump died and I think there's a small leak somewhere.", delay: 400 },
-    { sender: "ai",   text: "Frustrating combo! Is the water level dropping noticeably day to day?", delay: 700 },
-    { sender: "user", text: "About half an inch per day, which seems like a lot.", delay: 850 },
-    { sender: "ai",   text: "That's worth getting checked. In-ground or above-ground pool?", delay: 650 },
-    { sender: "user", text: "In-ground, gunite. About 15 years old.", delay: 800 },
-    { sender: "ai",   text: "Got it. I'll find pool specialists who handle both pump and leak detection.", delay: 700 },
-    { sender: "ai",   text: "Multiple bids incoming — no need to track anyone down yourself!", delay: 500 },
+    { sender: "user", text: "Hey HomeBids, I need help redesigning my backyard landscaping.", delay: 600 },
+    { sender: "ai",   text: "Sounds like a great project. What's the current state of the backyard?", delay: 900 },
+    { sender: "user", text: "It's pretty bare. Just grass and an old concrete patio.", delay: 700 },
+    { sender: "ai",   text: "Got it. Are you thinking plants and garden beds, hardscaping, or a full redesign?", delay: 900 },
+    { sender: "user", text: "Full redesign — plants, a new patio, maybe some lighting.", delay: 700 },
+    { sender: "ai",   text: "What's the approximate size of the backyard?", delay: 850 },
+    { sender: "user", text: "Maybe 50 by 60 feet.", delay: 600 },
+    { sender: "ai",   text: "That's a solid scope. I have what I need to connect you with landscape designers nearby.", delay: 800 },
   ],
-  // 8. Flooring installation
+  // 8. Water Heater Replacement
   [
-    { sender: "user", text: "Want to replace carpet with hardwood throughout the main floor.", delay: 400 },
-    { sender: "ai",   text: "Nice upgrade! Rough square footage, and any stairs involved?", delay: 700 },
-    { sender: "user", text: "Around 1,400 sq ft. No stairs, just open plan.", delay: 850 },
-    { sender: "ai",   text: "Easy scope. Any preference — solid hardwood, engineered, or open to both?", delay: 650 },
-    { sender: "user", text: "Open to both. Trying to stay under $15k.", delay: 800 },
-    { sender: "ai",   text: "That's very doable. I'll send this to flooring pros near you.", delay: 700 },
-    { sender: "ai",   text: "Expect competitive bids — compare side-by-side and pick your favorite!", delay: 500 },
+    { sender: "user", text: "Hey HomeBids, I need help replacing my water heater.", delay: 600 },
+    { sender: "ai",   text: "Of course. Is it completely out, or still running but showing signs of wear?", delay: 900 },
+    { sender: "user", text: "Still running, but it's 17 years old and starting to rust.", delay: 700 },
+    { sender: "ai",   text: "Smart to get ahead of it. Is it a tank-style or tankless unit?", delay: 900 },
+    { sender: "user", text: "Tank-style. Gas powered.", delay: 600 },
+    { sender: "ai",   text: "Are you open to going tankless, or would you prefer a direct replacement?", delay: 900 },
+    { sender: "user", text: "Open to tankless if it makes sense for the price.", delay: 700 },
+    { sender: "ai",   text: "Good to know. I have everything needed to line up the right plumbers for estimates.", delay: 800 },
   ],
-  // 9. Water heater replacement
+  // 9. Flooring Installation
   [
-    { sender: "user", text: "Water heater is 18 years old and starting to rust. Time to replace.", delay: 400 },
-    { sender: "ai",   text: "Smart move before it becomes an emergency! Tank or tankless?", delay: 700 },
-    { sender: "user", text: "Currently tank. Open to going tankless if the cost makes sense.", delay: 850 },
-    { sender: "ai",   text: "Good thinking. What's your current fuel source — gas or electric?", delay: 650 },
-    { sender: "user", text: "Natural gas.", delay: 800 },
-    { sender: "ai",   text: "Perfect. I'll get you bids for both options so you can compare.", delay: 700 },
-    { sender: "ai",   text: "Local plumbers notified — bids coming your way shortly!", delay: 500 },
+    { sender: "user", text: "Hey HomeBids, I need help installing new flooring in my home.", delay: 600 },
+    { sender: "ai",   text: "Sure thing. What type of flooring are you replacing, and what rooms are involved?", delay: 900 },
+    { sender: "user", text: "Replacing carpet with hardwood throughout the main floor.", delay: 700 },
+    { sender: "ai",   text: "How many square feet are we looking at, roughly?", delay: 850 },
+    { sender: "user", text: "Probably around 1,600 square feet.", delay: 650 },
+    { sender: "ai",   text: "Do you have a preference between solid hardwood and engineered hardwood?", delay: 900 },
+    { sender: "user", text: "No strong preference. Open to seeing what contractors recommend.", delay: 700 },
+    { sender: "ai",   text: "That flexibility will help get you competitive options. I have what I need.", delay: 800 },
   ],
-  // 10. Electrical panel upgrade
+  // 10. Pest Control – Scorpions
   [
-    { sender: "user", text: "Circuit breakers keep tripping. I think the panel is too old.", delay: 400 },
-    { sender: "ai",   text: "That's worth addressing — safety first. What amperage is the current panel?", delay: 700 },
-    { sender: "user", text: "100 amp I think. House was built in 1978.", delay: 850 },
-    { sender: "ai",   text: "Likely time for an upgrade to 200A. Adding any new circuits for EV or appliances?", delay: 700 },
-    { sender: "user", text: "Was thinking an EV charger too, yeah.", delay: 800 },
-    { sender: "ai",   text: "Great combo project. I'll find licensed electricians who handle panel upgrades.", delay: 700 },
-    { sender: "ai",   text: "Sending to verified local pros now — bids on the way!", delay: 500 },
+    { sender: "user", text: "Hey HomeBids, I need help getting rid of scorpions around my house.", delay: 600 },
+    { sender: "ai",   text: "Understood — that's a common issue in certain areas. Are you seeing them inside, outside, or both?", delay: 900 },
+    { sender: "user", text: "Mostly outside around the foundation, but a couple have gotten inside.", delay: 700 },
+    { sender: "ai",   text: "Good to know. Is this a recurring problem or something that started recently?", delay: 900 },
+    { sender: "user", text: "It's gotten worse this summer. Finding one or two a week now.", delay: 700 },
+    { sender: "ai",   text: "Are you looking for a one-time treatment or an ongoing service plan?", delay: 900 },
+    { sender: "user", text: "Probably ongoing. I want to stay on top of it.", delay: 650 },
+    { sender: "ai",   text: "That makes sense for your situation. I have what I need to find pest control pros near you.", delay: 800 },
   ],
 ];
 
-const TYPING_DURATION = 1100;
-const RESTART_DELAY  = 4200;
+const TYPING_DURATION = 1400;
+const RESTART_DELAY  = 5000;
 
 // Pick a random scenario on each mount (different per page load)
 function pickScenario(): Message[] {
