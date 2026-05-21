@@ -9,7 +9,7 @@
 import { demoJobs } from "./data/jobs";
 import { demoBids } from "./data/bids";
 import { demoContractorBids } from "./data/contractor-bids";
-import { demoOpenJobs } from "./data/open-jobs";
+import { demoOpenJobs, type DemoOpenJob } from "./data/open-jobs";
 import { demoContractorProfile } from "./data/contractor";
 
 // ── Homeowner ────────────────────────────────────────────────────────────────
@@ -33,26 +33,144 @@ export async function getHomeownerJobs() {
   };
 }
 
-/** Used by app/jobs/[id]/page.tsx. */
+/** Used by app/jobs/[id]/page.tsx. Searches all demo data sources. */
 export async function getJobById(id: string) {
+  // First check homeowner demo jobs
   const job = demoJobs.find((j) => j.id === id);
-  if (!job) return { job: null, error: "Job not found" };
-  return {
-    job: {
-      id: job.id,
-      title: job.title,
-      description: job.description,
-      category: job.category,
-      location: job.location,
-      status: job.status,
-      urgency: job.urgency ?? "medium",
-      budget_min: job.budget_min,
-      budget_max: job.budget_max,
-      created_at: job.created_at,
-      bids: Array.from({ length: job.bids[0]?.count ?? 0 }, (_, i) => ({ id: `bid-${i}` })),
-    },
-    error: null,
-  };
+  if (job) {
+    return {
+      job: {
+        id: job.id,
+        title: job.title,
+        description: job.description,
+        category: job.category,
+        location: job.location,
+        status: job.status,
+        urgency: job.urgency ?? "medium",
+        budget_min: job.budget_min,
+        budget_max: job.budget_max,
+        created_at: job.created_at,
+        bids: Array.from({ length: job.bids[0]?.count ?? 0 }, (_, i) => ({ id: `bid-${i}` })),
+      },
+      error: null,
+    };
+  }
+
+  // Then check contractor open jobs (marketplace)
+  const openJob = demoOpenJobs.find((j) => j.id === id);
+  if (openJob) {
+    // Parse budget string into min/max — format is "$X - $Y" or "TBD" or "$X"
+    const parseBudget = (budget: string): { min: number | null; max: number | null } => {
+      const match = budget.match(/\$?([\d,]+)\s*-?\s*\$?([\d,]+)?/);
+      if (!match) return { min: null, max: null };
+      const min = match[1] ? parseInt(match[1].replace(/,/g, ""), 10) : null;
+      const max = match[2] ? parseInt(match[2].replace(/,/g, ""), 10) : null;
+      return { min, max };
+    };
+    const { min, max } = parseBudget(openJob.budget);
+
+    return {
+      job: {
+        id: openJob.id,
+        title: openJob.title,
+        description: openJob.description,
+        category: openJob.category,
+        location: openJob.location,
+        status: "open",
+        urgency: openJob.urgency,
+        budget_min: min,
+        budget_max: max,
+        created_at: openJob.postedAt.toISOString(),
+        bids: Array.from({ length: openJob.bidsCount }, (_, i) => ({ id: `bid-${i}` })),
+        // Additional fields for contractor view
+        homeownerName: openJob.homeownerName,
+        propertyType: openJob.propertyType,
+        preferredContact: openJob.preferredContact,
+        imageCount: openJob.imageCount,
+        timeline: openJob.timeline,
+      },
+      error: null,
+    };
+  }
+
+  // Check contractor bid jobs (cjob-* IDs) — these have job data embedded in the bid
+  const contractorBid = demoContractorBids.find((b) => b.job_id === id);
+  if (contractorBid) {
+    // Parse budget string into min/max
+    const parseBudget = (budget: string): { min: number | null; max: number | null } => {
+      const match = budget.match(/\$?([\d,]+)\s*-?\s*\$?([\d,]+)?/);
+      if (!match) return { min: null, max: null };
+      const min = match[1] ? parseInt(match[1].replace(/,/g, ""), 10) : null;
+      const max = match[2] ? parseInt(match[2].replace(/,/g, ""), 10) : null;
+      return { min, max };
+    };
+    const { min, max } = parseBudget(contractorBid.jobBudget);
+
+    // Map contractor bid status to job status
+    const jobStatus =
+      contractorBid.status === "in_progress"
+        ? "in_progress"
+        : contractorBid.status === "completed"
+          ? "completed"
+          : "open";
+
+    return {
+      job: {
+        id: contractorBid.job_id,
+        title: contractorBid.jobTitle,
+        description: contractorBid.jobDescription,
+        category: "General", // Infer from title or use generic
+        location: contractorBid.homeownerLocation,
+        status: jobStatus,
+        urgency: contractorBid.jobTimeline === "ASAP" ? "high" : "medium",
+        budget_min: min,
+        budget_max: max,
+        created_at: contractorBid.submittedAt.toISOString(),
+        bids: Array.from({ length: contractorBid.otherBids + 1 }, (_, i) => ({ id: `bid-${i}` })),
+        homeownerName: contractorBid.homeownerName,
+        imageCount: contractorBid.imageCount,
+        timeline: contractorBid.jobTimeline,
+      },
+      error: null,
+    };
+  }
+
+  // Fallback: return a safe demo job instead of "not found" for any unknown ID in demo mode
+  const fallbackJob = demoOpenJobs[0];
+  if (fallbackJob) {
+    const { min, max } = (() => {
+      const match = fallbackJob.budget.match(/\$?([\d,]+)\s*-?\s*\$?([\d,]+)?/);
+      if (!match) return { min: null, max: null };
+      return {
+        min: match[1] ? parseInt(match[1].replace(/,/g, ""), 10) : null,
+        max: match[2] ? parseInt(match[2].replace(/,/g, ""), 10) : null,
+      };
+    })();
+
+    return {
+      job: {
+        id: fallbackJob.id,
+        title: fallbackJob.title,
+        description: fallbackJob.description,
+        category: fallbackJob.category,
+        location: fallbackJob.location,
+        status: "open",
+        urgency: fallbackJob.urgency,
+        budget_min: min,
+        budget_max: max,
+        created_at: fallbackJob.postedAt.toISOString(),
+        bids: Array.from({ length: fallbackJob.bidsCount }, (_, i) => ({ id: `bid-${i}` })),
+        homeownerName: fallbackJob.homeownerName,
+        propertyType: fallbackJob.propertyType,
+        preferredContact: fallbackJob.preferredContact,
+        imageCount: fallbackJob.imageCount,
+        timeline: fallbackJob.timeline,
+      },
+      error: null,
+    };
+  }
+
+  return { job: null, error: "Job not found" };
 }
 
 /** Used by app/jobs/[id]/bids/page.tsx. */
