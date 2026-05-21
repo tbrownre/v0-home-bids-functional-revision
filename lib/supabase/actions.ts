@@ -7,10 +7,13 @@ import { isDemoEmail } from "@/lib/demo-guard";
 const MAKE_WEBHOOK_URL = "https://hook.us2.make.com/1v7w6jnit6c3cbddxsqeyrobgnf21su9";
 
 function getConfirmUrl() {
-  const base =
-    process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "https://homebids.io";
+  // In development/preview only, allow the v0 redirect override so Supabase
+  // email links work inside the v0 sandbox. In production this variable must
+  // NOT override the canonical site URL — otherwise confirmation emails sent
+  // to real users would redirect through the v0 preview domain.
+  const isDev = process.env.NODE_ENV !== "production";
+  const devOverride = isDev ? process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL : undefined;
+  const base = devOverride || process.env.NEXT_PUBLIC_SITE_URL || "https://homebids.io";
   return `${base}/auth/confirm`;
 }
 
