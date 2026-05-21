@@ -109,6 +109,9 @@ export default function JobDetailsPage() {
   const [reviewText, setReviewText] = useState("");
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [showLeaveReview, setShowLeaveReview] = useState(false);
+  // Per-job message thread state (contractor ↔ homeowner)
+  const [chatMessages, setChatMessages] = useState<{ id: string; text: string; sender: "contractor" | "homeowner"; time: Date }[]>([]);
+  const [chatInput, setChatInput] = useState("");
   const hasLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -158,11 +161,6 @@ export default function JobDetailsPage() {
   const ownBid = isContractor
     ? demoContractorBids.find((b) => b.job_id === id) ?? null
     : null;
-
-  // Per-job message thread state (contractor ↔ homeowner)
-  interface ChatMsg { id: string; text: string; sender: "contractor" | "homeowner"; time: Date; }
-  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
-  const [chatInput, setChatInput] = useState("");
 
   const handleSendChat = () => {
     if (!chatInput.trim()) return;
