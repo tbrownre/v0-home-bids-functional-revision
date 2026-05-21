@@ -108,6 +108,13 @@ export default function HomePage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    // If the user clicked the logo (/?home=1), stay on the home page — never redirect.
+    const stayOnHome = new URLSearchParams(window.location.search).has("home");
+    if (stayOnHome) {
+      setIsSignedIn(true);
+      return;
+    }
+
     if (USE_MOCK_DATA) {
       // Mock mode — read session synchronously, no network call.
       const user = getMockUser();
