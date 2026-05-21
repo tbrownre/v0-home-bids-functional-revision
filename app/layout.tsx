@@ -12,11 +12,11 @@ const redHatDisplay = Red_Hat_Display({ subsets: ["latin"], weight: ["300", "400
 export const metadata: Metadata = {
   title: 'HomeBids - Better bids. Better homes.',
   description: 'HomeBids connects homeowners with trusted local pros through competitive job bidding. Contractors only pay when they win work.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://homebids.io'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://homebids.io'),
   openGraph: {
     title: 'HomeBids - Better bids. Better homes.',
     description: 'HomeBids connects homeowners with trusted local pros through competitive job bidding. Contractors only pay when they win work.',
-    url: process.env.NEXT_PUBLIC_APP_URL || 'https://homebids.io',
+    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://homebids.io',
     siteName: 'HomeBids',
     locale: 'en_US',
     type: 'website',
