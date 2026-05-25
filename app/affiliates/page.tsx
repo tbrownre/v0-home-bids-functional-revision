@@ -807,7 +807,7 @@ export default function AffiliatesPage() {
               <div className="h-3 w-3 rounded-full bg-muted" />
               <div className="h-3 w-3 rounded-full bg-muted" />
               <span className="ml-3 text-xs font-medium text-muted-foreground">
-                affiliates.homebids.io/dashboard
+                  affiliates.homebids.ai/dashboard
               </span>
             </div>
 
@@ -908,7 +908,7 @@ export default function AffiliatesPage() {
               className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center"
             >
               <Button size="lg" className="h-12 gap-2 px-10 text-base" asChild>
-                <a href="mailto:affiliates@homebids.io">
+                <a href="mailto:affiliates@homebids.ai">
                   Get Your Affiliate Link <ArrowRight className="h-4 w-4" />
                 </a>
               </Button>
@@ -918,7 +918,7 @@ export default function AffiliatesPage() {
                 className="h-12 gap-2 bg-transparent px-10 text-base"
                 asChild
               >
-                <a href="mailto:affiliates@homebids.io?subject=Founding Affiliate Application">
+                <a href="mailto:affiliates@homebids.ai?subject=Founding Affiliate Application">
                   Join as a Founding Affiliate
                 </a>
               </Button>

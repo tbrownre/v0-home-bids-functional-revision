@@ -41,7 +41,7 @@ BEGIN
     '00000000-0000-0000-0000-000000000000',
     'authenticated',
     'authenticated',
-    'demo.homeowner@homebids.io',
+    'demo.homeowner@homebids.ai',
     crypt('HomeBidsDemo!24', gen_salt('bf')),
     now(),
     jsonb_build_object(
@@ -79,7 +79,7 @@ BEGIN
     '00000000-0000-0000-0000-000000000000',
     'authenticated',
     'authenticated',
-    'demo.contractor@homebids.io',
+    'demo.contractor@homebids.ai',
     crypt('HomeBidsDemo!24', gen_salt('bf')),
     now(),
     jsonb_build_object(
@@ -99,8 +99,8 @@ BEGIN
 
   INSERT INTO public.profiles (id, full_name, email, user_type, created_at, updated_at)
   VALUES
-    (homeowner_id, 'Alex Demo', 'demo.homeowner@homebids.io', 'homeowner', now(), now()),
-    (contractor_id, 'Jordan Demo', 'demo.contractor@homebids.io', 'contractor', now(), now());
+    (homeowner_id, 'Alex Demo', 'demo.homeowner@homebids.ai', 'homeowner', now(), now()),
+    (contractor_id, 'Jordan Demo', 'demo.contractor@homebids.ai', 'contractor', now(), now());
 
   -- ── Contractor profile ─────────────────────────────────────────────────────
   DELETE FROM public.contractor_profiles WHERE id = contractor_id;

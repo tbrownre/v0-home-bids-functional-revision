@@ -7,7 +7,7 @@ export const demoContractorProfile = {
   id: "demo-contractor-id",
   full_name: "Marcus Webb",
   business_name: "Webb Home Services",
-  email: "demo.contractor@homebids.io",
+  email: "demo.contractor@homebids.ai",
   phone: "(512) 555-0200",
   services: ["HVAC", "Plumbing", "Electrical", "General Contractor"],
   service_areas: ["Austin, TX", "Round Rock, TX", "Cedar Park, TX", "Pflugerville, TX"],
