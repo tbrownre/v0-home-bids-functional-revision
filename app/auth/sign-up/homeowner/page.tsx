@@ -47,7 +47,7 @@ export default function HomeownerSignUpPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Link href="/" className="mb-2 inline-block text-lg font-bold text-primary">
-            HomeBids.io
+            HomeBids.ai
           </Link>
           <CardTitle className="text-2xl">Create your account</CardTitle>
           <CardDescription>Start receiving contractor bids for free</CardDescription>
