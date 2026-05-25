@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
     const res = await fetch(url.toString(), {
       headers: {
-        "User-Agent": "HomeBids/1.0 (https://homebids.io)",
+        "User-Agent": "HomeBids/1.0 (https://homebids.ai)",
         "Accept-Language": "en-US,en",
       },
     });

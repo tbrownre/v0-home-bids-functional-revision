@@ -136,10 +136,10 @@ export function Footer() {
             </nav>
             <div className="border-t border-border w-full pt-4 text-center">
               <Link href="/" className="text-sm font-semibold text-foreground hover:text-primary transition-colors">
-                HomeBids.io
+                HomeBids.ai
               </Link>
               <p className="mt-1 text-xs text-muted-foreground">
-                &copy; {new Date().getFullYear()} HomeBids.io. All rights reserved.
+                &copy; {new Date().getFullYear()} HomeBids.ai. All rights reserved.
               </p>
             </div>
           </div>
@@ -148,11 +148,11 @@ export function Footer() {
           <div className="hidden sm:flex flex-wrap items-center justify-between gap-y-2 py-3">
             <div className="flex items-center gap-3">
               <Link href="/" className="text-sm font-semibold text-foreground hover:text-primary transition-colors">
-                HomeBids.io
+                HomeBids.ai
               </Link>
               <span className="text-muted-foreground/40">|</span>
               <span className="text-xs text-muted-foreground">
-                &copy; {new Date().getFullYear()} HomeBids.io. All rights reserved.
+                &copy; {new Date().getFullYear()} HomeBids.ai. All rights reserved.
               </span>
             </div>
             <nav className="flex flex-wrap items-center gap-x-5 gap-y-1" aria-label="Footer navigation">

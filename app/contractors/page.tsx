@@ -108,7 +108,7 @@ export default function ContractorsPage() {
               Stop Buying Leads. Start Winning Jobs.
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
-              HomeBids.io connects you with verified homeowner projects. Subscribe to access the marketplace, then pay a small per-bid fee only when you choose to bid. No wasted spend on dead leads.
+              HomeBids.ai connects you with verified homeowner projects. Subscribe to access the marketplace, then pay a small per-bid fee only when you choose to bid. No wasted spend on dead leads.
             </p>
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <Button size="lg" asChild>
@@ -144,7 +144,7 @@ export default function ContractorsPage() {
               The Math That Makes Sense
             </h2>
             <p className="mt-4 text-muted-foreground">
-              See how HomeBids.io compares to traditional lead generation
+              See how HomeBids.ai compares to traditional lead generation
             </p>
           </motion.div>
 
@@ -186,7 +186,7 @@ export default function ContractorsPage() {
               </CardContent>
             </Card>
 
-            {/* HomeBids.io */}
+            {/* HomeBids.ai */}
             <Card className="border-2 border-accent bg-background">
               <CardContent className="p-8">
                 <div className="mb-6 flex items-center justify-between">
@@ -544,7 +544,7 @@ export default function ContractorsPage() {
             className="text-center"
           >
             <h2 className="text-3xl font-bold text-foreground sm:text-4xl">
-              Why Contractors Choose HomeBids.io
+              Why Contractors Choose HomeBids.ai
             </h2>
           </motion.div>
 
@@ -606,7 +606,7 @@ export default function ContractorsPage() {
               Ready to Grow Your Business?
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-primary-foreground/80">
-              Join thousands of contractors winning real work on HomeBids.io
+              Join thousands of contractors winning real work on HomeBids.ai
             </p>
             <Button size="lg" variant="secondary" className="mt-8" asChild>
               <Link href="/subscribe?type=contractor">

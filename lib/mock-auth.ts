@@ -65,8 +65,8 @@ export const MOCK_USERS: Record<string, MockUser> = {
 
 // Legacy email aliases so existing bookmarks keep working
 const EMAIL_ALIASES: Record<string, string> = {
-  "demo.homeowner@homebids.io": "homeowner@homebids.demo",
-  "demo.contractor@homebids.io": "contractor@homebids.demo",
+  "demo.homeowner@homebids.ai": "homeowner@homebids.demo",
+  "demo.contractor@homebids.ai": "contractor@homebids.demo",
 };
 
 // Common demo password — any password is accepted in mock mode

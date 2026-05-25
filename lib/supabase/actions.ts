@@ -13,7 +13,7 @@ function getConfirmUrl() {
   // to real users would redirect through the v0 preview domain.
   const isDev = process.env.NODE_ENV !== "production";
   const devOverride = isDev ? process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL : undefined;
-  const base = devOverride || process.env.NEXT_PUBLIC_SITE_URL || "https://homebids.io";
+  const base = devOverride || process.env.NEXT_PUBLIC_SITE_URL || "https://homebids.ai";
   return `${base}/auth/confirm`;
 }
 
@@ -481,7 +481,7 @@ export async function getContractorBids() {
   return { bids: data ?? [] };
 }
 
-// ── Messages ─────────────────────────────────────────────────────────────────
+// ── Messages ─────────────────────────────────────────────────────────────��───
 
 export async function sendMessage(formData: {
   job_id: string;

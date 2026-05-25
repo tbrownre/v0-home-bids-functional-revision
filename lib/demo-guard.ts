@@ -7,8 +7,8 @@
  * confirmed emails and stable passwords, but their writes are no-ops.
  */
 
-export const DEMO_HOMEOWNER_EMAIL = "demo.homeowner@homebids.io";
-export const DEMO_CONTRACTOR_EMAIL = "demo.contractor@homebids.io";
+export const DEMO_HOMEOWNER_EMAIL = "demo.homeowner@homebids.ai";
+export const DEMO_CONTRACTOR_EMAIL = "demo.contractor@homebids.ai";
 export const DEMO_PASSWORD = "HomeBidsDemo!24";
 
 // New mock-mode emails — kept alongside the legacy ones for compatibility
