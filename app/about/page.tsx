@@ -141,7 +141,7 @@ export default function AboutPage() {
               {
                 icon: Shield,
                 title: "Transparency",
-                desc: "Clear pricing. No surprise fees. Homeowners see real bids. Contractors know exactly what they pay.",
+                desc: "Clear pricing. No surprise fees. Homeowners post for free. Contractors know exactly what they pay.",
               },
               {
                 icon: MapPin,

@@ -89,7 +89,7 @@ export function SubscriptionCheckout({ planId, onSuccess, onCancel }: Subscripti
         </div>
         <h3 className="mt-4 text-xl font-semibold text-foreground">Subscription Active!</h3>
         <p className="mt-2 text-muted-foreground">
-          Your 3-day free trial has started. Welcome to HomeBids.
+          Your subscription is active. Welcome to HomeBids.
         </p>
         <Button className="mt-6" onClick={() => onSuccessRef.current?.()}>
           Get Started

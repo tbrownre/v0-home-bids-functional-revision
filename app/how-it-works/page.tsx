@@ -247,7 +247,7 @@ export default function HowItWorksPage() {
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <p className="mt-3 text-xs text-primary-foreground/40">3-day free trial. Cancel anytime.</p>
+                <p className="mt-3 text-xs text-primary-foreground/40">Free for homeowners. No credit card required.</p>
               </div>
             </section>
 
@@ -422,16 +422,14 @@ export default function HowItWorksPage() {
                 <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
                   <Button size="lg" variant="secondary" asChild>
                     <Link href="/subscribe?type=contractor">
-                      Start Free Trial
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                      Start Free Trial                      <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
                   <Button size="lg" variant="outline" className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10" asChild>
                     <Link href="/subscribe?type=contractor">View Contractor Plans</Link>
                   </Button>
                 </div>
-                <p className="mt-3 text-xs text-primary-foreground/40">3-day free trial. Subscription required after trial.</p>
-              </div>
+                <p className="mt-3 text-xs text-primary-foreground/40">3-day free trial. Subscription required after trial.</p>              </div>
             </section>
 
           </motion.div>
