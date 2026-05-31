@@ -12,25 +12,32 @@ const sections = [
     title: "Platform Overview",
     content: (
       <>
-        <p>HomeBids operates a technology platform that connects homeowners seeking home services with independent contractors willing to submit bids for those services.</p>
-        <p>When a homeowner submits a project request, the homeowner authorizes HomeBids to distribute the project to contractors who may wish to bid.</p>
-        <p>HomeBids may use automated systems, artificial intelligence, and outreach tools to identify contractors relevant to a project.</p>
-        <p>HomeBids does not perform construction services. The Platform only facilitates introductions between homeowners and contractors.</p>
+        <p>HomeBids operates a neutral technology platform that facilitates introductions and communications between homeowners and independent contractors.</p>
+        <p>HomeBids does not perform construction, remodeling, repair, maintenance, engineering, architectural, inspection, or trade services.</p>
+        <p>HomeBids may use automated systems, artificial intelligence, machine learning systems, algorithmic tools, communications systems, and contractor discovery technologies to help homeowners identify potentially relevant contractors for submitted projects.</p>
+        <p>HomeBids is not a contractor, subcontractor, construction manager, staffing company, employment agency, broker, insurer, project manager, or payment processor.</p>
+        <p>All contractor services are performed exclusively by independent third parties.</p>
       </>
     ),
   },
   {
     id: "authorization",
-    title: "Authorization to Seek Bids",
+    title: "Authorization to Seek Contractors and Distribute Projects",
     content: (
       <>
-        <p>By submitting a project request, homeowners authorize HomeBids to:</p>
+        <p>By submitting a project request, homeowners expressly authorize HomeBids to:</p>
         <ul>
           <li>distribute project information to contractors</li>
-          <li>invite contractors to submit bids</li>
-          <li>allow contractors to contact homeowners</li>
+          <li>identify potentially relevant contractors</li>
+          <li>contact contractors regarding submitted projects</li>
+          <li>facilitate communications between users</li>
+          <li>utilize automated outreach systems</li>
+          <li>utilize artificial intelligence systems</li>
+          <li>use publicly available contractor information</li>
+          <li>send project opportunity notifications</li>
         </ul>
-        <p>HomeBids does not guarantee contractor responses or bids.</p>
+        <p>This authorization may include communications through email, platform messaging, automated systems, artificial intelligence tools, and other lawful business communication methods.</p>
+        <p>HomeBids does not guarantee contractor responses, bid volume, pricing, availability, or project outcomes.</p>
       </>
     ),
   },
@@ -46,85 +53,13 @@ const sections = [
           <li>supervise contractor work</li>
           <li>control contractor pricing</li>
           <li>manage contractor projects</li>
+          <li>direct contractor operations</li>
+          <li>guarantee contractor licensing</li>
+          <li>guarantee contractor insurance</li>
+          <li>guarantee permits or code compliance</li>
         </ul>
-        <p>Contractors are responsible for licensing, insurance, permits, and compliance with applicable laws.</p>
-      </>
-    ),
-  },
-  {
-    id: "safe-harbor",
-    title: "Platform Safe Harbor",
-    content: (
-      <>
-        <p>HomeBids operates solely as a neutral technology platform facilitating introductions between homeowners and contractors.</p>
-        <p>HomeBids is not responsible for contractor services, project outcomes, or agreements between users.</p>
-        <p>Any service agreement exists solely between the homeowner and contractor.</p>
-      </>
-    ),
-  },
-  {
-    id: "no-project-management",
-    title: "No Project Management or Payment Handling",
-    content: (
-      <>
-        <p>HomeBids does not manage construction projects and does not process payments between homeowners and contractors.</p>
-        <p>HomeBids does not provide:</p>
-        <ul>
-          <li>escrow services</li>
-          <li>project supervision</li>
-          <li>contractor warranties</li>
-          <li>dispute mediation</li>
-        </ul>
-        <p>All agreements are negotiated directly between users.</p>
-      </>
-    ),
-  },
-  {
-    id: "ai-matching",
-    title: "AI and Algorithmic Matching",
-    content: (
-      <>
-        <p>HomeBids may use automated systems, machine learning, and artificial intelligence to identify contractors relevant to homeowner projects.</p>
-        <p>These systems may analyze factors including:</p>
-        <ul>
-          <li>contractor service categories</li>
-          <li>geographic proximity</li>
-          <li>responsiveness</li>
-          <li>profile completeness</li>
-          <li>platform activity</li>
-        </ul>
-        <p>Algorithmic results are informational only and do not represent endorsements.</p>
-      </>
-    ),
-  },
-  {
-    id: "affiliate-program",
-    title: "Affiliate and Referral Program",
-    content: (
-      <>
-        <p>HomeBids operates an affiliate and referral program.</p>
-        <p>Participants may receive compensation for referring homeowners or contractors to the Platform.</p>
-        <p>Compensation may include:</p>
-        <ul>
-          <li>referral commissions</li>
-          <li>recurring subscription revenue shares</li>
-          <li>promotional bonuses</li>
-        </ul>
-        <p>Affiliate participants may have financial incentives to promote HomeBids.</p>
-        <p>HomeBids does not guarantee earnings through the affiliate program.</p>
-        <p>Affiliate participation does not create employment, partnership, or agency relationships.</p>
-      </>
-    ),
-  },
-  {
-    id: "contractor-referral",
-    title: "Contractor Referral Incentives",
-    content: (
-      <>
-        <p>Contractors may receive compensation for referring homeowners to the Platform.</p>
-        <p>As a result, contractors referring homeowners may have financial incentives to promote HomeBids.</p>
-        <p>HomeBids does not influence homeowner hiring decisions.</p>
-        <p>Contractors compete independently for projects.</p>
+        <p>Contractors are solely responsible for licensing, insurance, permits, taxes, regulatory compliance, project performance, warranties, and safety compliance.</p>
+        <p>Any agreement entered into exists solely between the homeowner and contractor.</p>
       </>
     ),
   },
@@ -133,26 +68,82 @@ const sections = [
     title: "Marketplace Neutrality",
     content: (
       <>
-        <p>HomeBids operates as a neutral technology platform.</p>
-        <p>HomeBids does not recommend specific contractors.</p>
-        <p>Contractor visibility may depend on factors including:</p>
+        <p>HomeBids operates solely as a neutral technology platform.</p>
+        <p>HomeBids does not endorse, certify, guarantee, recommend, verify, warrant, or insure any contractor, homeowner, business, project, bid, project scope, license status, insurance status, qualifications, reviews, ratings, pricing, or project outcome.</p>
+        <p>Contractor visibility, ranking, or display order may depend on factors including:</p>
         <ul>
           <li>geographic relevance</li>
           <li>responsiveness</li>
+          <li>profile completeness</li>
           <li>subscription status</li>
+          <li>platform activity</li>
           <li>algorithmic systems</li>
+          <li>homeowner preferences</li>
         </ul>
-        <p>These factors do not represent endorsements.</p>
+        <p>These factors do not constitute endorsements or recommendations.</p>
       </>
     ),
   },
   {
-    id: "no-guarantee",
-    title: "No Guarantee of Work",
+    id: "no-project-management",
+    title: "No Project Management or Payment Handling",
     content: (
       <>
-        <p>HomeBids does not guarantee contractors will receive project opportunities, leads, or revenue.</p>
-        <p>Contractor success depends on market demand, homeowner preferences, responsiveness, and pricing competitiveness.</p>
+        <p>HomeBids does not:</p>
+        <ul>
+          <li>supervise projects</li>
+          <li>manage timelines</li>
+          <li>control construction work</li>
+          <li>process contractor payments</li>
+          <li>provide escrow services</li>
+          <li>mediate disputes</li>
+          <li>guarantee workmanship</li>
+          <li>inspect completed work</li>
+        </ul>
+        <p>HomeBids is not responsible for project outcomes, delays, damages, disputes, change orders, property damage, injuries, contractor conduct, or completed work.</p>
+        <p>All agreements are negotiated directly between homeowners and contractors.</p>
+      </>
+    ),
+  },
+  {
+    id: "ai-systems",
+    title: "AI and Automated Systems",
+    content: (
+      <>
+        <p>HomeBids may use artificial intelligence, machine learning systems, automated systems, and algorithmic technologies to:</p>
+        <ul>
+          <li>generate project summaries</li>
+          <li>categorize projects</li>
+          <li>identify contractors</li>
+          <li>facilitate communications</li>
+          <li>generate recommendations</li>
+          <li>organize data</li>
+          <li>improve platform functionality</li>
+        </ul>
+        <p>AI-generated content may be inaccurate, incomplete, delayed, misleading, or outdated.</p>
+        <p>Users are solely responsible for independently reviewing and verifying all information before relying upon it.</p>
+        <p>HomeBids does not guarantee the accuracy of AI-generated content.</p>
+      </>
+    ),
+  },
+  {
+    id: "public-contractor-info",
+    title: "Public Contractor Information and Contractor Discovery",
+    content: (
+      <>
+        <p>HomeBids may collect, organize, analyze, display, and utilize information obtained from:</p>
+        <ul>
+          <li>publicly available sources</li>
+          <li>business directories</li>
+          <li>licensing databases</li>
+          <li>public websites</li>
+          <li>user submissions</li>
+          <li>reviews</li>
+          <li>third-party data providers</li>
+          <li>lawful commercial data sources</li>
+        </ul>
+        <p>HomeBids does not guarantee the accuracy, completeness, or timeliness of publicly sourced information.</p>
+        <p>Contractors may request updates or removal of inaccurate information by contacting HomeBids.</p>
       </>
     ),
   },
@@ -161,31 +152,133 @@ const sections = [
     title: "Platform Communications",
     content: (
       <>
-        <p>The Platform may enable communication between homeowners and contractors.</p>
-        <p>HomeBids does not verify or guarantee the accuracy of statements exchanged between users.</p>
+        <p>The Platform may enable communications between homeowners and contractors.</p>
+        <p>HomeBids may send:</p>
+        <ul>
+          <li>project opportunity notifications</li>
+          <li>contractor outreach emails</li>
+          <li>bid notifications</li>
+          <li>platform alerts</li>
+          <li>transactional communications</li>
+          <li>service-related communications</li>
+        </ul>
         <p>Users are solely responsible for communications conducted through the Platform.</p>
+        <p>HomeBids does not verify or guarantee the accuracy of user communications.</p>
+        <p>Contractors may opt out of certain communications in accordance with applicable law.</p>
+      </>
+    ),
+  },
+  {
+    id: "affiliate-program",
+    title: "Affiliate and Referral Programs",
+    content: (
+      <>
+        <p>HomeBids may operate affiliate, referral, ambassador, or promotional programs.</p>
+        <p>Participants may receive compensation for referring users to the Platform.</p>
+        <p>Compensation may include:</p>
+        <ul>
+          <li>referral commissions</li>
+          <li>recurring revenue shares</li>
+          <li>promotional incentives</li>
+          <li>bonuses</li>
+          <li>marketing rewards</li>
+        </ul>
+        <p>Affiliate participants may have financial incentives to promote HomeBids.</p>
+        <p>HomeBids does not guarantee affiliate earnings or financial results.</p>
+        <p>Participation does not create employment, partnership, franchise, agency, or joint venture relationships.</p>
+      </>
+    ),
+  },
+  {
+    id: "no-guarantee",
+    title: "No Guarantee of Work or Revenue",
+    content: (
+      <>
+        <p>HomeBids does not guarantee:</p>
+        <ul>
+          <li>project awards</li>
+          <li>contractor selection</li>
+          <li>lead volume</li>
+          <li>revenue</li>
+          <li>profits</li>
+          <li>conversion rates</li>
+          <li>response rates</li>
+          <li>project availability</li>
+          <li>homeowner engagement</li>
+          <li>contractor participation</li>
+        </ul>
+        <p>Contractor success depends on market conditions, homeowner preferences, responsiveness, pricing, availability, location, competition, and numerous factors outside HomeBids&apos; control.</p>
+      </>
+    ),
+  },
+  {
+    id: "user-content",
+    title: "User Content",
+    content: (
+      <>
+        <p>Users are solely responsible for content submitted to the Platform, including:</p>
+        <ul>
+          <li>project descriptions</li>
+          <li>messages</li>
+          <li>reviews</li>
+          <li>bids</li>
+          <li>images</li>
+          <li>uploaded files</li>
+          <li>profile information</li>
+        </ul>
+        <p>HomeBids does not guarantee the accuracy, legality, or reliability of user-generated content.</p>
+        <p>HomeBids reserves the right to remove or restrict content at its discretion.</p>
       </>
     ),
   },
   {
     id: "fees",
-    title: "Fees",
+    title: "Subscription Billing and Fees",
     content: (
       <>
-        <p>HomeBids may charge subscription fees or bid placement fees.</p>
+        <p>HomeBids may charge:</p>
+        <ul>
+          <li>subscription fees</li>
+          <li>recurring membership fees</li>
+          <li>bid fees</li>
+          <li>promotional fees</li>
+          <li>premium feature fees</li>
+        </ul>
+        <p>By subscribing, users authorize recurring charges to their payment method until cancellation.</p>
         <p>Fees are generally non-refundable unless required by law.</p>
-        <p>HomeBids may modify pricing at any time.</p>
+        <p>HomeBids may modify pricing, subscription structures, or billing models at any time.</p>
+        <p>Users are responsible for cancelling subscriptions before renewal dates.</p>
       </>
     ),
   },
   {
-    id: "information-accuracy",
-    title: "Information Accuracy Disclaimer",
+    id: "intellectual-property",
+    title: "Intellectual Property",
     content: (
       <>
-        <p>Information on the Platform may originate from user submissions, publicly available sources, automated systems, or third-party databases.</p>
-        <p>HomeBids does not guarantee accuracy or completeness.</p>
-        <p>Users should verify information before entering agreements.</p>
+        <p>The Platform, including all software, branding, designs, graphics, systems, content, and technology, is owned by HomeBids or its licensors and protected by intellectual property laws.</p>
+        <p>Users may not copy, scrape, reproduce, reverse engineer, distribute, exploit, resell, or commercially use any portion of the Platform without written permission.</p>
+      </>
+    ),
+  },
+  {
+    id: "disclaimer",
+    title: "Disclaimer of Warranties",
+    content: (
+      <>
+        <p className="font-semibold uppercase tracking-wide text-foreground">The Platform is provided &quot;as is&quot; and &quot;as available.&quot;</p>
+        <p>To the maximum extent permitted by law, HomeBids disclaims all warranties, express or implied, including merchantability, fitness for a particular purpose, non-infringement, accuracy, reliability, and availability.</p>
+        <p>HomeBids does not guarantee:</p>
+        <ul>
+          <li>platform uptime</li>
+          <li>project results</li>
+          <li>contractor performance</li>
+          <li>user behavior</li>
+          <li>data accuracy</li>
+          <li>communication delivery</li>
+          <li>platform security</li>
+          <li>error-free operation</li>
+        </ul>
       </>
     ),
   },
@@ -194,8 +287,42 @@ const sections = [
     title: "Limitation of Liability",
     content: (
       <>
-        <p>To the maximum extent permitted by law, HomeBids is not liable for damages arising from contractor services, project outcomes, or user interactions.</p>
-        <p>Total liability shall not exceed $100 or the amount paid to HomeBids within the previous 12 months.</p>
+        <p>To the maximum extent permitted by law, HomeBids shall not be liable for indirect, incidental, consequential, special, exemplary, or punitive damages, including lost profits, lost revenue, business interruption, data loss, property damage, or personal injury arising from:</p>
+        <ul>
+          <li>contractor services</li>
+          <li>homeowner conduct</li>
+          <li>project outcomes</li>
+          <li>platform use</li>
+          <li>AI-generated content</li>
+          <li>communications</li>
+          <li>outages</li>
+          <li>third-party services</li>
+          <li>contractor outreach activities</li>
+        </ul>
+        <p>Total liability shall not exceed the greater of $100 USD or the amount paid to HomeBids during the previous 12 months.</p>
+      </>
+    ),
+  },
+  {
+    id: "indemnification",
+    title: "Indemnification",
+    content: (
+      <>
+        <p>Users agree to defend, indemnify, and hold harmless HomeBids and its owners, officers, affiliates, employees, contractors, licensors, successors, and agents from and against any claims, liabilities, damages, losses, judgments, settlements, costs, and expenses, including reasonable attorneys&apos; fees, arising from:</p>
+        <ul>
+          <li>use of the Platform</li>
+          <li>project disputes</li>
+          <li>contractor services</li>
+          <li>homeowner conduct</li>
+          <li>violations of law</li>
+          <li>property damage</li>
+          <li>bodily injury</li>
+          <li>user content</li>
+          <li>communications</li>
+          <li>reliance on AI-generated content</li>
+          <li>misuse of the Platform</li>
+          <li>submitted project information</li>
+        </ul>
       </>
     ),
   },
@@ -204,8 +331,36 @@ const sections = [
     title: "Arbitration and Class Action Waiver",
     content: (
       <>
-        <p>Disputes related to the Platform will be resolved through binding arbitration.</p>
-        <p>Users waive the right to participate in class-action lawsuits.</p>
+        <p>Any dispute arising from or relating to the Platform or these Terms shall be resolved exclusively through binding arbitration governed by the Federal Arbitration Act.</p>
+        <p>Users waive:</p>
+        <ul>
+          <li>the right to a jury trial</li>
+          <li>the right to participate in class actions</li>
+          <li>the right to participate in representative actions</li>
+        </ul>
+        <p>Arbitration shall occur in Maricopa County, Arizona unless otherwise required by law.</p>
+        <p>Either party may seek relief in small claims court for qualifying matters.</p>
+      </>
+    ),
+  },
+  {
+    id: "force-majeure",
+    title: "Force Majeure",
+    content: (
+      <>
+        <p>HomeBids shall not be liable for delays, interruptions, outages, failures, or damages caused by events beyond its reasonable control, including:</p>
+        <ul>
+          <li>internet failures</li>
+          <li>telecommunications outages</li>
+          <li>cyberattacks</li>
+          <li>API failures</li>
+          <li>artificial intelligence failures</li>
+          <li>natural disasters</li>
+          <li>labor disputes</li>
+          <li>government actions</li>
+          <li>software failures</li>
+          <li>third-party platform outages</li>
+        </ul>
       </>
     ),
   },
@@ -214,16 +369,38 @@ const sections = [
     title: "Platform Modifications",
     content: (
       <>
-        <p>HomeBids may modify or discontinue Platform features at any time.</p>
-        <p>This may include changes to pricing, subscriptions, bidding systems, referral programs, or contractor visibility.</p>
-        <p>HomeBids is not liable for losses resulting from platform changes.</p>
+        <p>HomeBids may modify, suspend, discontinue, or update any portion of the Platform at any time without liability.</p>
+        <p>This may include changes to:</p>
+        <ul>
+          <li>pricing</li>
+          <li>subscriptions</li>
+          <li>bidding systems</li>
+          <li>contractor visibility</li>
+          <li>communication systems</li>
+          <li>referral programs</li>
+          <li>platform functionality</li>
+          <li>AI systems</li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    id: "eligibility",
+    title: "Eligibility",
+    content: (
+      <>
+        <p>Users must be at least 18 years old and legally capable of entering binding agreements.</p>
+        <p>Businesses using the Platform represent they have authority to bind their organization.</p>
+        <p>Users agree to use the Platform only for lawful purposes.</p>
       </>
     ),
   },
   {
     id: "governing-law",
     title: "Governing Law",
-    content: <p>These Terms are governed by the laws of the State of Arizona.</p>,
+    content: (
+      <p>These Terms are governed by the laws of the State of Arizona, without regard to conflict-of-law principles.</p>
+    ),
   },
 ];
 
@@ -310,15 +487,15 @@ export default function TermsOfServicePage() {
             <p className="mt-2 text-muted-foreground">
               These Terms govern your use of the HomeBids platform.
             </p>
-            <p className="mt-1 text-xs text-muted-foreground/60">Last Updated: March 11, 2026</p>
+            <p className="mt-1 text-xs text-muted-foreground/60">Last Updated: May 30, 2025</p>
           </div>
 
           {/* Intro card */}
           <div className="mb-10 space-y-3 rounded-2xl border border-border bg-card p-6 leading-relaxed text-muted-foreground">
             <p>Welcome to <strong className="text-foreground">HomeBids</strong>.</p>
-            <p>These Terms of Service (&quot;Terms&quot;) govern your access to and use of the HomeBids website, mobile applications, and related services (the &quot;Platform&quot;).</p>
-            <p>By accessing or using the Platform you agree to these Terms.</p>
-            <p>If you do not agree, you may not use HomeBids.</p>
+            <p>These Terms of Service (&quot;Terms&quot;) govern your access to and use of the HomeBids website, mobile applications, communications systems, artificial intelligence systems, contractor discovery tools, and related services (collectively, the &quot;Platform&quot;).</p>
+            <p>By accessing or using HomeBids, you agree to these Terms.</p>
+            <p>If you do not agree, you may not use the Platform.</p>
           </div>
 
           {/* Mobile jump-to dropdown */}
