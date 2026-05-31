@@ -524,38 +524,20 @@ export default function ProfilePage() {
             <div className="rounded-xl border border-border bg-muted/40 p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Homeowner Plan — $9.99/month</p>
+                  <p className="text-sm font-semibold text-foreground">Homeowner Access — Free</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {profile.subStatus === "active"
-                      ? `Next billing date: ${billingDateStr}`
-                      : "Access continues until end of billing period."}
+                    HomeBids is completely free for homeowners.
                   </p>
                 </div>
-                <span
-                  className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    profile.subStatus === "active"
-                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                      : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                  }`}
-                >
-                  {profile.subStatus === "active" ? "Active" : "Cancellation Scheduled"}
+                <span className="shrink-0 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                  Active
                 </span>
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => showToast("Manage subscription (demo).")}>
-                Manage Subscription
+              <Button variant="outline" size="sm" asChild>
+                <a href="/new-job">Post a New Job</a>
               </Button>
-              {profile.subStatus === "active" && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() => setShowCancelModal(true)}
-                >
-                  Cancel Subscription
-                </Button>
-              )}
             </div>
           </Section>
 

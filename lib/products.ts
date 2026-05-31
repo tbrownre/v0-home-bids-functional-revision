@@ -16,22 +16,23 @@ export interface SubscriptionPlan {
 }
 
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
-  // Homeowner plan
+  // Homeowner plan — FREE, no payment required
   {
     id: 'homeowner-monthly',
-    name: 'Property Owner',
-    description: 'Post your project and receive bids from verified local contractors.',
-    priceInCents: 999, // $9.99/month
+    name: 'Homeowner',
+    description: 'Post your project for free and receive bids from verified local contractors.',
+    priceInCents: 0,
     bidFeeInCents: 0,
     userType: 'homeowner',
+    hasTrial: false,
     features: [
-      'Post unlimited home projects',
+      'Post your project — completely free',
+      'No credit card required',
       'Up to 100 matching contractors contacted',
       'Receive bids from verified contractors',
       'Compare quotes before hiring',
       'Direct messaging with contractors',
       'Simple project dashboard',
-      '3-day free trial',
     ],
   },
 

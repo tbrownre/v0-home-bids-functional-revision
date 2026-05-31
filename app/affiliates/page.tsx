@@ -179,7 +179,6 @@ function FloatingSocialProof() {
 }
 
 // ─── Earnings simulator ───────────────────────────────────────────────
-const HO_MONTHLY_PRICE = 9.99;
 const CONTRACTOR_PLAN_OPTIONS = [
   { label: "$9.99/mo",  value: 9.99 },
   { label: "$29/mo",   value: 29 },
@@ -188,47 +187,34 @@ const CONTRACTOR_PLAN_OPTIONS = [
 const COMMISSION_RATE = 0.2;
 
 function EarningsSimulator() {
-  const [homeowners, setHomeowners] = useState(25);
   const [contractors, setContractors] = useState(25);
   const [ctPlanIndex, setCtPlanIndex] = useState(1); // default $29/mo
 
   const ctPlan = CONTRACTOR_PLAN_OPTIONS[ctPlanIndex];
-  const monthly =
-    homeowners * HO_MONTHLY_PRICE * COMMISSION_RATE +
-    contractors * ctPlan.value * COMMISSION_RATE;
+  const monthly = contractors * ctPlan.value * COMMISSION_RATE;
   const annual = monthly * 12;
 
   const animatedMonthly = useAnimatedNumber(Math.round(monthly), 500);
   const animatedAnnual = useAnimatedNumber(Math.round(annual), 500);
-  const animatedHO = useAnimatedNumber(homeowners, 200);
   const animatedCT = useAnimatedNumber(contractors, 200);
 
   return (
     <div className="mx-auto max-w-2xl rounded-3xl border border-border bg-card p-8 shadow-sm">
       {/* Inputs */}
       <div className="grid gap-8 sm:grid-cols-2">
-        {/* Homeowners */}
-        <div>
-          <div className="flex items-center justify-between">
+        {/* Homeowners — free, no commission, shown as info */}
+        <div className="flex flex-col justify-between">
+          <div>
             <label className="text-sm font-semibold text-foreground">
               Homeowners referred
             </label>
-            <span className="w-12 text-right text-lg font-bold tabular-nums text-foreground">
-              {animatedHO}
-            </span>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Homeowners use HomeBids for free — no commission applies, but referring homeowners grows the marketplace and helps your contractor referrals convert.
+            </p>
           </div>
-          <input
-            type="range"
-            min={0}
-            max={1000}
-            step={1}
-            value={homeowners}
-            onChange={(e) => setHomeowners(Number(e.target.value))}
-            className="mt-3 h-2 w-full cursor-pointer accent-foreground"
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            @ ${HO_MONTHLY_PRICE}/mo plan
-          </p>
+          <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1.5 text-xs font-semibold text-green-700 w-fit">
+            Free for homeowners
+          </span>
         </div>
 
         {/* Contractors */}
@@ -298,7 +284,7 @@ function EarningsSimulator() {
       </div>
 
       <p className="mt-5 text-center text-sm text-muted-foreground">
-        Because commissions are lifetime, every referral can keep paying you{" "}
+        Because commissions are lifetime, every contractor referral can keep paying you{" "}
         <strong className="text-foreground">month after month.</strong>
       </p>
     </div>
@@ -397,8 +383,9 @@ export default function AffiliatesPage() {
             </motion.h1>
 
             <motion.p variants={fadeUp} className="mt-5 text-lg leading-relaxed text-muted-foreground">
-              Earn <strong className="text-foreground">20% lifetime commissions</strong> on every homeowner AND
-              contractor you refer. Paid monthly. No cap. Forever.
+              Earn <strong className="text-foreground">20% lifetime commissions</strong> on every
+              contractor you refer. Homeowners join free — grow the marketplace and earn on the contractors who follow.
+              Paid monthly. No cap. Forever.
             </motion.p>
 
             {/* Animated earnings counter */}
@@ -415,7 +402,7 @@ export default function AffiliatesPage() {
                 <span className="ml-1 text-base font-medium text-muted-foreground">/month</span>
               </p>
               <p className="mt-2 text-xs text-muted-foreground/70">
-                Your referrals can compound across homeowners and contractors — month after month.
+                Your contractor referrals compound — month after month.
               </p>
             </motion.div>
 
@@ -599,7 +586,7 @@ export default function AffiliatesPage() {
               <p className="mt-2 text-4xl font-bold text-foreground">20%</p>
               <p className="mt-1 text-sm font-semibold text-foreground">Lifetime Commission</p>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                Earn 20% of every payment made by homeowners you refer.
+                Homeowners use HomeBids for free. Refer them to grow the marketplace and help your contractor referrals find more work.
               </p>
             </motion.div>
 
@@ -646,7 +633,7 @@ export default function AffiliatesPage() {
               What Could 1,000 Referrals Become?
             </h2>
             <p className="mt-3 text-muted-foreground">
-              Homeowners are fixed. Contractors can scale up to higher monthly plans — and you earn 20% for life.
+              Your contractor referrals can scale up to higher monthly plans — and you earn 20% for life.
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
               The more contractors you refer, the more powerful the upside becomes.

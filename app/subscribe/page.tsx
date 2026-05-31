@@ -52,7 +52,11 @@ export default function SubscribePage() {
   const contractorPlans = getContractorPlans();
 
   const handleSelectPlan = (plan: SubscriptionPlan) => {
-    // All plans (contractor and homeowner) go through Stripe first.
+    // Homeowner plan is free — skip Stripe and go straight to posting
+    if (plan.userType === "homeowner") {
+      router.push("/new-job");
+      return;
+    }
     setSelectedPlan(plan);
     setShowCheckout(true);
   };
@@ -105,7 +109,7 @@ export default function SubscribePage() {
                       </p>
                     </div>
                     <p className="mt-3 text-xs text-muted-foreground/50">
-                      3-day free trial → then $9.99/month. Cancel anytime.
+                      Zero cost to homeowners. No credit card required.
                     </p>
                   </div>
                   {/* Right: plan card */}
@@ -289,7 +293,7 @@ export default function SubscribePage() {
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                   <p className="mt-3 text-xs text-primary-foreground/40">
-                    3-day free trial → then $9.99/month. Cancel anytime.
+                    Completely free for homeowners. No credit card required.
                   </p>
                 </div>
 
@@ -483,7 +487,7 @@ export default function SubscribePage() {
             <DialogDescription>
               {selectedPlan?.hasTrial === false
                 ? "Billed immediately. Cancel anytime."
-                : "3-day free trial included. Cancel anytime."}
+                : "Cancel anytime."}
             </DialogDescription>
           </DialogHeader>
           <div className="px-6 pb-6">
@@ -510,8 +514,9 @@ function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan:
   const ctaLabel =
     plan.id === "contractor-pro" ? "Upgrade to Pro"
     : plan.id === "contractor-elite" ? "Go Elite"
+    : plan.id === "homeowner-monthly" ? "Post Your Project — Free"
     : plan.hasTrial === false ? `Get ${plan.name}`
-    : "Start Free Trial";
+    : "Get Started";
 
   return (
     <motion.div
@@ -535,7 +540,16 @@ function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan:
         <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
 
         <div className="mt-4">
-          {plan.hasTrial === false ? (
+          {plan.priceInCents === 0 ? (
+            <div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-4xl font-extrabold text-foreground">Free</span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground/50">
+                No credit card required
+              </p>
+            </div>
+          ) : plan.hasTrial === false ? (
             <div className="flex items-baseline gap-1">
               <span className="text-4xl font-extrabold text-foreground">${monthlyPrice}</span>
               <span className="text-sm font-medium text-muted-foreground">/month</span>
