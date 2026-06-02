@@ -266,11 +266,11 @@ export function SmsIphonePreview() {
                 <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               <div className="flex flex-1 flex-col items-center">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-sm">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#0A84FF] shadow-sm">
                   <span className="text-[12px] font-bold text-white">HB</span>
                 </div>
                 <p className="mt-0.5 text-[12px] font-semibold text-black leading-tight">HomeBids AI</p>
-                <p className="text-[10px] leading-tight text-green-500 font-medium">
+                <p className="text-[10px] leading-tight text-[#0A84FF] font-medium">
                   {typing ? "typing..." : "Active Now"}
                 </p>
               </div>
