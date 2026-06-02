@@ -104,7 +104,7 @@ function SmartInput({
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="mt-2 flex items-center justify-center gap-1.5 text-sm text-green-600 dark:text-green-400"
+            className="mt-2 flex items-center justify-center gap-1.5 text-sm text-[#0A84FF]"
           >
             <Check className="h-4 w-4" />
             Number copied — text us to get started
@@ -143,8 +143,8 @@ function LiveActivity() {
   return (
     <div className="flex items-center gap-2">
       <span className="relative flex h-2 w-2 shrink-0">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-70" />
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0A84FF] opacity-70" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-[#0A84FF]" />
       </span>
       <span className="text-sm text-muted-foreground">
         Projects being posted right now:
@@ -224,7 +224,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               <br />
               Contractors bid.
               <br />
-              <span className="text-[#00c951]">Compare. Choose. Done.</span>
+              <span className="text-[#0A84FF]">Compare. Choose. Done.</span>
             </h1>
 
             <p className="mt-6 max-w-lg text-pretty text-lg leading-relaxed text-muted-foreground">
@@ -235,7 +235,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <Button
                 size="lg"
-                className="h-12 gap-2 rounded-full px-6 text-base font-semibold bg-[#00c951] text-white hover:bg-[#00c951]/90"
+                className="h-12 gap-2 rounded-full px-6 text-base font-semibold bg-[#0A84FF] text-white hover:bg-[#0A84FF]/90"
                 onClick={handlePrimaryClick}
               >
                 <MessageSquare className="h-5 w-5" />
@@ -250,7 +250,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               >
                 {numberCopied ? (
                   <>
-                    <Check className="h-4 w-4 text-green-600" />
+                    <Check className="h-4 w-4 text-[#0A84FF]" />
                     Copied!
                   </>
                 ) : (
@@ -413,7 +413,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               "Info stays private",
             ].map((item) => (
               <span key={item} className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <CheckCircle className="h-4 w-4 text-green-600" />
+                <CheckCircle className="h-4 w-4 text-[#0A84FF]" />
                 {item}
               </span>
             ))}

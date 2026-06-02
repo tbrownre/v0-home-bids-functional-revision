@@ -781,12 +781,12 @@ export default function HomePage() {
                             <span
                               className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${
                                 job.status === "completed"
-                                  ? "bg-green-50 text-green-700 ring-1 ring-green-200"
+                                  ? "bg-[#0A84FF]/10 text-[#0A84FF] ring-1 ring-[#0A84FF]/30"
                                   : job.status === "in_progress"
                                     ? "bg-blue-100 text-blue-800"
                                     : job.status === "contractor_selected"
                                       ? "bg-orange-100 text-orange-800"
-                                      : "bg-green-100 text-green-800"
+                                      : "bg-[#0A84FF]/10 text-[#0A84FF]"
                               }`}
                             >
                               {job.status === "completed" && <CheckCircle2 className="h-3 w-3" />}
@@ -1438,7 +1438,7 @@ export default function HomePage() {
                             Completely free. No credit card required.
                           </p>
                         </div>
-                        <span className="mt-1 inline-flex shrink-0 items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
+                        <span className="mt-1 inline-flex shrink-0 items-center gap-1 rounded-full bg-[#0A84FF]/10 px-2.5 py-1 text-xs font-semibold text-[#0A84FF]">
                           <CheckCircle2 className="h-3 w-3" />
                           Free
                         </span>
@@ -1455,7 +1455,7 @@ export default function HomePage() {
                           "Job management dashboard",
                         ].map((text) => (
                           <li key={text} className="flex items-center gap-2.5 text-sm text-foreground">
-                            <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                            <CheckCircle2 className="h-4 w-4 shrink-0 text-[#0A84FF]" />
                             {text}
                           </li>
                         ))}
@@ -1505,7 +1505,7 @@ export default function HomePage() {
                 {/* Success celebration */}
                 <div className="relative text-center">
                   {/* Green glow background */}
-                  <div className="absolute inset-0 -z-10 mx-auto h-32 w-32 rounded-full bg-green-500/20 blur-3xl" />
+                  <div className="absolute inset-0 -z-10 mx-auto h-32 w-32 rounded-full bg-[#0A84FF]/20 blur-3xl" />
                   
                   {/* Checkmark icon */}
                   
@@ -1518,7 +1518,7 @@ export default function HomePage() {
                     <h1 className="mt-6 text-balance text-3xl font-bold text-foreground md:text-4xl">
                       Congratulations!
                     </h1>
-                    <p className="mt-2 text-lg text-green-600 font-medium">
+                    <p className="mt-2 text-lg text-[#0A84FF] font-medium">
                       Your job has been posted successfully
                     </p>
                     <p className="mt-2 text-muted-foreground">
@@ -1532,47 +1532,47 @@ export default function HomePage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
-                  className="mt-8 rounded-2xl border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-6"
+                  className="mt-8 rounded-2xl border border-[#0A84FF]/30 bg-[#0A84FF]/5 p-6"
                 >
-                  <h3 className="flex items-center gap-2 text-lg font-semibold text-green-800">
+                  <h3 className="flex items-center gap-2 text-lg font-semibold text-foreground">
                     <FileText className="h-5 w-5" />
                     What happens next?
                   </h3>
                   <div className="mt-4 space-y-4">
                     <div className="flex items-start gap-4">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-600 text-sm font-bold text-white">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0A84FF] text-sm font-bold text-white">
                         1
                       </div>
                       <div>
-                        <p className="font-medium text-green-900">Contractors review your job</p>
-                        <p className="text-sm text-green-700">Qualified pros in your area will see your project details</p>
+                        <p className="font-medium text-foreground">Contractors review your job</p>
+                        <p className="text-sm text-muted-foreground">Qualified pros in your area will see your project details</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-4">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-600 text-sm font-bold text-white">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0A84FF] text-sm font-bold text-white">
                         2
                       </div>
                       <div>
-                        <p className="font-medium text-green-900">Receive competitive bids</p>
-                        <p className="text-sm text-green-700">{"You'll be notified via email and text when new bids arrive"}</p>
+                        <p className="font-medium text-foreground">Receive competitive bids</p>
+                        <p className="text-sm text-muted-foreground">{"You'll be notified via email and text when new bids arrive"}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-4">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-600 text-sm font-bold text-white">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0A84FF] text-sm font-bold text-white">
                         3
                       </div>
                       <div>
-                        <p className="font-medium text-green-900">Compare and choose</p>
-                        <p className="text-sm text-green-700">Review bids, check reviews, and pick the best fit for your project</p>
+                        <p className="font-medium text-foreground">Compare and choose</p>
+                        <p className="text-sm text-muted-foreground">Review bids, check reviews, and pick the best fit for your project</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-4">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-600 text-sm font-bold text-white">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0A84FF] text-sm font-bold text-white">
                         4
                       </div>
                       <div>
-                        <p className="font-medium text-green-900">Connect with your pro</p>
-                        <p className="text-sm text-green-700">Your contact info is only shared once you approve a bid</p>
+                        <p className="font-medium text-foreground">Connect with your pro</p>
+                        <p className="text-sm text-muted-foreground">Your contact info is only shared once you approve a bid</p>
                       </div>
                     </div>
                   </div>
@@ -1604,7 +1604,7 @@ export default function HomePage() {
                     <Button
                       asChild
                       variant="outline"
-                      className="gap-2 border-green-300 bg-transparent text-green-700 hover:bg-green-50 hover:text-green-800"
+                      className="gap-2 border-[#0A84FF]/40 bg-transparent text-[#0A84FF] hover:bg-[#0A84FF]/5 hover:text-[#0A84FF]"
                       size="lg"
                     >
                       <Link href="/new-job">
@@ -1623,7 +1623,7 @@ export default function HomePage() {
                         setShowJobsBoard(true);
                         setCurrentStepSafe("describe");
                       }}
-                      className="gap-2 bg-green-600 text-white shadow-lg shadow-green-600/30 hover:bg-green-500"
+                      className="gap-2 bg-[#0A84FF] text-white shadow-lg shadow-[#0A84FF]/30 hover:bg-[#0A84FF]/90"
                       size="lg"
                     >
                       <FileText className="h-4 w-4" />
@@ -1655,10 +1655,10 @@ export default function HomePage() {
         <DialogContent className="sm:max-w-md">
           <div className="relative">
             {/* Decorative gradient background */}
-            <div className="absolute -top-4 left-1/2 h-24 w-24 -translate-x-1/2 rounded-full bg-gradient-to-br from-green-400/30 to-emerald-500/30 blur-2xl" />
+            <div className="absolute -top-4 left-1/2 h-24 w-24 -translate-x-1/2 rounded-full bg-[#0A84FF]/20 blur-2xl" />
             
             <DialogHeader className="relative">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-green-400 to-green-600 shadow-lg shadow-green-500/30">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#0A84FF] shadow-lg shadow-[#0A84FF]/30">
                 <CheckCircle2 className="h-8 w-8 text-white" />
               </div>
               <DialogTitle className="text-center text-2xl">
@@ -1706,7 +1706,7 @@ export default function HomePage() {
                 </p>
               )}
               <Button
-                className="h-12 w-full gap-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30 hover:from-green-400 hover:to-emerald-500"
+                className="h-12 w-full gap-2 bg-[#0A84FF] text-white shadow-lg shadow-[#0A84FF]/30 hover:bg-[#0A84FF]/90"
                 onClick={handleFinalSubmit}
                 disabled={submittingJob || !password.trim() || password.length < 6 || !confirmPassword.trim() || password !== confirmPassword}
               >
