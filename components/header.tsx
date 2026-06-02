@@ -175,7 +175,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
 
   return (
     <header className="shrink-0 border-b border-border bg-background">
-      <div className="mx-auto grid grid-cols-[1fr_auto_1fr] items-center px-4 py-2 md:px-6">
+      <div className="mx-auto grid grid-cols-[1fr_auto_1fr] items-center px-4 md:px-6">
 
         {/* Left: menu button + optional back link */}
         <div className="flex items-center gap-1">
@@ -202,7 +202,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
             <div
               ref={panelRef}
               role="menu"
-              className="absolute left-3 top-14 z-50 w-56 rounded-xl border border-border bg-background p-1.5 shadow-lg"
+              className="absolute left-3 top-full z-50 w-56 rounded-xl border border-border bg-background p-1.5 shadow-lg"
             >
               {/* Nav items — logged out */}
               {!isLoggedIn && (
@@ -321,7 +321,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
             width={480}
             height={120}
             className="object-contain"
-            style={{ height: "clamp(112px, 18vw, 160px)", width: "auto" }}
+            style={{ height: "clamp(72px, 10vw, 96px)", width: "auto" }}
             priority
           />
         </Link>
