@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { getSmsLink, isMobileDevice, SMS_PHONE_DISPLAY, SMS_PHONE_NUMBER, SMS_BODY_PREFIX } from "@/lib/sms-config";
+import { getSmsLink, isMobileDevice, isSmsCapableDevice, SMS_PHONE_DISPLAY, SMS_PHONE_NUMBER, SMS_BODY_PREFIX } from "@/lib/sms-config";
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
 import {
   MessageSquare,
@@ -175,25 +175,44 @@ interface HomeLandingProps {
 
 export function HomeLanding({ onOpenForm }: HomeLandingProps) {
   const [numberCopied, setNumberCopied] = useState(false);
+  const [copyFallback, setCopyFallback] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    setIsMobile(isMobileDevice());
+    setIsMobile(isSmsCapableDevice());
   }, []);
 
   const handleCopyNumber = useCallback(() => {
     navigator.clipboard.writeText(SMS_PHONE_DISPLAY).catch(() => {});
     setNumberCopied(true);
+    setCopyFallback(false);
     setTimeout(() => setNumberCopied(false), 2500);
   }, []);
 
   const handlePrimaryClick = useCallback(() => {
-    if (isMobile) {
-      window.location.href = getSmsLink();
-    } else {
-      handleCopyNumber();
-    }
-  }, [isMobile, handleCopyNumber]);
+    const smsUrl = getSmsLink();
+
+    // Schedule clipboard fallback — fires only if the page stays visible
+    // (i.e. the SMS app did NOT open and take focus away)
+    const fallbackTimer = setTimeout(() => {
+      // visibilityState is still "visible" → SMS handler didn't launch
+      if (document.visibilityState === "visible") {
+        navigator.clipboard.writeText(SMS_PHONE_DISPLAY).catch(() => {});
+        setCopyFallback(true);
+        setNumberCopied(false);
+        setTimeout(() => setCopyFallback(false), 4000);
+      }
+    }, 1200);
+
+    // Clear the fallback if the user leaves the page (SMS app opened)
+    const clearFallback = () => {
+      clearTimeout(fallbackTimer);
+      document.removeEventListener("visibilitychange", clearFallback);
+    };
+    document.addEventListener("visibilitychange", clearFallback, { once: true });
+
+    window.location.href = smsUrl;
+  }, []);
 
   return (
     <div className="w-full font-sans">
@@ -261,6 +280,14 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
                 )}
               </Button>
             </div>
+
+            {/* SMS fallback notice — shown only when the SMS app did not open */}
+            {copyFallback && (
+              <p className="mt-2 flex items-center gap-1.5 text-sm text-[#0A84FF]">
+                <Check className="h-3.5 w-3.5 shrink-0" />
+                Number copied — paste it into your text app to start.
+              </p>
+            )}
 
             {/* Phone number display */}
             <p className="mt-3 text-2xl font-bold tracking-wide text-foreground">
