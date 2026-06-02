@@ -224,7 +224,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               <br />
               Contractors bid.
               <br />
-              <span className="text-[#00c951]">Compare. Choose. Done.</span>
+              <span className="text-[#0A84FF]">Compare. Choose. Done.</span>
             </h1>
 
             <p className="mt-6 max-w-lg text-pretty text-lg leading-relaxed text-muted-foreground">
@@ -235,7 +235,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <Button
                 size="lg"
-                className="h-12 gap-2 rounded-full px-6 text-base font-semibold bg-[#00c951] text-white hover:bg-[#00c951]/90"
+                className="h-12 gap-2 rounded-full px-6 text-base font-semibold bg-[#0A84FF] text-white hover:bg-[#0A84FF]/90"
                 onClick={handlePrimaryClick}
               >
                 <MessageSquare className="h-5 w-5" />
