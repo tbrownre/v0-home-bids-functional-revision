@@ -15,6 +15,9 @@ const SUGGESTIONS = [
   "window replacement",
 ]
 
+// Longest phrase — used to size the invisible width-reservation ghost
+const LONGEST_PHRASE = "cabinet refinishing"
+
 const TYPE_SPEED = 55
 const DELETE_SPEED = 30
 const PAUSE_AFTER = 1800
@@ -27,7 +30,6 @@ export function TypewriterHeadline() {
   const [cursorVisible, setCursorVisible] = useState(true)
   const prefersReducedMotion = useRef(false)
 
-  // Detect prefers-reduced-motion once on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
       prefersReducedMotion.current = window.matchMedia(
@@ -36,14 +38,12 @@ export function TypewriterHeadline() {
     }
   }, [])
 
-  // Cursor blink
   useEffect(() => {
     if (prefersReducedMotion.current) return
     const id = setInterval(() => setCursorVisible((v) => !v), 530)
     return () => clearInterval(id)
   }, [])
 
-  // Typewriter state machine
   useEffect(() => {
     if (prefersReducedMotion.current) {
       setDisplayed(SUGGESTIONS[0])
@@ -93,55 +93,93 @@ export function TypewriterHeadline() {
 
   return (
     <h1
-      className="text-4xl font-bold leading-[1.25] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]"
+      className="font-bold leading-[1.35] tracking-tight text-foreground"
       aria-label={`"Hey HomeBids, I need help with a ${SUGGESTIONS[index]}."`}
       style={{ fontSize: "28px" }}
     >
+      {/*
+        Strategy: the entire sentence is one continuous inline flow.
+        "with a " and the animated slot are wrapped together in a single
+        whitespace-nowrap span so the browser treats them as one word —
+        they either both fit at the end of a line or both wrap together.
+        This prevents "with" or "a" from ever appearing alone.
+
+        Layout-shift prevention: the animated slot uses position:relative
+        with an invisible ghost (the longest phrase) to always occupy the
+        same width, and the h1 itself has a min-height to reserve vertical
+        space even while the typewriter is empty on first render.
+      */}
       <span aria-hidden="true">
-        {/* Static prefix:
-            - Mobile (block): sits on its own line, ends without "a" so the
-              animated slot can start with "a " on the next line.
-            - sm+ (inline): full sentence flows on one line. */}
-        <span className="block text-foreground sm:inline">
-          &ldquo;Hey HomeBids, I need help with
-        </span>
+        {/* Static opening */}
+        <span className="text-foreground">&ldquo;Hey HomeBids, I need help </span>
 
-        {/* "a " connector — hidden on mobile (animated slot provides it inline),
-            shown as inline text on sm+ to join the prefix */}
-        <span className="text-foreground hidden sm:inline">&nbsp;a&nbsp;</span>
+        {/*
+          "with a [animated]" — all wrapped together as nowrap so the browser
+          never orphans "with" or "a" on their own line. The whole group
+          either fits at the end of the previous line or wraps as one unit.
+        */}
+        <span className="inline-block" style={{ whiteSpace: "nowrap", verticalAlign: "baseline" }}>
+          <span className="text-foreground">with a&nbsp;</span>
 
-        {/* Animated slot — block on mobile (own line), inline on sm+ */}
-        <span className="block sm:inline">
-          {/* "a " only shown on mobile, before the typed phrase */}
-          <span className="text-foreground sm:hidden">a </span>
-
-          <span className="relative inline-block whitespace-nowrap text-[#0A84FF]">
-            {/* Typed text */}
-            {displayed}
-
-            {/* Period — fades in when phrase is complete */}
-            <span style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.1s" }}>
-              .
-            </span>
-
-            {/* Closing quote — fades in with the period */}
-            <span style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.15s" }}>
-              &rdquo;
-            </span>
-
-            {/* Blinking cursor — fades out when phrase is complete */}
+          {/*
+            Animated slot: position:relative container holds both the
+            invisible ghost (which reserves stable width) and the
+            absolute-positioned live text layer on top of it.
+          */}
+          <span
+            className="relative inline-block text-[#0A84FF]"
+            style={{ verticalAlign: "baseline" }}
+          >
+            {/* Ghost — invisible, reserves the width of the longest phrase */}
             <span
+              className="invisible select-none"
               aria-hidden="true"
-              className="inline-block rounded-sm bg-[#0A84FF]"
-              style={{
-                width: "3px",
-                height: "0.82em",
-                marginLeft: "2px",
-                verticalAlign: "text-bottom",
-                opacity: isComplete ? 0 : cursorVisible ? 1 : 0,
-                transition: "opacity 0.1s",
-              }}
-            />
+              style={{ whiteSpace: "nowrap" }}
+            >
+              {LONGEST_PHRASE}.&rdquo;
+            </span>
+
+            {/* Live text — absolutely overlaid on the ghost */}
+            <span
+              className="absolute left-0 top-0 whitespace-nowrap text-[#0A84FF]"
+              style={{ lineHeight: "inherit" }}
+            >
+              {displayed}
+
+              {/* Period — fades in when complete */}
+              <span
+                style={{
+                  opacity: isComplete ? 1 : 0,
+                  transition: "opacity 0.1s",
+                }}
+              >
+                .
+              </span>
+
+              {/* Closing quote — fades in with period */}
+              <span
+                style={{
+                  opacity: isComplete ? 1 : 0,
+                  transition: "opacity 0.15s",
+                }}
+              >
+                &rdquo;
+              </span>
+
+              {/* Blinking cursor */}
+              <span
+                aria-hidden="true"
+                className="inline-block rounded-sm bg-[#0A84FF]"
+                style={{
+                  width: "3px",
+                  height: "0.82em",
+                  marginLeft: "2px",
+                  verticalAlign: "text-bottom",
+                  opacity: isComplete ? 0 : cursorVisible ? 1 : 0,
+                  transition: "opacity 0.1s",
+                }}
+              />
+            </span>
           </span>
         </span>
       </span>
