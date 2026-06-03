@@ -109,35 +109,45 @@ export function TypewriterHeadline() {
         {/* Opening quote */}
         <span className="text-foreground">&ldquo;Hey HomeBids, I need help with&nbsp;</span>
 
-        {/* Animated slot — reserves width of longest phrase so no layout shift */}
+        {/* Animated slot — reserves width of longest phrase + period + closing quote */}
         <span className="relative inline-block">
-          {/* Ghost: invisible longest phrase keeps the slot wide at all times */}
+          {/* Ghost: invisible — holds the maximum width so the layout never shifts */}
           <span
             className="invisible whitespace-nowrap text-[#0A84FF]"
             aria-hidden="true"
           >
             {LONGEST}
+            <span className="text-foreground">.&rdquo;</span>
           </span>
 
-          {/* Actual typed text — absolutely positioned over the ghost */}
+          {/* Actual typed text — absolutely positioned over the ghost, nowrap so
+              the period + closing quote never split off to a new line */}
           <span
             className="absolute inset-y-0 left-0 whitespace-nowrap text-[#0A84FF]"
             style={{ lineHeight: "inherit" }}
           >
             {displayed}
 
-            {/* Period — only visible when the phrase is complete */}
+            {/* Period in blue — fades in when phrase is complete */}
             <span
-              className="text-foreground"
+              className="text-[#0A84FF]"
               style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.1s" }}
             >
               .
             </span>
 
+            {/* Closing quote in foreground color — inline with the blue text group */}
+            <span
+              className="text-foreground"
+              style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.15s" }}
+            >
+              &rdquo;
+            </span>
+
             {/* Blinking cursor — hidden once phrase is complete */}
             <span
               aria-hidden="true"
-              className="inline-block rounded-sm bg-[#0A84FF] align-middle"
+              className="inline-block rounded-sm bg-[#0A84FF]"
               style={{
                 width: "3px",
                 height: "0.82em",
@@ -150,14 +160,6 @@ export function TypewriterHeadline() {
               }}
             />
           </span>
-        </span>
-
-        {/* Closing quote + period spacing — visible only when phrase is complete */}
-        <span
-          className="text-foreground"
-          style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.15s" }}
-        >
-          &rdquo;
         </span>
       </span>
     </h1>
