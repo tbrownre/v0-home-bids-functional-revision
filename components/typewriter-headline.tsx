@@ -95,6 +95,7 @@ export function TypewriterHeadline() {
     <h1
       className="text-4xl font-bold leading-[1.25] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]"
       aria-label={`"Hey HomeBids, I need help with a ${SUGGESTIONS[index]}."`}
+      style={{ fontSize: "28px" }}
     >
       <span aria-hidden="true">
         {/* Static prefix:
