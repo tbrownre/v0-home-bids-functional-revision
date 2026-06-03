@@ -220,11 +220,11 @@ export default function HowItWorksPage() {
                   <div className="space-y-3">
                     {["Post one job", "Receive multiple bids", "Compare contractors", "Message directly", "Hire who you want"].map((item, i) => (
                       <div key={item} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
                           {i + 1}
                         </div>
                         <span className="text-sm font-medium text-foreground">{item}</span>
-                        <CheckCircle2 className="ml-auto h-4 w-4 shrink-0 text-green-600" />
+                        <CheckCircle2 className="ml-auto h-4 w-4 shrink-0 text-primary" />
                       </div>
                     ))}
                   </div>

@@ -177,7 +177,7 @@ export default function SubscribePage() {
                   <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {["Price", "Timeline", "Reviews", "Experience"].map((item) => (
                       <li key={item} className="flex items-center gap-2 text-sm font-medium text-foreground">
-                        <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
                         {item}
                       </li>
                     ))}
@@ -202,7 +202,7 @@ export default function SubscribePage() {
                         "Direct messaging access",
                       ].map((item) => (
                         <li key={item} className="flex items-center gap-2.5 text-sm text-foreground">
-                          <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                          <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
                           {item}
                         </li>
                       ))}
@@ -224,7 +224,7 @@ export default function SubscribePage() {
                     <div className="space-y-2">
                       {["Business info on file", "4.8 ★ Google rating", "12 customer reviews", "3 years on HomeBids"].map((item) => (
                         <div key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" />
+                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary" />
                           {item}
                         </div>
                       ))}
@@ -396,7 +396,7 @@ export default function SubscribePage() {
                       <ul className="space-y-3">
                         {col.items.map((item) => (
                           <li key={item} className="flex items-start gap-2.5 text-sm text-foreground">
-                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                             {item}
                           </li>
                         ))}
@@ -574,7 +574,7 @@ function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan:
         )}
 
         {plan.savingsCallout && (
-          <div className="mt-2 inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+          <div className="mt-2 inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
             {plan.savingsCallout}
           </div>
         )}
@@ -582,7 +582,7 @@ function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan:
         <ul className="mt-6 space-y-3">
           {plan.features.map((feature) => (
             <li key={feature} className="flex items-start gap-2.5 text-sm text-foreground">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               {feature}
             </li>
           ))}
@@ -611,9 +611,9 @@ function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan:
   );
 }
 
-// ── TableCell ─────────────────────────────────────────────────────────────────
+// ── TableCell ─────────────────────────────────────────────────────────────���───
 function TableCell({ value }: { value: boolean | string }) {
-  if (value === true) return <CheckCircle2 className="inline h-4 w-4 text-green-600" />;
+  if (value === true) return <CheckCircle2 className="inline h-4 w-4 text-primary" />;
   if (value === false) return <X className="inline h-4 w-4 text-muted-foreground/40" />;
   return <span className="text-foreground">{value}</span>;
 }
