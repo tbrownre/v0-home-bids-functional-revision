@@ -11,38 +11,60 @@ export const size = {
 };
 export const contentType = "image/png";
 
+// Logo native dimensions: 2100 × 1097
+const LOGO_NATIVE_W = 2100;
+const LOGO_NATIVE_H = 1097;
+
 export default async function Image() {
-  // Read the logo from the public directory at build/request time
   const logoData = await readFile(
     join(process.cwd(), "public/images/homebids-logo-new.png")
   );
   const logoBase64 = `data:image/png;base64,${logoData.toString("base64")}`;
 
-  // Logo is 2100×1097. Fit within a 700px wide safe zone at center.
-  // Height = 700 * (1097 / 2100) ≈ 366px — well within the 630px canvas.
-  const logoWidth = 700;
-  const logoHeight = Math.round(700 * (1097 / 2100));
+  // Scale logo to ~980px wide — approximately 2.5× the previous 700px size.
+  // This keeps it within safe 40px horizontal margins (1200 - 980) / 2 = 110px each side.
+  const logoWidth = 980;
+  const logoHeight = Math.round(logoWidth * (LOGO_NATIVE_H / LOGO_NATIVE_W)); // ≈ 512px
 
   return new ImageResponse(
     (
       <div
         style={{
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           width: "100%",
           height: "100%",
           backgroundColor: "#ffffff",
+          gap: "0px",
         }}
       >
+        {/* Logo — dominant focal point */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={logoBase64}
           width={logoWidth}
           height={logoHeight}
           alt="HomeBids"
-          style={{ objectFit: "contain" }}
+          style={{ objectFit: "contain", display: "block" }}
         />
+
+        {/* Tagline — brand blue, positioned cleanly below the logo */}
+        <p
+          style={{
+            margin: "0",
+            marginTop: "12px",
+            fontSize: "36px",
+            fontWeight: 600,
+            color: "#0A84FF",
+            letterSpacing: "-0.01em",
+            fontFamily: "system-ui, -apple-system, sans-serif",
+            lineHeight: 1,
+          }}
+        >
+          Better bids. Better homes.
+        </p>
       </div>
     ),
     { ...size }
