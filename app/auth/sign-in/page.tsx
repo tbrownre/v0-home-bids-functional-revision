@@ -189,7 +189,7 @@ export default function SignInPage() {
             alt="HomeBids"
             width={702}
             height={176}
-            className="h-[140px] w-auto object-contain"
+            className="h-12 w-auto object-contain"
             priority
             unoptimized
           />

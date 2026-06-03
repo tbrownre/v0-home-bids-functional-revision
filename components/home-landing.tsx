@@ -218,8 +218,8 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
     <div className="w-full font-sans">
 
       {/* ── HERO ─────────────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-6xl px-4 pb-0 pt-6 sm:px-6 lg:px-8 lg:pt-12" style={{ marginTop: "-37px", marginLeft: "-16px", paddingLeft: "35px" }}>
-        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16" style={{ textAlign: "center", paddingBottom: "50px" }}>
+      <section className="mx-auto w-full max-w-6xl px-4 pb-0 pt-8 sm:px-6 lg:px-8 lg:pt-14">
+        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
 
           {/* Left — copy + CTAs */}
           <motion.div
@@ -238,7 +238,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               </span>
             </button>
 
-            <h1 className="text-4xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]" style={{ textAlign: "left", fontSize: "32px" }}>
+            <h1 className="text-4xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]">
               Text us your project.
               <br />
               Contractors bid.
@@ -255,7 +255,6 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               <Button
                 size="lg"
                 className="h-12 gap-2 rounded-full px-6 text-base font-semibold bg-[#0A84FF] text-white hover:bg-[#0A84FF]/90"
-                style={{ marginLeft: "49px" }}
                 onClick={handlePrimaryClick}
               >
                 <MessageSquare className="h-5 w-5" />
@@ -266,7 +265,6 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
                 variant="outline"
                 size="lg"
                 className="h-12 gap-2 rounded-full px-6 text-base"
-                style={{ marginLeft: "99px" }}
                 onClick={handleCopyNumber}
               >
                 {numberCopied ? (
@@ -321,7 +319,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
 
       {/* ── HOW IT WORKS ─────────────────────────────────────── */}
       <section className="border-t border-border bg-card">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8" style={{ paddingTop: "33px" }}>
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
           <p className="mb-10 text-center text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             How it works
           </p>
