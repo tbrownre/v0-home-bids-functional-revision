@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://homebids.ai'}/opengraph-image?v=3`,
+        url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://homebids.ai'}/opengraph-image?v=4`,
         width: 1200,
         height: 630,
         alt: 'HomeBids - Better bids. Better homes.',
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'HomeBids - Better bids. Better homes.',
     description: 'HomeBids connects homeowners with trusted local pros through competitive job bidding. Contractors only pay when they win work.',
-    images: [`${process.env.NEXT_PUBLIC_SITE_URL || 'https://homebids.ai'}/twitter-image?v=3`],
+    images: [`${process.env.NEXT_PUBLIC_SITE_URL || 'https://homebids.ai'}/twitter-image?v=4`],
   },
   icons: {
     icon: [

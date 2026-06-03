@@ -11,7 +11,7 @@ export const size = {
 };
 export const contentType = "image/png";
 
-// Logo native dimensions: 2100 × 1097
+// Logo native dimensions: 2100 × 1097 (aspect ratio ≈ 1.913)
 const LOGO_NATIVE_W = 2100;
 const LOGO_NATIVE_H = 1097;
 
@@ -21,10 +21,11 @@ export default async function Image() {
   );
   const logoBase64 = `data:image/png;base64,${logoData.toString("base64")}`;
 
-  // Scale logo to ~980px wide — approximately 2.5× the previous 700px size.
-  // This keeps it within safe 40px horizontal margins (1200 - 980) / 2 = 110px each side.
-  const logoWidth = 980;
-  const logoHeight = Math.round(logoWidth * (LOGO_NATIVE_H / LOGO_NATIVE_W)); // ≈ 512px
+  // 860px wide keeps 170px of safe horizontal margin each side (1200 - 860) / 2 = 170.
+  // Height ≈ 449px. Stack: 449 logo + 20 gap + 42 tagline = 511px total,
+  // leaving ~60px breathing room top and bottom — safe on all preview surfaces.
+  const logoWidth = 860;
+  const logoHeight = Math.round(logoWidth * (LOGO_NATIVE_H / LOGO_NATIVE_W)); // ≈ 449
 
   return new ImageResponse(
     (
@@ -34,37 +35,43 @@ export default async function Image() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          width: "100%",
-          height: "100%",
+          width: "1200px",
+          height: "630px",
           backgroundColor: "#ffffff",
-          gap: "0px",
         }}
       >
-        {/* Logo — dominant focal point */}
+        {/* Logo — dominant, centered, never cropped */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={logoBase64}
           width={logoWidth}
           height={logoHeight}
           alt="HomeBids"
-          style={{ objectFit: "contain", display: "block" }}
+          style={{
+            objectFit: "contain",
+            display: "block",
+            flexShrink: 0,
+          }}
         />
 
-        {/* Tagline — brand blue, positioned cleanly below the logo */}
-        <p
+        {/* Tagline — brand blue, tight kerning, centered under logo */}
+        <div
           style={{
-            margin: "0",
-            marginTop: "12px",
-            fontSize: "36px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginTop: "20px",
+            fontSize: "40px",
             fontWeight: 600,
             color: "#0A84FF",
-            letterSpacing: "-0.01em",
-            fontFamily: "system-ui, -apple-system, sans-serif",
+            letterSpacing: "-0.02em",
+            fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
             lineHeight: 1,
+            whiteSpace: "nowrap",
           }}
         >
           Better bids. Better homes.
-        </p>
+        </div>
       </div>
     ),
     { ...size }
