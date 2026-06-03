@@ -412,7 +412,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
           <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Button
               size="lg"
-              className="h-13 w-full gap-2 rounded-full px-8 text-base font-semibold sm:w-auto"
+              className="h-13 w-full gap-2 rounded-full px-8 text-base font-semibold sm:w-auto bg-[#0A84FF] hover:bg-[#0A84FF]/90"
               onClick={handlePrimaryClick}
             >
               <MessageSquare className="h-5 w-5" />
