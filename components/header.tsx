@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import React, { useState, useEffect, useRef, useSyncExternalStore } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle } from "lucide-react";
 import { homeownerNavItems, loggedOutNavItems, isNavItemActive } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
   const menuRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const router = useRouter();
 
   const [closing, setClosing] = useState(false);
 
@@ -62,6 +63,16 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
     (document.activeElement as HTMLElement)?.blur();
     // brief pointer-events guard so fast clicks can't reopen
     setTimeout(() => setClosing(false), 150);
+  };
+
+  // Imperative logo navigation — always goes to "/" regardless of auth state.
+  // Using router.push instead of a Link href avoids any query-param conflicts
+  // and ensures the click fires even when the menu is partially open.
+  const handleLogoClick = (e: React.MouseEvent | React.KeyboardEvent) => {
+    if ("key" in e && e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+    closeMenu();
+    router.push("/");
   };
 
   // Close menu on every route change (catches both Link clicks and window.location)
@@ -313,18 +324,33 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
 
         </div>
 
-        {/* Center: Logo — absolutely centered in the header regardless of side column widths */}
-        <Link href="/?home=1" className="flex items-center justify-center" onClick={closeMenu}>
+        {/* Center: Logo — imperative navigation to "/" on click/tap/keyboard */}
+        <button
+          type="button"
+          aria-label="Go to HomeBids homepage"
+          onClick={handleLogoClick}
+          onKeyDown={handleLogoClick}
+          className="flex items-center justify-center cursor-pointer"
+          style={{
+            background: "none",
+            border: "none",
+            padding: "8px",          // generous touch target
+            margin: "-8px",          // cancel padding so layout is unchanged
+            zIndex: 10,              // sit above any overlay fragments
+            position: "relative",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
           <Image
             src="/images/homebids-logo-new.png?v=2"
             alt="HomeBids"
             width={480}
             height={120}
-            className="object-contain"
+            className="object-contain pointer-events-none"
             style={{ height: "clamp(120px, 20vw, 180px)", width: "auto" }}
             priority
           />
-        </Link>
+        </button>
 
         {/* Right: spacer that mirrors the left column so the logo stays mathematically centered */}
         <div className="flex items-center justify-end">
