@@ -20,11 +20,20 @@ export const metadata: Metadata = {
     siteName: 'HomeBids',
     locale: 'en_US',
     type: 'website',
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'HomeBids - Better bids. Better homes.',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'HomeBids - Better bids. Better homes.',
     description: 'HomeBids connects homeowners with trusted local pros through competitive job bidding. Contractors only pay when they win work.',
+    images: ['/twitter-image'],
   },
   icons: {
     icon: [
