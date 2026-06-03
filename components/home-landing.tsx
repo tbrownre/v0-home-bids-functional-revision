@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { getSmsLink, isMobileDevice, isSmsCapableDevice, SMS_PHONE_DISPLAY, SMS_PHONE_NUMBER, SMS_BODY_PREFIX } from "@/lib/sms-config";
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
+import { TypewriterHeadline } from "@/components/typewriter-headline";
 import {
   MessageSquare,
   Copy,
@@ -238,13 +239,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               </span>
             </button>
 
-            <h1 className="text-4xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]">
-              Text us your project.
-              <br />
-              Contractors bid.
-              <br />
-              <span className="text-[#0A84FF]">Compare. Choose. Done.</span>
-            </h1>
+            <TypewriterHeadline />
 
             <p className="mt-6 max-w-lg text-pretty text-lg leading-relaxed text-muted-foreground">
               Start with a quick text. Answer a few simple questions—we&apos;ll bring you multiple bids from contractors ready to win your job.
