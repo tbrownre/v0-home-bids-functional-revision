@@ -185,7 +185,7 @@ export default function SignInPage() {
         </Link>
         <Link href="/" className="flex items-center">
           <Image
-            src="/images/homebids-logo-new.png"
+            src="/images/homebids-logo-new.png?v=2"
             alt="HomeBids"
             width={240}
             height={60}
