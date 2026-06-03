@@ -370,17 +370,17 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
           <div className="grid gap-5 sm:grid-cols-3">
             {[
               {
-                icon: <Users className="h-5 w-5" />,
+                icon: <Users className="h-5 w-5 text-[#0A84FF]" />,
                 title: "100+ matching contractors",
                 body: "We contact every relevant contractor in your area.",
               },
               {
-                icon: <Zap className="h-5 w-5" />,
+                icon: <Zap className="h-5 w-5 text-[#0A84FF]" />,
                 title: "AI handles the heavy lifting",
                 body: "Smart intake means no lengthy forms or follow-up calls.",
               },
               {
-                icon: <ShieldCheck className="h-5 w-5" />,
+                icon: <ShieldCheck className="h-5 w-5 text-[#0A84FF]" />,
                 title: "Real bids. No spam.",
                 body: "Your contact info stays private until you approve a bid.",
               },
