@@ -11,25 +11,31 @@ export const size = {
 };
 export const contentType = "image/png";
 
+// Logo native dimensions: 2100 × 1097
+const LOGO_NATIVE_W = 2100;
+const LOGO_NATIVE_H = 1097;
+
 export default async function Image() {
   const logoData = await readFile(
     join(process.cwd(), "public/images/homebids-logo-new.png")
   );
   const logoBase64 = `data:image/png;base64,${logoData.toString("base64")}`;
 
-  const logoWidth = 700;
-  const logoHeight = Math.round(700 * (1097 / 2100));
+  const logoWidth = 980;
+  const logoHeight = Math.round(logoWidth * (LOGO_NATIVE_H / LOGO_NATIVE_W));
 
   return new ImageResponse(
     (
       <div
         style={{
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           width: "100%",
           height: "100%",
           backgroundColor: "#ffffff",
+          gap: "0px",
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -38,8 +44,23 @@ export default async function Image() {
           width={logoWidth}
           height={logoHeight}
           alt="HomeBids"
-          style={{ objectFit: "contain" }}
+          style={{ objectFit: "contain", display: "block" }}
         />
+
+        <p
+          style={{
+            margin: "0",
+            marginTop: "12px",
+            fontSize: "36px",
+            fontWeight: 600,
+            color: "#0A84FF",
+            letterSpacing: "-0.01em",
+            fontFamily: "system-ui, -apple-system, sans-serif",
+            lineHeight: 1,
+          }}
+        >
+          Better bids. Better homes.
+        </p>
       </div>
     ),
     { ...size }
