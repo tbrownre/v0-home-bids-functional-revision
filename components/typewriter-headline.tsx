@@ -102,7 +102,7 @@ export function TypewriterHeadline() {
     <h1
       aria-label={`"Hey HomeBids, I need help with a ${SUGGESTIONS[index]}."`}
       style={{
-        fontSize: "28px",
+        fontSize: "21px",
         fontWeight: 700,
         lineHeight: 1.35,
         letterSpacing: "-0.01em",
