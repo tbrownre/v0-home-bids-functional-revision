@@ -51,7 +51,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-background">
+    <html lang="en" className="bg-background overflow-x-hidden">
         <body className={`${redHatDisplay.className} antialiased overflow-x-hidden`}>
         <ScrollRestoration />
         {children}

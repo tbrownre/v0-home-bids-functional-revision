@@ -175,7 +175,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
 
   return (
     <header className="relative shrink-0 border-b border-border bg-background">
-      <div className="mx-auto grid grid-cols-[1fr_auto_1fr] items-center px-4 py-0 md:px-6" style={{ marginTop: "-35px", marginBottom: "-34px" }}>
+      <div className="mx-auto grid grid-cols-[1fr_auto_1fr] items-center px-4 py-2 md:px-6">
 
         {/* Left: menu button + optional back link */}
         <div className="flex items-center gap-1">
@@ -203,7 +203,6 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
               ref={panelRef}
               role="menu"
               className="absolute left-3 top-full z-50 w-56 rounded-xl border border-border bg-background p-1.5 shadow-lg"
-              style={{ marginTop: "35px" }}
             >
               {/* Nav items — logged out */}
               {!isLoggedIn && (

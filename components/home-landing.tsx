@@ -246,10 +246,10 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
             </p>
 
             {/* Primary + Secondary CTAs */}
-            <div className="mt-5 flex flex-wrap items-center gap-3">
+            <div className="mt-5 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <Button
                 size="lg"
-                className="h-12 gap-2 rounded-full px-6 text-base font-semibold bg-[#0A84FF] text-white hover:bg-[#0A84FF]/90"
+                className="h-12 gap-2 rounded-full px-6 text-base font-semibold bg-[#0A84FF] text-white hover:bg-[#0A84FF]/90 sm:w-auto"
                 onClick={handlePrimaryClick}
               >
                 <MessageSquare className="h-5 w-5" />
@@ -259,7 +259,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               <Button
                 variant="outline"
                 size="lg"
-                className="h-12 gap-2 rounded-full px-6 text-base"
+                className="h-12 gap-2 rounded-full px-6 text-base sm:w-auto"
                 onClick={handleCopyNumber}
               >
                 {numberCopied ? (
@@ -404,10 +404,10 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
             No apps. Just text us.
           </p>
 
-          <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+          <div className="mt-8 flex flex-col items-stretch gap-4 sm:flex-row sm:justify-center">
             <Button
               size="lg"
-              className="h-13 w-full gap-2 rounded-full px-8 text-base font-semibold sm:w-auto bg-[#0A84FF] hover:bg-[#0A84FF]/90"
+              className="h-12 w-full gap-2 rounded-full px-8 text-base font-semibold sm:w-auto bg-[#0A84FF] hover:bg-[#0A84FF]/90"
               onClick={handlePrimaryClick}
             >
               <MessageSquare className="h-5 w-5" />
@@ -416,7 +416,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
             <Button
               variant="ghost"
               size="lg"
-              className="h-13 w-full gap-1 rounded-full px-6 text-base sm:w-auto"
+              className="h-12 w-full gap-1 rounded-full px-6 text-base sm:w-auto"
               onClick={onOpenForm}
             >
               Or fill out a form instead

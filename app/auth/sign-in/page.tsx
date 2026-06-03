@@ -178,7 +178,7 @@ export default function SignInPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-2">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <Link href="/" className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
           Back
@@ -189,7 +189,7 @@ export default function SignInPage() {
             alt="HomeBids"
             width={240}
             height={60}
-            className="h-[120px] w-auto object-contain"
+            className="h-[56px] w-auto object-contain"
             priority
           />
         </Link>

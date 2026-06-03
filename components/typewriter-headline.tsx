@@ -15,9 +15,6 @@ const SUGGESTIONS = [
   "window replacement",
 ]
 
-// Longest phrase — drives the min-width reservation (in ch units)
-const LONGEST = "bathroom renovation"
-
 const TYPE_SPEED = 55
 const DELETE_SPEED = 30
 const PAUSE_AFTER = 1800
@@ -99,60 +96,52 @@ export function TypewriterHeadline() {
       className="text-4xl font-bold leading-[1.25] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]"
       aria-label={`"Hey HomeBids, I need help with a ${SUGGESTIONS[index]}."`}
     >
-      {/*
-        Everything sits in one continuous inline flow — static prefix and
-        animated slot share the same text line. The slot uses `inline-block`
-        with a `min-width` derived from the longest phrase so the container
-        never collapses, but stays narrow enough to fit beside the prefix on
-        most viewports. When it truly can't fit, the browser wraps the whole
-        slot to the next line as a single unit (no mid-animation breaks).
-      */}
-      <span aria-hidden="true" className="inline">
-        {/* Static opening — ends with a non-breaking space before the slot */}
-        <span className="text-foreground">&ldquo;Hey HomeBids, I need help with a&nbsp;</span>
+      <span aria-hidden="true">
+        {/* Static prefix:
+            - Mobile (block): sits on its own line, ends without "a" so the
+              animated slot can start with "a " on the next line.
+            - sm+ (inline): full sentence flows on one line. */}
+        <span className="block text-foreground sm:inline">
+          &ldquo;Hey HomeBids, I need help with
+        </span>
 
-        {/*
-          Animated slot:
-          - `inline-block` so it acts as an atomic word unit for wrapping
-          - `min-width` in ch units reserves room for the longest phrase
-          - `vertical-align: baseline` keeps it on the same text baseline
-          - `position: relative` lets the absolute text layer sit inside it
-          - `white-space: nowrap` prevents the slot itself from wrapping internally
-        */}
-        <span
-          className="relative inline-block whitespace-nowrap align-baseline text-[#0A84FF]"
-          style={{ minWidth: `${LONGEST.length + 2}ch` }}
-        >
-          {/* Typed text */}
-          {displayed}
+        {/* "a " connector — hidden on mobile (animated slot provides it inline),
+            shown as inline text on sm+ to join the prefix */}
+        <span className="text-foreground hidden sm:inline">&nbsp;a&nbsp;</span>
 
-          {/* Period — fades in when phrase is complete, stays blue */}
-          <span
-            style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.1s" }}
-          >
-            .
+        {/* Animated slot — block on mobile (own line), inline on sm+ */}
+        <span className="block sm:inline">
+          {/* "a " only shown on mobile, before the typed phrase */}
+          <span className="text-foreground sm:hidden">a </span>
+
+          <span className="relative inline-block whitespace-nowrap text-[#0A84FF]">
+            {/* Typed text */}
+            {displayed}
+
+            {/* Period — fades in when phrase is complete */}
+            <span style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.1s" }}>
+              .
+            </span>
+
+            {/* Closing quote — fades in with the period */}
+            <span style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.15s" }}>
+              &rdquo;
+            </span>
+
+            {/* Blinking cursor — fades out when phrase is complete */}
+            <span
+              aria-hidden="true"
+              className="inline-block rounded-sm bg-[#0A84FF]"
+              style={{
+                width: "3px",
+                height: "0.82em",
+                marginLeft: "2px",
+                verticalAlign: "text-bottom",
+                opacity: isComplete ? 0 : cursorVisible ? 1 : 0,
+                transition: "opacity 0.1s",
+              }}
+            />
           </span>
-
-          {/* Closing quote — fades in with the period */}
-          <span
-            style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.15s" }}
-          >
-            &rdquo;
-          </span>
-
-          {/* Blinking cursor — fades out when phrase is complete */}
-          <span
-            aria-hidden="true"
-            className="inline-block rounded-sm bg-[#0A84FF]"
-            style={{
-              width: "3px",
-              height: "0.82em",
-              marginLeft: "2px",
-              verticalAlign: "text-bottom",
-              opacity: isComplete ? 0 : cursorVisible ? 1 : 0,
-              transition: "opacity 0.1s",
-            }}
-          />
         </span>
       </span>
     </h1>
