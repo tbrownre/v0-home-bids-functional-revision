@@ -97,7 +97,7 @@ export function TypewriterHeadline() {
   return (
     <h1
       className="text-4xl font-bold leading-[1.25] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]"
-      aria-label={`"Hey HomeBids, I need help with ${SUGGESTIONS[index]}."`}
+      aria-label={`"Hey HomeBids, I need help with a ${SUGGESTIONS[index]}."`}
     >
       {/*
         The entire sentence sits on one inline flow so static text, animated
@@ -107,7 +107,7 @@ export function TypewriterHeadline() {
       */}
       <span aria-hidden="true">
         {/* Opening quote */}
-        <span className="text-foreground">&ldquo;Hey HomeBids, I need help with&nbsp;</span>
+        <span className="text-foreground">&ldquo;Hey HomeBids, I need help with a&nbsp;</span>
 
         {/* Animated slot — reserves width of longest phrase + period + closing quote */}
         <span className="relative inline-block">
@@ -117,7 +117,7 @@ export function TypewriterHeadline() {
             aria-hidden="true"
           >
             {LONGEST}
-            <span className="text-foreground">.&rdquo;</span>
+            <span className="text-[#0A84FF]">.&rdquo;</span>
           </span>
 
           {/* Actual typed text — absolutely positioned over the ghost, nowrap so
@@ -136,9 +136,9 @@ export function TypewriterHeadline() {
               .
             </span>
 
-            {/* Closing quote in foreground color — inline with the blue text group */}
+            {/* Closing quote in blue — inline with the animated segment */}
             <span
-              className="text-foreground"
+              className="text-[#0A84FF]"
               style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.15s" }}
             >
               &rdquo;
