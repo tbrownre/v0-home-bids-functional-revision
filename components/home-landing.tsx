@@ -238,7 +238,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               </span>
             </button>
 
-            <h1 className="text-4xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]">
+            <h1 className="text-4xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]" style={{ textAlign: "left", fontSize: "32px" }}>
               Text us your project.
               <br />
               Contractors bid.
@@ -255,6 +255,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               <Button
                 size="lg"
                 className="h-12 gap-2 rounded-full px-6 text-base font-semibold bg-[#0A84FF] text-white hover:bg-[#0A84FF]/90"
+                style={{ marginLeft: "49px" }}
                 onClick={handlePrimaryClick}
               >
                 <MessageSquare className="h-5 w-5" />
@@ -265,6 +266,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
                 variant="outline"
                 size="lg"
                 className="h-12 gap-2 rounded-full px-6 text-base"
+                style={{ marginLeft: "99px" }}
                 onClick={handleCopyNumber}
               >
                 {numberCopied ? (
