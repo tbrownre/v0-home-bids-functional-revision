@@ -313,7 +313,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
 
         </div>
 
-        {/* Center: Logo — always routes to public home, never to a dashboard */}
+        {/* Center: Logo — absolutely centered in the header regardless of side column widths */}
         <Link href="/?home=1" className="flex items-center justify-center" onClick={closeMenu}>
           <Image
             src="/images/homebids-logo-new.png?v=2"
@@ -326,7 +326,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
           />
         </Link>
 
-        {/* Right: spacer that mirrors the left column to keep logo truly centered */}
+        {/* Right: spacer that mirrors the left column so the logo stays mathematically centered */}
         <div className="flex items-center justify-end">
           {backHref && (
             <Link
