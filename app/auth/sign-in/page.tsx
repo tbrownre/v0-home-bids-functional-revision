@@ -187,11 +187,10 @@ export default function SignInPage() {
           <Image
             src="/images/homebids-logo-new.png"
             alt="HomeBids"
-            width={702}
-            height={176}
-            className="h-[120px] w-auto object-contain"
+            width={240}
+            height={60}
+            className="h-10 w-auto object-contain"
             priority
-            unoptimized
           />
         </Link>
         <div className="w-12" />

@@ -175,7 +175,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
 
   return (
     <header className="shrink-0 border-b border-border bg-background">
-      <div className="mx-auto grid grid-cols-[1fr_auto_1fr] items-center px-4 py-1 md:px-6" style={{ marginTop: "-37px", marginBottom: "-41px" }}>
+      <div className="relative mx-auto grid grid-cols-[1fr_auto_1fr] items-center px-4 py-2 md:px-6">
 
         {/* Left: menu button + optional back link */}
         <div className="flex items-center gap-1">
@@ -321,7 +321,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
             width={480}
             height={120}
             className="object-contain"
-            style={{ height: "clamp(120px, 20vw, 180px)", width: "auto" }}
+            style={{ height: "clamp(40px, 6vw, 56px)", width: "auto" }}
             priority
           />
         </Link>
