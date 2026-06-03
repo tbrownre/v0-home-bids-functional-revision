@@ -219,7 +219,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
     <div className="w-full font-sans">
 
       {/* ── HERO ─────────────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-6xl px-4 pb-0 pt-8 sm:px-6 lg:px-8 lg:pt-14">
+      <section className="mx-auto w-full max-w-6xl px-4 pb-0 pt-8 sm:px-6 lg:px-8 lg:pt-14" style={{ boxSizing: "border-box" }}>
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16" style={{ marginTop: "-17px" }}>
 
           {/* Left — copy + CTAs */}
@@ -227,6 +227,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            style={{ minWidth: 0 }}
           >
             {/* Badge — clickable to start SMS */}
             <button

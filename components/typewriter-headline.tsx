@@ -15,9 +15,6 @@ const SUGGESTIONS = [
   "window replacement",
 ]
 
-// Longest phrase — used to size the invisible width-reservation ghost
-const LONGEST_PHRASE = "cabinet refinishing"
-
 const TYPE_SPEED = 55
 const DELETE_SPEED = 30
 const PAUSE_AFTER = 1800
@@ -38,48 +35,47 @@ export function TypewriterHeadline() {
     }
   }, [])
 
+  // Cursor blink
   useEffect(() => {
     if (prefersReducedMotion.current) return
     const id = setInterval(() => setCursorVisible((v) => !v), 530)
     return () => clearInterval(id)
   }, [])
 
+  // State machine
   useEffect(() => {
     if (prefersReducedMotion.current) {
       setDisplayed(SUGGESTIONS[0])
       setPhase("pausing")
       return
     }
-
     const current = SUGGESTIONS[index]
-
     if (phase === "typing") {
       if (displayed.length < current.length) {
-        const id = setTimeout(() => {
-          setDisplayed(current.slice(0, displayed.length + 1))
-        }, TYPE_SPEED)
+        const id = setTimeout(
+          () => setDisplayed(current.slice(0, displayed.length + 1)),
+          TYPE_SPEED
+        )
         return () => clearTimeout(id)
       } else {
         setPhase("pausing")
       }
     }
-
     if (phase === "pausing") {
       const id = setTimeout(() => setPhase("deleting"), PAUSE_AFTER)
       return () => clearTimeout(id)
     }
-
     if (phase === "deleting") {
       if (displayed.length > 0) {
-        const id = setTimeout(() => {
-          setDisplayed((d) => d.slice(0, -1))
-        }, DELETE_SPEED)
+        const id = setTimeout(
+          () => setDisplayed((d) => d.slice(0, -1)),
+          DELETE_SPEED
+        )
         return () => clearTimeout(id)
       } else {
         setPhase("waiting")
       }
     }
-
     if (phase === "waiting") {
       const id = setTimeout(() => {
         setIndex((i) => (i + 1) % SUGGESTIONS.length)
@@ -92,95 +88,78 @@ export function TypewriterHeadline() {
   const isComplete = phase === "pausing"
 
   return (
-    <h1
-      className="font-bold leading-[1.35] tracking-tight text-foreground"
-      aria-label={`"Hey HomeBids, I need help with a ${SUGGESTIONS[index]}."`}
-      style={{ fontSize: "28px" }}
-    >
-      {/*
-        Strategy: the entire sentence is one continuous inline flow.
-        "with a " and the animated slot are wrapped together in a single
-        whitespace-nowrap span so the browser treats them as one word —
-        they either both fit at the end of a line or both wrap together.
-        This prevents "with" or "a" from ever appearing alone.
+    /*
+      The h1 is one flat inline-flow sentence. No block wrappers, no forced
+      line breaks, no absolute positioning, no fixed widths.
 
-        Layout-shift prevention: the animated slot uses position:relative
-        with an invisible ghost (the longest phrase) to always occupy the
-        same width, and the h1 itself has a min-height to reserve vertical
-        space even while the typewriter is empty on first render.
-      */}
+      min-height reserves two lines of text at 28px × 1.35 line-height so the
+      layout never jumps while the typewriter is empty between rotations.
+
+      overflow-wrap: break-word is the last-resort safety net: if an animated
+      word is somehow wider than the viewport, the browser breaks it rather
+      than scrolling horizontally.
+    */
+    <h1
+      aria-label={`"Hey HomeBids, I need help with a ${SUGGESTIONS[index]}."`}
+      style={{
+        fontSize: "28px",
+        fontWeight: 700,
+        lineHeight: 1.35,
+        letterSpacing: "-0.01em",
+        overflowWrap: "break-word",
+        wordBreak: "break-word",
+        minHeight: "calc(28px * 1.35 * 2)",
+      }}
+    >
       <span aria-hidden="true">
-        {/* Static opening */}
-        <span className="text-foreground">&ldquo;Hey HomeBids, I need help </span>
+        {/* Static prefix — plain inline text, wraps naturally */}
+        <span style={{ color: "inherit" }}>&ldquo;Hey HomeBids, I need help with a </span>
 
         {/*
-          "with a [animated]" — all wrapped together as nowrap so the browser
-          never orphans "with" or "a" on their own line. The whole group
-          either fits at the end of the previous line or wraps as one unit.
+          Animated phrase inline — no wrapper element changes display mode.
+          The cursor is a tiny inline-block that does not widen the text line.
+          Period and closing quote fade in when the phrase is complete.
         */}
-        <span className="inline-block" style={{ whiteSpace: "nowrap", verticalAlign: "baseline" }}>
-          <span className="text-foreground">with a&nbsp;</span>
+        <span style={{ color: "#0A84FF" }}>
+          {displayed}
 
-          {/*
-            Animated slot: position:relative container holds both the
-            invisible ghost (which reserves stable width) and the
-            absolute-positioned live text layer on top of it.
-          */}
+          {/* Period */}
           <span
-            className="relative inline-block text-[#0A84FF]"
-            style={{ verticalAlign: "baseline" }}
+            style={{
+              opacity: isComplete ? 1 : 0,
+              transition: "opacity 0.1s",
+            }}
           >
-            {/* Ghost — invisible, reserves the width of the longest phrase */}
-            <span
-              className="invisible select-none"
-              aria-hidden="true"
-              style={{ whiteSpace: "nowrap" }}
-            >
-              {LONGEST_PHRASE}.&rdquo;
-            </span>
-
-            {/* Live text — absolutely overlaid on the ghost */}
-            <span
-              className="absolute left-0 top-0 whitespace-nowrap text-[#0A84FF]"
-              style={{ lineHeight: "inherit" }}
-            >
-              {displayed}
-
-              {/* Period — fades in when complete */}
-              <span
-                style={{
-                  opacity: isComplete ? 1 : 0,
-                  transition: "opacity 0.1s",
-                }}
-              >
-                .
-              </span>
-
-              {/* Closing quote — fades in with period */}
-              <span
-                style={{
-                  opacity: isComplete ? 1 : 0,
-                  transition: "opacity 0.15s",
-                }}
-              >
-                &rdquo;
-              </span>
-
-              {/* Blinking cursor */}
-              <span
-                aria-hidden="true"
-                className="inline-block rounded-sm bg-[#0A84FF]"
-                style={{
-                  width: "3px",
-                  height: "0.82em",
-                  marginLeft: "2px",
-                  verticalAlign: "text-bottom",
-                  opacity: isComplete ? 0 : cursorVisible ? 1 : 0,
-                  transition: "opacity 0.1s",
-                }}
-              />
-            </span>
+            .
           </span>
+
+          {/* Closing quote */}
+          <span
+            style={{
+              opacity: isComplete ? 1 : 0,
+              transition: "opacity 0.15s",
+            }}
+          >
+            &rdquo;
+          </span>
+
+          {/* Cursor — inline-block at text-bottom, sized to em so it scales */}
+          {!isComplete && (
+            <span
+              aria-hidden="true"
+              style={{
+                display: "inline-block",
+                width: "2px",
+                height: "0.8em",
+                marginLeft: "2px",
+                verticalAlign: "text-bottom",
+                borderRadius: "1px",
+                backgroundColor: "#0A84FF",
+                opacity: cursorVisible ? 1 : 0,
+                transition: "opacity 0.1s",
+              }}
+            />
+          )}
         </span>
       </span>
     </h1>
