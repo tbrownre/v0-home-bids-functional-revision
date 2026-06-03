@@ -218,7 +218,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
     <div className="w-full font-sans">
 
       {/* ── HERO ─────────────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-6xl px-4 pb-0 pt-6 sm:px-6 lg:px-8 lg:pt-12" style={{ marginTop: "-37px", marginLeft: "-16px", paddingLeft: "35px" }}>
+      <section className="mx-auto w-full max-w-6xl px-4 pb-0 pt-8 sm:px-6 lg:px-8 lg:pt-14">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
 
           {/* Left — copy + CTAs */}
@@ -238,7 +238,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               </span>
             </button>
 
-            <h1 className="text-4xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]">
+            <h1 className="text-4xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]" style={{ fontSize: "24px" }}>
               Text us your project.
               <br />
               Contractors bid.
