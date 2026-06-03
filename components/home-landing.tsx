@@ -219,7 +219,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
 
       {/* ── HERO ─────────────────────────────────────────────── */}
       <section className="mx-auto w-full max-w-6xl px-4 pb-0 pt-6 sm:px-6 lg:px-8 lg:pt-12" style={{ marginTop: "-37px", marginLeft: "-16px", paddingLeft: "35px" }}>
-        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16" style={{ textAlign: "center", paddingBottom: "50px" }}>
 
           {/* Left — copy + CTAs */}
           <motion.div
@@ -319,7 +319,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
 
       {/* ── HOW IT WORKS ─────────────────────────────────────── */}
       <section className="border-t border-border bg-card">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8" style={{ paddingTop: "33px" }}>
           <p className="mb-10 text-center text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             How it works
           </p>
