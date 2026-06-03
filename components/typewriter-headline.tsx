@@ -7,18 +7,21 @@ const SUGGESTIONS = [
   "roof repair",
   "bathroom renovation",
   "AC replacement",
-  "house painting",
   "flooring install",
+  "house painting",
   "water heater leak",
   "pool resurfacing",
   "cabinet refinishing",
   "window replacement",
 ]
 
-const TYPE_SPEED = 55      // ms per character typed
-const DELETE_SPEED = 30    // ms per character deleted
-const PAUSE_AFTER = 1800   // ms to hold the complete phrase
-const PAUSE_BEFORE = 300   // ms before starting to type next
+// The longest phrase — used to reserve stable width so the layout never shifts
+const LONGEST = "bathroom renovation"
+
+const TYPE_SPEED = 55
+const DELETE_SPEED = 30
+const PAUSE_AFTER = 1800
+const PAUSE_BEFORE = 300
 
 export function TypewriterHeadline() {
   const [displayed, setDisplayed] = useState("")
@@ -36,8 +39,9 @@ export function TypewriterHeadline() {
     }
   }, [])
 
-  // Cursor blink
+  // Cursor blink — only runs when not reduced-motion
   useEffect(() => {
+    if (prefersReducedMotion.current) return
     const id = setInterval(() => setCursorVisible((v) => !v), 530)
     return () => clearInterval(id)
   }, [])
@@ -46,6 +50,7 @@ export function TypewriterHeadline() {
   useEffect(() => {
     if (prefersReducedMotion.current) {
       setDisplayed(SUGGESTIONS[0])
+      setPhase("pausing")
       return
     }
 
@@ -87,27 +92,73 @@ export function TypewriterHeadline() {
     }
   }, [displayed, phase, index])
 
+  const isComplete = phase === "pausing"
+
   return (
-    <h1 className="text-4xl font-bold leading-[1.3] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]">
-      <span className="block text-muted-foreground text-2xl font-semibold tracking-normal sm:text-3xl lg:text-4xl mb-2">
-        Hey HomeBids, I need help with
-      </span>
-      {/* Fixed-height container prevents layout shift */}
-      <span
-        className="block min-h-[1.3em]"
-        aria-label={`Hey HomeBids, I need help with ${SUGGESTIONS[index]}`}
-        aria-live="polite"
-      >
-        <span className="text-[#0A84FF]">{displayed}</span>
+    <h1
+      className="text-4xl font-bold leading-[1.25] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]"
+      aria-label={`"Hey HomeBids, I need help with ${SUGGESTIONS[index]}."`}
+    >
+      {/*
+        The entire sentence sits on one inline flow so static text, animated
+        text, period, and closing quote all share the same baseline.
+        `inline-block` on the animated slot with a fixed invisible "ghost"
+        ensures the container never collapses or jumps.
+      */}
+      <span aria-hidden="true">
+        {/* Opening quote */}
+        <span className="text-foreground">&ldquo;Hey HomeBids, I need help with&nbsp;</span>
+
+        {/* Animated slot — reserves width of longest phrase so no layout shift */}
+        <span className="relative inline-block">
+          {/* Ghost: invisible longest phrase keeps the slot wide at all times */}
+          <span
+            className="invisible whitespace-nowrap text-[#0A84FF]"
+            aria-hidden="true"
+          >
+            {LONGEST}
+          </span>
+
+          {/* Actual typed text — absolutely positioned over the ghost */}
+          <span
+            className="absolute inset-y-0 left-0 whitespace-nowrap text-[#0A84FF]"
+            style={{ lineHeight: "inherit" }}
+          >
+            {displayed}
+
+            {/* Period — only visible when the phrase is complete */}
+            <span
+              className="text-foreground"
+              style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.1s" }}
+            >
+              .
+            </span>
+
+            {/* Blinking cursor — hidden once phrase is complete */}
+            <span
+              aria-hidden="true"
+              className="inline-block rounded-sm bg-[#0A84FF] align-middle"
+              style={{
+                width: "3px",
+                height: "0.82em",
+                marginLeft: "2px",
+                verticalAlign: "baseline",
+                position: "relative",
+                top: "-0.05em",
+                opacity: isComplete ? 0 : cursorVisible ? 1 : 0,
+                transition: "opacity 0.1s",
+              }}
+            />
+          </span>
+        </span>
+
+        {/* Closing quote + period spacing — visible only when phrase is complete */}
         <span
-          aria-hidden="true"
-          className="inline-block w-[3px] translate-y-[1px] rounded-sm bg-[#0A84FF] align-middle"
-          style={{
-            height: "0.85em",
-            opacity: cursorVisible ? 1 : 0,
-            transition: "opacity 0.1s",
-          }}
-        />
+          className="text-foreground"
+          style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.15s" }}
+        >
+          &rdquo;
+        </span>
       </span>
     </h1>
   )
