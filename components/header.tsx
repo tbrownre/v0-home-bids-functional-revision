@@ -313,21 +313,8 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
 
         </div>
 
-        {/* Center: spacer + optional back link (mirrors right column width for balance) */}
-        <div className="flex items-center justify-center">
-          {backHref && (
-            <Link
-              href={backHref}
-              className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">{backLabel || "Back"}</span>
-            </Link>
-          )}
-        </div>
-
-        {/* Right: Logo — always routes to public home, never to a dashboard */}
-        <Link href="/?home=1" className="flex items-center justify-end" onClick={closeMenu}>
+        {/* Center: Logo — absolutely centered in the header regardless of side column widths */}
+        <Link href="/?home=1" className="flex items-center justify-center" onClick={closeMenu}>
           <Image
             src="/images/homebids-logo-new.png?v=2"
             alt="HomeBids"
@@ -338,6 +325,19 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
             priority
           />
         </Link>
+
+        {/* Right: spacer that mirrors the left column so the logo stays mathematically centered */}
+        <div className="flex items-center justify-end">
+          {backHref && (
+            <Link
+              href={backHref}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">{backLabel || "Back"}</span>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Sign In Modal */}

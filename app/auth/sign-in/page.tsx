@@ -177,14 +177,17 @@ export default function SignInPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+      {/* Top bar — logo is absolutely centered so the back link never pushes it off */}
+      <div className="relative flex items-center border-b border-border px-4 py-3">
         <Link href="/" className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
           Back
         </Link>
-        <div className="flex-1" />
-        <Link href="/" className="flex items-center">
+        <Link
+          href="/"
+          className="absolute left-1/2 -translate-x-1/2 flex items-center"
+          style={{ pointerEvents: "auto" }}
+        >
           <Image
             src="/images/homebids-logo-new.png?v=2"
             alt="HomeBids"
