@@ -15,10 +15,10 @@ const SUGGESTIONS = [
   "window replacement",
 ]
 
-const TYPE_SPEED = 55
-const DELETE_SPEED = 30
-const PAUSE_AFTER = 1800
-const PAUSE_BEFORE = 300
+const TYPE_SPEED = 105
+const DELETE_SPEED = 60
+const PAUSE_AFTER = 1600
+const PAUSE_BEFORE = 400
 
 export function TypewriterHeadline() {
   const [displayed, setDisplayed] = useState("")
@@ -38,7 +38,7 @@ export function TypewriterHeadline() {
   // Cursor blink
   useEffect(() => {
     if (prefersReducedMotion.current) return
-    const id = setInterval(() => setCursorVisible((v) => !v), 530)
+    const id = setInterval(() => setCursorVisible((v) => !v), 1050)
     return () => clearInterval(id)
   }, [])
 
@@ -122,46 +122,52 @@ export function TypewriterHeadline() {
           The cursor is a tiny inline-block that does not widen the text line.
           Period and closing quote fade in when the phrase is complete.
         */}
-        <span style={{ color: "#0A84FF" }}>
+        <span style={{ color: "#0A84FF", whiteSpace: "nowrap" }}>
           {displayed}
 
-          {/* Period */}
+          {/*
+            Cursor, period, and closing quote are always in the DOM.
+            Only opacity changes — no mount/unmount, no layout shift.
+            All three are inline so they never push onto a new line.
+            whiteSpace: nowrap on the parent keeps this entire segment atomic.
+          */}
+
+          {/* Thin vertical bar cursor — inline-block, em-relative sizing */}
+          <span
+            aria-hidden="true"
+            style={{
+              display: "inline-block",
+              width: "1.5px",
+              height: "0.75em",
+              marginLeft: "1.5px",
+              verticalAlign: "text-bottom",
+              borderRadius: "1px",
+              backgroundColor: "#0A84FF",
+              opacity: isComplete ? 0 : cursorVisible ? 1 : 0,
+              // Only animate opacity — never width, margin, or position
+              transition: "opacity 0.25s ease",
+            }}
+          />
+
+          {/* Period fades in when phrase is complete */}
           <span
             style={{
               opacity: isComplete ? 1 : 0,
-              transition: "opacity 0.1s",
+              transition: "opacity 0.1s ease",
             }}
           >
             .
           </span>
 
-          {/* Closing quote */}
+          {/* Closing quote fades in with period */}
           <span
             style={{
               opacity: isComplete ? 1 : 0,
-              transition: "opacity 0.15s",
+              transition: "opacity 0.15s ease",
             }}
           >
             &rdquo;
           </span>
-
-          {/* Cursor — inline-block at text-bottom, sized to em so it scales */}
-          {!isComplete && (
-            <span
-              aria-hidden="true"
-              style={{
-                display: "inline-block",
-                width: "2px",
-                height: "0.8em",
-                marginLeft: "2px",
-                verticalAlign: "text-bottom",
-                borderRadius: "1px",
-                backgroundColor: "#0A84FF",
-                opacity: cursorVisible ? 1 : 0,
-                transition: "opacity 0.1s",
-              }}
-            />
-          )}
         </span>
       </span>
     </h1>
