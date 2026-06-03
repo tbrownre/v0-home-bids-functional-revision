@@ -102,18 +102,20 @@ export function TypewriterHeadline() {
     <h1
       aria-label={`"Hey HomeBids, I need help with a ${SUGGESTIONS[index]}."`}
       style={{
-        fontSize: "21px",
+        fontSize: "23px",
         fontWeight: 700,
         lineHeight: 1.35,
         letterSpacing: "-0.01em",
         overflowWrap: "break-word",
         wordBreak: "break-word",
         minHeight: "calc(28px * 1.35 * 2)",
+        textAlign: "center",
+        marginTop: "19px",
       }}
     >
       <span aria-hidden="true">
         {/* Static prefix — plain inline text, wraps naturally */}
-        <span style={{ color: "inherit" }}>&ldquo;Hey HomeBids, I need help with a </span>
+        <span style={{ color: "inherit", textAlign: "center" }}>&ldquo;Hey HomeBids, I need help with a </span>
 
         {/*
           Animated phrase inline — no wrapper element changes display mode.

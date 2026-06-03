@@ -227,12 +227,13 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-            style={{ minWidth: 0 }}
+            style={{ minWidth: 0, textAlign: "center" }}
           >
             {/* Badge — clickable to start SMS */}
             <button
               onClick={handlePrimaryClick}
               className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 transition-all hover:border-primary hover:bg-primary/5 active:scale-95"
+              style={{ marginTop: "9px" }}
             >
               <Zap className="h-3.5 w-3.5 text-foreground" />
               <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
@@ -242,7 +243,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
 
             <TypewriterHeadline />
 
-            <p className="max-w-lg text-pretty leading-relaxed text-muted-foreground" style={{ fontSize: "13px", marginTop: "0px" }}>
+            <p className="max-w-lg text-pretty leading-relaxed text-muted-foreground" style={{ fontSize: "18px", marginTop: "31px", textAlign: "center" }}>
               Start with a quick text. Answer a few simple questions—we&apos;ll bring you multiple bids from contractors ready to win your job.
             </p>
 
