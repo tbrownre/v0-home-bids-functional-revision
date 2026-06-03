@@ -321,7 +321,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
             width={480}
             height={120}
             className="object-contain"
-            style={{ height: "clamp(48px, 8vw, 72px)", width: "auto" }}
+            style={{ height: "clamp(120px, 20vw, 180px)", width: "auto" }}
             priority
           />
         </Link>
