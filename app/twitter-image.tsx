@@ -11,7 +11,7 @@ export const size = {
 };
 export const contentType = "image/png";
 
-// Logo native dimensions: 2100 × 1097
+// Logo native dimensions: 2100 × 1097 (aspect ratio ≈ 1.913)
 const LOGO_NATIVE_W = 2100;
 const LOGO_NATIVE_H = 1097;
 
@@ -21,7 +21,7 @@ export default async function Image() {
   );
   const logoBase64 = `data:image/png;base64,${logoData.toString("base64")}`;
 
-  const logoWidth = 980;
+  const logoWidth = 860;
   const logoHeight = Math.round(logoWidth * (LOGO_NATIVE_H / LOGO_NATIVE_W));
 
   return new ImageResponse(
@@ -32,10 +32,9 @@ export default async function Image() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          width: "100%",
-          height: "100%",
+          width: "1200px",
+          height: "630px",
           backgroundColor: "#ffffff",
-          gap: "0px",
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -44,23 +43,30 @@ export default async function Image() {
           width={logoWidth}
           height={logoHeight}
           alt="HomeBids"
-          style={{ objectFit: "contain", display: "block" }}
+          style={{
+            objectFit: "contain",
+            display: "block",
+            flexShrink: 0,
+          }}
         />
 
-        <p
+        <div
           style={{
-            margin: "0",
-            marginTop: "12px",
-            fontSize: "36px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginTop: "20px",
+            fontSize: "40px",
             fontWeight: 600,
             color: "#0A84FF",
-            letterSpacing: "-0.01em",
-            fontFamily: "system-ui, -apple-system, sans-serif",
+            letterSpacing: "-0.02em",
+            fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
             lineHeight: 1,
+            whiteSpace: "nowrap",
           }}
         >
           Better bids. Better homes.
-        </p>
+        </div>
       </div>
     ),
     { ...size }
