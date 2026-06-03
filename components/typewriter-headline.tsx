@@ -15,10 +15,10 @@ const SUGGESTIONS = [
   "window replacement",
 ]
 
-const TYPE_SPEED = 55
-const DELETE_SPEED = 30
-const PAUSE_AFTER = 1800
-const PAUSE_BEFORE = 300
+const TYPE_SPEED = 105
+const DELETE_SPEED = 60
+const PAUSE_AFTER = 1600
+const PAUSE_BEFORE = 400
 
 export function TypewriterHeadline() {
   const [displayed, setDisplayed] = useState("")
@@ -38,7 +38,7 @@ export function TypewriterHeadline() {
   // Cursor blink
   useEffect(() => {
     if (prefersReducedMotion.current) return
-    const id = setInterval(() => setCursorVisible((v) => !v), 530)
+    const id = setInterval(() => setCursorVisible((v) => !v), 1050)
     return () => clearInterval(id)
   }, [])
 
@@ -145,7 +145,7 @@ export function TypewriterHeadline() {
               backgroundColor: "#0A84FF",
               opacity: isComplete ? 0 : cursorVisible ? 1 : 0,
               // Only animate opacity — never width, margin, or position
-              transition: "opacity 0.12s ease",
+              transition: "opacity 0.25s ease",
             }}
           />
 
