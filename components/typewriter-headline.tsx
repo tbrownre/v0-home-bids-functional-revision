@@ -15,9 +15,6 @@ const SUGGESTIONS = [
   "window replacement",
 ]
 
-// The longest phrase — used to reserve stable width so the layout never shifts
-const LONGEST = "bathroom renovation"
-
 const TYPE_SPEED = 55
 const DELETE_SPEED = 30
 const PAUSE_AFTER = 1800
@@ -39,7 +36,7 @@ export function TypewriterHeadline() {
     }
   }, [])
 
-  // Cursor blink — only runs when not reduced-motion
+  // Cursor blink
   useEffect(() => {
     if (prefersReducedMotion.current) return
     const id = setInterval(() => setCursorVisible((v) => !v), 530)
@@ -98,53 +95,41 @@ export function TypewriterHeadline() {
     <h1
       className="text-4xl font-bold leading-[1.25] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]"
       aria-label={`"Hey HomeBids, I need help with a ${SUGGESTIONS[index]}."`}
+      style={{ fontSize: "28px" }}
     >
-      {/*
-        The entire sentence sits on one inline flow so static text, animated
-        text, period, and closing quote all share the same baseline.
-        `inline-block` on the animated slot with a fixed invisible "ghost"
-        ensures the container never collapses or jumps.
-      */}
       <span aria-hidden="true">
-        {/* Opening quote */}
-        <span className="text-foreground">&ldquo;Hey HomeBids, I need help with a&nbsp;</span>
+        {/* Static prefix:
+            - Mobile (block): sits on its own line, ends without "a" so the
+              animated slot can start with "a " on the next line.
+            - sm+ (inline): full sentence flows on one line. */}
+        <span className="block text-foreground sm:inline">
+          &ldquo;Hey HomeBids, I need help with
+        </span>
 
-        {/* Animated slot — reserves width of longest phrase + period + closing quote */}
-        <span className="relative inline-block">
-          {/* Ghost: invisible — holds the maximum width so the layout never shifts */}
-          <span
-            className="invisible whitespace-nowrap text-[#0A84FF]"
-            aria-hidden="true"
-          >
-            {LONGEST}
-            <span className="text-[#0A84FF]">.&rdquo;</span>
-          </span>
+        {/* "a " connector — hidden on mobile (animated slot provides it inline),
+            shown as inline text on sm+ to join the prefix */}
+        <span className="text-foreground hidden sm:inline">&nbsp;a&nbsp;</span>
 
-          {/* Actual typed text — absolutely positioned over the ghost, nowrap so
-              the period + closing quote never split off to a new line */}
-          <span
-            className="absolute inset-y-0 left-0 whitespace-nowrap text-[#0A84FF]"
-            style={{ lineHeight: "inherit" }}
-          >
+        {/* Animated slot — block on mobile (own line), inline on sm+ */}
+        <span className="block sm:inline">
+          {/* "a " only shown on mobile, before the typed phrase */}
+          <span className="text-foreground sm:hidden">a </span>
+
+          <span className="relative inline-block whitespace-nowrap text-[#0A84FF]">
+            {/* Typed text */}
             {displayed}
 
-            {/* Period in blue — fades in when phrase is complete */}
-            <span
-              className="text-[#0A84FF]"
-              style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.1s" }}
-            >
+            {/* Period — fades in when phrase is complete */}
+            <span style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.1s" }}>
               .
             </span>
 
-            {/* Closing quote in blue — inline with the animated segment */}
-            <span
-              className="text-[#0A84FF]"
-              style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.15s" }}
-            >
+            {/* Closing quote — fades in with the period */}
+            <span style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.15s" }}>
               &rdquo;
             </span>
 
-            {/* Blinking cursor — hidden once phrase is complete */}
+            {/* Blinking cursor — fades out when phrase is complete */}
             <span
               aria-hidden="true"
               className="inline-block rounded-sm bg-[#0A84FF]"
@@ -152,9 +137,7 @@ export function TypewriterHeadline() {
                 width: "3px",
                 height: "0.82em",
                 marginLeft: "2px",
-                verticalAlign: "baseline",
-                position: "relative",
-                top: "-0.05em",
+                verticalAlign: "text-bottom",
                 opacity: isComplete ? 0 : cursorVisible ? 1 : 0,
                 transition: "opacity 0.1s",
               }}
