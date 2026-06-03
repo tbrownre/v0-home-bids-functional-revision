@@ -122,46 +122,52 @@ export function TypewriterHeadline() {
           The cursor is a tiny inline-block that does not widen the text line.
           Period and closing quote fade in when the phrase is complete.
         */}
-        <span style={{ color: "#0A84FF" }}>
+        <span style={{ color: "#0A84FF", whiteSpace: "nowrap" }}>
           {displayed}
 
-          {/* Period */}
+          {/*
+            Cursor, period, and closing quote are always in the DOM.
+            Only opacity changes — no mount/unmount, no layout shift.
+            All three are inline so they never push onto a new line.
+            whiteSpace: nowrap on the parent keeps this entire segment atomic.
+          */}
+
+          {/* Thin vertical bar cursor — inline-block, em-relative sizing */}
+          <span
+            aria-hidden="true"
+            style={{
+              display: "inline-block",
+              width: "1.5px",
+              height: "0.75em",
+              marginLeft: "1.5px",
+              verticalAlign: "text-bottom",
+              borderRadius: "1px",
+              backgroundColor: "#0A84FF",
+              opacity: isComplete ? 0 : cursorVisible ? 1 : 0,
+              // Only animate opacity — never width, margin, or position
+              transition: "opacity 0.12s ease",
+            }}
+          />
+
+          {/* Period fades in when phrase is complete */}
           <span
             style={{
               opacity: isComplete ? 1 : 0,
-              transition: "opacity 0.1s",
+              transition: "opacity 0.1s ease",
             }}
           >
             .
           </span>
 
-          {/* Closing quote */}
+          {/* Closing quote fades in with period */}
           <span
             style={{
               opacity: isComplete ? 1 : 0,
-              transition: "opacity 0.15s",
+              transition: "opacity 0.15s ease",
             }}
           >
             &rdquo;
           </span>
-
-          {/* Cursor — inline-block at text-bottom, sized to em so it scales */}
-          {!isComplete && (
-            <span
-              aria-hidden="true"
-              style={{
-                display: "inline-block",
-                width: "2px",
-                height: "0.8em",
-                marginLeft: "2px",
-                verticalAlign: "text-bottom",
-                borderRadius: "1px",
-                backgroundColor: "#0A84FF",
-                opacity: cursorVisible ? 1 : 0,
-                transition: "opacity 0.1s",
-              }}
-            />
-          )}
         </span>
       </span>
     </h1>
