@@ -1,74 +1,56 @@
-import { ImageResponse } from "next/og";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { ImageResponse } from "@vercel/og";
 
-export const runtime = "nodejs";
-
+export const runtime = "edge";
 export const alt = "HomeBids - Better bids. Better homes.";
-export const size = {
-  width: 1200,
-  height: 630,
-};
+export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// Logo native dimensions: 2100 × 1097 (aspect ratio ≈ 1.913)
-const LOGO_NATIVE_W = 2100;
-const LOGO_NATIVE_H = 1097;
-
 export default async function Image() {
-  const logoData = await readFile(
-    join(process.cwd(), "public/images/homebids-logo-new.png")
-  );
-  const logoBase64 = `data:image/png;base64,${logoData.toString("base64")}`;
-
-  const logoWidth = 860;
-  const logoHeight = Math.round(logoWidth * (LOGO_NATIVE_H / LOGO_NATIVE_W));
-
   return new ImageResponse(
     (
       <div
         style={{
+          width: "100%",
+          height: "100%",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          width: "1200px",
-          height: "630px",
-          backgroundColor: "#ffffff",
+          backgroundColor: "#FAFAFA",
+          gap: "28px",
+          fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={logoBase64}
-          width={logoWidth}
-          height={logoHeight}
-          alt="HomeBids"
-          style={{
-            objectFit: "contain",
-            display: "block",
-            flexShrink: 0,
-          }}
-        />
-
+        {/* Wordmark: HOME in blue + BIDS in black */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            marginTop: "20px",
-            fontSize: "40px",
-            fontWeight: 600,
-            color: "#0A84FF",
-            letterSpacing: "-0.02em",
-            fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+            gap: "0px",
+            fontSize: "120px",
+            fontWeight: 800,
+            letterSpacing: "-3px",
             lineHeight: 1,
-            whiteSpace: "nowrap",
+          }}
+        >
+          <span style={{ color: "#0A84FF" }}>HOME</span>
+          <span style={{ color: "#000000" }}>BIDS</span>
+        </div>
+
+        {/* Tagline */}
+        <div
+          style={{
+            fontSize: "42px",
+            fontWeight: 500,
+            color: "#616161",
+            letterSpacing: "-0.5px",
+            lineHeight: 1,
           }}
         >
           Better bids. Better homes.
         </div>
       </div>
     ),
-    { ...size }
+    size
   );
 }
