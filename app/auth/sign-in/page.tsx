@@ -183,6 +183,7 @@ export default function SignInPage() {
           <ArrowLeft className="h-4 w-4" />
           Back
         </Link>
+        <div className="flex-1" />
         <Link href="/" className="flex items-center">
           <Image
             src="/images/homebids-logo-new.png?v=2"
@@ -193,7 +194,6 @@ export default function SignInPage() {
             priority
           />
         </Link>
-        <div className="w-12" />
       </div>
 
       {/* Content */}

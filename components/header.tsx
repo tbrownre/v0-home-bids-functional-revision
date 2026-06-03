@@ -313,21 +313,8 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
 
         </div>
 
-        {/* Center: Logo — always routes to public home, never to a dashboard */}
-        <Link href="/?home=1" className="flex items-center justify-center" onClick={closeMenu}>
-          <Image
-            src="/images/homebids-logo-new.png?v=2"
-            alt="HomeBids"
-            width={480}
-            height={120}
-            className="object-contain"
-            style={{ height: "clamp(120px, 20vw, 180px)", width: "auto" }}
-            priority
-          />
-        </Link>
-
-        {/* Right: spacer that mirrors the left column to keep logo truly centered */}
-        <div className="flex items-center justify-end">
+        {/* Center: spacer + optional back link (mirrors right column width for balance) */}
+        <div className="flex items-center justify-center">
           {backHref && (
             <Link
               href={backHref}
@@ -338,6 +325,19 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
             </Link>
           )}
         </div>
+
+        {/* Right: Logo — always routes to public home, never to a dashboard */}
+        <Link href="/?home=1" className="flex items-center justify-end" onClick={closeMenu}>
+          <Image
+            src="/images/homebids-logo-new.png?v=2"
+            alt="HomeBids"
+            width={480}
+            height={120}
+            className="object-contain"
+            style={{ height: "clamp(120px, 20vw, 180px)", width: "auto" }}
+            priority
+          />
+        </Link>
       </div>
 
       {/* Sign In Modal */}
