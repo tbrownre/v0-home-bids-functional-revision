@@ -346,7 +346,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
             ].map(({ step, title, body, icon }) => (
               <div key={step} className="flex flex-col gap-4 rounded-2xl border border-border bg-background p-7">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0A84FF] text-white">
                     {icon}
                   </div>
                   <span className="text-xs font-semibold text-muted-foreground">{step}</span>
