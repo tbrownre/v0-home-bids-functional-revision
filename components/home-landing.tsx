@@ -238,7 +238,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               </span>
             </button>
 
-            <h1 className="text-4xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]">
+            <h1 className="text-4xl font-bold leading-[1.15] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]" style={{ fontSize: "24px" }}>
               Text us your project.
               <br />
               Contractors bid.
