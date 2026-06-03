@@ -218,7 +218,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
     <div className="w-full font-sans">
 
       {/* ── HERO ─────────────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-6xl px-4 pb-16 pt-6 sm:px-6 lg:px-8 lg:pt-12">
+      <section className="mx-auto w-full max-w-6xl px-4 pb-0 pt-6 sm:px-6 lg:px-8 lg:pt-12" style={{ marginTop: "-37px", marginLeft: "-16px", paddingLeft: "35px" }}>
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
 
           {/* Left — copy + CTAs */}
@@ -346,7 +346,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
             ].map(({ step, title, body, icon }) => (
               <div key={step} className="flex flex-col gap-4 rounded-2xl border border-border bg-background p-7">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0A84FF] text-white">
                     {icon}
                   </div>
                   <span className="text-xs font-semibold text-muted-foreground">{step}</span>
@@ -412,7 +412,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
           <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Button
               size="lg"
-              className="h-13 w-full gap-2 rounded-full px-8 text-base font-semibold sm:w-auto"
+              className="h-13 w-full gap-2 rounded-full px-8 text-base font-semibold sm:w-auto bg-[#0A84FF] hover:bg-[#0A84FF]/90"
               onClick={handlePrimaryClick}
             >
               <MessageSquare className="h-5 w-5" />
