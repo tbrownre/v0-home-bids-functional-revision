@@ -27,7 +27,6 @@ export function TypewriterHeadline() {
   const [cursorVisible, setCursorVisible] = useState(true)
   const prefersReducedMotion = useRef(false)
 
-  // Detect prefers-reduced-motion once on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
       prefersReducedMotion.current = window.matchMedia(
@@ -43,43 +42,40 @@ export function TypewriterHeadline() {
     return () => clearInterval(id)
   }, [])
 
-  // Typewriter state machine
+  // State machine
   useEffect(() => {
     if (prefersReducedMotion.current) {
       setDisplayed(SUGGESTIONS[0])
       setPhase("pausing")
       return
     }
-
     const current = SUGGESTIONS[index]
-
     if (phase === "typing") {
       if (displayed.length < current.length) {
-        const id = setTimeout(() => {
-          setDisplayed(current.slice(0, displayed.length + 1))
-        }, TYPE_SPEED)
+        const id = setTimeout(
+          () => setDisplayed(current.slice(0, displayed.length + 1)),
+          TYPE_SPEED
+        )
         return () => clearTimeout(id)
       } else {
         setPhase("pausing")
       }
     }
-
     if (phase === "pausing") {
       const id = setTimeout(() => setPhase("deleting"), PAUSE_AFTER)
       return () => clearTimeout(id)
     }
-
     if (phase === "deleting") {
       if (displayed.length > 0) {
-        const id = setTimeout(() => {
-          setDisplayed((d) => d.slice(0, -1))
-        }, DELETE_SPEED)
+        const id = setTimeout(
+          () => setDisplayed((d) => d.slice(0, -1)),
+          DELETE_SPEED
+        )
         return () => clearTimeout(id)
       } else {
         setPhase("waiting")
       }
     }
-
     if (phase === "waiting") {
       const id = setTimeout(() => {
         setIndex((i) => (i + 1) % SUGGESTIONS.length)
@@ -92,57 +88,78 @@ export function TypewriterHeadline() {
   const isComplete = phase === "pausing"
 
   return (
+    /*
+      The h1 is one flat inline-flow sentence. No block wrappers, no forced
+      line breaks, no absolute positioning, no fixed widths.
+
+      min-height reserves two lines of text at 28px × 1.35 line-height so the
+      layout never jumps while the typewriter is empty between rotations.
+
+      overflow-wrap: break-word is the last-resort safety net: if an animated
+      word is somehow wider than the viewport, the browser breaks it rather
+      than scrolling horizontally.
+    */
     <h1
-      className="text-4xl font-bold leading-[1.25] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]"
       aria-label={`"Hey HomeBids, I need help with a ${SUGGESTIONS[index]}."`}
-      style={{ fontSize: "28px" }}
+      style={{
+        fontSize: "21px",
+        fontWeight: 700,
+        lineHeight: 1.35,
+        letterSpacing: "-0.01em",
+        overflowWrap: "break-word",
+        wordBreak: "break-word",
+        minHeight: "calc(28px * 1.35 * 2)",
+      }}
     >
       <span aria-hidden="true">
-        {/* Static prefix:
-            - Mobile (block): sits on its own line, ends without "a" so the
-              animated slot can start with "a " on the next line.
-            - sm+ (inline): full sentence flows on one line. */}
-        <span className="block text-foreground sm:inline">
-          &ldquo;Hey HomeBids, I need help with
-        </span>
+        {/* Static prefix — plain inline text, wraps naturally */}
+        <span style={{ color: "inherit" }}>&ldquo;Hey HomeBids, I need help with a </span>
 
-        {/* "a " connector — hidden on mobile (animated slot provides it inline),
-            shown as inline text on sm+ to join the prefix */}
-        <span className="text-foreground hidden sm:inline">&nbsp;a&nbsp;</span>
+        {/*
+          Animated phrase inline — no wrapper element changes display mode.
+          The cursor is a tiny inline-block that does not widen the text line.
+          Period and closing quote fade in when the phrase is complete.
+        */}
+        <span style={{ color: "#0A84FF" }}>
+          {displayed}
 
-        {/* Animated slot — block on mobile (own line), inline on sm+ */}
-        <span className="block sm:inline">
-          {/* "a " only shown on mobile, before the typed phrase */}
-          <span className="text-foreground sm:hidden">a </span>
+          {/* Period */}
+          <span
+            style={{
+              opacity: isComplete ? 1 : 0,
+              transition: "opacity 0.1s",
+            }}
+          >
+            .
+          </span>
 
-          <span className="relative inline-block whitespace-nowrap text-[#0A84FF]">
-            {/* Typed text */}
-            {displayed}
+          {/* Closing quote */}
+          <span
+            style={{
+              opacity: isComplete ? 1 : 0,
+              transition: "opacity 0.15s",
+            }}
+          >
+            &rdquo;
+          </span>
 
-            {/* Period — fades in when phrase is complete */}
-            <span style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.1s" }}>
-              .
-            </span>
-
-            {/* Closing quote — fades in with the period */}
-            <span style={{ opacity: isComplete ? 1 : 0, transition: "opacity 0.15s" }}>
-              &rdquo;
-            </span>
-
-            {/* Blinking cursor — fades out when phrase is complete */}
+          {/* Cursor — inline-block at text-bottom, sized to em so it scales */}
+          {!isComplete && (
             <span
               aria-hidden="true"
-              className="inline-block rounded-sm bg-[#0A84FF]"
               style={{
-                width: "3px",
-                height: "0.82em",
+                display: "inline-block",
+                width: "2px",
+                height: "0.8em",
                 marginLeft: "2px",
                 verticalAlign: "text-bottom",
-                opacity: isComplete ? 0 : cursorVisible ? 1 : 0,
+                borderRadius: "1px",
+                backgroundColor: "#0A84FF",
+                opacity: cursorVisible ? 1 : 0,
                 transition: "opacity 0.1s",
               }}
             />
-          </span>
+          )}
         </span>
       </span>
     </h1>
