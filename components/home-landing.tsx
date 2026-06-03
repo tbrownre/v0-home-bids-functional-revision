@@ -248,7 +248,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
             </p>
 
             {/* Primary + Secondary CTAs */}
-            <div className="mt-5 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap">
               <Button
                 size="lg"
                 className="h-12 gap-2 rounded-full px-6 text-base font-semibold bg-[#0A84FF] text-white hover:bg-[#0A84FF]/90 sm:w-auto"
