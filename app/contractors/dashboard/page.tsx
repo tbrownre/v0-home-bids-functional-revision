@@ -1987,11 +1987,13 @@ interface AiBid {
   createdAt: Date;
 }
 
-const DEMO_AI_BIDS: AiBid[] = [
-  { id: "ai-1", title: "HVAC Repair Estimate", type: "estimate", summary: "3-zone system diagnostic, refrigerant recharge, and capacitor replacement. Labor + parts included.", amount: "$485", createdAt: new Date(Date.now() - 1000 * 60 * 30) },
-  { id: "ai-2", title: "Roof Leak Repair Response", type: "response", summary: "Professional reply addressing homeowner concerns about storm damage liability and warranty coverage.", createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3) },
-  { id: "ai-3", title: "Bathroom Remodel Bid Template", type: "template", summary: "Full gut remodel template — demo, tile, plumbing rough-in, fixtures, and paint. Customizable for any scope.", amount: "$8,200–$14,000", createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24) },
-  { id: "ai-4", title: "Fence Replacement Draft", type: "draft", summary: "Draft estimate for 180ft cedar privacy fence replacement. Awaiting final material pricing.", amount: "$3,400", createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48) },
+// Offsets in ms — applied to Date.now() inside the component after mount
+// so server and client produce the same output on first render.
+const DEMO_AI_BID_TEMPLATES = [
+  { id: "ai-1", title: "HVAC Repair Estimate",          type: "estimate"  as const, summary: "3-zone system diagnostic, refrigerant recharge, and capacitor replacement. Labor + parts included.", amount: "$485",           offsetMs: 1000 * 60 * 30 },
+  { id: "ai-2", title: "Roof Leak Repair Response",     type: "response"  as const, summary: "Professional reply addressing homeowner concerns about storm damage liability and warranty coverage.",                           offsetMs: 1000 * 60 * 60 * 3 },
+  { id: "ai-3", title: "Bathroom Remodel Bid Template", type: "template"  as const, summary: "Full gut remodel template — demo, tile, plumbing rough-in, fixtures, and paint. Customizable for any scope.", amount: "$8,200–$14,000", offsetMs: 1000 * 60 * 60 * 24 },
+  { id: "ai-4", title: "Fence Replacement Draft",       type: "draft"     as const, summary: "Draft estimate for 180ft cedar privacy fence replacement. Awaiting final material pricing.", amount: "$3,400",                offsetMs: 1000 * 60 * 60 * 48 },
 ];
 
 const typeBadge: Record<AiBid["type"], { label: string; class: string }> = {
@@ -2003,6 +2005,25 @@ const typeBadge: Record<AiBid["type"], { label: string; class: string }> = {
 
 function AiGeneratedBidsSection() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  // Build dates after mount so server and client agree on the initial render.
+  const [bids, setBids] = useState<AiBid[]>(() =>
+    DEMO_AI_BID_TEMPLATES.map(({ offsetMs, ...rest }) => ({
+      ...rest,
+      createdAt: new Date(0), // stable placeholder — replaced after mount
+    }))
+  );
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const now = Date.now();
+    setBids(
+      DEMO_AI_BID_TEMPLATES.map(({ offsetMs, ...rest }) => ({
+        ...rest,
+        createdAt: new Date(now - offsetMs),
+      }))
+    );
+    setMounted(true);
+  }, []);
 
   const handleCopy = (id: string, summary: string) => {
     navigator.clipboard.writeText(summary).catch(() => {});
@@ -2025,7 +2046,7 @@ function AiGeneratedBidsSection() {
 
   return (
     <div className="space-y-3">
-      {DEMO_AI_BIDS.map((bid) => {
+      {bids.map((bid) => {
         const badge = typeBadge[bid.type];
         const isCopied = copiedId === bid.id;
         return (
@@ -2041,7 +2062,10 @@ function AiGeneratedBidsSection() {
                 )}
                 <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground line-clamp-2">{bid.summary}</p>
               </div>
-              <span className="shrink-0 text-[10px] text-muted-foreground">{formatRelative(bid.createdAt)}</span>
+              {/* Suppress until mounted to avoid server/client mismatch */}
+              {mounted && (
+                <span className="shrink-0 text-[10px] text-muted-foreground">{formatRelative(bid.createdAt)}</span>
+              )}
             </div>
 
             {/* Action row */}
