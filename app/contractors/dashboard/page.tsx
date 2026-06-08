@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,10 @@ import {
   Copy,
   ChevronRight,
   Zap,
+  ArrowLeft,
+  ExternalLink,
+  DollarSign,
+  TrendingUp,
 } from "lucide-react";
 import { getMockUser, mockSignOut, USE_MOCK_DATA } from "@/lib/mock-auth";
 import { getContractorBids } from "@/lib/supabase/actions";
@@ -78,6 +83,11 @@ interface MyLead {
   lastActivity: string;
   aiStatus: "estimate_ready" | "response_sent" | "followup_ready";
   phone?: string;
+}
+
+interface ChatMessage {
+  role: "ai" | "user";
+  content: string;
 }
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
@@ -152,55 +162,101 @@ const DEMO_MY_LEADS: MyLead[] = [
   { id: "ml-3", customerName: "Janet B.", projectTitle: "Bathroom Remodel Follow-Up", category: "Remodel", estimatedValue: "$12,000", status: "open", lastActivity: "Follow-up draft ready", aiStatus: "followup_ready" },
 ];
 
-// ── AI Tools definitions ──────────────────────────────────────────────────────
+// ── Bid Builder conversation engine ──────────────────────────────────────────
 
-const AI_TOOLS = [
-  {
-    id: "estimate",
-    label: "Generate Estimate",
-    description: "Get an AI-generated price estimate for any job type.",
-    icon: Calculator,
-    placeholder: "Describe the job: e.g. Interior paint, 3 bed / 2 bath, 1,800 sqft, Phoenix AZ",
-    sampleOutput: "Based on your area and scope, a fair estimate for a 3-bed/2-bath interior paint in Phoenix is $2,100–$2,800 including labor and materials. Lead with $2,400 — it's competitive without undervaluing your work.",
-  },
-  {
-    id: "pricecheck",
-    label: "Price Check",
-    description: "See how your bid stacks up against local market rates.",
-    icon: Sparkles,
-    placeholder: "Enter your bid amount and job type: e.g. $3,200 for drywall repair, Tempe AZ",
-    sampleOutput: "Your bid of $3,200 is slightly above the Tempe average of $2,900 for comparable drywall work. Consider dropping to $2,950 or highlighting your warranty to justify the premium.",
-  },
-  {
-    id: "response",
-    label: "Customer Response",
-    description: "Draft a professional reply to a homeowner message.",
-    icon: MessageCircle,
-    placeholder: "Paste the homeowner's message or describe the situation...",
-    sampleOutput: "Hi Sarah, thanks for reaching out! I'd love to take a look at your kitchen — I have availability this Thursday or Friday. My process includes a full walkthrough and same-day estimate. Does either day work for you?",
-  },
-  {
-    id: "followup",
-    label: "Follow-Up Message",
-    description: "Generate a follow-up for a bid you haven't heard back on.",
-    icon: Send,
-    placeholder: "Describe the job and when you submitted your bid: e.g. Landscaping bid submitted 5 days ago, no response",
-    sampleOutput: "Hi Marcus, just checking in on the turf project I quoted last week. I wanted to make sure you received everything and answer any questions. I have a slot open next week if you'd like to move forward.",
-  },
-] as const;
+const BID_BUILDER_INTRO: ChatMessage = {
+  role: "ai",
+  content: "Hi! I'm your AI estimating assistant. What type of project are you bidding on?",
+};
+
+function getBidBuilderReply(history: ChatMessage[]): string {
+  const userMessages = history.filter((m) => m.role === "user");
+  const count = userMessages.length;
+  const last = userMessages[count - 1]?.content?.toLowerCase() ?? "";
+
+  if (count === 1) {
+    if (last.includes("cabinet") || last.includes("paint") || last.includes("interior")) {
+      return "Got it — cabinet repaint. How many cabinet doors are involved, and what's the current finish (painted or stained)?";
+    }
+    if (last.includes("turf") || last.includes("landscap") || last.includes("yard")) {
+      return "Turf install — perfect. Roughly how many square feet, and is there existing grass or sod that needs to be removed first?";
+    }
+    if (last.includes("drywall") || last.includes("repair")) {
+      return "Drywall repair. How large is the damaged area, and is this a patch/texture match or a full panel replacement?";
+    }
+    if (last.includes("bathroom") || last.includes("vanity") || last.includes("remodel")) {
+      return "Bathroom remodel. Are we talking a full gut-and-remodel, or specific items like vanity, tile, or fixtures?";
+    }
+    return `${userMessages[0].content} — great. Can you give me a rough scope? (e.g. size of the space, materials, any demo work needed)`;
+  }
+
+  if (count === 2) {
+    return "Got it. What city and state is this job in? Pricing varies a lot by market.";
+  }
+
+  if (count === 3) {
+    return "What timeline did the homeowner mention, and have they shared a budget range?";
+  }
+
+  if (count === 4) {
+    return "Any special considerations — premium finishes, tight access, permit required, or work to be done on weekends?";
+  }
+
+  if (count === 5) {
+    return "One last thing — would you like to include optional upsells in the estimate? (e.g. an extra coat, warranty, or add-on service)";
+  }
+
+  // Final: generate full estimate output
+  const project = userMessages[0]?.content ?? "your project";
+  const location = userMessages[2]?.content ?? "your area";
+  return `Here's your professional bid summary for the ${project} in ${location}:\n\n**Scope of Work**\n${userMessages[1]?.content ?? "As described"}\n\n**Suggested Price Range**\n$1,200 – $1,800\n\n**Exclusions**\nPermit fees (if required), dumpster rental, unforeseen structural issues\n\n**Optional Upsells**\n• Premium finish upgrade: +$200\n• 1-year touch-up warranty: +$150\n• Weekend scheduling: +$100\n\n**Customer-Friendly Intro**\n"I've put together a detailed estimate for your project. My pricing includes all labor, materials, and clean-up — no surprise fees. I can typically start within 5–7 business days."\n\n_Tip: Lead with value, not just price. Mention your timeline and any warranties upfront._`;
+}
+
+// ── Price Check mock data ─────────────────────────────────────────────────────
+
+function getPriceCheckResponse(projectType: string, bidAmount: string, objection: string) {
+  const refLink = `https://homebids.com/compare?ref=contractor-demo&project=${encodeURIComponent(projectType)}`;
+  return {
+    response: `I completely understand wanting to compare options — that's smart. I actually work with HomeBids, so you can easily see what other contractors are quoting for the same work and make sure you're getting a fair deal.\n\nHere's a quick link to explore additional quotes:\n${refLink}\n\nIf another contractor ends up being a better fit, no worries at all — I still appreciate the opportunity and hope the comparison is helpful.`,
+    refLink,
+    earnings: {
+      potentialPerReferral: "$45–$120",
+      jobsReferred: 7,
+      affiliateEarned: "$490",
+    },
+  };
+}
+
+// ── Customer Response mock replies ────────────────────────────────────────────
+
+function getCustomerResponse(message: string, tone: string, goal: string) {
+  const toneMap: Record<string, string> = {
+    professional: "professional and clear",
+    friendly: "warm and friendly",
+    direct: "direct and confident",
+  };
+  const toneLabel = toneMap[tone] ?? "professional";
+  return {
+    full: `Hi there,\n\nThank you for reaching out! ${goal ? `Regarding your question about "${goal.slice(0, 60)}" — ` : ""}I wanted to make sure I got back to you quickly.\n\nI'd love to help with your project. Based on what you've shared, I can schedule a walkthrough at your convenience — I typically have availability within 2–3 business days and can provide a same-day written estimate after the visit.\n\nFeel free to call or text me anytime. Looking forward to connecting!\n\n— [Your Name]`,
+    sms: `Hi! Got your message. Happy to help with your project — I can come take a look in the next 2–3 days and give you a written estimate same day. When works for you? — [Your Name]`,
+    short: `Thanks for reaching out! I'd love to help. I'm available for a walkthrough this week — does any day work for you?`,
+    toneNote: `Tone applied: ${toneLabel}`,
+  };
+}
 
 // ── Main component ────────────────────────────────────────────────────────────
+
+type Tab = "home" | "leads" | "ai" | "account";
+type AiTool = "bid" | "pricecheck" | "response" | null;
 
 export default function ContractorDashboard() {
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get("tab") ?? "";
 
-  type Tab = "home" | "leads" | "ai" | "account";
   const [activeTab, setActiveTab] = useState<Tab>(
     (tabParam === "leads" || tabParam === "ai" || tabParam === "account") ? tabParam : "home"
   );
 
-  // Sync tab when URL search param changes (e.g. nav link click)
   useEffect(() => {
     const t = searchParams?.get("tab") ?? "";
     if (t === "leads" || t === "ai" || t === "account") setActiveTab(t);
@@ -216,7 +272,7 @@ export default function ContractorDashboard() {
     }
   }, []);
 
-  // Bids count (for home tab stats)
+  // Bids count
   const [bidsCount, setBidsCount] = useState(0);
   useEffect(() => {
     async function load() {
@@ -243,7 +299,7 @@ export default function ContractorDashboard() {
     load();
   }, []);
 
-  // Leads segmented toggle
+  // Leads
   const [leadsSegment, setLeadsSegment] = useState<"homebids" | "myleads">("homebids");
 
   // Relay modal
@@ -256,45 +312,87 @@ export default function ContractorDashboard() {
   const [showLeadDetail, setShowLeadDetail] = useState(false);
   const [selectedLead, setSelectedLead] = useState<HomeBidsLead | null>(null);
 
-  // AI Tools
-  const [activeTool, setActiveTool] = useState<string | null>(null);
-  const [toolInput, setToolInput] = useState("");
-  const [toolOutput, setToolOutput] = useState<string | null>(null);
-  const [toolLoading, setToolLoading] = useState(false);
-  const [toolCopied, setToolCopied] = useState(false);
+  // AI Tools — which tool is open
+  const [activeTool, setActiveTool] = useState<AiTool>(null);
 
-  function handleRunTool(toolId: string) {
-    if (!toolInput.trim()) return;
-    setToolLoading(true);
-    setToolOutput(null);
+  // ── Bid Builder state ────────────────────────────────────────────────────
+  const [bidMessages, setBidMessages] = useState<ChatMessage[]>([BID_BUILDER_INTRO]);
+  const [bidInput, setBidInput] = useState("");
+  const [bidTyping, setBidTyping] = useState(false);
+  const bidBottomRef = useRef<HTMLDivElement>(null);
+  const bidIsDone = bidMessages.filter((m) => m.role === "user").length >= 6;
+  const [bidCopied, setBidCopied] = useState(false);
+
+  function handleBidSend() {
+    if (!bidInput.trim() || bidTyping) return;
+    const userMsg: ChatMessage = { role: "user", content: bidInput.trim() };
+    const next = [...bidMessages, userMsg];
+    setBidMessages(next);
+    setBidInput("");
+    setBidTyping(true);
     setTimeout(() => {
-      const tool = AI_TOOLS.find((t) => t.id === toolId);
-      setToolOutput(tool?.sampleOutput ?? "Output generated.");
-      setToolLoading(false);
-    }, 1200);
+      const reply = getBidBuilderReply(next);
+      setBidMessages((prev) => [...prev, { role: "ai", content: reply }]);
+      setBidTyping(false);
+    }, 900);
   }
 
-  function handleCopyOutput() {
-    if (!toolOutput) return;
-    navigator.clipboard.writeText(toolOutput).then(() => {
-      setToolCopied(true);
-      setTimeout(() => setToolCopied(false), 2000);
-    });
+  useEffect(() => {
+    bidBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [bidMessages, bidTyping]);
+
+  function resetBidBuilder() {
+    setBidMessages([BID_BUILDER_INTRO]);
+    setBidInput("");
+    setBidTyping(false);
+    setBidCopied(false);
   }
 
-  const handleSignOut = () => {
-    mockSignOut();
-  };
+  // ── Price Check state ────────────────────────────────────────────────────
+  const [pcProject, setPcProject] = useState("");
+  const [pcBid, setPcBid] = useState("");
+  const [pcObjection, setPcObjection] = useState("");
+  const [pcResult, setPcResult] = useState<ReturnType<typeof getPriceCheckResponse> | null>(null);
+  const [pcLoading, setPcLoading] = useState(false);
+  const [pcCopied, setPcCopied] = useState(false);
+  const [pcLinkCopied, setPcLinkCopied] = useState(false);
+
+  function handlePriceCheck() {
+    if (!pcProject.trim() || !pcBid.trim()) return;
+    setPcLoading(true);
+    setPcResult(null);
+    setTimeout(() => {
+      setPcResult(getPriceCheckResponse(pcProject, pcBid, pcObjection));
+      setPcLoading(false);
+    }, 1000);
+  }
+
+  // ── Customer Response state ──────────────────────────────────────────────
+  const [crMessage, setCrMessage] = useState("");
+  const [crTone, setCrTone] = useState("professional");
+  const [crGoal, setCrGoal] = useState("");
+  const [crResult, setCrResult] = useState<ReturnType<typeof getCustomerResponse> | null>(null);
+  const [crLoading, setCrLoading] = useState(false);
+  const [crVersion, setCrVersion] = useState<"full" | "sms" | "short">("full");
+  const [crCopied, setCrCopied] = useState(false);
+
+  function handleCustomerResponse() {
+    if (!crMessage.trim()) return;
+    setCrLoading(true);
+    setCrResult(null);
+    setTimeout(() => {
+      setCrResult(getCustomerResponse(crMessage, crTone, crGoal));
+      setCrLoading(false);
+    }, 1000);
+  }
+
+  const handleSignOut = () => mockSignOut();
 
   // ── Derived stats ──────────────────────────────────────────────────────────
   const newLeads = DEMO_HOMEBIDS_LEADS.filter((l) => l.status === "new").length;
   const awaitingApproval = DEMO_HOMEBIDS_LEADS.filter((l) => l.status === "homeowner_reviewing").length;
   const inProgress = DEMO_MY_LEADS.filter((l) => l.status === "in_progress").length;
 
-  // ── Home tab action leads (items needing attention) ──────────────────────
-  const actionLeads = DEMO_HOMEBIDS_LEADS;
-
-  // ── Tab navigation helpers ────────────────────────────────────────────────
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: "home",    label: "Home",     icon: LayoutDashboard },
     { id: "leads",   label: "Leads",    icon: Users },
@@ -307,13 +405,11 @@ export default function ContractorDashboard() {
       <Header isContractor isSignedIn />
       <ScrollToTop />
 
-      {/* Main content — max-w-lg centered, generous padding */}
       <main className="mx-auto w-full max-w-lg flex-1 px-4 pb-28 pt-6">
 
         {/* ── HOME TAB ──────────────────────────────────────────────────── */}
         {activeTab === "home" && (
           <div className="space-y-6">
-            {/* Greeting */}
             <div>
               <h1 className="text-2xl font-bold text-foreground">
                 Good morning, {contractorName}.
@@ -323,98 +419,56 @@ export default function ContractorDashboard() {
               </p>
             </div>
 
-            {/* Stats pills */}
             <div className="flex flex-wrap gap-2">
-              <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
-                {newLeads} new
-              </span>
-              <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700">
-                {awaitingApproval} awaiting approval
-              </span>
-              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
-                {inProgress} in progress
-              </span>
-              <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                {bidsCount} bids submitted
-              </span>
+              <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">{newLeads} new</span>
+              <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700">{awaitingApproval} awaiting approval</span>
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">{inProgress} in progress</span>
+              <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{bidsCount} bids submitted</span>
             </div>
 
-            {/* Action leads */}
             <div>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Needs your attention
-              </h2>
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Needs your attention</h2>
               <div className="space-y-3">
-                {actionLeads.map((lead) => {
+                {DEMO_HOMEBIDS_LEADS.map((lead) => {
                   const statusBadge =
-                    lead.status === "new"
-                      ? { label: "New", cls: "bg-blue-100 text-blue-700" }
-                      : lead.status === "bid_submitted"
-                      ? { label: "Bid Submitted", cls: "bg-amber-100 text-amber-700" }
-                      : { label: "Reviewing", cls: "bg-purple-100 text-purple-700" };
+                    lead.status === "new" ? { label: "New", cls: "bg-blue-100 text-blue-700" }
+                    : lead.status === "bid_submitted" ? { label: "Bid Submitted", cls: "bg-amber-100 text-amber-700" }
+                    : { label: "Reviewing", cls: "bg-purple-100 text-purple-700" };
 
                   const cta = lead.directMessagingUnlocked
-                    ? { label: "Text Homeowner", variant: "default" as const, onClick: () => { window.location.href = `sms:${lead.homeownerPhone ?? ""}`; } }
+                    ? { label: "Text Homeowner", onClick: () => { window.location.href = `sms:${lead.homeownerPhone ?? ""}`; } }
                     : lead.status === "new"
-                    ? { label: "Generate Bid", variant: "default" as const, onClick: () => { setSelectedLead(lead); setShowLeadDetail(true); } }
-                    : { label: "Send via HomeBids AI", variant: "outline" as const, onClick: () => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); } };
+                    ? { label: "Generate Bid", onClick: () => { setSelectedLead(lead); setShowLeadDetail(true); } }
+                    : { label: "Send via HomeBids AI", onClick: () => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); } };
 
                   return (
-                    <div
-                      key={lead.id}
-                      className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/30"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadge.cls}`}>
-                              {statusBadge.label}
-                            </span>
-                            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                              {lead.category}
-                            </span>
-                          </div>
-                          <p className="mt-1.5 font-semibold text-foreground">{lead.title}</p>
-                          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3 shrink-0" />
-                              {lead.location}
-                            </span>
-                            <span className="font-semibold text-foreground">{lead.estimatedValue}</span>
-                          </div>
-                          {/* AI insight line */}
-                          <p className="mt-2 text-[11px] italic text-primary/80">
-                            {lead.aiNotes}
-                          </p>
-                          {/* Lock / unlock indicator */}
-                          <div className="mt-2 flex items-center gap-1">
-                            {lead.directMessagingUnlocked ? (
-                              <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">
-                                <Unlock className="h-3 w-3" /> Direct texting unlocked
-                              </span>
-                            ) : (
-                              <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                                <Lock className="h-3 w-3" /> Contact locked
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                    <div key={lead.id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/30">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadge.cls}`}>{statusBadge.label}</span>
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
+                      </div>
+                      <p className="mt-1.5 font-semibold text-foreground">{lead.title}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><MapPin className="h-3 w-3 shrink-0" />{lead.location}</span>
+                        <span className="font-semibold text-foreground">{lead.estimatedValue}</span>
+                      </div>
+                      <p className="mt-2 text-[11px] italic text-primary/80">{lead.aiNotes}</p>
+                      <div className="mt-2">
+                        {lead.directMessagingUnlocked ? (
+                          <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700 w-fit">
+                            <Unlock className="h-3 w-3" /> Direct texting unlocked
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground w-fit">
+                            <Lock className="h-3 w-3" /> Contact locked
+                          </span>
+                        )}
                       </div>
                       <div className="mt-3 flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 gap-1 px-2 text-xs text-muted-foreground"
-                          onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}
-                        >
+                        <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
                           <Eye className="h-3.5 w-3.5" /> Details
                         </Button>
-                        <Button
-                          size="sm"
-                          variant={cta.variant}
-                          className={`h-7 gap-1 px-3 text-xs ${cta.variant === "outline" ? "bg-transparent" : ""}`}
-                          onClick={cta.onClick}
-                        >
+                        <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={cta.onClick}>
                           {cta.label}
                         </Button>
                       </div>
@@ -424,29 +478,13 @@ export default function ContractorDashboard() {
               </div>
             </div>
 
-            {/* Quick-link to Leads tab */}
-            <button
-              type="button"
-              onClick={() => setActiveTab("leads")}
-              className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-            >
-              <span className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                View all leads ({DEMO_HOMEBIDS_LEADS.length + DEMO_MY_LEADS.length})
-              </span>
+            <button type="button" onClick={() => setActiveTab("leads")} className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted">
+              <span className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" />View all leads ({DEMO_HOMEBIDS_LEADS.length + DEMO_MY_LEADS.length})</span>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
 
-            {/* Quick-link to AI Tools */}
-            <button
-              type="button"
-              onClick={() => setActiveTab("ai")}
-              className="flex w-full items-center justify-between rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
-            >
-              <span className="flex items-center gap-2">
-                <Zap className="h-4 w-4" />
-                Open AI Tools — generate estimates, responses &amp; more
-              </span>
+            <button type="button" onClick={() => setActiveTab("ai")} className="flex w-full items-center justify-between rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10">
+              <span className="flex items-center gap-2"><Zap className="h-4 w-4" />Open AI Tools — generate bids, responses &amp; more</span>
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
@@ -457,62 +495,42 @@ export default function ContractorDashboard() {
           <div className="space-y-5">
             <h1 className="text-xl font-bold text-foreground">Leads</h1>
 
-            {/* Segmented toggle */}
             <div className="flex gap-1 rounded-xl bg-muted p-1">
-              <button
-                type="button"
-                onClick={() => setLeadsSegment("homebids")}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                  leadsSegment === "homebids"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                HomeBids AI
-                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${leadsSegment === "homebids" ? "bg-primary/10 text-primary" : "bg-muted-foreground/20 text-muted-foreground"}`}>
-                  {DEMO_HOMEBIDS_LEADS.length}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setLeadsSegment("myleads")}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                  leadsSegment === "myleads"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Users className="h-3.5 w-3.5" />
-                My Leads
-                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${leadsSegment === "myleads" ? "bg-emerald-100 text-emerald-700" : "bg-muted-foreground/20 text-muted-foreground"}`}>
-                  {DEMO_MY_LEADS.length}
-                </span>
-              </button>
+              {(["homebids", "myleads"] as const).map((seg) => (
+                <button
+                  key={seg}
+                  type="button"
+                  onClick={() => setLeadsSegment(seg)}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                    leadsSegment === seg ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {seg === "homebids" ? <Sparkles className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}
+                  {seg === "homebids" ? "HomeBids AI" : "My Leads"}
+                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                    leadsSegment === seg
+                      ? seg === "homebids" ? "bg-primary/10 text-primary" : "bg-emerald-100 text-emerald-700"
+                      : "bg-muted-foreground/20 text-muted-foreground"
+                  }`}>
+                    {seg === "homebids" ? DEMO_HOMEBIDS_LEADS.length : DEMO_MY_LEADS.length}
+                  </span>
+                </button>
+              ))}
             </div>
 
-            {/* HomeBids AI Leads */}
             {leadsSegment === "homebids" && (
               <div className="space-y-3">
-                <p className="text-xs text-muted-foreground">
-                  Leads sourced by HomeBids. Win homeowner approval to unlock direct texting.
-                </p>
+                <p className="text-xs text-muted-foreground">AI-matched leads. Win approval to unlock direct contact.</p>
                 {DEMO_HOMEBIDS_LEADS.map((lead) => {
                   const statusBadge =
-                    lead.status === "new"
-                      ? { label: "New", cls: "bg-blue-100 text-blue-700" }
-                      : lead.status === "bid_submitted"
-                      ? { label: "Bid Submitted", cls: "bg-amber-100 text-amber-700" }
-                      : { label: "Reviewing", cls: "bg-purple-100 text-purple-700" };
+                    lead.status === "new" ? { label: "New", cls: "bg-blue-100 text-blue-700" }
+                    : lead.status === "bid_submitted" ? { label: "Bid Submitted", cls: "bg-amber-100 text-amber-700" }
+                    : { label: "Reviewing", cls: "bg-purple-100 text-purple-700" };
                   return (
                     <div key={lead.id} className="rounded-xl border border-border bg-card p-4">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadge.cls}`}>
-                          {statusBadge.label}
-                        </span>
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                          {lead.category}
-                        </span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadge.cls}`}>{statusBadge.label}</span>
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
                       </div>
                       <p className="mt-1.5 font-semibold text-foreground">{lead.title}</p>
                       <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
@@ -520,49 +538,31 @@ export default function ContractorDashboard() {
                         <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{lead.timeline}</span>
                         <span className="font-semibold text-foreground">{lead.estimatedValue}</span>
                       </div>
-                      <div className="mt-2 flex items-center gap-1">
+                      <div className="mt-2">
                         {lead.directMessagingUnlocked ? (
-                          <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">
+                          <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700 w-fit">
                             <Unlock className="h-3 w-3" /> Direct texting unlocked
                           </span>
                         ) : (
-                          <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground w-fit">
                             <Lock className="h-3 w-3" /> Contact locked — win approval first
                           </span>
                         )}
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 gap-1 px-2.5 text-xs bg-transparent"
-                          onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}
-                        >
+                        <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
                           <Eye className="h-3 w-3" /> Details
                         </Button>
                         {lead.directMessagingUnlocked ? (
-                          <Button
-                            size="sm"
-                            className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white"
-                            onClick={() => { window.location.href = `sms:${lead.homeownerPhone ?? ""}`; }}
-                          >
+                          <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => { window.location.href = `sms:${lead.homeownerPhone ?? ""}`; }}>
                             <MessageCircle className="h-3 w-3" /> Text Homeowner
                           </Button>
                         ) : (
                           <>
-                            <Button
-                              size="sm"
-                              className="h-7 gap-1 px-3 text-xs"
-                              onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}
-                            >
+                            <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
                               <Calculator className="h-3 w-3" /> Generate Bid
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 gap-1 px-2.5 text-xs bg-transparent"
-                              onClick={() => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); }}
-                            >
+                            <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); }}>
                               <MessageCircle className="h-3 w-3" /> Send via HomeBids AI
                             </Button>
                           </>
@@ -574,19 +574,14 @@ export default function ContractorDashboard() {
               </div>
             )}
 
-            {/* My Leads */}
             {leadsSegment === "myleads" && (
               <div className="space-y-3">
-                <p className="text-xs text-muted-foreground">
-                  Your own leads — full control, text directly any time.
-                </p>
+                <p className="text-xs text-muted-foreground">Your own leads — full control, text directly any time.</p>
                 {DEMO_MY_LEADS.map((lead) => {
                   const aiStatusBadge =
-                    lead.aiStatus === "estimate_ready"
-                      ? { label: "Estimate Ready", cls: "bg-blue-100 text-blue-700" }
-                      : lead.aiStatus === "response_sent"
-                      ? { label: "Response Sent", cls: "bg-amber-100 text-amber-700" }
-                      : { label: "Follow-Up Ready", cls: "bg-purple-100 text-purple-700" };
+                    lead.aiStatus === "estimate_ready" ? { label: "Estimate Ready", cls: "bg-blue-100 text-blue-700" }
+                    : lead.aiStatus === "response_sent" ? { label: "Response Sent", cls: "bg-amber-100 text-amber-700" }
+                    : { label: "Follow-Up Ready", cls: "bg-purple-100 text-purple-700" };
                   return (
                     <div key={lead.id} className="rounded-xl border border-border bg-card p-4">
                       <div className="flex items-center gap-3">
@@ -601,25 +596,14 @@ export default function ContractorDashboard() {
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${aiStatusBadge.cls}`}>
-                          {aiStatusBadge.label}
-                        </span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${aiStatusBadge.cls}`}>{aiStatusBadge.label}</span>
                       </div>
                       <p className="mt-1.5 text-[11px] text-muted-foreground">{lead.lastActivity}</p>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 gap-1 px-2.5 text-xs bg-transparent"
-                          onClick={() => setActiveTab("ai")}
-                        >
+                        <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => setActiveTab("ai")}>
                           <Sparkles className="h-3 w-3" /> AI Tools
                         </Button>
-                        <Button
-                          size="sm"
-                          className="h-7 gap-1 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                          onClick={() => { window.location.href = `sms:${lead.phone ?? ""}`; }}
-                        >
+                        <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { window.location.href = `sms:${lead.phone ?? ""}`; }}>
                           <MessageCircle className="h-3 w-3" /> Text Customer
                         </Button>
                       </div>
@@ -634,107 +618,351 @@ export default function ContractorDashboard() {
         {/* ── AI TOOLS TAB ──────────────────────────────────────────────── */}
         {activeTab === "ai" && (
           <div className="space-y-5">
-            <div>
-              <h1 className="text-xl font-bold text-foreground">AI Tools</h1>
-              <p className="mt-1 text-sm text-muted-foreground">Your AI co-pilot for estimates, pricing, and customer communication.</p>
-            </div>
+            {/* Tool picker */}
+            {activeTool === null && (
+              <>
+                <div>
+                  <h1 className="text-xl font-bold text-foreground">AI Tools</h1>
+                  <p className="mt-1 text-sm text-muted-foreground">Your AI co-pilot for bids, pricing, and customer communication.</p>
+                </div>
+                <div className="space-y-3">
+                  {/* Bid Builder */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveTool("bid")}
+                    className="flex w-full items-start gap-4 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                      <Calculator className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-foreground">Bid Builder</p>
+                      <p className="mt-0.5 text-sm text-muted-foreground">Chat with AI to build a professional estimate step by step.</p>
+                    </div>
+                    <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                  </button>
 
-            {/* Tool cards */}
-            <div className="space-y-3">
-              {AI_TOOLS.map((tool) => {
-                const Icon = tool.icon;
-                const isActive = activeTool === tool.id;
-                return (
-                  <div key={tool.id} className={`rounded-xl border bg-card transition-all ${isActive ? "border-primary/40 shadow-sm" : "border-border"}`}>
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                  {/* Price Check */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveTool("pricecheck")}
+                    className="flex w-full items-start gap-4 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
+                      <DollarSign className="h-5 w-5 text-emerald-700" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-foreground">Price Check</p>
+                      <p className="mt-0.5 text-sm text-muted-foreground">Handle pricing objections and generate a HomeBids referral link to earn affiliate revenue.</p>
+                    </div>
+                    <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                  </button>
+
+                  {/* Customer Response */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveTool("response")}
+                    className="flex w-full items-start gap-4 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+                      <MessageCircle className="h-5 w-5 text-blue-700" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-foreground">Customer Response</p>
+                      <p className="mt-0.5 text-sm text-muted-foreground">Generate professional replies to homeowner messages, objections, and follow-ups.</p>
+                    </div>
+                    <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ── BID BUILDER ─────────────────────────────────────────── */}
+            {activeTool === "bid" && (
+              <div className="flex flex-col" style={{ minHeight: "calc(100dvh - 180px)" }}>
+                {/* Header */}
+                <div className="mb-4 flex items-center gap-3">
+                  <button type="button" onClick={() => setActiveTool(null)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground">
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
+                  <div className="flex-1">
+                    <h2 className="font-bold text-foreground">Bid Builder</h2>
+                    <p className="text-xs text-muted-foreground">Chat with your AI estimating assistant</p>
+                  </div>
+                  <button type="button" onClick={resetBidBuilder} className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
+                    Reset
+                  </button>
+                </div>
+
+                {/* Chat thread */}
+                <div className="flex-1 space-y-3 overflow-y-auto pb-2">
+                  {bidMessages.map((msg, i) => (
+                    <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                      {msg.role === "ai" && (
+                        <div className="mr-2 mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                          <Sparkles className="h-3 w-3 text-primary" />
+                        </div>
+                      )}
+                      <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                        msg.role === "user"
+                          ? "bg-primary text-primary-foreground rounded-br-sm"
+                          : "bg-muted text-foreground rounded-bl-sm"
+                      }`}>
+                        <span className="whitespace-pre-wrap">{msg.content}</span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {bidTyping && (
+                    <div className="flex justify-start">
+                      <div className="mr-2 mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                        <Sparkles className="h-3 w-3 text-primary" />
+                      </div>
+                      <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-muted px-4 py-3">
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:0ms]" />
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:150ms]" />
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:300ms]" />
+                      </div>
+                    </div>
+                  )}
+                  <div ref={bidBottomRef} />
+                </div>
+
+                {/* Actions if done */}
+                {bidIsDone && !bidTyping && (
+                  <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-border bg-card p-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 gap-1 px-2.5 text-xs bg-transparent"
                       onClick={() => {
-                        if (isActive) {
-                          setActiveTool(null);
-                          setToolInput("");
-                          setToolOutput(null);
-                        } else {
-                          setActiveTool(tool.id);
-                          setToolInput("");
-                          setToolOutput(null);
-                        }
+                        const last = bidMessages.filter((m) => m.role === "ai").at(-1)?.content ?? "";
+                        navigator.clipboard.writeText(last).then(() => { setBidCopied(true); setTimeout(() => setBidCopied(false), 2000); });
                       }}
                     >
-                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isActive ? "bg-primary/10" : "bg-muted"}`}>
-                        <Icon className={`h-4 w-4 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
-                      </div>
-                      <div className="flex-1">
-                        <p className={`font-semibold ${isActive ? "text-primary" : "text-foreground"}`}>{tool.label}</p>
-                        <p className="text-xs text-muted-foreground">{tool.description}</p>
-                      </div>
-                      <ChevronRight className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${isActive ? "rotate-90" : ""}`} />
-                    </button>
-
-                    {isActive && (
-                      <div className="border-t border-border px-4 pb-4 pt-3 space-y-3">
-                        <Textarea
-                          rows={3}
-                          placeholder={tool.placeholder}
-                          value={toolInput}
-                          onChange={(e) => { setToolInput(e.target.value); setToolOutput(null); }}
-                          className="resize-none text-sm"
-                        />
-                        <Button
-                          className="w-full gap-2"
-                          disabled={!toolInput.trim() || toolLoading}
-                          onClick={() => handleRunTool(tool.id)}
-                        >
-                          {toolLoading ? (
-                            <span className="flex items-center gap-2">
-                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                              Generating...
-                            </span>
-                          ) : (
-                            <>
-                              <Sparkles className="h-4 w-4" /> Generate
-                            </>
-                          )}
-                        </Button>
-
-                        {toolOutput && (
-                          <div className="rounded-lg border border-border bg-muted/40 p-3">
-                            <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{toolOutput}</p>
-                            <div className="mt-3 flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 gap-1 px-2.5 text-xs bg-transparent"
-                                onClick={handleCopyOutput}
-                              >
-                                <Copy className="h-3 w-3" />
-                                {toolCopied ? "Copied!" : "Copy"}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 gap-1 px-2.5 text-xs bg-transparent"
-                                onClick={() => { window.location.href = `sms:?body=${encodeURIComponent(toolOutput)}`; }}
-                              >
-                                <MessageCircle className="h-3 w-3" /> Send via SMS
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 gap-1 px-2.5 text-xs bg-transparent"
-                                onClick={() => window.print()}
-                              >
-                                <FileText className="h-3 w-3" /> Export PDF
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                      <Copy className="h-3 w-3" />{bidCopied ? "Copied!" : "Copy Estimate"}
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => window.print()}>
+                      <FileText className="h-3 w-3" /> Export PDF
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 gap-1 px-2.5 text-xs bg-transparent"
+                      onClick={() => {
+                        const last = bidMessages.filter((m) => m.role === "ai").at(-1)?.content ?? "";
+                        window.location.href = `sms:?body=${encodeURIComponent(last)}`;
+                      }}
+                    >
+                      <Send className="h-3 w-3" /> Send via SMS
+                    </Button>
                   </div>
-                );
-              })}
-            </div>
+                )}
+
+                {/* Input bar */}
+                {!bidIsDone && (
+                  <div className="mt-3 flex gap-2">
+                    <Input
+                      placeholder="Type your answer..."
+                      value={bidInput}
+                      onChange={(e) => setBidInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleBidSend(); } }}
+                      className="flex-1 text-sm"
+                      disabled={bidTyping}
+                    />
+                    <Button size="icon" className="shrink-0" onClick={handleBidSend} disabled={!bidInput.trim() || bidTyping}>
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── PRICE CHECK ─────────────────────────────────────────── */}
+            {activeTool === "pricecheck" && (
+              <div className="space-y-5">
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={() => setActiveTool(null)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground">
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
+                  <div>
+                    <h2 className="font-bold text-foreground">Price Check</h2>
+                    <p className="text-xs text-muted-foreground">Turn pricing objections into affiliate revenue</p>
+                  </div>
+                </div>
+
+                {/* Affiliate stats teaser */}
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: "Jobs Referred", value: "7", icon: Users },
+                    { label: "Avg. Earn/Job", value: "$70", icon: DollarSign },
+                    { label: "Total Earned", value: "$490", icon: TrendingUp },
+                  ].map(({ label, value, icon: Icon }) => (
+                    <div key={label} className="rounded-xl border border-border bg-card p-3 text-center">
+                      <Icon className="mx-auto mb-1 h-4 w-4 text-muted-foreground" />
+                      <p className="text-base font-bold text-foreground">{value}</p>
+                      <p className="text-[10px] text-muted-foreground">{label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Inputs */}
+                <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pc-project" className="text-xs font-medium">Project type</Label>
+                    <Input id="pc-project" placeholder="e.g. Kitchen cabinet repaint" value={pcProject} onChange={(e) => setPcProject(e.target.value)} className="text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pc-bid" className="text-xs font-medium">Your bid amount</Label>
+                    <Input id="pc-bid" placeholder="e.g. $1,450" value={pcBid} onChange={(e) => setPcBid(e.target.value)} className="text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pc-objection" className="text-xs font-medium">Homeowner objection (optional)</Label>
+                    <Input id="pc-objection" placeholder='e.g. "I want to get more bids first"' value={pcObjection} onChange={(e) => setPcObjection(e.target.value)} className="text-sm" />
+                  </div>
+                  <Button className="w-full gap-2" onClick={handlePriceCheck} disabled={!pcProject.trim() || !pcBid.trim() || pcLoading}>
+                    {pcLoading ? (
+                      <span className="flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />Generating...</span>
+                    ) : (
+                      <><Sparkles className="h-4 w-4" /> Generate Response &amp; Referral Link</>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Result */}
+                {pcResult && (
+                  <div className="space-y-3">
+                    <div className="rounded-xl border border-border bg-muted/40 p-4">
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Suggested Response</p>
+                      <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{pcResult.response}</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { navigator.clipboard.writeText(pcResult.response); setPcCopied(true); setTimeout(() => setPcCopied(false), 2000); }}>
+                          <Copy className="h-3 w-3" />{pcCopied ? "Copied!" : "Copy"}
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { window.location.href = `sms:?body=${encodeURIComponent(pcResult.response)}`; }}>
+                          <Send className="h-3 w-3" /> Send via SMS
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Referral link */}
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Your HomeBids Referral Link</p>
+                      <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-2">
+                        <p className="flex-1 truncate text-xs text-foreground font-mono">{pcResult.refLink}</p>
+                        <button
+                          type="button"
+                          onClick={() => { navigator.clipboard.writeText(pcResult.refLink); setPcLinkCopied(true); setTimeout(() => setPcLinkCopied(false), 2000); }}
+                          className="shrink-0 text-emerald-700 hover:text-emerald-900"
+                        >
+                          {pcLinkCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        </button>
+                        <a href={pcResult.refLink} target="_blank" rel="noopener noreferrer" className="shrink-0 text-emerald-700 hover:text-emerald-900">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </div>
+                      <p className="text-xs text-emerald-800">
+                        If the homeowner hires another contractor through HomeBids, you earn <span className="font-semibold">{pcResult.earnings.potentialPerReferral}</span> in affiliate revenue — automatically.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── CUSTOMER RESPONSE ───────────────────────────────────── */}
+            {activeTool === "response" && (
+              <div className="space-y-5">
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={() => setActiveTool(null)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground">
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
+                  <div>
+                    <h2 className="font-bold text-foreground">Customer Response</h2>
+                    <p className="text-xs text-muted-foreground">Generate a professional reply in seconds</p>
+                  </div>
+                </div>
+
+                {/* Inputs */}
+                <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cr-message" className="text-xs font-medium">Homeowner message or situation</Label>
+                    <Textarea id="cr-message" rows={3} placeholder={`e.g. "Your quote seems high. Can you do it for less?"`} value={crMessage} onChange={(e) => setCrMessage(e.target.value)} className="resize-none text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Tone</Label>
+                    <div className="flex gap-2">
+                      {(["professional", "friendly", "direct"] as const).map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setCrTone(t)}
+                          className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium capitalize transition-colors ${
+                            crTone === t ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cr-goal" className="text-xs font-medium">Desired outcome (optional)</Label>
+                    <Input id="cr-goal" placeholder="e.g. Schedule a walkthrough, defend pricing, follow up" value={crGoal} onChange={(e) => setCrGoal(e.target.value)} className="text-sm" />
+                  </div>
+                  <Button className="w-full gap-2" onClick={handleCustomerResponse} disabled={!crMessage.trim() || crLoading}>
+                    {crLoading ? (
+                      <span className="flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />Generating...</span>
+                    ) : (
+                      <><Sparkles className="h-4 w-4" /> Generate Response</>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Result */}
+                {crResult && (
+                  <div className="space-y-3">
+                    {/* Version tabs */}
+                    <div className="flex gap-1 rounded-lg bg-muted p-1">
+                      {(["full", "sms", "short"] as const).map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => setCrVersion(v)}
+                          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                            crVersion === v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {v === "full" ? "Full" : v === "sms" ? "SMS" : "Short"}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-muted/40 p-4">
+                      <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{crResult[crVersion]}</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 gap-1 px-2.5 text-xs bg-transparent"
+                          onClick={() => { navigator.clipboard.writeText(crResult[crVersion]); setCrCopied(true); setTimeout(() => setCrCopied(false), 2000); }}
+                        >
+                          <Copy className="h-3 w-3" />{crCopied ? "Copied!" : "Copy"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 gap-1 px-2.5 text-xs bg-transparent"
+                          onClick={() => { window.location.href = `sms:?body=${encodeURIComponent(crResult[crVersion])}`; }}
+                        >
+                          <Send className="h-3 w-3" /> Send via SMS
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -743,7 +971,6 @@ export default function ContractorDashboard() {
           <div className="space-y-5">
             <h1 className="text-xl font-bold text-foreground">Account</h1>
 
-            {/* Profile */}
             <div className="rounded-xl border border-border bg-card p-4 space-y-3">
               <h2 className="text-sm font-semibold text-foreground">Profile</h2>
               <div className="flex items-center gap-3">
@@ -767,7 +994,6 @@ export default function ContractorDashboard() {
               </div>
             </div>
 
-            {/* Subscription */}
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-2">
               <h2 className="text-sm font-semibold text-primary">Your Plan</h2>
               <p className="text-2xl font-bold text-foreground">$99 / month</p>
@@ -777,7 +1003,7 @@ export default function ContractorDashboard() {
                   "No bid fees — ever",
                   "HomeBids AI lead matching",
                   "Direct homeowner contact after approval",
-                  "AI estimate, price check, and response tools",
+                  "AI Bid Builder, Price Check, and Customer Response tools",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2 text-sm text-foreground">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
@@ -787,31 +1013,19 @@ export default function ContractorDashboard() {
               </ul>
             </div>
 
-            {/* Notifications */}
             <div className="rounded-xl border border-border bg-card p-4 space-y-3">
               <h2 className="text-sm font-semibold text-foreground">Notifications</h2>
               <label className="flex cursor-pointer items-center justify-between">
-                <span className="flex items-center gap-2 text-sm text-foreground">
-                  <Bell className="h-4 w-4 text-muted-foreground" />
-                  New lead alerts
-                </span>
+                <span className="flex items-center gap-2 text-sm text-foreground"><Bell className="h-4 w-4 text-muted-foreground" />New lead alerts</span>
                 <input type="checkbox" defaultChecked className="h-4 w-4 accent-primary" />
               </label>
               <label className="flex cursor-pointer items-center justify-between">
-                <span className="flex items-center gap-2 text-sm text-foreground">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  Homeowner approval alerts
-                </span>
+                <span className="flex items-center gap-2 text-sm text-foreground"><User className="h-4 w-4 text-muted-foreground" />Homeowner approval alerts</span>
                 <input type="checkbox" defaultChecked className="h-4 w-4 accent-primary" />
               </label>
             </div>
 
-            {/* Sign out */}
-            <Button
-              variant="outline"
-              className="w-full gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-600 bg-transparent"
-              onClick={handleSignOut}
-            >
+            <Button variant="outline" className="w-full gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-600 bg-transparent" onClick={handleSignOut}>
               <LogOut className="h-4 w-4" />
               Sign Out
             </Button>
@@ -829,7 +1043,7 @@ export default function ContractorDashboard() {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => { setActiveTab(tab.id); if (tab.id !== "ai") setActiveTool(null); }}
                 className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors ${
                   isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
@@ -855,26 +1069,16 @@ export default function ContractorDashboard() {
             <div className="flex flex-col items-center gap-3 py-6 text-center">
               <CheckCircle2 className="h-10 w-10 text-green-600" />
               <p className="font-semibold text-foreground">Message sent via HomeBids AI</p>
-              <p className="text-sm text-muted-foreground">
-                You&apos;ll be notified when the homeowner responds or approves direct contact.
-              </p>
+              <p className="text-sm text-muted-foreground">You&apos;ll be notified when the homeowner responds or approves direct contact.</p>
               <Button className="mt-2 w-full" onClick={() => setShowRelayModal(false)}>Done</Button>
             </div>
           ) : (
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
                 <Label htmlFor="relay-message">Your message</Label>
-                <Textarea
-                  id="relay-message"
-                  value={relayMessage}
-                  onChange={(e) => setRelayMessage(e.target.value)}
-                  rows={4}
-                  placeholder={relayLead?.suggestedResponse ?? "Hi, I wanted to follow up on your project..."}
-                />
+                <Textarea id="relay-message" value={relayMessage} onChange={(e) => setRelayMessage(e.target.value)} rows={4} placeholder={relayLead?.suggestedResponse ?? "Hi, I wanted to follow up on your project..."} />
               </div>
-              <p className="text-xs text-muted-foreground">
-                Once the homeowner approves, direct SMS access will be unlocked.
-              </p>
+              <p className="text-xs text-muted-foreground">Once the homeowner approves, direct SMS access will be unlocked.</p>
               <div className="flex justify-end gap-3">
                 <Button variant="outline" onClick={() => setShowRelayModal(false)} className="bg-transparent">Cancel</Button>
                 <Button disabled={!relayMessage.trim()} onClick={() => setRelaySent(true)}>
@@ -944,31 +1148,15 @@ export default function ContractorDashboard() {
                 </ul>
               </div>
               <div className="flex flex-col gap-2 pt-1">
-                <Button
-                  className="w-full gap-2"
-                  onClick={() => { setShowLeadDetail(false); setActiveTab("ai"); }}
-                >
-                  <Calculator className="h-4 w-4" /> Generate Bid in AI Tools
+                <Button className="w-full gap-2" onClick={() => { setShowLeadDetail(false); setActiveTab("ai"); setActiveTool("bid"); }}>
+                  <Calculator className="h-4 w-4" /> Build Bid in AI Tools
                 </Button>
                 {!selectedLead.directMessagingUnlocked ? (
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 bg-transparent"
-                    onClick={() => {
-                      setRelayLead(selectedLead);
-                      setRelayMessage(selectedLead.suggestedResponse);
-                      setRelaySent(false);
-                      setShowLeadDetail(false);
-                      setTimeout(() => setShowRelayModal(true), 150);
-                    }}
-                  >
+                  <Button variant="outline" className="w-full gap-2 bg-transparent" onClick={() => { setRelayLead(selectedLead); setRelayMessage(selectedLead.suggestedResponse); setRelaySent(false); setShowLeadDetail(false); setTimeout(() => setShowRelayModal(true), 150); }}>
                     <MessageCircle className="h-4 w-4" /> Message via HomeBids AI
                   </Button>
                 ) : (
-                  <Button
-                    className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
-                    onClick={() => { window.location.href = `sms:${selectedLead.homeownerPhone ?? ""}`; }}
-                  >
+                  <Button className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white" onClick={() => { window.location.href = `sms:${selectedLead.homeownerPhone ?? ""}`; }}>
                     <MessageCircle className="h-4 w-4" /> Text Homeowner
                   </Button>
                 )}
