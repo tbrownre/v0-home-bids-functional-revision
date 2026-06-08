@@ -128,7 +128,7 @@ const DEMO_HOMEBIDS_LEADS: HomeBidsLead[] = [
     recommendedPrice: "$1,350–$1,600",
     suggestedResponse: "Hi Jennifer, I'd love to help refresh your cabinets with a low-VOC finish that's safe for your kids. I specialize in cabinet repaints in the Gilbert area and can get started within the week.",
     objections: ["Too expensive — counter with longevity vs. full replacement cost", "Timeline concern — offer flexible scheduling"],
-    nextAction: "Generate Winning Bid",
+    nextAction: "Generate Bid",
   },
   {
     id: "hbl-2",
@@ -931,7 +931,7 @@ export default function ContractorDashboard() {
                             <>
                               <Button size="sm" className="h-7 gap-1 px-2.5 text-xs">
                                 <Calculator className="h-3 w-3" />
-                                Generate Winning Bid
+                                Generate Bid
                               </Button>
                               <Button
                                 size="sm"
@@ -1139,7 +1139,7 @@ export default function ContractorDashboard() {
                     onClick={() => { handleOpenMessenger(selectedBid); }}
                   >
                     <MessageCircle className="h-4 w-4" />
-                    Message Homeowner
+                    Message via HomeBids AI
                   </Button>
                 </div>
               </motion.div>
