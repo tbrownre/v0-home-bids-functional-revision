@@ -114,25 +114,18 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [menuOpen]);
 
-  // Auth state
-  const [isSignedIn, setIsSignedIn] = useState(() => {
-    if (USE_MOCK_DATA && typeof window !== "undefined") {
-      const user = getMockUser();
-      return isSignedInProp || (user?.role === "homeowner" || user?.role === "admin") ? true : false;
-    }
-    return isSignedInProp;
-  });
-  const [isContractor, setIsContractor] = useState(() => {
-    if (USE_MOCK_DATA && typeof window !== "undefined") {
-      const user = getMockUser();
-      return isContractorProp || user?.role === "contractor";
-    }
-    return isContractorProp;
-  });
+  // Auth state — initialise from props (same on server and client) and
+  // correct for mock/Supabase data after mount in the effect below.
+  const [isSignedIn, setIsSignedIn] = useState(isSignedInProp);
+  const [isContractor, setIsContractor] = useState(isContractorProp);
   const isLoggedIn = isContractor || isSignedIn;
 
+  // Track client mount so hydration-sensitive values (unread badge, auth
+  // from window/localStorage) are only applied after the first render.
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    setMounted(true);
 
     if (USE_MOCK_DATA) {
       const user = getMockUser();
@@ -162,13 +155,14 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
     return () => subscription?.unsubscribe();
   }, []);
 
-  // Inbox state (still uses in-memory store for now)
+  // Inbox state — server snapshot always returns 0 to avoid hydration mismatch.
   const unreadSnapshot = useSyncExternalStore(
     subscribeInbox,
     isContractor ? getContractorUnreadSnapshot : getHomeownerUnreadSnapshot,
-    isContractor ? getContractorUnreadSnapshot : getHomeownerUnreadSnapshot,
+    () => 0,
   );
-  const unreadCount = isLoggedIn ? unreadSnapshot : 0;
+  // Only use the live count after mount so server HTML and first client render match.
+  const unreadCount = mounted && isLoggedIn ? unreadSnapshot : 0;
 
   const handleSignOut = async () => {
     closeMenu();
