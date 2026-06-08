@@ -176,66 +176,41 @@ function getBidBuilderReply(history: ChatMessage[]): string {
   const last = userMessages[count - 1]?.content?.toLowerCase() ?? "";
 
   if (count === 1) {
-    if (last.includes("cabinet") || last.includes("paint") || last.includes("interior")) {
+    if (last.includes("cabinet") || last.includes("paint") || last.includes("interior"))
       return "Got it — cabinet repaint. How many cabinet doors are involved, and what's the current finish (painted or stained)?";
-    }
-    if (last.includes("turf") || last.includes("landscap") || last.includes("yard")) {
+    if (last.includes("turf") || last.includes("landscap") || last.includes("yard"))
       return "Turf install — perfect. Roughly how many square feet, and is there existing grass or sod that needs to be removed first?";
-    }
-    if (last.includes("drywall") || last.includes("repair")) {
+    if (last.includes("drywall") || last.includes("repair"))
       return "Drywall repair. How large is the damaged area, and is this a patch/texture match or a full panel replacement?";
-    }
-    if (last.includes("bathroom") || last.includes("vanity") || last.includes("remodel")) {
+    if (last.includes("bathroom") || last.includes("vanity") || last.includes("remodel"))
       return "Bathroom remodel. Are we talking a full gut-and-remodel, or specific items like vanity, tile, or fixtures?";
-    }
     return `${userMessages[0].content} — great. Can you give me a rough scope? (e.g. size of the space, materials, any demo work needed)`;
   }
+  if (count === 2) return "Got it. What city and state is this job in? Pricing varies a lot by market.";
+  if (count === 3) return "What timeline did the homeowner mention, and have they shared a budget range?";
+  if (count === 4) return "Any special considerations — premium finishes, tight access, permit required, or work to be done on weekends?";
+  if (count === 5) return "One last thing — would you like to include optional upsells in the estimate? (e.g. an extra coat, warranty, or add-on service)";
 
-  if (count === 2) {
-    return "Got it. What city and state is this job in? Pricing varies a lot by market.";
-  }
-
-  if (count === 3) {
-    return "What timeline did the homeowner mention, and have they shared a budget range?";
-  }
-
-  if (count === 4) {
-    return "Any special considerations — premium finishes, tight access, permit required, or work to be done on weekends?";
-  }
-
-  if (count === 5) {
-    return "One last thing — would you like to include optional upsells in the estimate? (e.g. an extra coat, warranty, or add-on service)";
-  }
-
-  // Final: generate full estimate output
   const project = userMessages[0]?.content ?? "your project";
   const location = userMessages[2]?.content ?? "your area";
   return `Here's your professional bid summary for the ${project} in ${location}:\n\n**Scope of Work**\n${userMessages[1]?.content ?? "As described"}\n\n**Suggested Price Range**\n$1,200 – $1,800\n\n**Exclusions**\nPermit fees (if required), dumpster rental, unforeseen structural issues\n\n**Optional Upsells**\n• Premium finish upgrade: +$200\n• 1-year touch-up warranty: +$150\n• Weekend scheduling: +$100\n\n**Customer-Friendly Intro**\n"I've put together a detailed estimate for your project. My pricing includes all labor, materials, and clean-up — no surprise fees. I can typically start within 5–7 business days."\n\n_Tip: Lead with value, not just price. Mention your timeline and any warranties upfront._`;
 }
 
-// ── Price Check mock data ─────────────────────────────────────────────────────
+// ── Price Check ───────────────────────────────────────────────────────────────
 
 function getPriceCheckResponse(projectType: string, bidAmount: string, objection: string) {
   const refLink = `https://homebids.com/compare?ref=contractor-demo&project=${encodeURIComponent(projectType)}`;
   return {
     response: `I completely understand wanting to compare options — that's smart. I actually work with HomeBids, so you can easily see what other contractors are quoting for the same work and make sure you're getting a fair deal.\n\nHere's a quick link to explore additional quotes:\n${refLink}\n\nIf another contractor ends up being a better fit, no worries at all — I still appreciate the opportunity and hope the comparison is helpful.`,
     refLink,
-    earnings: {
-      potentialPerReferral: "$45–$120",
-      jobsReferred: 7,
-      affiliateEarned: "$490",
-    },
+    earnings: { potentialPerReferral: "$45–$120", jobsReferred: 7, affiliateEarned: "$490" },
   };
 }
 
-// ── Customer Response mock replies ────────────────────────────────────────────
+// ── Customer Response ─────────────────────────────────────────────────────────
 
 function getCustomerResponse(message: string, tone: string, goal: string) {
-  const toneMap: Record<string, string> = {
-    professional: "professional and clear",
-    friendly: "warm and friendly",
-    direct: "direct and confident",
-  };
+  const toneMap: Record<string, string> = { professional: "professional and clear", friendly: "warm and friendly", direct: "direct and confident" };
   const toneLabel = toneMap[tone] ?? "professional";
   return {
     full: `Hi there,\n\nThank you for reaching out! ${goal ? `Regarding your question about "${goal.slice(0, 60)}" — ` : ""}I wanted to make sure I got back to you quickly.\n\nI'd love to help with your project. Based on what you've shared, I can schedule a walkthrough at your convenience — I typically have availability within 2–3 business days and can provide a same-day written estimate after the visit.\n\nFeel free to call or text me anytime. Looking forward to connecting!\n\n— [Your Name]`,
@@ -245,10 +220,43 @@ function getCustomerResponse(message: string, tone: string, goal: string) {
   };
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 type Tab = "home" | "leads" | "ai" | "account";
 type AiTool = "bid" | "pricecheck" | "response" | null;
+
+// ── Sidebar nav item ──────────────────────────────────────────────────────────
+
+function SidebarNavItem({
+  id,
+  label,
+  icon: Icon,
+  isActive,
+  onClick,
+}: {
+  id: Tab;
+  label: string;
+  icon: React.ElementType;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+        isActive
+          ? "bg-primary/10 text-primary"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+      }`}
+    >
+      <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+      {label}
+    </button>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function ContractorDashboard() {
   const searchParams = useSearchParams();
@@ -293,14 +301,12 @@ export default function ContractorDashboard() {
         }
         const { bids } = await getContractorBids();
         setBidsCount((bids ?? []).length);
-      } catch {
-        // non-fatal
-      }
+      } catch { /* non-fatal */ }
     }
     load();
   }, []);
 
-  // Leads
+  // Leads segment
   const [leadsSegment, setLeadsSegment] = useState<"homebids" | "myleads">("homebids");
 
   // Relay modal
@@ -313,10 +319,10 @@ export default function ContractorDashboard() {
   const [showLeadDetail, setShowLeadDetail] = useState(false);
   const [selectedLead, setSelectedLead] = useState<HomeBidsLead | null>(null);
 
-  // AI Tools — which tool is open
+  // AI Tools
   const [activeTool, setActiveTool] = useState<AiTool>(null);
 
-  // ── Bid Builder state ────────────────────────────────────────────────────
+  // Bid Builder
   const [bidMessages, setBidMessages] = useState<ChatMessage[]>([BID_BUILDER_INTRO]);
   const [bidInput, setBidInput] = useState("");
   const [bidTyping, setBidTyping] = useState(false);
@@ -349,7 +355,7 @@ export default function ContractorDashboard() {
     setBidCopied(false);
   }
 
-  // ── Price Check state ────────────────────────────────────────────────────
+  // Price Check
   const [pcProject, setPcProject] = useState("");
   const [pcBid, setPcBid] = useState("");
   const [pcObjection, setPcObjection] = useState("");
@@ -362,13 +368,10 @@ export default function ContractorDashboard() {
     if (!pcProject.trim() || !pcBid.trim()) return;
     setPcLoading(true);
     setPcResult(null);
-    setTimeout(() => {
-      setPcResult(getPriceCheckResponse(pcProject, pcBid, pcObjection));
-      setPcLoading(false);
-    }, 1000);
+    setTimeout(() => { setPcResult(getPriceCheckResponse(pcProject, pcBid, pcObjection)); setPcLoading(false); }, 1000);
   }
 
-  // ── Customer Response state ──────────────────────────────────────────────
+  // Customer Response
   const [crMessage, setCrMessage] = useState("");
   const [crTone, setCrTone] = useState("professional");
   const [crGoal, setCrGoal] = useState("");
@@ -381,15 +384,12 @@ export default function ContractorDashboard() {
     if (!crMessage.trim()) return;
     setCrLoading(true);
     setCrResult(null);
-    setTimeout(() => {
-      setCrResult(getCustomerResponse(crMessage, crTone, crGoal));
-      setCrLoading(false);
-    }, 1000);
+    setTimeout(() => { setCrResult(getCustomerResponse(crMessage, crTone, crGoal)); setCrLoading(false); }, 1000);
   }
 
   const handleSignOut = () => mockSignOut();
 
-  // ── Derived stats ──────────────────────────────────────────────────────────
+  // Derived stats
   const newLeads = DEMO_HOMEBIDS_LEADS.filter((l) => l.status === "new").length;
   const awaitingApproval = DEMO_HOMEBIDS_LEADS.filter((l) => l.status === "homeowner_reviewing").length;
   const inProgress = DEMO_MY_LEADS.filter((l) => l.status === "in_progress").length;
@@ -401,641 +401,728 @@ export default function ContractorDashboard() {
     { id: "account", label: "Account",  icon: Wrench },
   ];
 
+  function handleTabChange(id: Tab) {
+    setActiveTab(id);
+    if (id !== "ai") setActiveTool(null);
+  }
+
+  // ── Shared lead card renderer ─────────────────────────────────────────────
+
+  function renderHomeBidsLeadCard(lead: HomeBidsLead, compact = false) {
+    const statusBadge =
+      lead.status === "new" ? { label: "New", cls: "bg-blue-100 text-blue-700" }
+      : lead.status === "bid_submitted" ? { label: "Bid Submitted", cls: "bg-amber-100 text-amber-700" }
+      : { label: "Reviewing", cls: "bg-purple-100 text-purple-700" };
+
+    const cta = lead.directMessagingUnlocked
+      ? { label: "Text Homeowner", primary: true, green: true, onClick: () => { window.location.href = `sms:${lead.homeownerPhone ?? ""}`; } }
+      : lead.status === "new"
+      ? { label: "Generate Bid", primary: true, green: false, onClick: () => { setSelectedLead(lead); setShowLeadDetail(true); } }
+      : { label: "Send via HomeBids AI", primary: true, green: false, onClick: () => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); } };
+
+    return (
+      <div key={lead.id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/30">
+        {/* Top row */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadge.cls}`}>{statusBadge.label}</span>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
+          </div>
+          <span className="text-sm font-semibold text-foreground shrink-0">{lead.estimatedValue}</span>
+        </div>
+
+        <p className="mt-1.5 font-semibold text-foreground">{lead.title}</p>
+
+        <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1"><MapPin className="h-3 w-3 shrink-0" />{lead.location}</span>
+          <span className="flex items-center gap-1"><Clock className="h-3 w-3 shrink-0" />{lead.timeline}</span>
+        </div>
+
+        {!compact && <p className="mt-2 text-[11px] italic text-primary/80">{lead.aiNotes}</p>}
+
+        <div className="mt-2">
+          {lead.directMessagingUnlocked ? (
+            <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700 w-fit">
+              <Unlock className="h-3 w-3" /> Direct texting unlocked
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground w-fit">
+              <Lock className="h-3 w-3" /> Contact locked
+            </span>
+          )}
+        </div>
+
+        <div className="mt-3 flex gap-2">
+          <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
+            <Eye className="h-3.5 w-3.5" /> Details
+          </Button>
+          <Button
+            size="sm"
+            className={`h-7 gap-1 px-3 text-xs ${cta.green ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
+            onClick={cta.onClick}
+          >
+            {cta.label}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── HOME tab content ───────────────────────────────────────────────────────
+
+  const homeContent = (
+    <div className="space-y-6">
+      {/* Greeting */}
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Good morning, {contractorName}.</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          You have <span className="font-semibold text-foreground">{DEMO_HOMEBIDS_LEADS.length + DEMO_MY_LEADS.length}</span> active leads.
+        </p>
+      </div>
+
+      {/* KPI row — horizontal on both mobile and desktop */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          { label: "New Leads",        value: newLeads,          color: "bg-blue-50 text-blue-700 border-blue-100" },
+          { label: "Awaiting Approval", value: awaitingApproval, color: "bg-purple-50 text-purple-700 border-purple-100" },
+          { label: "In Progress",      value: inProgress,        color: "bg-amber-50 text-amber-700 border-amber-100" },
+          { label: "Bids Submitted",   value: bidsCount,         color: "bg-muted text-muted-foreground border-border" },
+        ].map(({ label, value, color }) => (
+          <div key={label} className={`rounded-xl border p-3 ${color}`}>
+            <p className="text-2xl font-bold">{value}</p>
+            <p className="mt-0.5 text-[11px] font-medium">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Two-column on desktop, stacked on mobile */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        {/* Left: Priority leads */}
+        <div className="lg:col-span-3">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Needs your attention</h2>
+          <div className="space-y-3">
+            {DEMO_HOMEBIDS_LEADS.map((lead) => renderHomeBidsLeadCard(lead, false))}
+          </div>
+        </div>
+
+        {/* Right: Suggested actions panel */}
+        <div className="lg:col-span-2">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Suggested actions</h2>
+          <div className="space-y-2">
+            {[
+              { icon: Calculator, label: "Finish draft estimate", sub: "Kitchen Cabinet Repaint", action: () => { handleTabChange("ai"); setActiveTool("bid"); } },
+              { icon: Eye, label: "Homeowner reviewing bid", sub: "Backyard Turf Install", action: () => handleTabChange("leads") },
+              { icon: Unlock, label: "Approval unlocked", sub: "Bathroom Vanity Replacement", action: () => handleTabChange("leads") },
+              { icon: MessageCircle, label: "Generate a response", sub: "Use AI Customer Response tool", action: () => { handleTabChange("ai"); setActiveTool("response"); } },
+            ].map(({ icon: Icon, label, sub, action }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={action}
+                className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/30 hover:bg-primary/5"
+              >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground">{label}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">{sub}</p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
+            ))}
+          </div>
+
+          {/* Quick-access AI CTA */}
+          <button
+            type="button"
+            onClick={() => handleTabChange("ai")}
+            className="mt-4 flex w-full items-center justify-between rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+          >
+            <span className="flex items-center gap-2"><Zap className="h-4 w-4" />Open AI Tools</span>
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── LEADS tab content ──────────────────────────────────────────────────────
+
+  const leadsContent = (
+    <div className="space-y-5">
+      <h1 className="text-xl font-bold text-foreground">Leads</h1>
+
+      {/* Segment toggle */}
+      <div className="flex gap-1 rounded-xl bg-muted p-1">
+        {(["homebids", "myleads"] as const).map((seg) => (
+          <button
+            key={seg}
+            type="button"
+            onClick={() => setLeadsSegment(seg)}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+              leadsSegment === seg ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {seg === "homebids" ? <Sparkles className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}
+            {seg === "homebids" ? "HomeBids AI" : "My Leads"}
+            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+              leadsSegment === seg
+                ? seg === "homebids" ? "bg-primary/10 text-primary" : "bg-emerald-100 text-emerald-700"
+                : "bg-muted-foreground/20 text-muted-foreground"
+            }`}>
+              {seg === "homebids" ? DEMO_HOMEBIDS_LEADS.length : DEMO_MY_LEADS.length}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {leadsSegment === "homebids" && (
+        <div>
+          <p className="mb-3 text-xs text-muted-foreground">AI-matched leads. Win approval to unlock direct contact.</p>
+          {/* On desktop, use a 2-col grid for lead cards */}
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {DEMO_HOMEBIDS_LEADS.map((lead) => {
+              const statusBadge =
+                lead.status === "new" ? { label: "New", cls: "bg-blue-100 text-blue-700" }
+                : lead.status === "bid_submitted" ? { label: "Bid Submitted", cls: "bg-amber-100 text-amber-700" }
+                : { label: "Reviewing", cls: "bg-purple-100 text-purple-700" };
+              return (
+                <div key={lead.id} className="rounded-xl border border-border bg-card p-4">
+                  {/* Horizontal layout on desktop */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadge.cls}`}>{statusBadge.label}</span>
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
+                    </div>
+                    <span className="shrink-0 font-semibold text-foreground">{lead.estimatedValue}</span>
+                  </div>
+                  <p className="mt-2 font-semibold text-foreground">{lead.title}</p>
+                  <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{lead.location}</span>
+                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{lead.timeline}</span>
+                  </div>
+                  <p className="mt-2 text-[11px] italic text-primary/80 line-clamp-2">{lead.aiNotes}</p>
+                  <div className="mt-2">
+                    {lead.directMessagingUnlocked ? (
+                      <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700 w-fit">
+                        <Unlock className="h-3 w-3" /> Direct texting unlocked
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground w-fit">
+                        <Lock className="h-3 w-3" /> Contact locked — win approval first
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
+                      <Eye className="h-3 w-3" /> Details
+                    </Button>
+                    {lead.directMessagingUnlocked ? (
+                      <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => { window.location.href = `sms:${lead.homeownerPhone ?? ""}`; }}>
+                        <MessageCircle className="h-3 w-3" /> Text Homeowner
+                      </Button>
+                    ) : (
+                      <>
+                        <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
+                          <Calculator className="h-3 w-3" /> Generate Bid
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); }}>
+                          <MessageCircle className="h-3 w-3" /> Send via HomeBids AI
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {leadsSegment === "myleads" && (
+        <div>
+          <p className="mb-3 text-xs text-muted-foreground">Your own leads — full control, text directly any time.</p>
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {DEMO_MY_LEADS.map((lead) => {
+              const aiStatusBadge =
+                lead.aiStatus === "estimate_ready" ? { label: "Estimate Ready", cls: "bg-blue-100 text-blue-700" }
+                : lead.aiStatus === "response_sent" ? { label: "Response Sent", cls: "bg-amber-100 text-amber-700" }
+                : { label: "Follow-Up Ready", cls: "bg-purple-100 text-purple-700" };
+              return (
+                <div key={lead.id} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-700">
+                      {lead.customerName.charAt(0)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-foreground">{lead.customerName}</p>
+                      <p className="text-xs text-muted-foreground">{lead.projectTitle}</p>
+                    </div>
+                    <span className="shrink-0 font-semibold text-foreground">{lead.estimatedValue}</span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${aiStatusBadge.cls}`}>{aiStatusBadge.label}</span>
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">{lead.lastActivity}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => handleTabChange("ai")}>
+                      <Sparkles className="h-3 w-3" /> AI Tools
+                    </Button>
+                    <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { window.location.href = `sms:${lead.phone ?? ""}`; }}>
+                      <MessageCircle className="h-3 w-3" /> Text Customer
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // ── AI TOOLS tab content ───────────────────────────────────────────────────
+
+  // Tool picker list (shared between mobile and desktop sidebar)
+  const aiToolList = (
+    <div className="space-y-2">
+      {[
+        { id: "bid" as AiTool, label: "Bid Builder", desc: "Build a professional estimate step by step.", icon: Calculator, bg: "bg-primary/10", iconCls: "text-primary" },
+        { id: "pricecheck" as AiTool, label: "Price Check", desc: "Handle objections and earn affiliate revenue.", icon: DollarSign, bg: "bg-emerald-100", iconCls: "text-emerald-700" },
+        { id: "response" as AiTool, label: "Customer Response", desc: "Generate professional replies in seconds.", icon: MessageCircle, bg: "bg-blue-100", iconCls: "text-blue-700" },
+      ].map(({ id, label, desc, icon: Icon, bg, iconCls }) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => setActiveTool(id)}
+          className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors ${
+            activeTool === id
+              ? "border-primary/40 bg-primary/5"
+              : "border-border bg-card hover:border-primary/30 hover:bg-primary/5"
+          }`}
+        >
+          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${bg}`}>
+            <Icon className={`h-4 w-4 ${iconCls}`} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">{label}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">{desc}</p>
+          </div>
+          {/* Only show chevron in the mobile single-pane view */}
+          <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground lg:hidden" />
+        </button>
+      ))}
+    </div>
+  );
+
+  // Bid builder pane
+  const bidBuilderPane = (
+    <div className="flex h-full flex-col" style={{ minHeight: "calc(100dvh - 220px)" }}>
+      <div className="mb-4 flex items-center gap-3 lg:hidden">
+        <button type="button" onClick={() => setActiveTool(null)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="flex-1">
+          <h2 className="font-bold text-foreground">Bid Builder</h2>
+          <p className="text-xs text-muted-foreground">Chat with your AI estimating assistant</p>
+        </div>
+        <button type="button" onClick={resetBidBuilder} className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">Reset</button>
+      </div>
+      {/* Desktop title row */}
+      <div className="mb-4 hidden items-center justify-between lg:flex">
+        <div>
+          <h2 className="font-bold text-foreground">Bid Builder</h2>
+          <p className="text-xs text-muted-foreground">Chat with your AI estimating assistant</p>
+        </div>
+        <button type="button" onClick={resetBidBuilder} className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">Reset</button>
+      </div>
+
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pb-2">
+        {bidMessages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+            {msg.role === "ai" && (
+              <div className="mr-2 mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <Sparkles className="h-3 w-3 text-primary" />
+              </div>
+            )}
+            <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+              msg.role === "user" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm"
+            }`}>
+              <span className="whitespace-pre-wrap">{msg.content}</span>
+            </div>
+          </div>
+        ))}
+        {bidTyping && (
+          <div className="flex justify-start">
+            <div className="mr-2 mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <Sparkles className="h-3 w-3 text-primary" />
+            </div>
+            <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-muted px-4 py-3">
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:0ms]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:150ms]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:300ms]" />
+            </div>
+          </div>
+        )}
+        <div ref={bidBottomRef} />
+      </div>
+
+      {bidIsDone && !bidTyping && (
+        <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-border bg-card p-3">
+          <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent"
+            onClick={() => { const last = bidMessages.filter((m) => m.role === "ai").at(-1)?.content ?? ""; copyToClipboard(last).then(() => { setBidCopied(true); setTimeout(() => setBidCopied(false), 2000); }); }}>
+            <Copy className="h-3 w-3" />{bidCopied ? "Copied!" : "Copy Estimate"}
+          </Button>
+          <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => window.print()}>
+            <FileText className="h-3 w-3" /> Export PDF
+          </Button>
+          <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent"
+            onClick={() => { const last = bidMessages.filter((m) => m.role === "ai").at(-1)?.content ?? ""; window.location.href = `sms:?body=${encodeURIComponent(last)}`; }}>
+            <Send className="h-3 w-3" /> Send via SMS
+          </Button>
+        </div>
+      )}
+
+      {!bidIsDone && (
+        <div className="mt-3 flex gap-2">
+          <Input placeholder="Type your answer..." value={bidInput} onChange={(e) => setBidInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleBidSend(); } }}
+            className="flex-1 text-sm" disabled={bidTyping} />
+          <Button size="icon" className="shrink-0" onClick={handleBidSend} disabled={!bidInput.trim() || bidTyping}>
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
+  // Price check pane
+  const priceCheckPane = (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3 lg:hidden">
+        <button type="button" onClick={() => setActiveTool(null)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div>
+          <h2 className="font-bold text-foreground">Price Check</h2>
+          <p className="text-xs text-muted-foreground">Turn pricing objections into affiliate revenue</p>
+        </div>
+      </div>
+      <div className="hidden lg:block">
+        <h2 className="font-bold text-foreground">Price Check</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">Turn pricing objections into affiliate revenue</p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {[{ label: "Jobs Referred", value: "7", icon: Users }, { label: "Avg. Earn/Job", value: "$70", icon: DollarSign }, { label: "Total Earned", value: "$490", icon: TrendingUp }].map(({ label, value, icon: Icon }) => (
+          <div key={label} className="rounded-xl border border-border bg-card p-3 text-center">
+            <Icon className="mx-auto mb-1 h-4 w-4 text-muted-foreground" />
+            <p className="text-base font-bold text-foreground">{value}</p>
+            <p className="text-[10px] text-muted-foreground">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="pc-project" className="text-xs font-medium">Project type</Label>
+          <Input id="pc-project" placeholder="e.g. Kitchen cabinet repaint" value={pcProject} onChange={(e) => setPcProject(e.target.value)} className="text-sm" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="pc-bid" className="text-xs font-medium">Your bid amount</Label>
+          <Input id="pc-bid" placeholder="e.g. $1,450" value={pcBid} onChange={(e) => setPcBid(e.target.value)} className="text-sm" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="pc-objection" className="text-xs font-medium">Homeowner objection (optional)</Label>
+          <Input id="pc-objection" placeholder={`e.g. "I want to get more bids first"`} value={pcObjection} onChange={(e) => setPcObjection(e.target.value)} className="text-sm" />
+        </div>
+        <Button className="w-full gap-2" onClick={handlePriceCheck} disabled={!pcProject.trim() || !pcBid.trim() || pcLoading}>
+          {pcLoading ? <span className="flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />Generating...</span> : <><Sparkles className="h-4 w-4" /> Generate Response &amp; Referral Link</>}
+        </Button>
+      </div>
+
+      {pcResult && (
+        <div className="space-y-3">
+          <div className="rounded-xl border border-border bg-muted/40 p-4">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Suggested Response</p>
+            <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{pcResult.response}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { copyToClipboard(pcResult.response); setPcCopied(true); setTimeout(() => setPcCopied(false), 2000); }}>
+                <Copy className="h-3 w-3" />{pcCopied ? "Copied!" : "Copy"}
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { window.location.href = `sms:?body=${encodeURIComponent(pcResult.response)}`; }}>
+                <Send className="h-3 w-3" /> Send via SMS
+              </Button>
+            </div>
+          </div>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Your HomeBids Referral Link</p>
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-2">
+              <p className="flex-1 truncate text-xs text-foreground font-mono">{pcResult.refLink}</p>
+              <button type="button" onClick={() => { copyToClipboard(pcResult.refLink); setPcLinkCopied(true); setTimeout(() => setPcLinkCopied(false), 2000); }} className="shrink-0 text-emerald-700 hover:text-emerald-900">
+                {pcLinkCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </button>
+              <a href={pcResult.refLink} target="_blank" rel="noopener noreferrer" className="shrink-0 text-emerald-700 hover:text-emerald-900"><ExternalLink className="h-4 w-4" /></a>
+            </div>
+            <p className="text-xs text-emerald-800">
+              If the homeowner hires another contractor through HomeBids, you earn <span className="font-semibold">{pcResult.earnings.potentialPerReferral}</span> in affiliate revenue — automatically.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Customer response pane
+  const customerResponsePane = (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3 lg:hidden">
+        <button type="button" onClick={() => setActiveTool(null)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div>
+          <h2 className="font-bold text-foreground">Customer Response</h2>
+          <p className="text-xs text-muted-foreground">Generate a professional reply in seconds</p>
+        </div>
+      </div>
+      <div className="hidden lg:block">
+        <h2 className="font-bold text-foreground">Customer Response</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">Generate a professional reply in seconds</p>
+      </div>
+
+      <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="cr-message" className="text-xs font-medium">Homeowner message or situation</Label>
+          <Textarea id="cr-message" rows={3} placeholder={`e.g. "Your quote seems high. Can you do it for less?"`} value={crMessage} onChange={(e) => setCrMessage(e.target.value)} className="resize-none text-sm" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Tone</Label>
+          <div className="flex gap-2">
+            {(["professional", "friendly", "direct"] as const).map((t) => (
+              <button key={t} type="button" onClick={() => setCrTone(t)}
+                className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium capitalize transition-colors ${
+                  crTone === t ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:text-foreground"
+                }`}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="cr-goal" className="text-xs font-medium">Desired outcome (optional)</Label>
+          <Input id="cr-goal" placeholder="e.g. Schedule a walkthrough, defend pricing, follow up" value={crGoal} onChange={(e) => setCrGoal(e.target.value)} className="text-sm" />
+        </div>
+        <Button className="w-full gap-2" onClick={handleCustomerResponse} disabled={!crMessage.trim() || crLoading}>
+          {crLoading ? <span className="flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />Generating...</span> : <><Sparkles className="h-4 w-4" /> Generate Response</>}
+        </Button>
+      </div>
+
+      {crResult && (
+        <div className="space-y-3">
+          <div className="flex gap-1 rounded-lg bg-muted p-1">
+            {(["full", "sms", "short"] as const).map((v) => (
+              <button key={v} type="button" onClick={() => setCrVersion(v)}
+                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${crVersion === v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+                {v === "full" ? "Full" : v === "sms" ? "SMS" : "Short"}
+              </button>
+            ))}
+          </div>
+          <div className="rounded-xl border border-border bg-muted/40 p-4">
+            <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{crResult[crVersion]}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent"
+                onClick={() => { copyToClipboard(crResult[crVersion]); setCrCopied(true); setTimeout(() => setCrCopied(false), 2000); }}>
+                <Copy className="h-3 w-3" />{crCopied ? "Copied!" : "Copy"}
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent"
+                onClick={() => { window.location.href = `sms:?body=${encodeURIComponent(crResult[crVersion])}`; }}>
+                <Send className="h-3 w-3" /> Send via SMS
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const aiContent = (
+    <>
+      {/* ── MOBILE: single-pane with back navigation ── */}
+      <div className="lg:hidden space-y-5">
+        {activeTool === null && (
+          <>
+            <div>
+              <h1 className="text-xl font-bold text-foreground">AI Tools</h1>
+              <p className="mt-1 text-sm text-muted-foreground">Your AI co-pilot for bids, pricing, and customer communication.</p>
+            </div>
+            {aiToolList}
+          </>
+        )}
+        {activeTool === "bid" && bidBuilderPane}
+        {activeTool === "pricecheck" && priceCheckPane}
+        {activeTool === "response" && customerResponsePane}
+      </div>
+
+      {/* ── DESKTOP: two-column workspace ── */}
+      <div className="hidden lg:flex lg:gap-6" style={{ minHeight: "calc(100vh - 200px)" }}>
+        {/* Left: tool list */}
+        <div className="w-64 shrink-0">
+          <div className="mb-4">
+            <h1 className="text-lg font-bold text-foreground">AI Tools</h1>
+            <p className="mt-0.5 text-xs text-muted-foreground">Select a tool to get started.</p>
+          </div>
+          {aiToolList}
+        </div>
+        {/* Right: active tool workspace */}
+        <div className="flex-1 min-w-0 rounded-xl border border-border bg-card p-6">
+          {activeTool === null && (
+            <div className="flex h-full flex-col items-center justify-center text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-3">
+                <Sparkles className="h-6 w-6 text-primary" />
+              </div>
+              <p className="font-semibold text-foreground">Choose a tool to get started</p>
+              <p className="mt-1 max-w-xs text-sm text-muted-foreground">Select Bid Builder, Price Check, or Customer Response from the panel on the left.</p>
+            </div>
+          )}
+          {activeTool === "bid" && bidBuilderPane}
+          {activeTool === "pricecheck" && priceCheckPane}
+          {activeTool === "response" && customerResponsePane}
+        </div>
+      </div>
+    </>
+  );
+
+  // ── ACCOUNT tab content ────────────────────────────────────────────────────
+
+  const accountContent = (
+    <div className="space-y-5">
+      <h1 className="text-xl font-bold text-foreground">Account</h1>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-start">
+        {/* Profile */}
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <h2 className="text-sm font-semibold text-foreground">Profile</h2>
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary">
+              {contractorName.charAt(0)}
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">{contractorName} Rodriguez</p>
+              <p className="text-xs text-muted-foreground">Contractor</p>
+            </div>
+          </div>
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-4 w-4 shrink-0" />contractor@homebids.demo</div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Phone className="h-4 w-4 shrink-0" />(480) 555-0192</div>
+          </div>
+        </div>
+
+        {/* Plan */}
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-2">
+          <h2 className="text-sm font-semibold text-primary">Your Plan</h2>
+          <p className="text-2xl font-bold text-foreground">$99 / month</p>
+          <ul className="space-y-1.5 pt-1">
+            {[
+              "Unlimited AI-generated bids",
+              "No bid fees — ever",
+              "HomeBids AI lead matching",
+              "Direct homeowner contact after approval",
+              "AI Bid Builder, Price Check, and Customer Response tools",
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-2 text-sm text-foreground">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Notifications */}
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3 lg:col-span-2">
+          <h2 className="text-sm font-semibold text-foreground">Notifications</h2>
+          <label className="flex cursor-pointer items-center justify-between">
+            <span className="flex items-center gap-2 text-sm text-foreground"><Bell className="h-4 w-4 text-muted-foreground" />New lead alerts</span>
+            <input type="checkbox" defaultChecked className="h-4 w-4 accent-primary" />
+          </label>
+          <label className="flex cursor-pointer items-center justify-between">
+            <span className="flex items-center gap-2 text-sm text-foreground"><User className="h-4 w-4 text-muted-foreground" />Homeowner approval alerts</span>
+            <input type="checkbox" defaultChecked className="h-4 w-4 accent-primary" />
+          </label>
+        </div>
+      </div>
+
+      <Button variant="outline" className="gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-600 bg-transparent" onClick={handleSignOut}>
+        <LogOut className="h-4 w-4" />
+        Sign Out
+      </Button>
+    </div>
+  );
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  const tabContent: Record<Tab, React.ReactNode> = {
+    home: homeContent,
+    leads: leadsContent,
+    ai: aiContent,
+    account: accountContent,
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header isContractor isSignedIn />
       <ScrollToTop />
 
-      <main className="mx-auto w-full max-w-lg flex-1 px-4 pb-28 pt-6">
+      {/*
+        Mobile: full-width single column, bottom nav
+        Desktop: fixed left sidebar + scrollable main content area
+      */}
+      <div className="flex flex-1">
 
-        {/* ── HOME TAB ──────────────────────────────────────────────────── */}
-        {activeTab === "home" && (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                Good morning, {contractorName}.
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                You have <span className="font-semibold text-foreground">{DEMO_HOMEBIDS_LEADS.length + DEMO_MY_LEADS.length}</span> active leads.
-              </p>
+        {/* ── Desktop left sidebar ── */}
+        <aside className="hidden lg:flex lg:w-56 lg:flex-col lg:border-r lg:border-border lg:bg-card">
+          {/* Sticky inner */}
+          <div className="sticky top-0 flex flex-col gap-1 p-4 pt-8">
+            <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Workspace</p>
+            {tabs.map((tab) => (
+              <SidebarNavItem
+                key={tab.id}
+                id={tab.id}
+                label={tab.label}
+                icon={tab.icon}
+                isActive={activeTab === tab.id}
+                onClick={() => handleTabChange(tab.id)}
+              />
+            ))}
+            <div className="mt-4 border-t border-border pt-4">
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600"
+              >
+                <LogOut className="h-4 w-4 shrink-0" />
+                Sign Out
+              </button>
             </div>
-
-            <div className="flex flex-wrap gap-2">
-              <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">{newLeads} new</span>
-              <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700">{awaitingApproval} awaiting approval</span>
-              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">{inProgress} in progress</span>
-              <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{bidsCount} bids submitted</span>
-            </div>
-
-            <div>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Needs your attention</h2>
-              <div className="space-y-3">
-                {DEMO_HOMEBIDS_LEADS.map((lead) => {
-                  const statusBadge =
-                    lead.status === "new" ? { label: "New", cls: "bg-blue-100 text-blue-700" }
-                    : lead.status === "bid_submitted" ? { label: "Bid Submitted", cls: "bg-amber-100 text-amber-700" }
-                    : { label: "Reviewing", cls: "bg-purple-100 text-purple-700" };
-
-                  const cta = lead.directMessagingUnlocked
-                    ? { label: "Text Homeowner", onClick: () => { window.location.href = `sms:${lead.homeownerPhone ?? ""}`; } }
-                    : lead.status === "new"
-                    ? { label: "Generate Bid", onClick: () => { setSelectedLead(lead); setShowLeadDetail(true); } }
-                    : { label: "Send via HomeBids AI", onClick: () => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); } };
-
-                  return (
-                    <div key={lead.id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/30">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadge.cls}`}>{statusBadge.label}</span>
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
-                      </div>
-                      <p className="mt-1.5 font-semibold text-foreground">{lead.title}</p>
-                      <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><MapPin className="h-3 w-3 shrink-0" />{lead.location}</span>
-                        <span className="font-semibold text-foreground">{lead.estimatedValue}</span>
-                      </div>
-                      <p className="mt-2 text-[11px] italic text-primary/80">{lead.aiNotes}</p>
-                      <div className="mt-2">
-                        {lead.directMessagingUnlocked ? (
-                          <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700 w-fit">
-                            <Unlock className="h-3 w-3" /> Direct texting unlocked
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground w-fit">
-                            <Lock className="h-3 w-3" /> Contact locked
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-3 flex gap-2">
-                        <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
-                          <Eye className="h-3.5 w-3.5" /> Details
-                        </Button>
-                        <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={cta.onClick}>
-                          {cta.label}
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <button type="button" onClick={() => setActiveTab("leads")} className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted">
-              <span className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" />View all leads ({DEMO_HOMEBIDS_LEADS.length + DEMO_MY_LEADS.length})</span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
-
-            <button type="button" onClick={() => setActiveTab("ai")} className="flex w-full items-center justify-between rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10">
-              <span className="flex items-center gap-2"><Zap className="h-4 w-4" />Open AI Tools — generate bids, responses &amp; more</span>
-              <ChevronRight className="h-4 w-4" />
-            </button>
           </div>
-        )}
+        </aside>
 
-        {/* ── LEADS TAB ─────────────────────────────────────────────────── */}
-        {activeTab === "leads" && (
-          <div className="space-y-5">
-            <h1 className="text-xl font-bold text-foreground">Leads</h1>
-
-            <div className="flex gap-1 rounded-xl bg-muted p-1">
-              {(["homebids", "myleads"] as const).map((seg) => (
-                <button
-                  key={seg}
-                  type="button"
-                  onClick={() => setLeadsSegment(seg)}
-                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                    leadsSegment === seg ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {seg === "homebids" ? <Sparkles className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}
-                  {seg === "homebids" ? "HomeBids AI" : "My Leads"}
-                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                    leadsSegment === seg
-                      ? seg === "homebids" ? "bg-primary/10 text-primary" : "bg-emerald-100 text-emerald-700"
-                      : "bg-muted-foreground/20 text-muted-foreground"
-                  }`}>
-                    {seg === "homebids" ? DEMO_HOMEBIDS_LEADS.length : DEMO_MY_LEADS.length}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            {leadsSegment === "homebids" && (
-              <div className="space-y-3">
-                <p className="text-xs text-muted-foreground">AI-matched leads. Win approval to unlock direct contact.</p>
-                {DEMO_HOMEBIDS_LEADS.map((lead) => {
-                  const statusBadge =
-                    lead.status === "new" ? { label: "New", cls: "bg-blue-100 text-blue-700" }
-                    : lead.status === "bid_submitted" ? { label: "Bid Submitted", cls: "bg-amber-100 text-amber-700" }
-                    : { label: "Reviewing", cls: "bg-purple-100 text-purple-700" };
-                  return (
-                    <div key={lead.id} className="rounded-xl border border-border bg-card p-4">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadge.cls}`}>{statusBadge.label}</span>
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
-                      </div>
-                      <p className="mt-1.5 font-semibold text-foreground">{lead.title}</p>
-                      <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{lead.location}</span>
-                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{lead.timeline}</span>
-                        <span className="font-semibold text-foreground">{lead.estimatedValue}</span>
-                      </div>
-                      <div className="mt-2">
-                        {lead.directMessagingUnlocked ? (
-                          <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700 w-fit">
-                            <Unlock className="h-3 w-3" /> Direct texting unlocked
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground w-fit">
-                            <Lock className="h-3 w-3" /> Contact locked — win approval first
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
-                          <Eye className="h-3 w-3" /> Details
-                        </Button>
-                        {lead.directMessagingUnlocked ? (
-                          <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => { window.location.href = `sms:${lead.homeownerPhone ?? ""}`; }}>
-                            <MessageCircle className="h-3 w-3" /> Text Homeowner
-                          </Button>
-                        ) : (
-                          <>
-                            <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
-                              <Calculator className="h-3 w-3" /> Generate Bid
-                            </Button>
-                            <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); }}>
-                              <MessageCircle className="h-3 w-3" /> Send via HomeBids AI
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {leadsSegment === "myleads" && (
-              <div className="space-y-3">
-                <p className="text-xs text-muted-foreground">Your own leads — full control, text directly any time.</p>
-                {DEMO_MY_LEADS.map((lead) => {
-                  const aiStatusBadge =
-                    lead.aiStatus === "estimate_ready" ? { label: "Estimate Ready", cls: "bg-blue-100 text-blue-700" }
-                    : lead.aiStatus === "response_sent" ? { label: "Response Sent", cls: "bg-amber-100 text-amber-700" }
-                    : { label: "Follow-Up Ready", cls: "bg-purple-100 text-purple-700" };
-                  return (
-                    <div key={lead.id} className="rounded-xl border border-border bg-card p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-700">
-                          {lead.customerName.charAt(0)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-foreground">{lead.customerName}</p>
-                          <p className="text-xs text-muted-foreground">{lead.projectTitle}</p>
-                        </div>
-                        <span className="font-semibold text-foreground">{lead.estimatedValue}</span>
-                      </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${aiStatusBadge.cls}`}>{aiStatusBadge.label}</span>
-                      </div>
-                      <p className="mt-1.5 text-[11px] text-muted-foreground">{lead.lastActivity}</p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => setActiveTab("ai")}>
-                          <Sparkles className="h-3 w-3" /> AI Tools
-                        </Button>
-                        <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { window.location.href = `sms:${lead.phone ?? ""}`; }}>
-                          <MessageCircle className="h-3 w-3" /> Text Customer
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+        {/* ── Main content ── */}
+        <main className="flex-1 min-w-0">
+          {/* Mobile: compact padding + bottom nav offset */}
+          <div className="mx-auto w-full max-w-lg px-4 pb-28 pt-6 lg:hidden">
+            {tabContent[activeTab]}
           </div>
-        )}
-
-        {/* ── AI TOOLS TAB ──────────────────────────────────────────────── */}
-        {activeTab === "ai" && (
-          <div className="space-y-5">
-            {/* Tool picker */}
-            {activeTool === null && (
-              <>
-                <div>
-                  <h1 className="text-xl font-bold text-foreground">AI Tools</h1>
-                  <p className="mt-1 text-sm text-muted-foreground">Your AI co-pilot for bids, pricing, and customer communication.</p>
-                </div>
-                <div className="space-y-3">
-                  {/* Bid Builder */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTool("bid")}
-                    className="flex w-full items-start gap-4 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                      <Calculator className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-foreground">Bid Builder</p>
-                      <p className="mt-0.5 text-sm text-muted-foreground">Chat with AI to build a professional estimate step by step.</p>
-                    </div>
-                    <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
-                  </button>
-
-                  {/* Price Check */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTool("pricecheck")}
-                    className="flex w-full items-start gap-4 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
-                      <DollarSign className="h-5 w-5 text-emerald-700" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-foreground">Price Check</p>
-                      <p className="mt-0.5 text-sm text-muted-foreground">Handle pricing objections and generate a HomeBids referral link to earn affiliate revenue.</p>
-                    </div>
-                    <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
-                  </button>
-
-                  {/* Customer Response */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTool("response")}
-                    className="flex w-full items-start gap-4 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100">
-                      <MessageCircle className="h-5 w-5 text-blue-700" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-foreground">Customer Response</p>
-                      <p className="mt-0.5 text-sm text-muted-foreground">Generate professional replies to homeowner messages, objections, and follow-ups.</p>
-                    </div>
-                    <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
-                  </button>
-                </div>
-              </>
-            )}
-
-            {/* ── BID BUILDER ─────────────────────────────────────────── */}
-            {activeTool === "bid" && (
-              <div className="flex flex-col" style={{ minHeight: "calc(100dvh - 180px)" }}>
-                {/* Header */}
-                <div className="mb-4 flex items-center gap-3">
-                  <button type="button" onClick={() => setActiveTool(null)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground">
-                    <ArrowLeft className="h-4 w-4" />
-                  </button>
-                  <div className="flex-1">
-                    <h2 className="font-bold text-foreground">Bid Builder</h2>
-                    <p className="text-xs text-muted-foreground">Chat with your AI estimating assistant</p>
-                  </div>
-                  <button type="button" onClick={resetBidBuilder} className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
-                    Reset
-                  </button>
-                </div>
-
-                {/* Chat thread */}
-                <div className="flex-1 space-y-3 overflow-y-auto pb-2">
-                  {bidMessages.map((msg, i) => (
-                    <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                      {msg.role === "ai" && (
-                        <div className="mr-2 mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                          <Sparkles className="h-3 w-3 text-primary" />
-                        </div>
-                      )}
-                      <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                        msg.role === "user"
-                          ? "bg-primary text-primary-foreground rounded-br-sm"
-                          : "bg-muted text-foreground rounded-bl-sm"
-                      }`}>
-                        <span className="whitespace-pre-wrap">{msg.content}</span>
-                      </div>
-                    </div>
-                  ))}
-
-                  {bidTyping && (
-                    <div className="flex justify-start">
-                      <div className="mr-2 mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                        <Sparkles className="h-3 w-3 text-primary" />
-                      </div>
-                      <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-muted px-4 py-3">
-                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:0ms]" />
-                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:150ms]" />
-                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:300ms]" />
-                      </div>
-                    </div>
-                  )}
-                  <div ref={bidBottomRef} />
-                </div>
-
-                {/* Actions if done */}
-                {bidIsDone && !bidTyping && (
-                  <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-border bg-card p-3">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 gap-1 px-2.5 text-xs bg-transparent"
-                      onClick={() => {
-                        const last = bidMessages.filter((m) => m.role === "ai").at(-1)?.content ?? "";
-                        copyToClipboard(last).then(() => { setBidCopied(true); setTimeout(() => setBidCopied(false), 2000); });
-                      }}
-                    >
-                      <Copy className="h-3 w-3" />{bidCopied ? "Copied!" : "Copy Estimate"}
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => window.print()}>
-                      <FileText className="h-3 w-3" /> Export PDF
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 gap-1 px-2.5 text-xs bg-transparent"
-                      onClick={() => {
-                        const last = bidMessages.filter((m) => m.role === "ai").at(-1)?.content ?? "";
-                        window.location.href = `sms:?body=${encodeURIComponent(last)}`;
-                      }}
-                    >
-                      <Send className="h-3 w-3" /> Send via SMS
-                    </Button>
-                  </div>
-                )}
-
-                {/* Input bar */}
-                {!bidIsDone && (
-                  <div className="mt-3 flex gap-2">
-                    <Input
-                      placeholder="Type your answer..."
-                      value={bidInput}
-                      onChange={(e) => setBidInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleBidSend(); } }}
-                      className="flex-1 text-sm"
-                      disabled={bidTyping}
-                    />
-                    <Button size="icon" className="shrink-0" onClick={handleBidSend} disabled={!bidInput.trim() || bidTyping}>
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── PRICE CHECK ─────────────────────────────────────────── */}
-            {activeTool === "pricecheck" && (
-              <div className="space-y-5">
-                <div className="flex items-center gap-3">
-                  <button type="button" onClick={() => setActiveTool(null)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground">
-                    <ArrowLeft className="h-4 w-4" />
-                  </button>
-                  <div>
-                    <h2 className="font-bold text-foreground">Price Check</h2>
-                    <p className="text-xs text-muted-foreground">Turn pricing objections into affiliate revenue</p>
-                  </div>
-                </div>
-
-                {/* Affiliate stats teaser */}
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: "Jobs Referred", value: "7", icon: Users },
-                    { label: "Avg. Earn/Job", value: "$70", icon: DollarSign },
-                    { label: "Total Earned", value: "$490", icon: TrendingUp },
-                  ].map(({ label, value, icon: Icon }) => (
-                    <div key={label} className="rounded-xl border border-border bg-card p-3 text-center">
-                      <Icon className="mx-auto mb-1 h-4 w-4 text-muted-foreground" />
-                      <p className="text-base font-bold text-foreground">{value}</p>
-                      <p className="text-[10px] text-muted-foreground">{label}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Inputs */}
-                <div className="space-y-3 rounded-xl border border-border bg-card p-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="pc-project" className="text-xs font-medium">Project type</Label>
-                    <Input id="pc-project" placeholder="e.g. Kitchen cabinet repaint" value={pcProject} onChange={(e) => setPcProject(e.target.value)} className="text-sm" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="pc-bid" className="text-xs font-medium">Your bid amount</Label>
-                    <Input id="pc-bid" placeholder="e.g. $1,450" value={pcBid} onChange={(e) => setPcBid(e.target.value)} className="text-sm" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="pc-objection" className="text-xs font-medium">Homeowner objection (optional)</Label>
-                    <Input id="pc-objection" placeholder='e.g. "I want to get more bids first"' value={pcObjection} onChange={(e) => setPcObjection(e.target.value)} className="text-sm" />
-                  </div>
-                  <Button className="w-full gap-2" onClick={handlePriceCheck} disabled={!pcProject.trim() || !pcBid.trim() || pcLoading}>
-                    {pcLoading ? (
-                      <span className="flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />Generating...</span>
-                    ) : (
-                      <><Sparkles className="h-4 w-4" /> Generate Response &amp; Referral Link</>
-                    )}
-                  </Button>
-                </div>
-
-                {/* Result */}
-                {pcResult && (
-                  <div className="space-y-3">
-                    <div className="rounded-xl border border-border bg-muted/40 p-4">
-                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Suggested Response</p>
-                      <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{pcResult.response}</p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent"                     onClick={() => { copyToClipboard(pcResult.response); setPcCopied(true); setTimeout(() => setPcCopied(false), 2000); }}>
-                          <Copy className="h-3 w-3" />{pcCopied ? "Copied!" : "Copy"}
-                        </Button>
-                        <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { window.location.href = `sms:?body=${encodeURIComponent(pcResult.response)}`; }}>
-                          <Send className="h-3 w-3" /> Send via SMS
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Referral link */}
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Your HomeBids Referral Link</p>
-                      <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-2">
-                        <p className="flex-1 truncate text-xs text-foreground font-mono">{pcResult.refLink}</p>
-                        <button
-                          type="button"
-                          onClick={() => { copyToClipboard(pcResult.refLink); setPcLinkCopied(true); setTimeout(() => setPcLinkCopied(false), 2000); }}
-                          className="shrink-0 text-emerald-700 hover:text-emerald-900"
-                        >
-                          {pcLinkCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                        </button>
-                        <a href={pcResult.refLink} target="_blank" rel="noopener noreferrer" className="shrink-0 text-emerald-700 hover:text-emerald-900">
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      </div>
-                      <p className="text-xs text-emerald-800">
-                        If the homeowner hires another contractor through HomeBids, you earn <span className="font-semibold">{pcResult.earnings.potentialPerReferral}</span> in affiliate revenue — automatically.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── CUSTOMER RESPONSE ───────────────────────────────────── */}
-            {activeTool === "response" && (
-              <div className="space-y-5">
-                <div className="flex items-center gap-3">
-                  <button type="button" onClick={() => setActiveTool(null)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground">
-                    <ArrowLeft className="h-4 w-4" />
-                  </button>
-                  <div>
-                    <h2 className="font-bold text-foreground">Customer Response</h2>
-                    <p className="text-xs text-muted-foreground">Generate a professional reply in seconds</p>
-                  </div>
-                </div>
-
-                {/* Inputs */}
-                <div className="space-y-3 rounded-xl border border-border bg-card p-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="cr-message" className="text-xs font-medium">Homeowner message or situation</Label>
-                    <Textarea id="cr-message" rows={3} placeholder={`e.g. "Your quote seems high. Can you do it for less?"`} value={crMessage} onChange={(e) => setCrMessage(e.target.value)} className="resize-none text-sm" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">Tone</Label>
-                    <div className="flex gap-2">
-                      {(["professional", "friendly", "direct"] as const).map((t) => (
-                        <button
-                          key={t}
-                          type="button"
-                          onClick={() => setCrTone(t)}
-                          className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium capitalize transition-colors ${
-                            crTone === t ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          {t}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="cr-goal" className="text-xs font-medium">Desired outcome (optional)</Label>
-                    <Input id="cr-goal" placeholder="e.g. Schedule a walkthrough, defend pricing, follow up" value={crGoal} onChange={(e) => setCrGoal(e.target.value)} className="text-sm" />
-                  </div>
-                  <Button className="w-full gap-2" onClick={handleCustomerResponse} disabled={!crMessage.trim() || crLoading}>
-                    {crLoading ? (
-                      <span className="flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />Generating...</span>
-                    ) : (
-                      <><Sparkles className="h-4 w-4" /> Generate Response</>
-                    )}
-                  </Button>
-                </div>
-
-                {/* Result */}
-                {crResult && (
-                  <div className="space-y-3">
-                    {/* Version tabs */}
-                    <div className="flex gap-1 rounded-lg bg-muted p-1">
-                      {(["full", "sms", "short"] as const).map((v) => (
-                        <button
-                          key={v}
-                          type="button"
-                          onClick={() => setCrVersion(v)}
-                          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                            crVersion === v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          {v === "full" ? "Full" : v === "sms" ? "SMS" : "Short"}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="rounded-xl border border-border bg-muted/40 p-4">
-                      <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{crResult[crVersion]}</p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 gap-1 px-2.5 text-xs bg-transparent"
-                          onClick={() => { copyToClipboard(crResult[crVersion]); setCrCopied(true); setTimeout(() => setCrCopied(false), 2000); }}
-                        >
-                          <Copy className="h-3 w-3" />{crCopied ? "Copied!" : "Copy"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 gap-1 px-2.5 text-xs bg-transparent"
-                          onClick={() => { window.location.href = `sms:?body=${encodeURIComponent(crResult[crVersion])}`; }}
-                        >
-                          <Send className="h-3 w-3" /> Send via SMS
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+          {/* Desktop: generous padding, no bottom nav offset, wider container */}
+          <div className="hidden lg:block mx-auto w-full max-w-5xl px-8 py-8">
+            {tabContent[activeTab]}
           </div>
-        )}
+        </main>
+      </div>
 
-        {/* ── ACCOUNT TAB ───────────────────────────────────────────────── */}
-        {activeTab === "account" && (
-          <div className="space-y-5">
-            <h1 className="text-xl font-bold text-foreground">Account</h1>
-
-            <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-              <h2 className="text-sm font-semibold text-foreground">Profile</h2>
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary">
-                  {contractorName.charAt(0)}
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">{contractorName} Rodriguez</p>
-                  <p className="text-xs text-muted-foreground">Contractor</p>
-                </div>
-              </div>
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Mail className="h-4 w-4 shrink-0" />
-                  contractor@homebids.demo
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Phone className="h-4 w-4 shrink-0" />
-                  (480) 555-0192
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-2">
-              <h2 className="text-sm font-semibold text-primary">Your Plan</h2>
-              <p className="text-2xl font-bold text-foreground">$99 / month</p>
-              <ul className="space-y-1.5 pt-1">
-                {[
-                  "Unlimited AI-generated bids",
-                  "No bid fees — ever",
-                  "HomeBids AI lead matching",
-                  "Direct homeowner contact after approval",
-                  "AI Bid Builder, Price Check, and Customer Response tools",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-sm text-foreground">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-              <h2 className="text-sm font-semibold text-foreground">Notifications</h2>
-              <label className="flex cursor-pointer items-center justify-between">
-                <span className="flex items-center gap-2 text-sm text-foreground"><Bell className="h-4 w-4 text-muted-foreground" />New lead alerts</span>
-                <input type="checkbox" defaultChecked className="h-4 w-4 accent-primary" />
-              </label>
-              <label className="flex cursor-pointer items-center justify-between">
-                <span className="flex items-center gap-2 text-sm text-foreground"><User className="h-4 w-4 text-muted-foreground" />Homeowner approval alerts</span>
-                <input type="checkbox" defaultChecked className="h-4 w-4 accent-primary" />
-              </label>
-            </div>
-
-            <Button variant="outline" className="w-full gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-600 bg-transparent" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
-          </div>
-        )}
-      </main>
-
-      {/* ── Bottom tab bar ─────────────────────────────────────────────── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background">
+      {/* ── Mobile bottom tab bar (hidden on desktop) ── */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background lg:hidden">
         <div className="mx-auto flex max-w-lg">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -1044,7 +1131,7 @@ export default function ContractorDashboard() {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => { setActiveTab(tab.id); if (tab.id !== "ai") setActiveTool(null); }}
+                onClick={() => handleTabChange(tab.id)}
                 className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors ${
                   isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
@@ -1057,7 +1144,7 @@ export default function ContractorDashboard() {
         </div>
       </nav>
 
-      {/* ── Relay Modal ──────────────────────────────────────────────────── */}
+      {/* ── Relay Modal ── */}
       <Dialog open={showRelayModal} onOpenChange={(open) => { if (!open) setShowRelayModal(false); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -1091,7 +1178,7 @@ export default function ContractorDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Lead Detail Modal ─────────────────────────────────────────────── */}
+      {/* ── Lead Detail Modal ── */}
       <Dialog open={showLeadDetail} onOpenChange={setShowLeadDetail}>
         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -1149,7 +1236,7 @@ export default function ContractorDashboard() {
                 </ul>
               </div>
               <div className="flex flex-col gap-2 pt-1">
-                <Button className="w-full gap-2" onClick={() => { setShowLeadDetail(false); setActiveTab("ai"); setActiveTool("bid"); }}>
+                <Button className="w-full gap-2" onClick={() => { setShowLeadDetail(false); handleTabChange("ai"); setActiveTool("bid"); }}>
                   <Calculator className="h-4 w-4" /> Build Bid in AI Tools
                 </Button>
                 {!selectedLead.directMessagingUnlocked ? (
