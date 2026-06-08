@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { copyToClipboard } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -737,7 +738,7 @@ export default function ContractorDashboard() {
                       className="h-7 gap-1 px-2.5 text-xs bg-transparent"
                       onClick={() => {
                         const last = bidMessages.filter((m) => m.role === "ai").at(-1)?.content ?? "";
-                        navigator.clipboard.writeText(last).then(() => { setBidCopied(true); setTimeout(() => setBidCopied(false), 2000); });
+                        copyToClipboard(last).then(() => { setBidCopied(true); setTimeout(() => setBidCopied(false), 2000); });
                       }}
                     >
                       <Copy className="h-3 w-3" />{bidCopied ? "Copied!" : "Copy Estimate"}
@@ -836,7 +837,7 @@ export default function ContractorDashboard() {
                       <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Suggested Response</p>
                       <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{pcResult.response}</p>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { navigator.clipboard.writeText(pcResult.response); setPcCopied(true); setTimeout(() => setPcCopied(false), 2000); }}>
+                        <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent"                     onClick={() => { copyToClipboard(pcResult.response); setPcCopied(true); setTimeout(() => setPcCopied(false), 2000); }}>
                           <Copy className="h-3 w-3" />{pcCopied ? "Copied!" : "Copy"}
                         </Button>
                         <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { window.location.href = `sms:?body=${encodeURIComponent(pcResult.response)}`; }}>
@@ -852,7 +853,7 @@ export default function ContractorDashboard() {
                         <p className="flex-1 truncate text-xs text-foreground font-mono">{pcResult.refLink}</p>
                         <button
                           type="button"
-                          onClick={() => { navigator.clipboard.writeText(pcResult.refLink); setPcLinkCopied(true); setTimeout(() => setPcLinkCopied(false), 2000); }}
+                          onClick={() => { copyToClipboard(pcResult.refLink); setPcLinkCopied(true); setTimeout(() => setPcLinkCopied(false), 2000); }}
                           className="shrink-0 text-emerald-700 hover:text-emerald-900"
                         >
                           {pcLinkCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -945,7 +946,7 @@ export default function ContractorDashboard() {
                           size="sm"
                           variant="outline"
                           className="h-7 gap-1 px-2.5 text-xs bg-transparent"
-                          onClick={() => { navigator.clipboard.writeText(crResult[crVersion]); setCrCopied(true); setTimeout(() => setCrCopied(false), 2000); }}
+                          onClick={() => { copyToClipboard(crResult[crVersion]); setCrCopied(true); setTimeout(() => setCrCopied(false), 2000); }}
                         >
                           <Copy className="h-3 w-3" />{crCopied ? "Copied!" : "Copy"}
                         </Button>

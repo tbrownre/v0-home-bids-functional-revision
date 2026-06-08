@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { getSmsLink, isMobileDevice, isSmsCapableDevice, SMS_PHONE_DISPLAY, SMS_PHONE_NUMBER, SMS_BODY_PREFIX } from "@/lib/sms-config";
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
 import { TypewriterHeadline } from "@/components/typewriter-headline";
+import { copyToClipboard } from "@/lib/utils";
 import {
   MessageSquare,
   Copy,
@@ -48,7 +49,7 @@ function SmartInput({
       onSubmit(trimmed);
     } else {
       // Desktop — copy number and show confirmation
-      navigator.clipboard.writeText(SMS_PHONE_DISPLAY).catch(() => {});
+      copyToClipboard(SMS_PHONE_DISPLAY).catch(() => {});
       setCopied(true);
       setSubmitted(true);
       onSubmit(trimmed);
@@ -198,7 +199,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
     const fallbackTimer = setTimeout(() => {
       // visibilityState is still "visible" → SMS handler didn't launch
       if (document.visibilityState === "visible") {
-        navigator.clipboard.writeText(SMS_PHONE_DISPLAY).catch(() => {});
+        copyToClipboard(SMS_PHONE_DISPLAY).catch(() => {});
         setCopyFallback(true);
         setNumberCopied(false);
         setTimeout(() => setCopyFallback(false), 4000);
