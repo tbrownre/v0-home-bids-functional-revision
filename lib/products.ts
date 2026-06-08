@@ -1,5 +1,5 @@
-// HomeBids subscription plans and bid fees
-// These are the source of truth for all pricing logic.
+// HomeBids subscription plans.
+// Contractors pay a flat $99/month — no bid fees, no per-lead charges.
 // Server-side price validation is done against these values.
 
 export interface SubscriptionPlan {
@@ -7,7 +7,6 @@ export interface SubscriptionPlan {
   name: string
   description: string
   priceInCents: number // per month
-  bidFeeInCents: number // per bid, 0 for homeowners
   features: string[]
   userType: 'homeowner' | 'contractor'
   highlighted?: boolean
@@ -22,7 +21,6 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     name: 'Homeowner',
     description: 'Post your project for free and receive bids from verified local contractors.',
     priceInCents: 0,
-    bidFeeInCents: 0,
     userType: 'homeowner',
     hasTrial: false,
     features: [
@@ -36,17 +34,18 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     ],
   },
 
-  // Contractor plan — single AI Growth Tools package
+  // Contractor plan — flat $99/month, unlimited bids, no per-bid fees
   {
     id: 'contractor-growth',
     name: 'HomeBids AI Growth Tools',
-    description: 'Lightweight AI tools to estimate faster, respond better, and win more jobs.',
+    description: 'Unlimited bidding + AI tools to estimate faster, respond better, and win more jobs.',
     priceInCents: 9900, // $99/month
-    bidFeeInCents: 0,
     userType: 'contractor',
     highlighted: true,
     hasTrial: true,
     features: [
+      'Unlimited bids — no bid fees, ever',
+      'No pay-per-lead charges',
       'AI Estimate Assistant',
       'AI Price Check / Bid Defense Tool',
       'AI Response Assistant',
