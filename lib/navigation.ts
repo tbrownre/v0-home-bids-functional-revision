@@ -5,13 +5,13 @@ export interface NavItem {
 }
 
 // Single source of truth for signed-out navigation.
-// "Sign In" is intentionally excluded — it is rendered separately after a divider.
+// "Sign In" is intentionally excluded — it is rendered separately after a divider (contractors only).
 export const loggedOutNavItems: NavItem[] = [
   { label: "Home",         href: "/" },
-  { label: "Services",     href: "/services" },
   { label: "How It Works", href: "/how-it-works" },
+  { label: "Services",     href: "/services" },
+  { label: "Contractors",  href: "/contractors" },
   { label: "Pricing",      href: "/subscribe" },
-  { label: "About Us",     href: "/about" },
 ];
 
 // Single source of truth for homeowner logged-in navigation.

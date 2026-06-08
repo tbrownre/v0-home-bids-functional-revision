@@ -36,60 +36,27 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     ],
   },
 
-  // Contractor plans
+  // Contractor plan — single AI Growth Tools package
   {
-    id: 'contractor-starter',
-    name: 'Starter',
-    description: 'Good for trying the platform.',
-    priceInCents: 999, // $9.99/month
-    bidFeeInCents: 1000, // $10 per bid
-    userType: 'contractor',
-    features: [
-      'Marketplace access',
-      'Direct homeowner messaging',
-      'Basic contractor profile',
-      'Bid on open jobs',
-    ],
-  },
-  {
-    id: 'contractor-pro',
-    name: 'Pro',
-    description: 'For contractors actively winning jobs.',
-    priceInCents: 2900, // $29/month
-    bidFeeInCents: 700, // $7 per bid
+    id: 'contractor-growth',
+    name: 'HomeBids AI Growth Tools',
+    description: 'Lightweight AI tools to estimate faster, respond better, and win more jobs.',
+    priceInCents: 9900, // $99/month
+    bidFeeInCents: 0,
     userType: 'contractor',
     highlighted: true,
-    hasTrial: false,
+    hasTrial: true,
     features: [
-      'Everything in Starter +',
-      'Instant job alerts',
-      'AI bid templates',
-      'Enhanced contractor profile',
-      'Priority placement in search',
-      'Job recommendations',
+      'AI Estimate Assistant',
+      'AI Price Check / Bid Defense Tool',
+      'AI Response Assistant',
+      'Unlimited AI usage during beta',
+      'SMS-first workflow',
+      'Pipeline & job tracking',
+      'Mobile-first contractor dashboard',
+      '3-day free trial included',
     ],
-    savingsCallout: 'Save 30% on every bid',
-  },
-  {
-    id: 'contractor-elite',
-    name: 'Elite',
-    description: 'Maximum visibility. Zero dollars per bid.',
-    priceInCents: 7900, // $79/month
-    bidFeeInCents: 0, // $0 per bid
-    userType: 'contractor',
-    hasTrial: false,
-    features: [
-      'Everything in Pro +',
-      'Early access to new jobs',
-      'SMS instant job alerts (coming soon)',
-      'AI bid generator',
-      'Top placement in search',
-      'Job value estimates',
-      'Advanced contractor analytics',
-      'Elite contractor badge',
-      'Zero cost per bid',
-    ],
-    savingsCallout: 'Bid unlimited for $79/month',
+    savingsCallout: '3-day free trial',
   },
 ]
 

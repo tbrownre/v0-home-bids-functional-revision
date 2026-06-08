@@ -221,10 +221,10 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
                   {loggedOutNavItems.map((item) => (
                     <Link key={item.label} href={item.href} className={menuItemClass} onClick={closeMenu}>
                       {item.label === "Home"         && <Home       className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      {item.label === "Services"     && <Briefcase  className="h-4 w-4 shrink-0 text-muted-foreground" />}
                       {item.label === "How It Works" && <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      {item.label === "Pricing"      && <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      {item.label === "About Us"     && <Home       className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "Services"     && <Briefcase  className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "Contractors"  && <Hammer     className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "Pricing"      && <FileText   className="h-4 w-4 shrink-0 text-muted-foreground" />}
                       {item.label}
                     </Link>
                   ))}
@@ -235,7 +235,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
                     className={menuItemClass}
                   >
                     <LogIn className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    Sign In
+                    Contractor Sign In
                   </button>
                 </>
               )}

@@ -42,6 +42,7 @@ import {
   ChevronUp,
   ImageIcon,
   Loader2,
+  Copy,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -63,6 +64,7 @@ interface ActiveBid {
   jobDescription: string;
   homeownerLocation: string;
   homeownerName: string;
+  homeownerPhone?: string; // only populated for contractor-owned or approved leads
   bidAmount: number;
   timeline: string;
   message: string;
@@ -73,6 +75,8 @@ interface ActiveBid {
   otherBids: number;
   financingAvailable?: boolean;
   imageCount: number;
+  leadSource?: "contractor" | "homebids"; // "homebids" = relay required before approval
+  directMessagingUnlocked?: boolean; // true once homeowner approves
 }
 
 interface Message {
@@ -319,6 +323,12 @@ export default function ContractorDashboard() {
     setPreviewChatInput("");
     // Real messaging will be handled via the inbox system — no simulated replies.
   };
+
+  // Relay modal state (HomeBids leads — before homeowner approval)
+  const [showRelayModal, setShowRelayModal] = useState(false);
+  const [relayBid, setRelayBid] = useState<ActiveBid | null>(null);
+  const [relayMessage, setRelayMessage] = useState("");
+  const [relaySent, setRelaySent] = useState(false);
 
   // Payout calculator state removed — contractors keep 100% with no success fees
   // Messages start empty — never seed with fake threads tied to hardcoded bid IDs.
@@ -718,7 +728,7 @@ export default function ContractorDashboard() {
               })}
             </div>
 
-            {/* Available Jobs Section */}
+            {/* AI Generated Bids Section */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -727,67 +737,15 @@ export default function ContractorDashboard() {
             >
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-primary" />
-                  <h3 className="text-sm font-semibold text-foreground sm:text-base">Jobs You Might Like</h3>
+                  <Calculator className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-semibold text-foreground sm:text-base">Your AI Generated Bids</h3>
                 </div>
-                <Link href="/contractors/jobs">
-                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors cursor-pointer">
-                    Browse all
-                  </span>
-                </Link>
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                  AI Workspace
+                </span>
               </div>
 
-              {suggestedJobs.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border p-6 text-center">
-                  <Briefcase className="mx-auto h-8 w-8 text-muted-foreground/40" />
-                  <p className="mt-3 text-sm text-muted-foreground">Browse open jobs to find your next opportunity</p>
-                  <Button asChild className="mt-4" size="sm">
-                    <Link href="/contractors/jobs">View Open Jobs</Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {suggestedJobs.map((job) => {
-                    const urgencyColors = {
-                      high: "bg-red-100 text-red-700",
-                      medium: "bg-amber-100 text-amber-700",
-                      low: "bg-emerald-100 text-emerald-700",
-                    };
-                    return (
-                      <button
-                        key={job.id}
-                        onClick={() => handleOpenJobPreview(job)}
-                        className="w-full rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-primary/40 hover:shadow-sm"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-semibold leading-tight text-foreground line-clamp-1">{job.title}</p>
-                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${urgencyColors[job.urgency]}`}>
-                            {job.urgency === "high" ? "Urgent" : job.urgency === "medium" ? "Soon" : "Flexible"}
-                          </span>
-                        </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {job.location}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <DollarSign className="h-3 w-3" />
-                            {job.budget}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {job.bidsCount} bid{job.bidsCount !== 1 ? "s" : ""}
-                          </span>
-                        </div>
-                        <p className="mt-2 text-xs text-muted-foreground line-clamp-2 leading-relaxed">{job.description}</p>
-                      </button>
-                    );
-                  })}
-                  <Button asChild variant="outline" size="sm" className="w-full mt-1">
-                    <Link href="/contractors/jobs">View All Open Jobs</Link>
-                  </Button>
-                </div>
-              )}
+              <AiGeneratedBidsSection />
             </motion.div>
           </div>
 
@@ -973,10 +931,21 @@ export default function ContractorDashboard() {
                       <div className="flex flex-col items-center text-center lg:flex-row lg:items-start lg:justify-between lg:text-left">
                         <div>
                           <h3 className="text-xl font-bold text-foreground">{selectedBid.jobTitle}</h3>
-                          <div className="mt-2 flex items-center gap-2">
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
                             <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${statusConfig[selectedBid.status].color}`}>
                               {statusConfig[selectedBid.status].label}
                             </span>
+                            {selectedBid.leadSource === "homebids" && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                                HomeBids Lead
+                              </span>
+                            )}
+                            {selectedBid.directMessagingUnlocked && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
+                                <CheckCircle2 className="h-3 w-3" />
+                                Direct messaging unlocked
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className="mt-4 flex flex-wrap justify-center gap-2 lg:mt-0">
@@ -1076,13 +1045,54 @@ export default function ContractorDashboard() {
                           </Link>
                         </Button>
                       )}
-                      <Button 
-                        className="w-full gap-2"
-                        onClick={() => handleOpenMessenger(selectedBid)}
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                        Message Homeowner
-                      </Button>
+
+                      {/* Communication workflow */}
+                      {selectedBid.leadSource === "homebids" && !selectedBid.directMessagingUnlocked ? (
+                        /* HomeBids lead — relay required */
+                        <Button
+                          className="w-full gap-2"
+                          variant="outline"
+                          onClick={() => {
+                            setRelayBid(selectedBid);
+                            setRelayMessage("");
+                            setRelaySent(false);
+                            setShowRelayModal(true);
+                          }}
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                          Message via HomeBids AI
+                        </Button>
+                      ) : selectedBid.leadSource === "homebids" && selectedBid.directMessagingUnlocked ? (
+                        /* HomeBids lead — approved, direct SMS unlocked */
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-center gap-1.5 rounded-lg bg-green-50 px-3 py-2 text-xs font-medium text-green-700">
+                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                            Direct messaging unlocked
+                          </div>
+                          <Button
+                            className="w-full gap-2"
+                            onClick={() => {
+                              const phone = selectedBid.homeownerPhone ?? "";
+                              window.location.href = `sms:${phone}`;
+                            }}
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            Text Homeowner
+                          </Button>
+                        </div>
+                      ) : (
+                        /* Contractor-owned lead — text directly */
+                        <Button
+                          className="w-full gap-2"
+                          onClick={() => {
+                            const phone = selectedBid.homeownerPhone ?? "";
+                            window.location.href = `sms:${phone}`;
+                          }}
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                          Text Customer
+                        </Button>
+                      )}
                     </div>
                   </motion.div>
                 ) : (
@@ -1910,7 +1920,171 @@ export default function ContractorDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* HomeBids AI Relay Modal */}
+      <Dialog open={showRelayModal} onOpenChange={(open) => { if (!open) setShowRelayModal(false); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Message via HomeBids AI</DialogTitle>
+            <DialogDescription>
+              Your message will be relayed through HomeBids AI. The homeowner&apos;s contact info stays private until they approve direct messaging.
+            </DialogDescription>
+          </DialogHeader>
+          {relaySent ? (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <CheckCircle2 className="h-10 w-10 text-green-600" />
+              <p className="font-semibold text-foreground">Message sent via HomeBids AI</p>
+              <p className="text-sm text-muted-foreground">
+                The homeowner will receive your message through our relay system. You&apos;ll be notified when they respond or approve direct contact.
+              </p>
+              <Button className="mt-2 w-full" onClick={() => setShowRelayModal(false)}>
+                Done
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label htmlFor="relay-message">Your message</Label>
+                <Textarea
+                  id="relay-message"
+                  value={relayMessage}
+                  onChange={(e) => setRelayMessage(e.target.value)}
+                  rows={4}
+                  placeholder="Hi, I wanted to follow up on your project..."
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                HomeBids AI will relay this message to the homeowner on your behalf. Once they approve, direct SMS access will be unlocked.
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setShowRelayModal(false)} className="bg-transparent">
+                  Cancel
+                </Button>
+                <Button
+                  disabled={!relayMessage.trim()}
+                  onClick={() => setRelaySent(true)}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Send via AI Relay
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <ScrollToTop />
+    </div>
+  );
+}
+
+// ── AiGeneratedBidsSection ─────────────────────────────────────────────────────
+interface AiBid {
+  id: string;
+  title: string;
+  type: "estimate" | "template" | "response" | "draft";
+  summary: string;
+  amount?: string;
+  createdAt: Date;
+}
+
+const DEMO_AI_BIDS: AiBid[] = [
+  { id: "ai-1", title: "HVAC Repair Estimate", type: "estimate", summary: "3-zone system diagnostic, refrigerant recharge, and capacitor replacement. Labor + parts included.", amount: "$485", createdAt: new Date(Date.now() - 1000 * 60 * 30) },
+  { id: "ai-2", title: "Roof Leak Repair Response", type: "response", summary: "Professional reply addressing homeowner concerns about storm damage liability and warranty coverage.", createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3) },
+  { id: "ai-3", title: "Bathroom Remodel Bid Template", type: "template", summary: "Full gut remodel template — demo, tile, plumbing rough-in, fixtures, and paint. Customizable for any scope.", amount: "$8,200–$14,000", createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24) },
+  { id: "ai-4", title: "Fence Replacement Draft", type: "draft", summary: "Draft estimate for 180ft cedar privacy fence replacement. Awaiting final material pricing.", amount: "$3,400", createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48) },
+];
+
+const typeBadge: Record<AiBid["type"], { label: string; class: string }> = {
+  estimate:  { label: "Estimate",  class: "bg-blue-100 text-blue-700" },
+  template:  { label: "Template",  class: "bg-purple-100 text-purple-700" },
+  response:  { label: "Response",  class: "bg-amber-100 text-amber-700" },
+  draft:     { label: "Draft",     class: "bg-gray-100 text-gray-600" },
+};
+
+function AiGeneratedBidsSection() {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopy = (id: string, summary: string) => {
+    navigator.clipboard.writeText(summary).catch(() => {});
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleSendSms = (bid: AiBid) => {
+    const body = encodeURIComponent(`${bid.title}\n\n${bid.summary}${bid.amount ? `\n\nTotal: ${bid.amount}` : ""}`);
+    window.location.href = `sms:?&body=${body}`;
+  };
+
+  const formatRelative = (date: Date) => {
+    const mins = Math.round((Date.now() - date.getTime()) / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.round(hrs / 24)}d ago`;
+  };
+
+  return (
+    <div className="space-y-3">
+      {DEMO_AI_BIDS.map((bid) => {
+        const badge = typeBadge[bid.type];
+        const isCopied = copiedId === bid.id;
+        return (
+          <div key={bid.id} className="rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/30 hover:shadow-sm">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-semibold text-foreground">{bid.title}</p>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${badge.class}`}>{badge.label}</span>
+                </div>
+                {bid.amount && (
+                  <p className="mt-0.5 text-sm font-bold text-primary">{bid.amount}</p>
+                )}
+                <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground line-clamp-2">{bid.summary}</p>
+              </div>
+              <span className="shrink-0 text-[10px] text-muted-foreground">{formatRelative(bid.createdAt)}</span>
+            </div>
+
+            {/* Action row */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs">
+                <Eye className="h-3 w-3" />
+                View
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 gap-1 px-2.5 text-xs"
+                onClick={() => handleCopy(bid.id, bid.summary)}
+              >
+                {isCopied ? <CheckCircle2 className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                {isCopied ? "Copied" : "Copy"}
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs">
+                <Edit3 className="h-3 w-3" />
+                Edit
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 gap-1 px-2.5 text-xs"
+                onClick={() => handleSendSms(bid)}
+              >
+                <MessageCircle className="h-3 w-3" />
+                Send via SMS
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs">
+                <FileText className="h-3 w-3" />
+                Export PDF
+              </Button>
+            </div>
+          </div>
+        );
+      })}
+
+      <Button variant="outline" size="sm" className="mt-1 w-full gap-1.5 text-xs">
+        <Calculator className="h-3.5 w-3.5" />
+        Generate New Estimate with AI
+      </Button>
     </div>
   );
 }
