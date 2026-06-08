@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import React, { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle, LayoutDashboard, Sparkles, Users, DollarSign, Settings } from "lucide-react";
+import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle, LayoutDashboard, Sparkles, Users, Wrench } from "lucide-react";
 import { homeownerNavItems, loggedOutNavItems, contractorNavItems, isNavItemActive } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
 import { SignInModal } from "@/components/sign-in-modal";
@@ -300,12 +300,10 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
                         className={`${menuItemClass}${active ? " bg-muted font-medium" : ""}`}
                         onClick={closeMenu}
                       >
-                        {item.label === "Dashboard"           && <LayoutDashboard className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                        {item.label === "HomeBids AI Leads"   && <Sparkles        className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                        {item.label === "My Leads"            && <Users           className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                        {item.label === "AI Generated Bids"   && <FileText        className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                        {item.label === "Pricing"             && <DollarSign      className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                        {item.label === "Settings"            && <Settings        className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                        {item.label === "Home"      && <LayoutDashboard className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                        {item.label === "Leads"     && <Users           className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                        {item.label === "AI Tools"  && <Sparkles        className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                        {item.label === "Account"   && <Wrench          className="h-4 w-4 shrink-0 text-muted-foreground" />}
                         {item.label}
                       </Link>
                     );
