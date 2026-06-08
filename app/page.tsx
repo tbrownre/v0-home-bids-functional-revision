@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
+import { copyToClipboard } from "@/lib/utils";
 import {
   Plus,
   FileText,
@@ -1755,7 +1756,7 @@ export default function HomePage() {
               variant="outline"
               className="gap-2"
               onClick={() => {
-                navigator.clipboard.writeText(SMS_PHONE_DISPLAY);
+                copyToClipboard(SMS_PHONE_DISPLAY);
                 setCopiedNumber(true);
                 setTimeout(() => setCopiedNumber(false), 2000);
               }}

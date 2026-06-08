@@ -8,11 +8,14 @@ import { SubscriptionCheckout } from "@/components/subscription-checkout";
 import { getContractorPlans, getHomeownerPlan, type SubscriptionPlan } from "@/lib/products";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  CheckCircle2, Zap, X, Minus, AlertCircle,
-  TrendingUp, Clock, Star, BarChart2, Shield,
-  Activity, Users, FileText, Wrench, Thermometer, Droplets,
+  CheckCircle2, Zap,
+  TrendingUp, BarChart2,
+  Activity, Users, FileText,
+  Thermometer, Droplets,
   Lightbulb, PaintBucket, Trees, Hammer, Bath, ChefHat,
-  ArrowRight, BadgeCheck, MessageSquare, LayoutDashboard,
+  ArrowRight, BadgeCheck, MessageSquare,
+  Shield, Star,
+  Smartphone, Bot,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -305,154 +308,117 @@ export default function SubscribePage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
               >
-                {/* SECTION 1 — Header */}
+                {/* HEADER */}
                 <div className="mb-10 text-center">
                   <h1 className="text-balance text-4xl font-bold text-foreground sm:text-5xl">
-                    Choose Your Contractor Plan
+                    AI Growth Tools for Contractors
                   </h1>
                   <p className="mx-auto mt-3 max-w-xl text-lg text-muted-foreground">
-                    Win more jobs. Get faster alerts. Pay less per bid.
+                    Estimate faster. Respond better. Win more jobs.
                   </p>
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    Contractors on <span className="font-semibold text-foreground">Pro & Elite win 2.4x more projects</span>
-                  </p>
-                </div>
-
-                {/* SECTION 2 — Early Access Callout */}
-                <div className="mb-8 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm dark:border-amber-800 dark:bg-amber-950/30">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                  <p className="text-amber-800 dark:text-amber-300">
-                    <span className="font-semibold">Early Job Access —</span> Elite contractors see jobs{" "}
-                    <span className="font-semibold">up to 10 minutes before other users</span>, giving them the best chance to win projects first.
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Everything you need — one simple plan.
                   </p>
                 </div>
 
-                {/* SECTION 3 — Pricing Cards */}
-                <div className="grid gap-6 sm:grid-cols-3">
-                  {contractorPlans.map((plan) => (
-                    <PlanCard key={plan.id} plan={plan} onSelect={handleSelectPlan} />
+                {/* SINGLE PLAN CARD */}
+                <div className="flex justify-center">
+                  {contractorPlans.slice(0, 1).map((plan) => (
+                    <div key={plan.id} className="w-full max-w-md">
+                      <PlanCard plan={plan} onSelect={handleSelectPlan} />
+                    </div>
                   ))}
                 </div>
 
-                {/* SECTION 4 — Example Monthly Earnings */}
+                {/* WHAT'S INCLUDED */}
                 <div className="mt-16">
-                  <div className="mb-2 text-center">
-                    <h2 className="text-2xl font-bold text-foreground">Example Monthly Earnings</h2>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      See the potential revenue contractors generate using HomeBids.
-                    </p>
-                    <div className="mt-3 flex flex-wrap justify-center gap-4 text-xs text-muted-foreground">
-                      <span>Average Job Value: <strong className="text-foreground">$1,500</strong></span>
-                      <span>Average Platform Win Rate: <strong className="text-foreground">15%</strong></span>
-                    </div>
-                  </div>
-                  <div className="mt-6 grid gap-6 sm:grid-cols-3">
+                  <h2 className="mb-8 text-center text-2xl font-bold text-foreground">What&apos;s Included</h2>
+                  <div className="grid gap-6 sm:grid-cols-3">
                     {[
-                      { plan: "Starter", jobs: 3, revenue: 4500, highlighted: false },
-                      { plan: "Pro", jobs: 5, revenue: 7500, highlighted: true },
-                      { plan: "Elite", jobs: 8, revenue: 12000, highlighted: true },
+                      {
+                        icon: FileText,
+                        title: "AI Estimate Assistant",
+                        desc: "Generate clean, professional estimates in seconds. Describe the job and AI builds a formatted proposal you can send immediately.",
+                      },
+                      {
+                        icon: TrendingUp,
+                        title: "AI Price Check Tool",
+                        desc: "Validate your numbers before you send. Get AI-backed pricing insight to defend your bids with confidence.",
+                      },
+                      {
+                        icon: MessageSquare,
+                        title: "AI Response Assistant",
+                        desc: "Get suggested replies for common objections and follow-ups. Respond faster without thinking from scratch every time.",
+                      },
+                      {
+                        icon: Smartphone,
+                        title: "SMS-First Workflow",
+                        desc: "Send estimates and responses via SMS directly from your phone. No desktop required.",
+                      },
+                      {
+                        icon: BarChart2,
+                        title: "Pipeline Tracking",
+                        desc: "Keep your open, in-progress, and completed jobs organized in a lightweight mobile-first dashboard.",
+                      },
+                      {
+                        icon: Bot,
+                        title: "HomeBids AI Relay",
+                        desc: "For HomeBids-matched leads, our AI handles early communication until the homeowner approves direct contact.",
+                      },
                     ].map((item) => (
-                      <div
-                        key={item.plan}
-                        className={`rounded-2xl border bg-card p-6 shadow-sm ${
-                          item.highlighted ? "border-primary ring-2 ring-primary/20" : "border-border"
-                        }`}
-                      >
-                        <p className="text-sm font-semibold text-muted-foreground">{item.plan}</p>
-                        <p className="mt-3 text-3xl font-extrabold text-foreground">
-                          ${item.revenue.toLocaleString()}
-                        </p>
-                        <p className="mt-1 text-sm text-muted-foreground">revenue potential</p>
-                        <div className="mt-4 flex items-center gap-2 text-sm text-foreground">
-                          <TrendingUp className="h-4 w-4 text-green-600" />
-                          {item.jobs} jobs per month
+                      <div key={item.title} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                          <item.icon className="h-5 w-5 text-primary" />
                         </div>
+                        <p className="font-semibold text-foreground">{item.title}</p>
+                        <p className="text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* SECTION 5 — Why Contractors Upgrade */}
-                <div className="mt-16 grid gap-6 sm:grid-cols-2">
-                  {[
-                    {
-                      title: "Pro Contractors",
-                      icon: Star,
-                      color: "text-primary",
-                      items: ["Get alerts instantly", "Submit bids faster", "Appear higher in search"],
-                    },
-                    {
-                      title: "Elite Contractors",
-                      icon: Shield,
-                      color: "text-amber-600",
-                      items: ["See jobs before everyone else", "Pay the lowest bid fees", "Win the most projects"],
-                    },
-                  ].map((col) => (
-                    <div key={col.title} className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                      <div className="flex items-center gap-2 mb-4">
-                        <col.icon className={`h-5 w-5 ${col.color}`} />
-                        <h3 className="font-bold text-foreground">{col.title}</h3>
-                      </div>
-                      <ul className="space-y-3">
-                        {col.items.map((item) => (
-                          <li key={item} className="flex items-start gap-2.5 text-sm text-foreground">
-                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-
-                {/* SECTION 6 — Feature Comparison Table */}
-                <div className="mt-16 overflow-x-auto">
-                  <h2 className="mb-6 text-2xl font-bold text-foreground text-center">Feature Comparison</h2>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="py-3 text-left font-medium text-muted-foreground w-1/2">Feature</th>
-                        <th className="py-3 text-center font-medium text-muted-foreground">Starter</th>
-                        <th className="py-3 text-center font-semibold text-primary">Pro</th>
-                        <th className="py-3 text-center font-medium text-amber-600">Elite</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {[
-                        { feature: "Marketplace access", starter: true, pro: true, elite: true },
-                        { feature: "Bid cost", starter: "$10", pro: "$7", elite: "$4" },
-                        { feature: "Job alerts", starter: "Delayed", pro: "Instant", elite: "Instant + SMS*" },
-                        { feature: "Profile ranking", starter: "Standard", pro: "Priority", elite: "Top" },
-                        { feature: "AI bid help", starter: false, pro: "Templates", elite: "Full AI bids" },
-                        { feature: "Early job access", starter: false, pro: false, elite: true },
-                        { feature: "Contractor analytics", starter: false, pro: "Basic", elite: "Advanced" },
-                      ].map((row) => (
-                        <tr key={row.feature}>
-                          <td className="py-3 text-foreground">{row.feature}</td>
-                          <td className="py-3 text-center"><TableCell value={row.starter} /></td>
-                          <td className="py-3 text-center"><TableCell value={row.pro} /></td>
-                          <td className="py-3 text-center"><TableCell value={row.elite} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <p className="mt-2 text-xs text-muted-foreground/60">* SMS alerts coming soon</p>
-                </div>
-
-                {/* SECTION 7 — Calculator */}
-                <div className="mt-16">
-                  <h2 className="mb-2 text-2xl font-bold text-foreground text-center">Contractor Earnings Calculator</h2>
-                  <p className="mb-8 text-center text-sm text-muted-foreground">Estimate your monthly revenue and ROI across plans.</p>
-                  <EarningsCalculator onSelect={handleSelectPlan} plans={contractorPlans} />
-                </div>
-
-                {/* SECTION 8 — Conversion Microcopy */}
-                <div className="mt-10 flex flex-col items-center gap-2 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Most contractors upgrade to <span className="font-semibold text-foreground">Pro after winning their first job.</span>
+                {/* BUILT FOR CONTRACTORS */}
+                <div className="mt-16 rounded-2xl border border-border bg-card p-8">
+                  <h2 className="text-2xl font-bold text-foreground">Built for how contractors actually work</h2>
+                  <p className="mt-3 text-muted-foreground">
+                    No complex CRM. No heavy dashboard. Just fast, lightweight AI tools that help you estimate, respond, and win — all from your phone.
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    Elite contractors typically win <span className="font-semibold text-foreground">2–3x more projects.</span>
+                  <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+                    {[
+                      "Respond to homeowners in minutes, not hours",
+                      "Create professional estimates on the job site",
+                      "Defend your pricing when customers push back",
+                      "Stay organized without adding office staff",
+                      "Send everything via text message",
+                      "Works on any device — no app required",
+                    ].map((item) => (
+                      <li key={item} className="flex items-center gap-2 text-sm text-foreground">
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* FINAL CTA */}
+                <div className="mt-16 rounded-2xl bg-primary px-8 py-12 text-center">
+                  <h2 className="text-balance text-3xl font-bold text-primary-foreground sm:text-4xl">
+                    Ready to win more jobs?
+                  </h2>
+                  <p className="mx-auto mt-4 max-w-lg text-primary-foreground/80">
+                    Start your free 3-day trial today. No commitment — cancel anytime.
+                  </p>
+                  <Button
+                    size="lg"
+                    variant="secondary"
+                    className="mt-8"
+                    onClick={() => contractorPlans[0] && handleSelectPlan(contractorPlans[0])}
+                  >
+                    Get AI Growth Tools
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                  <p className="mt-3 text-xs text-primary-foreground/40">
+                    $99/month after 3-day trial. Cancel anytime.
                   </p>
                 </div>
 
@@ -508,12 +474,10 @@ export default function SubscribePage() {
 
 // ── PlanCard ──────────────────────────────────────────────────────────────────
 function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan: SubscriptionPlan) => void }) {
-  const monthlyPrice = (plan.priceInCents / 100).toFixed(2);
-  const bidFee = plan.bidFeeInCents > 0 ? `$${(plan.bidFeeInCents / 100).toFixed(0)} per bid` : null;
+  const monthlyPrice = (plan.priceInCents / 100).toFixed(0);
 
   const ctaLabel =
-    plan.id === "contractor-pro" ? "Upgrade to Pro"
-    : plan.id === "contractor-elite" ? "Go Elite"
+    plan.id === "contractor-growth" ? "Start Free Trial"
     : plan.id === "homeowner-monthly" ? "Post Your Project — Free"
     : plan.hasTrial === false ? `Get ${plan.name}`
     : "Get Started";
@@ -567,12 +531,6 @@ function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan:
           )}
         </div>
 
-        {bidFee && (
-          <div className="mt-2 inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-            + {bidFee}
-          </div>
-        )}
-
         {plan.savingsCallout && (
           <div className="mt-2 inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
             {plan.savingsCallout}
@@ -588,16 +546,6 @@ function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan:
           ))}
         </ul>
 
-        {plan.id === "contractor-starter" && (
-          <ul className="mt-3 space-y-2">
-            {["Limited job visibility", "Higher bid fees"].map((lim) => (
-              <li key={lim} className="flex items-start gap-2.5 text-sm text-muted-foreground/70">
-                <Minus className="mt-0.5 h-4 w-4 shrink-0" />
-                {lim}
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
 
       <Button
@@ -608,151 +556,5 @@ function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan:
         {ctaLabel}
       </Button>
     </motion.div>
-  );
-}
-
-// ── TableCell ─────────────────────────────────────────────────────────────���───
-function TableCell({ value }: { value: boolean | string }) {
-  if (value === true) return <CheckCircle2 className="inline h-4 w-4 text-primary" />;
-  if (value === false) return <X className="inline h-4 w-4 text-muted-foreground/40" />;
-  return <span className="text-foreground">{value}</span>;
-}
-
-// ── EarningsCalculator ────────────────────────────────────────────────────────
-const WIN_RATES: Record<string, number> = {
-  "Beginner (10%)": 0.1,
-  "Active bidder (20%)": 0.2,
-  "Top contractor (30%)": 0.3,
-};
-
-const PLAN_CONFIG = [
-  { id: "contractor-starter", label: "Starter", avgBids: 30, bidFeePerBid: 10, monthlySub: 9.99, cta: "Start Free Trial", highlighted: false },
-  { id: "contractor-pro",     label: "Pro",     avgBids: 25, bidFeePerBid: 7,  monthlySub: 29,   cta: "Upgrade to Pro",  highlighted: true  },
-  { id: "contractor-elite",   label: "Elite",   avgBids: 20, bidFeePerBid: 4,  monthlySub: 79,   cta: "Go Elite",        highlighted: false },
-];
-
-function EarningsCalculator({
-  onSelect,
-  plans,
-}: {
-  onSelect: (plan: SubscriptionPlan) => void;
-  plans: SubscriptionPlan[];
-}) {
-  const [jobValue, setJobValue] = useState(1500);
-  const [jobsWanted, setJobsWanted] = useState(5);
-  const [winRateKey, setWinRateKey] = useState("Active bidder (20%)");
-  const winRate = WIN_RATES[winRateKey];
-
-  return (
-    <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
-      <div className="grid lg:grid-cols-2">
-        {/* Inputs */}
-        <div className="border-b border-border p-6 lg:border-b-0 lg:border-r">
-          <h3 className="mb-6 font-semibold text-foreground">Your Numbers</h3>
-          <div className="space-y-6">
-            <div>
-              <div className="mb-2 flex justify-between text-sm">
-                <span className="font-medium text-foreground">Average Job Value</span>
-                <span className="font-semibold text-foreground">${jobValue.toLocaleString()}</span>
-              </div>
-              <input
-                type="range" min={250} max={20000} step={250} value={jobValue}
-                onChange={(e) => setJobValue(Number(e.target.value))}
-                className="w-full accent-primary"
-              />
-              <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-                <span>$250</span><span>$20,000</span>
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-2 flex justify-between text-sm">
-                <span className="font-medium text-foreground">Jobs Wanted Per Month</span>
-                <span className="font-semibold text-foreground">{jobsWanted}</span>
-              </div>
-              <input
-                type="range" min={1} max={20} step={1} value={jobsWanted}
-                onChange={(e) => setJobsWanted(Number(e.target.value))}
-                className="w-full accent-primary"
-              />
-              <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-                <span>1</span><span>20</span>
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-foreground">Estimated Win Rate</label>
-              <select
-                value={winRateKey}
-                onChange={(e) => setWinRateKey(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
-              >
-                {Object.keys(WIN_RATES).map((k) => (
-                  <option key={k} value={k}>{k}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Results */}
-        <div className="p-6">
-          <h3 className="mb-4 font-semibold text-foreground">Estimated Results</h3>
-          <div className="space-y-4">
-            {PLAN_CONFIG.map((cfg) => {
-              const bidsNeeded = Math.ceil(jobsWanted / winRate);
-              const bidCost = bidsNeeded * cfg.bidFeePerBid;
-              const jobsWon = Math.round(bidsNeeded * winRate);
-              const revenue = jobsWon * jobValue;
-              const platformCost = cfg.monthlySub + bidCost;
-              const roi = platformCost > 0 ? Math.round(revenue / platformCost) : 0;
-              const plan = plans.find((p) => p.id === cfg.id);
-
-              return (
-                <div
-                  key={cfg.id}
-                  className={`rounded-xl border p-4 ${
-                    cfg.highlighted ? "border-primary ring-1 ring-primary/20 bg-primary/5" : "border-border bg-muted/30"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground">{cfg.label}</p>
-                      <p className="mt-1 text-xl font-extrabold text-foreground">
-                        ${revenue.toLocaleString()}
-                        <span className="ml-1 text-xs font-normal text-muted-foreground">est. revenue</span>
-                      </p>
-                      <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <span>{bidsNeeded} bids · ${bidCost} bid cost</span>
-                        <span>{jobsWon} jobs won</span>
-                        <span>${platformCost.toFixed(0)}/mo total cost</span>
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${
-                        cfg.highlighted ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                      }`}>
-                        <BarChart2 className="h-3 w-3" />
-                        {roi}x ROI
-                      </span>
-                    </div>
-                  </div>
-                  {plan && (
-                    <Button
-                      size="sm"
-                      variant={cfg.highlighted ? "default" : "outline"}
-                      className="mt-3 w-full"
-                      onClick={() => onSelect(plan)}
-                    >
-                      {cfg.cta}
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }

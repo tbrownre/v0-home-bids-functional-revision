@@ -27,7 +27,7 @@ export default function FoundingContractorPresalePage() {
               Lock In Founder Pricing <span className="text-amber-600">For Life</span>
             </h1>
             <p className="text-xl text-muted-foreground mb-8">
-              Get unlimited bidding at $10/month (regularly $79/month). Includes exclusive Facebook Group growth bonuses.
+              Get AI growth tools + unlimited bidding at $10/month (regularly $99/month). Includes exclusive Facebook Group growth bonuses.
             </p>
           </div>
 
@@ -41,9 +41,9 @@ export default function FoundingContractorPresalePage() {
                 <span className="text-muted-foreground">/month</span>
               </div>
               <div className="flex items-center justify-center gap-2 mb-6">
-                <span className="text-lg text-amber-600 line-through">$79/month</span>
+                <span className="text-lg text-amber-600 line-through">$99/month</span>
                 <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-bold text-green-700">
-                  87% Off
+                  90% Off
                 </span>
               </div>
               <p className="text-sm text-amber-800 font-medium">Billed today • Access locked in for life</p>
@@ -67,7 +67,7 @@ export default function FoundingContractorPresalePage() {
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                  <span className="text-sm text-foreground">Future Elite plan access included ($79/month value)</span>
+                  <span className="text-sm text-foreground">AI Growth Tools + unlimited bidding — no bid fees, ever</span>
                 </li>
               </ul>
             </div>
@@ -169,7 +169,7 @@ export default function FoundingContractorPresalePage() {
               </li>
               <li className="flex items-center gap-3">
                 <Check className="h-5 w-5 text-amber-600" />
-                <span className="text-foreground">Future $79 Elite plan access included</span>
+                <span className="text-foreground">AI Growth Tools + unlimited bidding — no bid fees, ever</span>
               </li>
               <li className="flex items-center gap-3">
                 <Check className="h-5 w-5 text-amber-600" />
@@ -285,7 +285,7 @@ export default function FoundingContractorPresalePage() {
             <div className="flex items-start gap-3">
               <Check className="h-5 w-5 text-green-600 mt-0.5" />
               <div>
-                <h3 className="font-semibold text-foreground">Elite Access Locked In For Life</h3>
+                <h3 className="font-semibold text-foreground">AI Growth Tools Locked In For Life</h3>
                 <p className="text-sm text-muted-foreground">$10/month founder rate guaranteed as long as you stay active</p>
               </div>
             </div>

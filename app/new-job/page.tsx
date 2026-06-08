@@ -7,6 +7,7 @@ import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { getMockUser, USE_MOCK_DATA } from "@/lib/mock-auth";
 import { MessageCircle, Zap, Clock, CheckCircle2, Check, Copy } from "lucide-react";
+import { copyToClipboard } from "@/lib/utils";
 
 const HOMEBIDS_PHONE = "555-867-5309";
 const SMS_BODY = "Hi, I'd like to start a project with HomeBids.";
@@ -336,7 +337,7 @@ export default function NewJobPage() {
     if (isMobile) {
       window.location.href = SMS_HREF;
     } else {
-      navigator.clipboard.writeText(HOMEBIDS_PHONE).catch(() => {});
+      copyToClipboard(HOMEBIDS_PHONE).catch(() => {});
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
     }

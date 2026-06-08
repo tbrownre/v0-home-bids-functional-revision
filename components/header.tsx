@@ -4,8 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import React, { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle } from "lucide-react";
-import { homeownerNavItems, loggedOutNavItems, isNavItemActive } from "@/lib/navigation";
+import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle, LayoutDashboard, Sparkles, Users, Wrench } from "lucide-react";
+import { homeownerNavItems, loggedOutNavItems, contractorNavItems, isNavItemActive } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
 import { SignInModal } from "@/components/sign-in-modal";
 import {
@@ -114,25 +114,18 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [menuOpen]);
 
-  // Auth state
-  const [isSignedIn, setIsSignedIn] = useState(() => {
-    if (USE_MOCK_DATA && typeof window !== "undefined") {
-      const user = getMockUser();
-      return isSignedInProp || (user?.role === "homeowner" || user?.role === "admin") ? true : false;
-    }
-    return isSignedInProp;
-  });
-  const [isContractor, setIsContractor] = useState(() => {
-    if (USE_MOCK_DATA && typeof window !== "undefined") {
-      const user = getMockUser();
-      return isContractorProp || user?.role === "contractor";
-    }
-    return isContractorProp;
-  });
+  // Auth state — initialise from props (same on server and client) and
+  // correct for mock/Supabase data after mount in the effect below.
+  const [isSignedIn, setIsSignedIn] = useState(isSignedInProp);
+  const [isContractor, setIsContractor] = useState(isContractorProp);
   const isLoggedIn = isContractor || isSignedIn;
 
+  // Track client mount so hydration-sensitive values (unread badge, auth
+  // from window/localStorage) are only applied after the first render.
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    setMounted(true);
 
     if (USE_MOCK_DATA) {
       const user = getMockUser();
@@ -162,13 +155,14 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
     return () => subscription?.unsubscribe();
   }, []);
 
-  // Inbox state (still uses in-memory store for now)
+  // Inbox state — server snapshot always returns 0 to avoid hydration mismatch.
   const unreadSnapshot = useSyncExternalStore(
     subscribeInbox,
     isContractor ? getContractorUnreadSnapshot : getHomeownerUnreadSnapshot,
-    isContractor ? getContractorUnreadSnapshot : getHomeownerUnreadSnapshot,
+    () => 0,
   );
-  const unreadCount = isLoggedIn ? unreadSnapshot : 0;
+  // Only use the live count after mount so server HTML and first client render match.
+  const unreadCount = mounted && isLoggedIn ? unreadSnapshot : 0;
 
   const handleSignOut = async () => {
     closeMenu();
@@ -221,10 +215,10 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
                   {loggedOutNavItems.map((item) => (
                     <Link key={item.label} href={item.href} className={menuItemClass} onClick={closeMenu}>
                       {item.label === "Home"         && <Home       className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      {item.label === "Services"     && <Briefcase  className="h-4 w-4 shrink-0 text-muted-foreground" />}
                       {item.label === "How It Works" && <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      {item.label === "Pricing"      && <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      {item.label === "About Us"     && <Home       className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "Services"     && <Briefcase  className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "Contractors"  && <Hammer     className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "Pricing"      && <FileText   className="h-4 w-4 shrink-0 text-muted-foreground" />}
                       {item.label}
                     </Link>
                   ))}
@@ -235,7 +229,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
                     className={menuItemClass}
                   >
                     <LogIn className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    Sign In
+                    Contractor Sign In
                   </button>
                 </>
               )}
@@ -291,27 +285,23 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
               {/* Nav items — logged in contractor */}
               {isLoggedIn && isContractor && (
                 <>
-                  <Link href="/contractors/dashboard" className={`${menuItemClass} font-medium`} onClick={closeMenu}>
-                    <Hammer className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    Contractor Dashboard
-                  </Link>
-                  <Link href="/contractors/jobs" className={menuItemClass} onClick={closeMenu}>
-                    <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    Available Jobs
-                  </Link>
-                  <Link href="/inbox?type=contractor" className={menuItemClass} onClick={closeMenu}>
-                    <MessageCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="flex-1">Messages</span>
-                    {unreadCount > 0 && (
-                      <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
-                  </Link>
-                  <Link href="/contractors/dashboard" className={menuItemClass} onClick={closeMenu}>
-                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    My Bids
-                  </Link>
+                  {contractorNavItems.map((item) => {
+                    const active = isNavItemActive(item, pathname);
+                    return (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        className={`${menuItemClass}${active ? " bg-muted font-medium" : ""}`}
+                        onClick={closeMenu}
+                      >
+                        {item.label === "Home"      && <LayoutDashboard className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                        {item.label === "Leads"     && <Users           className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                        {item.label === "AI Tools"  && <Sparkles        className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                        {item.label === "Account"   && <Wrench          className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                        {item.label}
+                      </Link>
+                    );
+                  })}
                   <div className={separatorClass} />
                   <button type="button" onClick={handleSignOut} className={`${menuItemClass} text-red-600 hover:text-red-600`}>
                     <LogOut className="h-4 w-4 shrink-0" />

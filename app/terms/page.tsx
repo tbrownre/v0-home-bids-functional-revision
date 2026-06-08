@@ -238,9 +238,8 @@ const sections = [
       <>
         <p>HomeBids may charge:</p>
         <ul>
-          <li>subscription fees</li>
+          <li>monthly subscription fees</li>
           <li>recurring membership fees</li>
-          <li>bid fees</li>
           <li>promotional fees</li>
           <li>premium feature fees</li>
         </ul>

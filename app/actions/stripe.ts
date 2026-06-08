@@ -65,27 +65,5 @@ export async function startSubscriptionCheckout(
   return session.client_secret
 }
 
-/**
- * Create a Stripe Payment Intent for a one-time bid fee.
- * Returns the client_secret needed to confirm the payment.
- */
-export async function createBidFeePaymentIntent(planId: string): Promise<string> {
-  const plan = getPlanById(planId)
-  if (!plan || plan.bidFeeInCents === 0) {
-    throw new Error(`Invalid plan for bid fee: "${planId}"`)
-  }
-
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: plan.bidFeeInCents,
-    currency: 'usd',
-    automatic_payment_methods: { enabled: true },
-    description: `HomeBids bid fee – ${plan.name} plan`,
-    metadata: { planId },
-  })
-
-  if (!paymentIntent.client_secret) {
-    throw new Error('Failed to create payment intent')
-  }
-
-  return paymentIntent.client_secret
-}
+// Bid fees are not charged — HomeBids uses a flat $99/month subscription.
+// Contractors can bid on unlimited projects with no per-bid charges.

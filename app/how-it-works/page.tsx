@@ -11,6 +11,7 @@ import {
   FileText, CheckCircle2, ArrowRight, Users, MessageSquare,
   Briefcase, DollarSign, Search, Star, ShieldCheck,
   Home, Hammer, Thermometer, PaintBucket, Trees, Bath,
+  Zap, Smartphone, Bot, TrendingUp,
 } from "lucide-react";
 
 type Audience = "homeowner" | "contractor";
@@ -83,23 +84,23 @@ export default function HowItWorksPage() {
                 <div className="grid items-center gap-10 lg:grid-cols-2">
                   <div>
                     <h2 className="text-balance text-3xl font-bold text-foreground sm:text-4xl">
-                      Post your project once. Compare multiple contractor bids. Choose with confidence.
+                      Text us your project. We handle the rest.
                     </h2>
                     <p className="mt-4 text-muted-foreground">
-                      HomeBids makes it easier to find the right contractor without spending hours making calls or filling out multiple forms.
+                      No accounts. No apps. No forms. Just send a text message and our AI takes it from there — gathering details, organizing your request, and connecting you with contractor options.
                     </p>
                     <p className="mt-3 text-muted-foreground">
-                      Describe your project once, receive competing bids, compare your options, and connect directly with the contractor you want to hire.
+                      Your contact info stays private until you approve a contractor.
                     </p>
                   </div>
                   <Card className="border-border bg-background">
                     <CardContent className="p-6 space-y-3">
                       {[
-                        { icon: FileText, label: "Post one job" },
-                        { icon: Users, label: "Receive multiple bids" },
-                        { icon: Search, label: "Compare contractors" },
-                        { icon: MessageSquare, label: "Message directly" },
-                        { icon: CheckCircle2, label: "Hire who you want" },
+                        { icon: Smartphone, label: "Text us your project" },
+                        { icon: Bot, label: "AI gathers details" },
+                        { icon: Users, label: "Get contractor options" },
+                        { icon: ShieldCheck, label: "Approve before connecting" },
+                        { icon: CheckCircle2, label: "Direct texting unlocked" },
                       ].map((item) => (
                         <div key={item.label} className="flex items-center gap-3 text-sm font-medium text-foreground">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -114,34 +115,40 @@ export default function HowItWorksPage() {
               </div>
             </section>
 
-            {/* Section 2 — 4-Step Process */}
+            {/* Section 2 — SMS-First Process */}
             <section className="px-4 py-16 sm:px-6 lg:px-8">
               <div className="mx-auto max-w-5xl">
                 <h2 className="mb-10 text-center text-2xl font-bold text-foreground">The Process</h2>
-                <motion.div variants={stagger} initial="initial" whileInView="animate" viewport={{ once: true }} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <motion.div variants={stagger} initial="initial" whileInView="animate" viewport={{ once: true }} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {[
                     {
-                      step: "1", icon: FileText, title: "Tell Us About Your Project",
-                      desc: "Post what you need done — description, budget, timeline, and photos if helpful.",
-                      sub: "The more detail you provide, the better the bids you receive.",
-                      examples: ["Bathroom remodel", "Roof repair", "HVAC replacement", "Interior painting"],
+                      step: "1", icon: Smartphone, title: "Text Us Your Project",
+                      desc: "Send a quick text about what you need help with — repair, renovation, maintenance, or anything else.",
+                      sub: "No account or app required.",
+                      examples: ["Roof leak", "AC not cooling", "Kitchen remodel", "Fence repair"],
                     },
                     {
-                      step: "2", icon: Users, title: "Contractors Review Your Job",
-                      desc: "Contractors who match your project type can review your request and decide whether to submit a bid.",
-                      sub: "This creates competition around your project instead of forcing you to chase quotes one by one.",
+                      step: "2", icon: Bot, title: "AI Gathers the Details",
+                      desc: "Our AI asks a few smart follow-up questions to understand your project scope, timeline, and location.",
+                      sub: "Fast, conversational, and done entirely over text.",
                       examples: [],
                     },
                     {
-                      step: "3", icon: Search, title: "Compare Your Options",
-                      desc: "Evaluate contractor bids based on pricing, scope, timing, experience, and reviews.",
-                      sub: "More visibility means better decisions.",
+                      step: "3", icon: Users, title: "We Find Contractor Options",
+                      desc: "HomeBids AI matches your project to relevant contractors and helps organize your options.",
+                      sub: "You stay in control of who you connect with.",
                       examples: [],
                     },
                     {
-                      step: "4", icon: MessageSquare, title: "Message and Move Forward",
-                      desc: "Message your chosen contractor directly to finalize details and move the project forward.",
-                      sub: "HomeBids helps make the connection — you stay in control of who you hire.",
+                      step: "4", icon: MessageSquare, title: "AI Relays Communications",
+                      desc: "Before you approve a contractor, our AI handles back-and-forth messaging on your behalf — keeping your contact info private.",
+                      sub: "Your number is never shared without your permission.",
+                      examples: [],
+                    },
+                    {
+                      step: "5", icon: CheckCircle2, title: "Approve & Connect Directly",
+                      desc: "Once you approve a contractor, direct text messaging is unlocked. You communicate with them just like you would any contact.",
+                      sub: "Simple, fast, and entirely through text.",
                       examples: [],
                     },
                   ].map((s) => (
@@ -180,13 +187,13 @@ export default function HowItWorksPage() {
             {/* Section 3 — Why Homeowners */}
             <section className="bg-card px-4 py-16 sm:px-6 lg:px-8">
               <div className="mx-auto max-w-5xl">
-                <h2 className="mb-10 text-center text-2xl font-bold text-foreground">Why Homeowners Use HomeBids</h2>
+                <h2 className="mb-10 text-center text-2xl font-bold text-foreground">Why Homeowners Choose HomeBids</h2>
                 <motion.div variants={stagger} initial="initial" whileInView="animate" viewport={{ once: true }} className="grid gap-6 sm:grid-cols-2">
                   {[
-                    { icon: DollarSign, title: "Potentially better pricing", desc: "Multiple bids can help you avoid overpaying and give you more leverage when choosing a contractor." },
-                    { icon: Search, title: "More transparency", desc: "Compare contractor responses, timing, and qualifications in one place instead of across texts, calls, and emails." },
-                    { icon: ShieldCheck, title: "Private communication", desc: "No spammy blast leads. Messaging happens inside the platform so your contact details stay protected." },
-                    { icon: CheckCircle2, title: "Faster decision-making", desc: "Homeowners can move from \"I need help\" to \"I found someone\" much faster." },
+                    { icon: Smartphone, title: "No apps. No accounts.", desc: "Everything works over text message. There is nothing to download, sign up for, or log in to." },
+                    { icon: Zap, title: "Fast and frictionless", desc: "Most homeowners go from text to contractor options in under 10 minutes — no forms, no phone calls." },
+                    { icon: ShieldCheck, title: "Your info stays private", desc: "Your contact details are never shared until you approve a contractor. HomeBids AI handles early communication." },
+                    { icon: CheckCircle2, title: "You stay in control", desc: "Review your options, approve who you want, and connect directly — on your terms." },
                   ].map((card) => (
                     <motion.div key={card.title} variants={childFade}>
                       <Card className="h-full border-border bg-background">
@@ -204,50 +211,22 @@ export default function HowItWorksPage() {
               </div>
             </section>
 
-            {/* Section 4 — Trust */}
-            <section className="px-4 py-16 sm:px-6 lg:px-8">
-              <div className="mx-auto max-w-4xl">
-                <div className="grid items-center gap-10 lg:grid-cols-2">
-                  <div>
-                    <h2 className="text-2xl font-bold text-foreground">Simple, transparent contractor outreach</h2>
-                    <p className="mt-4 text-muted-foreground">
-                      HomeBids is designed to help homeowners efficiently reach multiple contractors for the same job opportunity.
-                    </p>
-                    <p className="mt-3 text-muted-foreground">
-                      You review your options, choose who you want to talk to, and decide who you want to hire.
-                    </p>
-                  </div>
-                  <div className="space-y-3">
-                    {["Post one job", "Receive multiple bids", "Compare contractors", "Message directly", "Hire who you want"].map((item, i) => (
-                      <div key={item} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                          {i + 1}
-                        </div>
-                        <span className="text-sm font-medium text-foreground">{item}</span>
-                        <CheckCircle2 className="ml-auto h-4 w-4 shrink-0 text-primary" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Section 5 — Homeowner CTA */}
+            {/* Section 4 — Homeowner CTA */}
             <section className="px-4 pb-16 sm:px-6 lg:px-8">
               <div className="mx-auto max-w-2xl rounded-2xl bg-primary px-8 py-12 text-center">
                 <h2 className="text-balance text-3xl font-bold text-primary-foreground">
-                  Ready to get bids on your project?
+                  Ready to get help with your project?
                 </h2>
                 <p className="mt-3 text-primary-foreground/80">
-                  Start your post in minutes and begin comparing contractor interest in one place.
+                  Just send us a text. Our AI takes it from there.
                 </p>
                 <Button size="lg" variant="secondary" className="mt-6" asChild>
-                  <Link href="/new-job">
-                    Post Your Project
+                  <Link href="/">
+                    Text Us Your Project
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <p className="mt-3 text-xs text-primary-foreground/40">Free for homeowners. No credit card required.</p>
+                <p className="mt-3 text-xs text-primary-foreground/40">Free for homeowners. No credit card or account required.</p>
               </div>
             </section>
 
@@ -261,23 +240,23 @@ export default function HowItWorksPage() {
                 <div className="grid items-center gap-10 lg:grid-cols-2">
                   <div>
                     <h2 className="text-balance text-3xl font-bold text-foreground sm:text-4xl">
-                      Find homeowner projects, submit bids, and win more work
+                      AI growth tools that help you win more jobs
                     </h2>
                     <p className="mt-4 text-muted-foreground">
-                      HomeBids helps contractors discover active homeowner projects and bid on the jobs they actually want.
+                      HomeBids gives contractors lightweight AI tools to estimate faster, respond better, and close more work — without adding office staff or complex software.
                     </p>
                     <p className="mt-3 text-muted-foreground">
-                      Instead of waiting for referrals, you can browse opportunities, send proposals, and connect directly with motivated homeowners.
+                      Everything is built for how contractors actually work: fast, mobile, and text-first.
                     </p>
                   </div>
                   <Card className="border-border bg-background">
                     <CardContent className="p-6 space-y-3">
                       {[
-                        { icon: Search, label: "Browse jobs" },
-                        { icon: DollarSign, label: "Pick the right opportunities" },
-                        { icon: FileText, label: "Submit bids fast" },
-                        { icon: MessageSquare, label: "Message homeowners" },
-                        { icon: Star, label: "Win more projects" },
+                        { icon: FileText, label: "AI Estimate Assistant" },
+                        { icon: TrendingUp, label: "AI Price Check Tool" },
+                        { icon: MessageSquare, label: "AI Response Assistant" },
+                        { icon: Zap, label: "Respond faster, win more" },
+                        { icon: CheckCircle2, label: "No office staff needed" },
                       ].map((item) => (
                         <div key={item.label} className="flex items-center gap-3 text-sm font-medium text-foreground">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -292,34 +271,40 @@ export default function HowItWorksPage() {
               </div>
             </section>
 
-            {/* Section 2 — 4-Step Process */}
+            {/* Section 2 — AI Tools Process */}
             <section className="px-4 py-16 sm:px-6 lg:px-8">
               <div className="mx-auto max-w-5xl">
-                <h2 className="mb-10 text-center text-2xl font-bold text-foreground">The Process</h2>
-                <motion.div variants={stagger} initial="initial" whileInView="animate" viewport={{ once: true }} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <h2 className="mb-10 text-center text-2xl font-bold text-foreground">Your AI Growth Toolkit</h2>
+                <motion.div variants={stagger} initial="initial" whileInView="animate" viewport={{ once: true }} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {[
                     {
-                      step: "1", icon: Search, title: "Browse Matching Jobs",
-                      desc: "Browse available projects based on your service category and location.",
-                      sub: "Focus only on the jobs that fit your business.",
-                      examples: ["Roofing", "Plumbing", "HVAC", "Painting", "Remodeling", "Landscaping"],
+                      step: "01", icon: FileText, title: "AI Estimate Assistant",
+                      desc: "Generate clean, professional estimates in seconds. Describe the job, and AI builds a formatted proposal you can send immediately.",
+                      sub: "No more blank-page estimating.",
+                      examples: ["Roofing", "HVAC", "Plumbing", "Electrical", "Remodeling"],
                     },
                     {
-                      step: "2", icon: FileText, title: "Submit Your Bid",
-                      desc: "Respond with your estimate, timing, and why you're a strong fit for the project.",
-                      sub: "A clear, professional bid helps you stand out quickly.",
+                      step: "02", icon: TrendingUp, title: "AI Price Check Tool",
+                      desc: "Worried about underbidding or getting undercut? Run a quick price check to validate your numbers before you send.",
+                      sub: "Defend your pricing with confidence.",
                       examples: [],
                     },
                     {
-                      step: "3", icon: MessageSquare, title: "Message the Homeowner",
-                      desc: "Homeowners can message you after reviewing your bid to ask questions and build trust.",
-                      sub: "No cold outreach — just direct conversations tied to active projects.",
+                      step: "03", icon: MessageSquare, title: "AI Response Assistant",
+                      desc: "Get suggested replies for common objections, questions, and follow-ups. Respond faster without thinking from scratch every time.",
+                      sub: "Speed up every customer conversation.",
                       examples: [],
                     },
                     {
-                      step: "4", icon: Star, title: "Win the Job",
-                      desc: "If the homeowner chooses you, you move forward directly with them.",
-                      sub: "HomeBids helps create the connection and makes bidding simpler.",
+                      step: "04", icon: Smartphone, title: "SMS-First Workflow",
+                      desc: "Your tools work over text. AI-generated estimates, responses, and follow-ups can all be sent directly via SMS to the homeowner.",
+                      sub: "Built for how contractors actually communicate.",
+                      examples: [],
+                    },
+                    {
+                      step: "05", icon: Bot, title: "HomeBids AI Relay",
+                      desc: "For HomeBids-matched leads, our AI handles early communication until the homeowner approves direct contact — protecting everyone.",
+                      sub: "No spam. No cold outreach.",
                       examples: [],
                     },
                   ].map((s) => (
@@ -358,13 +343,13 @@ export default function HowItWorksPage() {
             {/* Section 3 — Why Contractors */}
             <section className="bg-card px-4 py-16 sm:px-6 lg:px-8">
               <div className="mx-auto max-w-5xl">
-                <h2 className="mb-10 text-center text-2xl font-bold text-foreground">Why Contractors Use HomeBids</h2>
+                <h2 className="mb-10 text-center text-2xl font-bold text-foreground">Why Contractors Use HomeBids AI</h2>
                 <motion.div variants={stagger} initial="initial" whileInView="animate" viewport={{ once: true }} className="grid gap-6 sm:grid-cols-2">
                   {[
-                    { icon: Home, title: "Real homeowner demand", desc: "Projects come from homeowners actively seeking bids, not passive traffic." },
-                    { icon: Hammer, title: "More chances to win work", desc: "The more relevant jobs you bid on, the more opportunities you create." },
-                    { icon: MessageSquare, title: "Direct homeowner messaging", desc: "Communicate inside the platform without needing to publicly post contact details." },
-                    { icon: Briefcase, title: "Control over what you bid", desc: "Choose the jobs you want instead of paying for generic leads you may not even want." },
+                    { icon: Zap, title: "Respond faster", desc: "AI-generated responses mean you reply in minutes, not hours. Fast replies win more jobs." },
+                    { icon: TrendingUp, title: "Defend your pricing", desc: "Stop losing jobs because you can not explain your numbers. The Price Check tool helps you back up every bid." },
+                    { icon: FileText, title: "Cleaner estimates", desc: "AI-structured estimates look professional and communicate value — even when you are on the job site." },
+                    { icon: Smartphone, title: "Work from your phone", desc: "Everything is SMS-first. No desktop required. Your AI tools go where you go." },
                   ].map((card) => (
                     <motion.div key={card.title} variants={childFade}>
                       <Card className="h-full border-border bg-background">
@@ -387,16 +372,16 @@ export default function HowItWorksPage() {
               <div className="mx-auto max-w-4xl">
                 <div className="grid items-center gap-10 lg:grid-cols-2">
                   <div>
-                    <h2 className="text-2xl font-bold text-foreground">Built for contractors who want consistent opportunity</h2>
+                    <h2 className="text-2xl font-bold text-foreground">Built to help you operate without extra staff</h2>
                     <p className="mt-4 text-muted-foreground">
-                      HomeBids gives contractors a simple way to stay in front of active projects, respond quickly, and create more chances to win work.
+                      HomeBids AI handles the time-consuming parts of your sales process so you can focus on doing the work.
                     </p>
                     <p className="mt-3 text-muted-foreground">
-                      Whether you're testing the platform or bidding aggressively, the process is designed to be straightforward and scalable.
+                      Estimate, respond, follow up, and win — all from your phone.
                     </p>
                   </div>
                   <div className="space-y-3">
-                    {["Browse jobs", "Pick the right opportunities", "Submit bids fast", "Message homeowners", "Win more projects"].map((item, i) => (
+                    {["Estimate faster", "Respond to objections", "Validate your pricing", "Send via SMS", "Win more jobs"].map((item, i) => (
                       <div key={item} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
                         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
                           {i + 1}
@@ -414,22 +399,24 @@ export default function HowItWorksPage() {
             <section className="px-4 pb-16 sm:px-6 lg:px-8">
               <div className="mx-auto max-w-2xl rounded-2xl bg-primary px-8 py-12 text-center">
                 <h2 className="text-balance text-3xl font-bold text-primary-foreground">
-                  Ready to start bidding on new projects?
+                  Ready to start winning more jobs?
                 </h2>
                 <p className="mt-3 text-primary-foreground/80">
-                  Join HomeBids, view open jobs, and start competing for homeowner projects in your area.
+                  Get AI growth tools built specifically for contractors. Start your free trial today.
                 </p>
                 <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
                   <Button size="lg" variant="secondary" asChild>
                     <Link href="/subscribe?type=contractor">
-                      Start Free Trial                      <ArrowRight className="ml-2 h-4 w-4" />
+                      Get AI Growth Tools
+                      <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
                   <Button size="lg" variant="outline" className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10" asChild>
-                    <Link href="/subscribe?type=contractor">View Contractor Plans</Link>
+                    <Link href="/contractors">See Contractor Tools</Link>
                   </Button>
                 </div>
-                <p className="mt-3 text-xs text-primary-foreground/40">3-day free trial. Subscription required after trial.</p>              </div>
+                <p className="mt-3 text-xs text-primary-foreground/40">3-day free trial. $99/month after trial.</p>
+              </div>
             </section>
 
           </motion.div>

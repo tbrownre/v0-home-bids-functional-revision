@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { copyToClipboard } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -14,1895 +16,1092 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { motion, AnimatePresence } from "framer-motion";
 import {
-  Briefcase,
-  DollarSign,
-  Clock,
   MapPin,
-  Calendar,
-  Edit3,
-  Trash2,
+  Clock,
   MessageCircle,
   Eye,
   CheckCircle2,
-  AlertCircle,
-  MoreVertical,
-  Search,
-  Filter,
-  TrendingUp,
   Users,
   FileText,
-  X,
-  CreditCard,
   Send,
-  ArrowLeft,
   Calculator,
-  ChevronDown,
-  ChevronUp,
-  ImageIcon,
-  Loader2,
+  Sparkles,
+  Lock,
+  Unlock,
+  Wrench,
+  LayoutDashboard,
+  LogOut,
+  User,
+  Phone,
+  Mail,
+  Bell,
+  Copy,
+  ChevronRight,
+  Zap,
+  ArrowLeft,
+  ExternalLink,
+  DollarSign,
+  TrendingUp,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import Link from "next/link";
+import { getMockUser, mockSignOut, USE_MOCK_DATA } from "@/lib/mock-auth";
 import { getContractorBids } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
-import { getContractorBids as getDemoContractorBids, getOpenJobs as getDemoOpenJobs } from "@/lib/demo/services";
+import { getContractorBids as getDemoContractorBids } from "@/lib/demo/services";
 import { DEMO_CONTRACTOR_EMAIL } from "@/lib/demo-guard";
-import { getMockUser, mockSignOut, USE_MOCK_DATA } from "@/lib/mock-auth";
 
-interface ActiveBid {
-  id: string;
-  job_id: string;
-  jobTitle: string;
-  jobDescription: string;
-  homeownerLocation: string;
-  homeownerName: string;
-  bidAmount: number;
-  timeline: string;
-  message: string;
-  status: "open" | "in_progress" | "completed" | "not_selected";
-  submittedAt: Date;
-  jobBudget: string;
-  jobTimeline: string;
-  otherBids: number;
-  financingAvailable?: boolean;
-  imageCount: number;
-}
+// ── Types ────────────────────────────────────────────────────────────────────
 
-interface Message {
-  id: string;
-  text: string;
-  sender: "contractor" | "homeowner";
-  timestamp: Date;
-}
-
-interface AvailableJob {
+interface HomeBidsLead {
   id: string;
   title: string;
-  description: string;
-  location: string;
-  budget: string;
-  timeline: string;
-  postedAt: Date;
   category: string;
-  urgency: "low" | "medium" | "high";
-  bidsCount: number;
+  location: string;
+  estimatedValue: string;
+  timeline: string;
+  status: "new" | "bid_submitted" | "homeowner_reviewing";
+  directMessagingUnlocked: boolean;
   homeownerName: string;
-  propertyType: string;
+  homeownerGoals: string;
+  scope: string;
+  budgetRange: string;
+  aiNotes: string;
+  suggestedStrategy: string;
+  recommendedPrice: string;
+  suggestedResponse: string;
+  objections: string[];
+  nextAction: string;
+  homeownerPhone?: string;
 }
 
-interface JobMessage {
+interface MyLead {
   id: string;
-  text: string;
-  sender: "contractor" | "homeowner";
-  time: Date;
+  customerName: string;
+  projectTitle: string;
+  category: string;
+  estimatedValue: string;
+  status: "open" | "in_progress";
+  lastActivity: string;
+  aiStatus: "estimate_ready" | "response_sent" | "followup_ready";
+  phone?: string;
 }
 
-// No sample data — bids are loaded from Supabase per authenticated user
-  
-  const statusConfig = {
-  open: { label: "Open", color: "bg-blue-100 text-blue-700", icon: Eye },
-  in_progress: { label: "In Progress", color: "bg-amber-100 text-amber-700", icon: Clock },
-  completed: { label: "Completed", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
-  not_selected: { label: "Not Selected", color: "bg-gray-100 text-gray-600", icon: X },
+interface ChatMessage {
+  role: "ai" | "user";
+  content: string;
+}
+
+// ── Mock data ─────────────────────────────────────────────────────────────────
+
+const DEMO_HOMEBIDS_LEADS: HomeBidsLead[] = [
+  {
+    id: "hbl-1",
+    title: "Kitchen Cabinet Repaint",
+    category: "Interior Painting",
+    location: "Gilbert, AZ 85296",
+    estimatedValue: "$1,200–$1,800",
+    timeline: "1–2 weeks",
+    status: "new",
+    directMessagingUnlocked: false,
+    homeownerName: "Jennifer T.",
+    homeownerGoals: "Wants fresh, modern look — considering white or greige. Has kids so wants low-VOC paint.",
+    scope: "Upper and lower cabinets (32 doors), light sanding, primer, 2 coats. No hardware replacement.",
+    budgetRange: "$1,000–$2,000",
+    aiNotes: "Comparable Gilbert jobs this month averaged $1,450. Homeowner mentioned urgency — reply fast.",
+    suggestedStrategy: "Lead with low-VOC eco angle. Offer a free color consult to differentiate.",
+    recommendedPrice: "$1,350–$1,600",
+    suggestedResponse: "Hi Jennifer, I'd love to help refresh your cabinets with a low-VOC finish that's safe for your kids. I specialize in cabinet repaints in the Gilbert area and can get started within the week.",
+    objections: ["Too expensive — counter with longevity vs. full replacement cost", "Timeline concern — offer flexible scheduling"],
+    nextAction: "Generate Bid",
+  },
+  {
+    id: "hbl-2",
+    title: "Backyard Turf Install",
+    category: "Landscaping",
+    location: "Chandler, AZ 85226",
+    estimatedValue: "$6,500–$9,000",
+    timeline: "2–3 weeks",
+    status: "bid_submitted",
+    directMessagingUnlocked: false,
+    homeownerName: "Marcus D.",
+    homeownerGoals: "Replace dead grass with low-maintenance turf. Has two dogs.",
+    scope: "Approx 800 sqft, existing sod removal, base prep, pet-friendly turf install, border edging.",
+    budgetRange: "$6,000–$10,000",
+    aiNotes: "Bid already submitted at $7,800. Homeowner viewed bid twice but hasn't responded. Consider follow-up.",
+    suggestedStrategy: "Highlight pet-friendly turf warranty and drainage. Follow up within 24h.",
+    recommendedPrice: "$7,500–$8,200",
+    suggestedResponse: "Hi Marcus, following up on my turf proposal. Happy to answer any questions about the pet-safe material or drainage setup.",
+    objections: ["HOA approval needed — offer to provide product spec sheet", "Price — emphasize 10-year lifespan vs. annual lawn care costs"],
+    nextAction: "Message via HomeBids AI",
+  },
+  {
+    id: "hbl-3",
+    title: "Bathroom Vanity Replacement",
+    category: "Plumbing / Remodel",
+    location: "Mesa, AZ 85201",
+    estimatedValue: "$850–$1,400",
+    timeline: "1 week",
+    status: "homeowner_reviewing",
+    directMessagingUnlocked: true,
+    homeownerName: "Rachel S.",
+    homeownerGoals: "Upgrade dated single vanity to double. Wants modern farmhouse style.",
+    scope: "Remove existing vanity, install customer-supplied 60\" double vanity, reconnect plumbing, patch drywall.",
+    budgetRange: "$700–$1,500",
+    aiNotes: "Homeowner approved direct contact. Follow up by phone or text today.",
+    suggestedStrategy: "She's close to deciding. Text directly and confirm availability this week.",
+    recommendedPrice: "$950–$1,200",
+    suggestedResponse: "Hi Rachel, just checking in on the vanity project — I have availability this week and can get started right away.",
+    objections: ["Scheduling — she wants it done before a family visit"],
+    nextAction: "Text Homeowner",
+    homeownerPhone: "",
+  },
+];
+
+const DEMO_MY_LEADS: MyLead[] = [
+  { id: "ml-1", customerName: "Sarah M.", projectTitle: "Interior Paint Estimate", category: "Interior Painting", estimatedValue: "$2,400", status: "open", lastActivity: "Waiting on estimate", aiStatus: "estimate_ready" },
+  { id: "ml-2", customerName: "Mike R.", projectTitle: "Drywall Repair Response", category: "Drywall", estimatedValue: "$380", status: "in_progress", lastActivity: "Sent response — awaiting reply", aiStatus: "response_sent" },
+  { id: "ml-3", customerName: "Janet B.", projectTitle: "Bathroom Remodel Follow-Up", category: "Remodel", estimatedValue: "$12,000", status: "open", lastActivity: "Follow-up draft ready", aiStatus: "followup_ready" },
+];
+
+// ── Bid Builder conversation engine ──────────────────────────────────────────
+
+const BID_BUILDER_INTRO: ChatMessage = {
+  role: "ai",
+  content: "Hi! I'm your AI estimating assistant. What type of project are you bidding on?",
 };
 
-// No sample available jobs — real jobs are fetched from Supabase
+function getBidBuilderReply(history: ChatMessage[]): string {
+  const userMessages = history.filter((m) => m.role === "user");
+  const count = userMessages.length;
+  const last = userMessages[count - 1]?.content?.toLowerCase() ?? "";
 
-function mapBidFromDb(raw: Record<string, unknown>): ActiveBid {
-  const job = (raw.jobs ?? {}) as Record<string, unknown>;
-  const budgetMin = job.budget_min as number | null | undefined;
-  const budgetMax = job.budget_max as number | null | undefined;
-  const budgetStr =
-    budgetMin && budgetMax
-      ? `$${Number(budgetMin).toLocaleString()} - $${Number(budgetMax).toLocaleString()}`
-      : budgetMin
-      ? `From $${Number(budgetMin).toLocaleString()}`
-      : budgetMax
-      ? `Up to $${Number(budgetMax).toLocaleString()}`
-      : "TBD";
+  if (count === 1) {
+    if (last.includes("cabinet") || last.includes("paint") || last.includes("interior"))
+      return "Got it — cabinet repaint. How many cabinet doors are involved, and what's the current finish (painted or stained)?";
+    if (last.includes("turf") || last.includes("landscap") || last.includes("yard"))
+      return "Turf install — perfect. Roughly how many square feet, and is there existing grass or sod that needs to be removed first?";
+    if (last.includes("drywall") || last.includes("repair"))
+      return "Drywall repair. How large is the damaged area, and is this a patch/texture match or a full panel replacement?";
+    if (last.includes("bathroom") || last.includes("vanity") || last.includes("remodel"))
+      return "Bathroom remodel. Are we talking a full gut-and-remodel, or specific items like vanity, tile, or fixtures?";
+    return `${userMessages[0].content} — great. Can you give me a rough scope? (e.g. size of the space, materials, any demo work needed)`;
+  }
+  if (count === 2) return "Got it. What city and state is this job in? Pricing varies a lot by market.";
+  if (count === 3) return "What timeline did the homeowner mention, and have they shared a budget range?";
+  if (count === 4) return "Any special considerations — premium finishes, tight access, permit required, or work to be done on weekends?";
+  if (count === 5) return "One last thing — would you like to include optional upsells in the estimate? (e.g. an extra coat, warranty, or add-on service)";
 
-  const dbStatus = (raw.status as string) ?? "pending";
-  let status: ActiveBid["status"] = "open";
-  if (dbStatus === "pending") status = "open";
-  else if (dbStatus === "accepted") status = "in_progress";
-  else if (dbStatus === "completed") status = "completed";
-  else if (dbStatus === "rejected") status = "not_selected";
+  const project = userMessages[0]?.content ?? "your project";
+  const location = userMessages[2]?.content ?? "your area";
+  return `Here's your professional bid summary for the ${project} in ${location}:\n\n**Scope of Work**\n${userMessages[1]?.content ?? "As described"}\n\n**Suggested Price Range**\n$1,200 – $1,800\n\n**Exclusions**\nPermit fees (if required), dumpster rental, unforeseen structural issues\n\n**Optional Upsells**\n• Premium finish upgrade: +$200\n• 1-year touch-up warranty: +$150\n• Weekend scheduling: +$100\n\n**Customer-Friendly Intro**\n"I've put together a detailed estimate for your project. My pricing includes all labor, materials, and clean-up — no surprise fees. I can typically start within 5–7 business days."\n\n_Tip: Lead with value, not just price. Mention your timeline and any warranties upfront._`;
+}
 
+// ── Price Check ───────────────────────────────────────────────────────────────
+
+function getPriceCheckResponse(projectType: string, bidAmount: string, objection: string) {
+  const refLink = `https://homebids.com/compare?ref=contractor-demo&project=${encodeURIComponent(projectType)}`;
   return {
-    id: raw.id as string,
-    job_id: raw.job_id as string,
-    jobTitle: (job.title as string) ?? "Untitled Job",
-    jobDescription: (job.description as string) ?? "",
-    homeownerLocation: (job.location as string) ?? "",
-    homeownerName: "",
-    bidAmount: (raw.amount as number) ?? 0,
-    timeline: (raw.timeline as string) ?? "",
-    message: (raw.message as string) ?? "",
-    status,
-    submittedAt: new Date((raw.created_at as string) ?? Date.now()),
-    jobBudget: budgetStr,
-    jobTimeline: (job.urgency as string) ?? "",
-    otherBids: 0,
-    financingAvailable: false,
-    imageCount: 0,
+    response: `I completely understand wanting to compare options — that's smart. I actually work with HomeBids, so you can easily see what other contractors are quoting for the same work and make sure you're getting a fair deal.\n\nHere's a quick link to explore additional quotes:\n${refLink}\n\nIf another contractor ends up being a better fit, no worries at all — I still appreciate the opportunity and hope the comparison is helpful.`,
+    refLink,
+    earnings: { potentialPerReferral: "$45–$120", jobsReferred: 7, affiliateEarned: "$490" },
   };
 }
 
-export default function ContractorDashboard() {
-  const [bids, setBids] = useState<ActiveBid[]>([]);
-  const [bidsLoading, setBidsLoading] = useState(true);
-  const [bidsError, setBidsError] = useState<string | null>(null);
+// ── Customer Response ─────────────────────────────────────────────────────────
 
-  // Auth guard — mock mode skips all Supabase calls and never redirects.
+function getCustomerResponse(message: string, tone: string, goal: string) {
+  const toneMap: Record<string, string> = { professional: "professional and clear", friendly: "warm and friendly", direct: "direct and confident" };
+  const toneLabel = toneMap[tone] ?? "professional";
+  return {
+    full: `Hi there,\n\nThank you for reaching out! ${goal ? `Regarding your question about "${goal.slice(0, 60)}" — ` : ""}I wanted to make sure I got back to you quickly.\n\nI'd love to help with your project. Based on what you've shared, I can schedule a walkthrough at your convenience — I typically have availability within 2–3 business days and can provide a same-day written estimate after the visit.\n\nFeel free to call or text me anytime. Looking forward to connecting!\n\n— [Your Name]`,
+    sms: `Hi! Got your message. Happy to help with your project — I can come take a look in the next 2–3 days and give you a written estimate same day. When works for you? — [Your Name]`,
+    short: `Thanks for reaching out! I'd love to help. I'm available for a walkthrough this week — does any day work for you?`,
+    toneNote: `Tone applied: ${toneLabel}`,
+  };
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type Tab = "home" | "leads" | "ai" | "account";
+type AiTool = "bid" | "pricecheck" | "response" | null;
+
+
+
+// ── Main component ────────────────────────────────────────────────────────────
+
+export default function ContractorDashboard() {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams?.get("tab") ?? "";
+
+  const [activeTab, setActiveTab] = useState<Tab>(
+    (tabParam === "leads" || tabParam === "ai" || tabParam === "account") ? tabParam : "home"
+  );
+
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    const t = searchParams?.get("tab") ?? "";
+    if (t === "leads" || t === "ai" || t === "account") setActiveTab(t);
+    else if (t === "" || t === "home") setActiveTab("home");
+  }, [searchParams]);
+
+  // Auth
+  const [contractorName, setContractorName] = useState("there");
+  useEffect(() => {
     if (USE_MOCK_DATA) {
       const user = getMockUser();
-      if (!user) {
-        window.location.replace("/auth/sign-in");
-      }
-      // Contractor is authenticated in mock mode — nothing else to check.
-      return;
+      if (user?.firstName) setContractorName(user.firstName);
     }
-
-    let didRedirect = false;
-    const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data: { user }, error }) => {
-      if (error || !user) {
-        if (!didRedirect) { didRedirect = true; window.location.replace("/auth/sign-in"); }
-        return;
-      }
-      if (user.email === DEMO_CONTRACTOR_EMAIL) return;
-      const { data: profile } = await supabase
-        .from("contractor_profiles")
-        .select("approval_status")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (!profile) {
-        if (!didRedirect) { didRedirect = true; window.location.replace("/"); }
-        return;
-      }
-      if (profile.approval_status === "pending") {
-        if (!didRedirect) { didRedirect = true; window.location.replace("/contractors/signup/pending"); }
-        return;
-      }
-      if (profile.approval_status === "rejected") {
-        if (!didRedirect) { didRedirect = true; window.location.replace("/contractors/signup/rejected"); }
-      }
-    });
   }, []);
 
-  // Load bids — mock mode always uses pre-seeded demo data, no Supabase call.
+  // Bids count
+  const [bidsCount, setBidsCount] = useState(0);
   useEffect(() => {
-    setBidsLoading(true);
-    ;(async () => {
-      if (USE_MOCK_DATA) {
-        const { bids: demoBids } = await getDemoContractorBids();
-        setBids((demoBids ?? []).map((b) => mapBidFromDb(b as Record<string, unknown>)));
-        const { jobs: openJobs } = await getDemoOpenJobs();
-        setSuggestedJobs((openJobs ?? []).slice(0, 3) as AvailableJob[]);
-        setBidsLoading(false);
-        return;
-      }
-
-      if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) {
-        setBidsLoading(false);
-        return;
-      }
-
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email === DEMO_CONTRACTOR_EMAIL) {
-        const { bids: demoBids } = await getDemoContractorBids();
-        setBids((demoBids ?? []).map((b) => mapBidFromDb(b as Record<string, unknown>)));
-        const { jobs: openJobs } = await getDemoOpenJobs();
-        setSuggestedJobs((openJobs ?? []).slice(0, 3) as AvailableJob[]);
-        setBidsLoading(false);
-        return;
-      }
-      const { bids: rawBids, error } = await getContractorBids();
-      if (error) {
-        setBidsError(error);
-      } else {
-        setBids((rawBids ?? []).map((b) => mapBidFromDb(b as Record<string, unknown>)));
-      }
-      setBidsLoading(false);
-    })();
+    async function load() {
+      try {
+        if (USE_MOCK_DATA) {
+          const { bids } = await getDemoContractorBids();
+          setBidsCount((bids ?? []).length);
+          return;
+        }
+        if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email === DEMO_CONTRACTOR_EMAIL) {
+          const { bids } = await getDemoContractorBids();
+          setBidsCount((bids ?? []).length);
+          return;
+        }
+        const { bids } = await getContractorBids();
+        setBidsCount((bids ?? []).length);
+      } catch { /* non-fatal */ }
+    }
+    load();
   }, []);
-  const [suggestedJobs, setSuggestedJobs] = useState<AvailableJob[]>([]);
-  const [selectedBid, setSelectedBid] = useState<ActiveBid | null>(null);
-  const [showMobileDetail, setShowMobileDetail] = useState(false);
-  const [editingBid, setEditingBid] = useState<ActiveBid | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [bidToDelete, setBidToDelete] = useState<ActiveBid | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [showPipeline, setShowPipeline] = useState(false);
-  const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
-  
-  // Messenger state
-  const [showMessenger, setShowMessenger] = useState(false);
-  const [messagingBid, setMessagingBid] = useState<ActiveBid | null>(null);
-  const [newMessage, setNewMessage] = useState("");
 
-  // Job preview popup state
-  const [showJobPreview, setShowJobPreview] = useState(false);
-  const [previewJob, setPreviewJob] = useState<AvailableJob | null>(null);
-  const [previewTab, setPreviewTab] = useState<"details" | "bid" | "chat">("details");
-  const [previewBidAmount, setPreviewBidAmount] = useState("");
-  const [previewBidTimeline, setPreviewBidTimeline] = useState("");
-  const [previewBidMessage, setPreviewBidMessage] = useState("");
-  const [previewBidSubmitted, setPreviewBidSubmitted] = useState(false);
-  const [previewBidMode, setPreviewBidMode] = useState<"bid_only" | "bid_and_inspection" | "inspection_only">("bid_only");
-  const [previewBidNoDeposit, setPreviewBidNoDeposit] = useState<boolean | null>(null);
-  const [previewBidDepositAmount, setPreviewBidDepositAmount] = useState("");
-  const [previewBidInspectionFee, setPreviewBidInspectionFee] = useState("");
-  const [previewBidFreeInspection, setPreviewBidFreeInspection] = useState(false);
-  const [previewBidFinancing, setPreviewBidFinancing] = useState<boolean | null>(null);
-  const [showBidConfirm, setShowBidConfirm] = useState(false);
-  const [previewChatInput, setPreviewChatInput] = useState("");
-  const [previewChatMessages, setPreviewChatMessages] = useState<Record<string, JobMessage[]>>({});
+  // Leads segment
+  const [leadsSegment, setLeadsSegment] = useState<"homebids" | "myleads">("homebids");
 
-  const handleOpenJobPreview = (job: AvailableJob) => {
-    setPreviewJob(job);
-    setPreviewTab("details");
-    setPreviewBidMode("bid_only");
-    setPreviewBidAmount("");
-    setPreviewBidTimeline("");
-    setPreviewBidMessage("");
-    setPreviewBidNoDeposit(null);
-    setPreviewBidDepositAmount("");
-    setPreviewBidInspectionFee("");
-    setPreviewBidFreeInspection(false);
-    setPreviewBidFinancing(null);
-    setPreviewBidSubmitted(false);
-    setPreviewChatInput("");
-    setShowJobPreview(true);
-  };
+  // Relay modal
+  const [showRelayModal, setShowRelayModal] = useState(false);
+  const [relayLead, setRelayLead] = useState<HomeBidsLead | null>(null);
+  const [relayMessage, setRelayMessage] = useState("");
+  const [relaySent, setRelaySent] = useState(false);
 
-  const handlePreviewSubmitBid = () => {
-    if (!previewJob) return;
-    if (previewBidMode === "inspection_only") {
-      if (!previewBidFreeInspection && !previewBidInspectionFee) return;
-    } else {
-      if (!previewBidAmount || !previewBidTimeline) return;
-    }
-    setShowBidConfirm(true);
-  };
+  // Lead detail modal
+  const [showLeadDetail, setShowLeadDetail] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<HomeBidsLead | null>(null);
 
-  const handleConfirmBidSubmit = () => {
-    setShowBidConfirm(false);
-    setPreviewBidSubmitted(true);
-  };
+  // AI Tools
+  const [activeTool, setActiveTool] = useState<AiTool>(null);
 
-  const handlePreviewSendChat = () => {
-    if (!previewChatInput.trim() || !previewJob) return;
-    const jobId = previewJob.id;
-    const msg: JobMessage = {
-      id: Date.now().toString(),
-      text: previewChatInput.trim(),
-      sender: "contractor",
-      time: new Date(),
-    };
-    setPreviewChatMessages((prev) => ({
-      ...prev,
-      [jobId]: [...(prev[jobId] || []), msg],
-    }));
-    setPreviewChatInput("");
-    // Real messaging will be handled via the inbox system — no simulated replies.
-  };
+  // Bid Builder
+  const [bidMessages, setBidMessages] = useState<ChatMessage[]>([BID_BUILDER_INTRO]);
+  const [bidInput, setBidInput] = useState("");
+  const [bidTyping, setBidTyping] = useState(false);
+  const bidBottomRef = useRef<HTMLDivElement>(null);
+  const bidIsDone = bidMessages.filter((m) => m.role === "user").length >= 6;
+  const [bidCopied, setBidCopied] = useState(false);
 
-  // Payout calculator state removed — contractors keep 100% with no success fees
-  // Messages start empty — never seed with fake threads tied to hardcoded bid IDs.
-  // Real message history is not yet persisted server-side; this is a UI-only state.
-  const [messages, setMessages] = useState<Record<string, Message[]>>({});
+  function handleBidSend() {
+    if (!bidInput.trim() || bidTyping) return;
+    const userMsg: ChatMessage = { role: "user", content: bidInput.trim() };
+    const next = [...bidMessages, userMsg];
+    setBidMessages(next);
+    setBidInput("");
+    setBidTyping(true);
+    setTimeout(() => {
+      const reply = getBidBuilderReply(next);
+      setBidMessages((prev) => [...prev, { role: "ai", content: reply }]);
+      setBidTyping(false);
+    }, 900);
+  }
 
-  // Edit form state
-  const [editAmount, setEditAmount] = useState("");
-  const [editTimeline, setEditTimeline] = useState("");
-  const [editMessage, setEditMessage] = useState("");
+  useEffect(() => {
+    bidBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [bidMessages, bidTyping]);
 
-  const detailPanelRef = useRef<HTMLDivElement>(null);
+  function resetBidBuilder() {
+    setBidMessages([BID_BUILDER_INTRO]);
+    setBidInput("");
+    setBidTyping(false);
+    setBidCopied(false);
+  }
 
-  const handleSelectBid = (bid: ActiveBid) => {
-    setSelectedBid(bid);
-    setShowMobileDetail(true);
-    requestAnimationFrame(() => {
-      const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
-      if (isDesktop && detailPanelRef.current) {
-        detailPanelRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-      } else {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
-    });
-  };
+  // Price Check
+  const [pcProject, setPcProject] = useState("");
+  const [pcBid, setPcBid] = useState("");
+  const [pcObjection, setPcObjection] = useState("");
+  const [pcResult, setPcResult] = useState<ReturnType<typeof getPriceCheckResponse> | null>(null);
+  const [pcLoading, setPcLoading] = useState(false);
+  const [pcCopied, setPcCopied] = useState(false);
+  const [pcLinkCopied, setPcLinkCopied] = useState(false);
 
-  const handleBackToList = () => {
-    setShowMobileDetail(false);
-  };
+  function handlePriceCheck() {
+    if (!pcProject.trim() || !pcBid.trim()) return;
+    setPcLoading(true);
+    setPcResult(null);
+    setTimeout(() => { setPcResult(getPriceCheckResponse(pcProject, pcBid, pcObjection)); setPcLoading(false); }, 1000);
+  }
 
-  const handleEditBid = (bid: ActiveBid) => {
-    setEditingBid(bid);
-    setEditAmount(bid.bidAmount.toString());
-    setEditTimeline(bid.timeline);
-    setEditMessage(bid.message);
-    setShowEditModal(true);
-  };
+  // Customer Response
+  const [crMessage, setCrMessage] = useState("");
+  const [crTone, setCrTone] = useState("professional");
+  const [crGoal, setCrGoal] = useState("");
+  const [crResult, setCrResult] = useState<ReturnType<typeof getCustomerResponse> | null>(null);
+  const [crLoading, setCrLoading] = useState(false);
+  const [crVersion, setCrVersion] = useState<"full" | "sms" | "short">("full");
+  const [crCopied, setCrCopied] = useState(false);
 
-  const handleSaveEdit = () => {
-    if (!editingBid) return;
+  function handleCustomerResponse() {
+    if (!crMessage.trim()) return;
+    setCrLoading(true);
+    setCrResult(null);
+    setTimeout(() => { setCrResult(getCustomerResponse(crMessage, crTone, crGoal)); setCrLoading(false); }, 1000);
+  }
 
-    setBids((prev) =>
-      prev.map((bid) =>
-        bid.id === editingBid.id
-          ? {
-              ...bid,
-              bidAmount: Number.parseFloat(editAmount) || bid.bidAmount,
-              timeline: editTimeline || bid.timeline,
-              message: editMessage || bid.message,
-            }
-          : bid
-      )
+  const handleSignOut = () => mockSignOut();
+
+  // Derived stats
+  const newLeads = DEMO_HOMEBIDS_LEADS.filter((l) => l.status === "new").length;
+  const awaitingApproval = DEMO_HOMEBIDS_LEADS.filter((l) => l.status === "homeowner_reviewing").length;
+  const inProgress = DEMO_MY_LEADS.filter((l) => l.status === "in_progress").length;
+
+  const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
+    { id: "home",    label: "Home",     icon: LayoutDashboard },
+    { id: "leads",   label: "Leads",    icon: Users },
+    { id: "ai",      label: "AI Tools", icon: Sparkles },
+    { id: "account", label: "Account",  icon: Wrench },
+  ];
+
+  function handleTabChange(id: Tab) {
+    setActiveTab(id);
+    if (id !== "ai") setActiveTool(null);
+  }
+
+  // ── Shared lead card renderer ─────────────────────────────────────────────
+
+  function renderHomeBidsLeadCard(lead: HomeBidsLead, compact = false) {
+    const statusBadge =
+      lead.status === "new" ? { label: "New", cls: "bg-blue-100 text-blue-700" }
+      : lead.status === "bid_submitted" ? { label: "Bid Submitted", cls: "bg-amber-100 text-amber-700" }
+      : { label: "Reviewing", cls: "bg-purple-100 text-purple-700" };
+
+    const cta = lead.directMessagingUnlocked
+      ? { label: "Text Homeowner", primary: true, green: true, onClick: () => { window.location.href = `sms:${lead.homeownerPhone ?? ""}`; } }
+      : lead.status === "new"
+      ? { label: "Generate Bid", primary: true, green: false, onClick: () => { setSelectedLead(lead); setShowLeadDetail(true); } }
+      : { label: "Send via HomeBids AI", primary: true, green: false, onClick: () => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); } };
+
+    return (
+      <div key={lead.id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/30">
+        {/* Top row */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadge.cls}`}>{statusBadge.label}</span>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
+          </div>
+          <span className="text-sm font-semibold text-foreground shrink-0">{lead.estimatedValue}</span>
+        </div>
+
+        <p className="mt-1.5 font-semibold text-foreground">{lead.title}</p>
+
+        <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1"><MapPin className="h-3 w-3 shrink-0" />{lead.location}</span>
+          <span className="flex items-center gap-1"><Clock className="h-3 w-3 shrink-0" />{lead.timeline}</span>
+        </div>
+
+        {!compact && <p className="mt-2 text-[11px] italic text-primary/80">{lead.aiNotes}</p>}
+
+        <div className="mt-2">
+          {lead.directMessagingUnlocked ? (
+            <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700 w-fit">
+              <Unlock className="h-3 w-3" /> Direct texting unlocked
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground w-fit">
+              <Lock className="h-3 w-3" /> Contact locked
+            </span>
+          )}
+        </div>
+
+        <div className="mt-3 flex gap-2">
+          <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
+            <Eye className="h-3.5 w-3.5" /> Details
+          </Button>
+          <Button
+            size="sm"
+            className={`h-7 gap-1 px-3 text-xs ${cta.green ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
+            onClick={cta.onClick}
+          >
+            {cta.label}
+          </Button>
+        </div>
+      </div>
     );
+  }
 
-    setShowEditModal(false);
-    setEditingBid(null);
-  };
+  // ── HOME tab content ───────────────────────────────────────────────────────
 
-  const handleDeleteClick = (bid: ActiveBid) => {
-    setBidToDelete(bid);
-    setShowDeleteConfirm(true);
-  };
+  const homeContent = (
+    <div className="space-y-6">
+      {/* Greeting */}
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Good morning, {contractorName}.</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          You have <span className="font-semibold text-foreground">{DEMO_HOMEBIDS_LEADS.length + DEMO_MY_LEADS.length}</span> active leads.
+        </p>
+      </div>
 
-  const handleConfirmDelete = () => {
-    if (!bidToDelete) return;
+      {/* KPI row — horizontal on both mobile and desktop */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          { label: "New Leads",        value: newLeads,          color: "bg-blue-50 text-blue-700 border-blue-100" },
+          { label: "Awaiting Approval", value: awaitingApproval, color: "bg-purple-50 text-purple-700 border-purple-100" },
+          { label: "In Progress",      value: inProgress,        color: "bg-amber-50 text-amber-700 border-amber-100" },
+          { label: "Bids Submitted",   value: bidsCount,         color: "bg-muted text-muted-foreground border-border" },
+        ].map(({ label, value, color }) => (
+          <div key={label} className={`rounded-xl border p-3 ${color}`}>
+            <p className="text-2xl font-bold">{value}</p>
+            <p className="mt-0.5 text-[11px] font-medium">{label}</p>
+          </div>
+        ))}
+      </div>
 
-    setBids((prev) => prev.filter((bid) => bid.id !== bidToDelete.id));
-    setShowDeleteConfirm(false);
-    setBidToDelete(null);
-    if (selectedBid?.id === bidToDelete.id) {
-      setSelectedBid(null);
-    }
-  };
+      {/* Two-column on desktop, stacked on mobile */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        {/* Left: Priority leads */}
+        <div className="lg:col-span-3">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Needs your attention</h2>
+          <div className="space-y-3">
+            {DEMO_HOMEBIDS_LEADS.map((lead) => renderHomeBidsLeadCard(lead, false))}
+          </div>
+        </div>
 
-  const handleOpenMessenger = (bid: ActiveBid) => {
-    setMessagingBid(bid);
-    setShowMessenger(true);
-  };
+        {/* Right: Suggested actions panel */}
+        <div className="lg:col-span-2">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Suggested actions</h2>
+          <div className="space-y-2">
+            {[
+              { icon: Calculator, label: "Finish draft estimate", sub: "Kitchen Cabinet Repaint", action: () => { handleTabChange("ai"); setActiveTool("bid"); } },
+              { icon: Eye, label: "Homeowner reviewing bid", sub: "Backyard Turf Install", action: () => handleTabChange("leads") },
+              { icon: Unlock, label: "Approval unlocked", sub: "Bathroom Vanity Replacement", action: () => handleTabChange("leads") },
+              { icon: MessageCircle, label: "Generate a response", sub: "Use AI Customer Response tool", action: () => { handleTabChange("ai"); setActiveTool("response"); } },
+            ].map(({ icon: Icon, label, sub, action }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={action}
+                className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/30 hover:bg-primary/5"
+              >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground">{label}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">{sub}</p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
+            ))}
+          </div>
 
-  const handleSendMessage = () => {
-    if (!messagingBid || !newMessage.trim()) return;
+          {/* Quick-access AI CTA */}
+          <button
+            type="button"
+            onClick={() => handleTabChange("ai")}
+            className="mt-4 flex w-full items-center justify-between rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+          >
+            <span className="flex items-center gap-2"><Zap className="h-4 w-4" />Open AI Tools</span>
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
-    const message: Message = {
-      id: `m${Date.now()}`,
-      text: newMessage.trim(),
-      sender: "contractor",
-      timestamp: new Date(),
-    };
+  // ── LEADS tab content ──────────────────────────────────────────────────────
 
-    setMessages((prev) => ({
-      ...prev,
-      [messagingBid.id]: [...(prev[messagingBid.id] || []), message],
-    }));
-    setNewMessage("");
-  };
+  const leadsContent = (
+    <div className="space-y-5">
+      <h1 className="text-xl font-bold text-foreground">Leads</h1>
 
-  // Payout handler removed — contractors keep 100% with no success fees
+      {/* Segment toggle */}
+      <div className="flex gap-1 rounded-xl bg-muted p-1">
+        {(["homebids", "myleads"] as const).map((seg) => (
+          <button
+            key={seg}
+            type="button"
+            onClick={() => setLeadsSegment(seg)}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+              leadsSegment === seg ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {seg === "homebids" ? <Sparkles className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}
+            {seg === "homebids" ? "HomeBids AI" : "My Leads"}
+            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+              leadsSegment === seg
+                ? seg === "homebids" ? "bg-primary/10 text-primary" : "bg-emerald-100 text-emerald-700"
+                : "bg-muted-foreground/20 text-muted-foreground"
+            }`}>
+              {seg === "homebids" ? DEMO_HOMEBIDS_LEADS.length : DEMO_MY_LEADS.length}
+            </span>
+          </button>
+        ))}
+      </div>
 
-  // Payout calculation removed — contractors keep 100% with no success fees
+      {leadsSegment === "homebids" && (
+        <div>
+          <p className="mb-3 text-xs text-muted-foreground">AI-matched leads. Win approval to unlock direct contact.</p>
+          {/* On desktop, use a 2-col grid for lead cards */}
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {DEMO_HOMEBIDS_LEADS.map((lead) => {
+              const statusBadge =
+                lead.status === "new" ? { label: "New", cls: "bg-blue-100 text-blue-700" }
+                : lead.status === "bid_submitted" ? { label: "Bid Submitted", cls: "bg-amber-100 text-amber-700" }
+                : { label: "Reviewing", cls: "bg-purple-100 text-purple-700" };
+              return (
+                <div key={lead.id} className="rounded-xl border border-border bg-card p-4">
+                  {/* Horizontal layout on desktop */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadge.cls}`}>{statusBadge.label}</span>
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
+                    </div>
+                    <span className="shrink-0 font-semibold text-foreground">{lead.estimatedValue}</span>
+                  </div>
+                  <p className="mt-2 font-semibold text-foreground">{lead.title}</p>
+                  <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{lead.location}</span>
+                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{lead.timeline}</span>
+                  </div>
+                  <p className="mt-2 text-[11px] italic text-primary/80 line-clamp-2">{lead.aiNotes}</p>
+                  <div className="mt-2">
+                    {lead.directMessagingUnlocked ? (
+                      <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700 w-fit">
+                        <Unlock className="h-3 w-3" /> Direct texting unlocked
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground w-fit">
+                        <Lock className="h-3 w-3" /> Contact locked — win approval first
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
+                      <Eye className="h-3 w-3" /> Details
+                    </Button>
+                    {lead.directMessagingUnlocked ? (
+                      <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => { window.location.href = `sms:${lead.homeownerPhone ?? ""}`; }}>
+                        <MessageCircle className="h-3 w-3" /> Text Homeowner
+                      </Button>
+                    ) : (
+                      <>
+                        <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
+                          <Calculator className="h-3 w-3" /> Generate Bid
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); }}>
+                          <MessageCircle className="h-3 w-3" /> Send via HomeBids AI
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
-  const toggleExpandedStatus = (status: string) => {
-    setExpandedStatuses((prev) => {
-      const next = new Set(prev);
-      if (next.has(status)) {
-        next.delete(status);
-      } else {
-        next.add(status);
-      }
-      return next;
-    });
-  };
+      {leadsSegment === "myleads" && (
+        <div>
+          <p className="mb-3 text-xs text-muted-foreground">Your own leads — full control, text directly any time.</p>
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {DEMO_MY_LEADS.map((lead) => {
+              const aiStatusBadge =
+                lead.aiStatus === "estimate_ready" ? { label: "Estimate Ready", cls: "bg-blue-100 text-blue-700" }
+                : lead.aiStatus === "response_sent" ? { label: "Response Sent", cls: "bg-amber-100 text-amber-700" }
+                : { label: "Follow-Up Ready", cls: "bg-purple-100 text-purple-700" };
+              return (
+                <div key={lead.id} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-700">
+                      {lead.customerName.charAt(0)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-foreground">{lead.customerName}</p>
+                      <p className="text-xs text-muted-foreground">{lead.projectTitle}</p>
+                    </div>
+                    <span className="shrink-0 font-semibold text-foreground">{lead.estimatedValue}</span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${aiStatusBadge.cls}`}>{aiStatusBadge.label}</span>
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">{lead.lastActivity}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => handleTabChange("ai")}>
+                      <Sparkles className="h-3 w-3" /> AI Tools
+                    </Button>
+                    <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { window.location.href = `sms:${lead.phone ?? ""}`; }}>
+                      <MessageCircle className="h-3 w-3" /> Text Customer
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
-  const statusOrder: Record<string, number> = { open: 0, in_progress: 1, completed: 2, not_selected: 3 };
+  // ── AI TOOLS tab content ───────────────────────────────────────────────────
 
-  const filteredBids = bids.filter((bid) => {
-    const matchesSearch =
-      bid.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      bid.homeownerLocation.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter =
-      filterStatus === "all" ||
-      (filterStatus === "active" ? ["open", "in_progress"].includes(bid.status) : bid.status === filterStatus);
-    return matchesSearch && matchesFilter;
-  }).sort((a, b) => (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9));
+  // Tool picker list (shared between mobile and desktop sidebar)
+  const aiToolList = (
+    <div className="space-y-2">
+      {[
+        { id: "bid" as AiTool, label: "Bid Builder", desc: "Build a professional estimate step by step.", icon: Calculator, bg: "bg-primary/10", iconCls: "text-primary" },
+        { id: "pricecheck" as AiTool, label: "Price Check", desc: "Handle objections and earn affiliate revenue.", icon: DollarSign, bg: "bg-emerald-100", iconCls: "text-emerald-700" },
+        { id: "response" as AiTool, label: "Customer Response", desc: "Generate professional replies in seconds.", icon: MessageCircle, bg: "bg-blue-100", iconCls: "text-blue-700" },
+      ].map(({ id, label, desc, icon: Icon, bg, iconCls }) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => setActiveTool(id)}
+          className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors ${
+            activeTool === id
+              ? "border-primary/40 bg-primary/5"
+              : "border-border bg-card hover:border-primary/30 hover:bg-primary/5"
+          }`}
+        >
+          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${bg}`}>
+            <Icon className={`h-4 w-4 ${iconCls}`} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">{label}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">{desc}</p>
+          </div>
+          {/* Only show chevron in the mobile single-pane view */}
+          <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground lg:hidden" />
+        </button>
+      ))}
+    </div>
+  );
 
-  const bidsByStatus = {
-    open: bids.filter((b) => b.status === "open"),
-    in_progress: bids.filter((b) => b.status === "in_progress"),
-    completed: bids.filter((b) => b.status === "completed"),
-    not_selected: bids.filter((b) => b.status === "not_selected"),
-  };
+  // Bid builder pane
+  const bidBuilderPane = (
+    <div className="flex h-full flex-col" style={{ minHeight: "calc(100dvh - 220px)" }}>
+      <div className="mb-4 flex items-center gap-3 lg:hidden">
+        <button type="button" onClick={() => setActiveTool(null)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="flex-1">
+          <h2 className="font-bold text-foreground">Bid Builder</h2>
+          <p className="text-xs text-muted-foreground">Chat with your AI estimating assistant</p>
+        </div>
+        <button type="button" onClick={resetBidBuilder} className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">Reset</button>
+      </div>
+      {/* Desktop title row */}
+      <div className="mb-4 hidden items-center justify-between lg:flex">
+        <div>
+          <h2 className="font-bold text-foreground">Bid Builder</h2>
+          <p className="text-xs text-muted-foreground">Chat with your AI estimating assistant</p>
+        </div>
+        <button type="button" onClick={resetBidBuilder} className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">Reset</button>
+      </div>
 
-  const statOf = (key: keyof typeof bidsByStatus) => ({
-    count: bidsByStatus[key].length,
-    value: bidsByStatus[key].reduce((sum, b) => sum + b.bidAmount, 0),
-  });
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pb-2">
+        {bidMessages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+            {msg.role === "ai" && (
+              <div className="mr-2 mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <Sparkles className="h-3 w-3 text-primary" />
+              </div>
+            )}
+            <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+              msg.role === "user" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm"
+            }`}>
+              <span className="whitespace-pre-wrap">{msg.content}</span>
+            </div>
+          </div>
+        ))}
+        {bidTyping && (
+          <div className="flex justify-start">
+            <div className="mr-2 mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <Sparkles className="h-3 w-3 text-primary" />
+            </div>
+            <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-muted px-4 py-3">
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:0ms]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:150ms]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:300ms]" />
+            </div>
+          </div>
+        )}
+        <div ref={bidBottomRef} />
+      </div>
 
-  const stats = {
-    open: statOf("open"),
-    in_progress: statOf("in_progress"),
-    completed: statOf("completed"),
-    not_selected: statOf("not_selected"),
-  };
+      {bidIsDone && !bidTyping && (
+        <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-border bg-card p-3">
+          <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent"
+            onClick={() => { const last = bidMessages.filter((m) => m.role === "ai").at(-1)?.content ?? ""; copyToClipboard(last).then(() => { setBidCopied(true); setTimeout(() => setBidCopied(false), 2000); }); }}>
+            <Copy className="h-3 w-3" />{bidCopied ? "Copied!" : "Copy Estimate"}
+          </Button>
+          <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => window.print()}>
+            <FileText className="h-3 w-3" /> Export PDF
+          </Button>
+          <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent"
+            onClick={() => { const last = bidMessages.filter((m) => m.role === "ai").at(-1)?.content ?? ""; window.location.href = `sms:?body=${encodeURIComponent(last)}`; }}>
+            <Send className="h-3 w-3" /> Send via SMS
+          </Button>
+        </div>
+      )}
 
-  const totalPipeline =
-    bidsByStatus.open.reduce((sum, b) => sum + b.bidAmount, 0) +
-    bidsByStatus.in_progress.reduce((sum, b) => sum + b.bidAmount, 0);
+      {!bidIsDone && (
+        <div className="mt-3 flex gap-2">
+          <Input placeholder="Type your answer..." value={bidInput} onChange={(e) => setBidInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleBidSend(); } }}
+            className="flex-1 text-sm" disabled={bidTyping} />
+          <Button size="icon" className="shrink-0" onClick={handleBidSend} disabled={!bidInput.trim() || bidTyping}>
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  };
+  // Price check pane
+  const priceCheckPane = (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3 lg:hidden">
+        <button type="button" onClick={() => setActiveTool(null)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div>
+          <h2 className="font-bold text-foreground">Price Check</h2>
+          <p className="text-xs text-muted-foreground">Turn pricing objections into affiliate revenue</p>
+        </div>
+      </div>
+      <div className="hidden lg:block">
+        <h2 className="font-bold text-foreground">Price Check</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">Turn pricing objections into affiliate revenue</p>
+      </div>
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Header isContractor />
+      <div className="grid grid-cols-3 gap-2">
+        {[{ label: "Jobs Referred", value: "7", icon: Users }, { label: "Avg. Earn/Job", value: "$70", icon: DollarSign }, { label: "Total Earned", value: "$490", icon: TrendingUp }].map(({ label, value, icon: Icon }) => (
+          <div key={label} className="rounded-xl border border-border bg-card p-3 text-center">
+            <Icon className="mx-auto mb-1 h-4 w-4 text-muted-foreground" />
+            <p className="text-base font-bold text-foreground">{value}</p>
+            <p className="text-[10px] text-muted-foreground">{label}</p>
+          </div>
+        ))}
+      </div>
 
-      <main className="px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          {/* Page Header - Hidden on mobile when viewing bid detail */}
-          <div className={`mb-8 text-center lg:text-left ${showMobileDetail ? "hidden lg:block" : "block"}`}>
-            <h1 className="text-3xl font-bold text-foreground">Contractor Dashboard</h1>
-            <p className="mt-2 text-muted-foreground">
-              Manage your active bids and track job opportunities
+      <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="pc-project" className="text-xs font-medium">Project type</Label>
+          <Input id="pc-project" placeholder="e.g. Kitchen cabinet repaint" value={pcProject} onChange={(e) => setPcProject(e.target.value)} className="text-sm" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="pc-bid" className="text-xs font-medium">Your bid amount</Label>
+          <Input id="pc-bid" placeholder="e.g. $1,450" value={pcBid} onChange={(e) => setPcBid(e.target.value)} className="text-sm" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="pc-objection" className="text-xs font-medium">Homeowner objection (optional)</Label>
+          <Input id="pc-objection" placeholder={`e.g. "I want to get more bids first"`} value={pcObjection} onChange={(e) => setPcObjection(e.target.value)} className="text-sm" />
+        </div>
+        <Button className="w-full gap-2" onClick={handlePriceCheck} disabled={!pcProject.trim() || !pcBid.trim() || pcLoading}>
+          {pcLoading ? <span className="flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />Generating...</span> : <><Sparkles className="h-4 w-4" /> Generate Response &amp; Referral Link</>}
+        </Button>
+      </div>
+
+      {pcResult && (
+        <div className="space-y-3">
+          <div className="rounded-xl border border-border bg-muted/40 p-4">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Suggested Response</p>
+            <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{pcResult.response}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { copyToClipboard(pcResult.response); setPcCopied(true); setTimeout(() => setPcCopied(false), 2000); }}>
+                <Copy className="h-3 w-3" />{pcCopied ? "Copied!" : "Copy"}
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { window.location.href = `sms:?body=${encodeURIComponent(pcResult.response)}`; }}>
+                <Send className="h-3 w-3" /> Send via SMS
+              </Button>
+            </div>
+          </div>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Your HomeBids Referral Link</p>
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-2">
+              <p className="flex-1 truncate text-xs text-foreground font-mono">{pcResult.refLink}</p>
+              <button type="button" onClick={() => { copyToClipboard(pcResult.refLink); setPcLinkCopied(true); setTimeout(() => setPcLinkCopied(false), 2000); }} className="shrink-0 text-emerald-700 hover:text-emerald-900">
+                {pcLinkCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </button>
+              <a href={pcResult.refLink} target="_blank" rel="noopener noreferrer" className="shrink-0 text-emerald-700 hover:text-emerald-900"><ExternalLink className="h-4 w-4" /></a>
+            </div>
+            <p className="text-xs text-emerald-800">
+              If the homeowner hires another contractor through HomeBids, you earn <span className="font-semibold">{pcResult.earnings.potentialPerReferral}</span> in affiliate revenue — automatically.
             </p>
           </div>
+        </div>
+      )}
+    </div>
+  );
 
-          {/* Gamified Earnings Tracker - Hidden on mobile when viewing bid detail */}
-          <div className={`mb-8 ${showMobileDetail ? "hidden lg:block" : "block"}`}>
-            {/* Total Potential Banner - Clickable to expand full pipeline */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              onClick={() => setShowPipeline(!showPipeline)}
-              className="mb-4 cursor-pointer rounded-xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 transition-all hover:border-primary/40 hover:shadow-md"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wider text-primary/70">Total Pipeline Value</p>
-                  <p className="mt-1 text-2xl font-bold text-foreground sm:text-3xl">
-                    ${totalPipeline.toLocaleString()}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20">
-                    <TrendingUp className="h-6 w-6 text-primary" />
-                  </div>
-                  <motion.div
-                    animate={{ rotate: showPipeline ? 180 : 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10"
-                  >
-                    <ChevronDown className="h-4 w-4 text-primary" />
-                  </motion.div>
-                </div>
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                {showPipeline ? "Click to collapse pipeline" : "Click to view full bid pipeline"}
-              </p>
-            </motion.div>
+  // Customer response pane
+  const customerResponsePane = (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3 lg:hidden">
+        <button type="button" onClick={() => setActiveTool(null)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div>
+          <h2 className="font-bold text-foreground">Customer Response</h2>
+          <p className="text-xs text-muted-foreground">Generate a professional reply in seconds</p>
+        </div>
+      </div>
+      <div className="hidden lg:block">
+        <h2 className="font-bold text-foreground">Customer Response</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">Generate a professional reply in seconds</p>
+      </div>
 
-            {/* Expanded Pipeline View */}
-            <AnimatePresence>
-              {showPipeline && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3, ease: "easeInOut" }}
-                  className="mb-4 overflow-hidden"
-                >
-                  <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
-                    <h3 className="mb-4 text-sm font-semibold text-foreground sm:text-base">Bid Pipeline</h3>
-
-                    {/* Pipeline stages */}
-                    {(
-                      [
-                        { key: "open", label: "Open Bids", color: "bg-blue-500", lightBg: "bg-blue-50", textColor: "text-blue-700", icon: Eye },
-                        { key: "in_progress", label: "In Progress", color: "bg-amber-500", lightBg: "bg-amber-50", textColor: "text-amber-700", icon: Clock },
-                        { key: "completed", label: "Completed", color: "bg-emerald-500", lightBg: "bg-emerald-50", textColor: "text-emerald-700", icon: CheckCircle2 },
-                        { key: "not_selected", label: "Not Selected", color: "bg-gray-400", lightBg: "bg-gray-50", textColor: "text-gray-600", icon: X },
-                      ] as const
-                    ).map((stage) => {
-                      const stageBids = bidsByStatus[stage.key];
-                      if (stageBids.length === 0) return null;
-                      const StageIcon = stage.icon;
-                      return (
-                        <div key={stage.key} className="mb-4 last:mb-0">
-                          {/* Stage header */}
-                          <div className="mb-2 flex items-center gap-2">
-                            <div className={`h-2.5 w-2.5 rounded-full ${stage.color}`} />
-                            <p className={`text-xs font-semibold ${stage.textColor} sm:text-sm`}>{stage.label}</p>
-                            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                              {stageBids.length}
-                            </span>
-                            <span className="ml-auto text-xs font-semibold text-foreground">
-                              ${stageBids.reduce((s, b) => s + b.bidAmount, 0).toLocaleString()}
-                            </span>
-                          </div>
-
-                          {/* Stage bids */}
-                          <div className="space-y-1.5 pl-5">
-                            {stageBids.map((bid) => (
-                              <div
-                                key={bid.id}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSelectBid(bid);
-                                  setShowPipeline(false);
-                                }}
-                                className={`flex cursor-pointer items-center justify-between rounded-lg border border-border p-2.5 transition-all hover:border-primary/30 hover:bg-muted/50 sm:p-3 ${
-                                  selectedBid?.id === bid.id ? "border-primary/40 bg-primary/5 ring-1 ring-primary/20" : ""
-                                }`}
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-xs font-medium text-foreground sm:text-sm">{bid.jobTitle}</p>
-                                  <div className="mt-0.5 flex items-center gap-2">
-                                    <p className="flex items-center gap-0.5 text-[10px] text-muted-foreground sm:text-xs">
-                                      <MapPin className="h-2.5 w-2.5 shrink-0" />
-                                      <span className="truncate">{bid.homeownerLocation}</span>
-                                    </p>
-                                    <span className="text-[10px] text-muted-foreground/50">|</span>
-                                    <p className="text-[10px] text-muted-foreground sm:text-xs">{bid.homeownerName}</p>
-                                  </div>
-                                </div>
-                                <div className="ml-3 text-right">
-                                  <p className="text-xs font-bold text-foreground sm:text-sm">${bid.bidAmount.toLocaleString()}</p>
-                                  <p className="text-[10px] text-muted-foreground">{bid.timeline}</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Pipeline summary bar */}
-                    <div className="mt-5 rounded-lg bg-muted/50 p-3">
-                      <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground sm:text-xs">Pipeline Breakdown</p>
-                      <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted">
-                        {stats.open.value > 0 && (
-                          <div className="bg-blue-500 transition-all" style={{ width: `${(stats.open.value / (totalPipeline || 1)) * 100}%` }} title={`Open: $${stats.open.value.toLocaleString()}`} />
-                        )}
-                        {stats.in_progress.value > 0 && (
-                          <div className="bg-amber-500 transition-all" style={{ width: `${(stats.in_progress.value / (totalPipeline || 1)) * 100}%` }} title={`In Progress: $${stats.in_progress.value.toLocaleString()}`} />
-                        )}
-                      </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-3">
-                        {stats.open.count > 0 && (
-                          <span className="flex items-center gap-1 text-[10px] text-muted-foreground"><span className="h-2 w-2 rounded-full bg-blue-500" />Open</span>
-                        )}
-                        {stats.in_progress.count > 0 && (
-                          <span className="flex items-center gap-1 text-[10px] text-muted-foreground"><span className="h-2 w-2 rounded-full bg-amber-500" />In Progress</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Earnings Breakdown */}
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-              {(
-                [
-                  { key: "open" as const, label: "Open", suffix: (c: number) => `${c} open bid${c !== 1 ? "s" : ""}`, delay: 0.1, icon: Eye, border: "border-blue-200", borderActive: "border-blue-400 ring-2 ring-blue-300/50 shadow-sm", bg: "bg-blue-50/50", bgActive: "bg-blue-50", iconBg: "bg-blue-100", iconColor: "text-blue-600", textColor: "text-blue-700", valueColor: "text-blue-800", subColor: "text-blue-600", hoverBorder: "hover:border-blue-300" },
-                  { key: "in_progress" as const, label: "In Progress", suffix: (c: number) => `${c} job${c !== 1 ? "s" : ""} active`, delay: 0.15, icon: Clock, border: "border-amber-200", borderActive: "border-amber-400 ring-2 ring-amber-300/50 shadow-sm", bg: "bg-amber-50/50", bgActive: "bg-amber-50", iconBg: "bg-amber-100", iconColor: "text-amber-600", textColor: "text-amber-700", valueColor: "text-amber-800", subColor: "text-amber-600", hoverBorder: "hover:border-amber-300" },
-                  { key: "completed" as const, label: "Completed", suffix: (c: number) => `${c} job${c !== 1 ? "s" : ""} done`, delay: 0.2, icon: CheckCircle2, border: "border-emerald-200", borderActive: "border-emerald-400 ring-2 ring-emerald-300/50 shadow-sm", bg: "bg-emerald-50/50", bgActive: "bg-emerald-50", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", textColor: "text-emerald-700", valueColor: "text-emerald-800", subColor: "text-emerald-600", hoverBorder: "hover:border-emerald-300" },
-                ] as const
-              ).map((stage) => {
-                const stat = stats[stage.key];
-                const isExpanded = expandedStatuses.has(stage.key);
-                const stageBids = bidsByStatus[stage.key];
-                const StageIcon = stage.icon;
-
-                return (
-                  <motion.div
-                    key={stage.key}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: stage.delay }}
-                    className={`rounded-xl border transition-all ${stage.key === "completed" ? "col-span-2 lg:col-span-1" : ""} ${isExpanded ? `${stage.borderActive} ${stage.bgActive}` : `${stage.border} ${stage.bg} ${stage.hoverBorder} hover:shadow-sm`}`}
-                  >
-                    {/* Card header - click to expand/collapse dropdown only */}
-                    <div
-                      onClick={() => {
-                        if (stat.count > 0) {
-                          toggleExpandedStatus(stage.key);
-                        }
-                      }}
-                      className="cursor-pointer p-3 sm:p-4"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${stage.iconBg}`}>
-                            <StageIcon className={`h-4 w-4 ${stage.iconColor}`} />
-                          </div>
-                          <p className={`text-xs font-medium ${stage.textColor} sm:text-sm`}>{stage.label}</p>
-                        </div>
-                        {stat.count > 0 && (
-                          <div className={`flex h-6 w-6 items-center justify-center rounded-full ${stage.iconBg} ${stage.iconColor}`}>
-                            <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                              <ChevronDown className="h-3.5 w-3.5" />
-                            </motion.div>
-                          </div>
-                        )}
-                      </div>
-                      <p className={`mt-2 text-lg font-bold ${stage.valueColor} sm:text-xl`}>
-                        ${stat.value.toLocaleString()}
-                      </p>
-                      <p className={`text-[10px] ${stage.subColor} sm:text-xs`}>
-                        {stage.suffix(stat.count)}
-                      </p>
-                    </div>
-
-                    {/* Expandable bid list */}
-                    <AnimatePresence>
-                      {isExpanded && stageBids.length > 0 && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.25, ease: "easeInOut" }}
-                          className="overflow-hidden"
-                        >
-                          <div className="border-t border-border/30 px-3 pb-3 pt-2 sm:px-4 sm:pb-4">
-                            <div className="space-y-1.5">
-                              {stageBids.map((bid) => (
-                                <div
-                                  key={bid.id}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSelectBid(bid);
-                                  }}
-                                  className={`flex cursor-pointer items-center justify-between rounded-lg border border-border/50 bg-card/80 p-2 transition-all hover:border-primary/30 hover:bg-card sm:p-2.5 ${
-                                    selectedBid?.id === bid.id ? "border-primary/40 bg-primary/5 ring-1 ring-primary/20" : ""
-                                  }`}
-                                >
-                                  <div className="min-w-0 flex-1">
-                                    <p className="truncate text-[11px] font-medium text-foreground sm:text-xs">{bid.jobTitle}</p>
-                                    <p className="mt-0.5 flex items-center gap-1 text-[9px] text-muted-foreground sm:text-[10px]">
-                                      <MapPin className="h-2 w-2 shrink-0 sm:h-2.5 sm:w-2.5" />
-                                      <span className="truncate">{bid.homeownerLocation}</span>
-                                    </p>
-                                  </div>
-                                  <div className="ml-2 text-right">
-                                    <p className="text-[11px] font-bold text-foreground sm:text-xs">${bid.bidAmount.toLocaleString()}</p>
-                                    <p className="text-[9px] text-muted-foreground sm:text-[10px]">{bid.timeline}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            {/* Available Jobs Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="mt-6"
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-primary" />
-                  <h3 className="text-sm font-semibold text-foreground sm:text-base">Jobs You Might Like</h3>
-                </div>
-                <Link href="/contractors/jobs">
-                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors cursor-pointer">
-                    Browse all
-                  </span>
-                </Link>
-              </div>
-
-              {suggestedJobs.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border p-6 text-center">
-                  <Briefcase className="mx-auto h-8 w-8 text-muted-foreground/40" />
-                  <p className="mt-3 text-sm text-muted-foreground">Browse open jobs to find your next opportunity</p>
-                  <Button asChild className="mt-4" size="sm">
-                    <Link href="/contractors/jobs">View Open Jobs</Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {suggestedJobs.map((job) => {
-                    const urgencyColors = {
-                      high: "bg-red-100 text-red-700",
-                      medium: "bg-amber-100 text-amber-700",
-                      low: "bg-emerald-100 text-emerald-700",
-                    };
-                    return (
-                      <button
-                        key={job.id}
-                        onClick={() => handleOpenJobPreview(job)}
-                        className="w-full rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-primary/40 hover:shadow-sm"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-semibold leading-tight text-foreground line-clamp-1">{job.title}</p>
-                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${urgencyColors[job.urgency]}`}>
-                            {job.urgency === "high" ? "Urgent" : job.urgency === "medium" ? "Soon" : "Flexible"}
-                          </span>
-                        </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {job.location}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <DollarSign className="h-3 w-3" />
-                            {job.budget}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {job.bidsCount} bid{job.bidsCount !== 1 ? "s" : ""}
-                          </span>
-                        </div>
-                        <p className="mt-2 text-xs text-muted-foreground line-clamp-2 leading-relaxed">{job.description}</p>
-                      </button>
-                    );
-                  })}
-                  <Button asChild variant="outline" size="sm" className="w-full mt-1">
-                    <Link href="/contractors/jobs">View All Open Jobs</Link>
-                  </Button>
-                </div>
-              )}
-            </motion.div>
+      <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="cr-message" className="text-xs font-medium">Homeowner message or situation</Label>
+          <Textarea id="cr-message" rows={3} placeholder={`e.g. "Your quote seems high. Can you do it for less?"`} value={crMessage} onChange={(e) => setCrMessage(e.target.value)} className="resize-none text-sm" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Tone</Label>
+          <div className="flex gap-2">
+            {(["professional", "friendly", "direct"] as const).map((t) => (
+              <button key={t} type="button" onClick={() => setCrTone(t)}
+                className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium capitalize transition-colors ${
+                  crTone === t ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:text-foreground"
+                }`}>
+                {t}
+              </button>
+            ))}
           </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="cr-goal" className="text-xs font-medium">Desired outcome (optional)</Label>
+          <Input id="cr-goal" placeholder="e.g. Schedule a walkthrough, defend pricing, follow up" value={crGoal} onChange={(e) => setCrGoal(e.target.value)} className="text-sm" />
+        </div>
+        <Button className="w-full gap-2" onClick={handleCustomerResponse} disabled={!crMessage.trim() || crLoading}>
+          {crLoading ? <span className="flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />Generating...</span> : <><Sparkles className="h-4 w-4" /> Generate Response</>}
+        </Button>
+      </div>
 
-          {/* Search and Filter - Hidden on mobile when viewing bid detail */}
-          <div className={`mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between ${showMobileDetail ? "hidden lg:flex" : "flex"}`}>
-            <div className="relative flex-1 max-w-md mx-auto sm:mx-0">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search bids..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex items-center justify-center gap-2 sm:justify-start">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="open">Open</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="not_selected">Not Selected</option>
-              </select>
-            </div>
+      {crResult && (
+        <div className="space-y-3">
+          <div className="flex gap-1 rounded-lg bg-muted p-1">
+            {(["full", "sms", "short"] as const).map((v) => (
+              <button key={v} type="button" onClick={() => setCrVersion(v)}
+                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${crVersion === v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+                {v === "full" ? "Full" : v === "sms" ? "SMS" : "Short"}
+              </button>
+            ))}
           </div>
-
-          {/* Bids Grid */}
-          <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-            {/* Bids List - Hidden on mobile when detail is shown */}
-            <div className={`space-y-4 ${showMobileDetail ? "hidden lg:block" : "block"}`}>
-              <h2 className="text-lg font-semibold text-foreground text-center lg:text-left">Your Bids ({filteredBids.length})</h2>
-              
-              {bidsLoading ? (
-                <div className="flex items-center justify-center rounded-xl border border-border bg-card p-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : bidsError ? (
-                <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-8 text-center">
-                  <AlertCircle className="mx-auto h-8 w-8 text-destructive/60" />
-                  <p className="mt-3 text-sm font-medium text-destructive">Failed to load bids</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{bidsError}</p>
-                </div>
-              ) : filteredBids.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border p-8 text-center">
-                  <Briefcase className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                  <p className="mt-4 font-medium text-muted-foreground">No bids yet</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Browse open jobs to submit your first bid</p>
-                  <Button asChild className="mt-4" size="sm" variant="outline">
-                    <Link href="/contractors/jobs">Find Jobs</Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-14rem)] pr-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/20">
-                  {filteredBids.map((bid) => {
-                    const StatusIcon = statusConfig[bid.status].icon;
-                    const isEditable = bid.status === "open";
-
-                    return (
-                      <motion.div
-                        key={bid.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`cursor-pointer rounded-xl border p-4 transition-all ${
-                          selectedBid?.id === bid.id
-                            ? "border-primary bg-primary/5 shadow-sm"
-                            : "border-border bg-card hover:border-primary/30 hover:shadow-sm"
-                        }`}
-                        onClick={() => handleSelectBid(bid)}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-semibold text-foreground truncate">
-                                {bid.jobTitle}
-                              </h3>
-                              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${statusConfig[bid.status].color}`}>
-                                <StatusIcon className="h-3 w-3" />
-                                {statusConfig[bid.status].label}
-                              </span>
-                            </div>
-                            <div className="mt-2 flex items-center gap-3 text-sm text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <MapPin className="h-3.5 w-3.5" />
-                                {bid.homeownerLocation}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3.5 w-3.5" />
-                                {formatDate(bid.submittedAt)}
-                              </span>
-                            </div>
-<div className="mt-3 flex items-center gap-3 flex-wrap">
-                                              <span className="inline-flex items-center gap-1 rounded-lg bg-green-50 px-2.5 py-1 text-sm font-bold text-green-700">
-                                                <DollarSign className="h-4 w-4" />
-                                                {bid.bidAmount.toLocaleString()}
-                                              </span>
-                                              <span className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
-                                                <Clock className="h-3.5 w-3.5" />
-                                                {bid.timeline}
-                                              </span>
-                                              {bid.financingAvailable && (
-                                                <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                                                  <CreditCard className="h-3.5 w-3.5" />
-                                                  Financing
-                                                </span>
-                                              )}
-                                              <span className="text-xs text-muted-foreground">
-                                                <Users className="mr-1 inline h-3.5 w-3.5" />
-                                                {bid.otherBids} other bids
-                                              </span>
-                                            </div>
-                          </div>
-
-                          {isEditable && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="shrink-0"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleOpenMessenger(bid)}>
-                                  <MessageCircle className="mr-2 h-4 w-4" />
-                                  Message Homeowner
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleEditBid(bid)}>
-                                  <Edit3 className="mr-2 h-4 w-4" />
-                                  Edit Bid
-                                </DropdownMenuItem>
-                              <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => handleDeleteClick(bid)}
-                              >
-                              <X className="mr-2 h-4 w-4" />
-                              Cancel Bid
-                              </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Bid Detail Panel - Full screen on mobile when shown */}
-            <div ref={detailPanelRef} className={`lg:sticky lg:top-8 lg:self-start ${showMobileDetail ? "block" : "hidden lg:block"}`}>
-              <AnimatePresence mode="wait">
-                {selectedBid ? (
-                  <motion.div
-                    key={selectedBid.id}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    className="rounded-xl border border-border bg-card overflow-y-auto max-h-[calc(100vh-4rem)] lg:max-h-[calc(100vh-14rem)] scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/20"
-                  >
-                    {/* Mobile Back Button */}
-                    <div className="flex items-center gap-3 border-b border-border p-4 lg:hidden">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleBackToList}
-                        className="gap-2 bg-transparent"
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                        Back to Bids
-                      </Button>
-                    </div>
-
-                    {/* Detail Header */}
-                    <div className="border-b border-border p-6">
-                      <div className="flex flex-col items-center text-center lg:flex-row lg:items-start lg:justify-between lg:text-left">
-                        <div>
-                          <h3 className="text-xl font-bold text-foreground">{selectedBid.jobTitle}</h3>
-                          <div className="mt-2 flex items-center gap-2">
-                            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${statusConfig[selectedBid.status].color}`}>
-                              {statusConfig[selectedBid.status].label}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="mt-4 flex flex-wrap justify-center gap-2 lg:mt-0">
-                          {selectedBid.status === "open" && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleEditBid(selectedBid)}
-                                className="gap-1.5 bg-transparent"
-                              >
-                                <Edit3 className="h-4 w-4" />
-                                Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleDeleteClick(selectedBid)}
-                                className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive bg-transparent"
-                              >
-                                <X className="h-4 w-4" />
-                                Cancel
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Job Details */}
-                    <div className="border-b border-border p-6">
-                      <h4 className="mb-3 font-semibold text-foreground text-center lg:text-left">Job Details</h4>
-                      <p className="text-sm text-muted-foreground leading-relaxed text-center lg:text-left">
-                        {selectedBid.jobDescription}
-                      </p>
-                      {selectedBid.imageCount > 0 && (
-                        <button
-                          type="button"
-                          className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
-                        >
-                          <ImageIcon className="h-3.5 w-3.5" />
-                          See Images ({selectedBid.imageCount} photos from homeowner)
-                        </button>
-                      )}
-                      <div className="mt-4 grid grid-cols-2 gap-4">
-                        <div className={`rounded-lg p-3 text-center lg:text-left ${selectedBid.jobBudget === "TBD - Insurance Paid" ? "bg-blue-50 border border-blue-200" : "bg-muted/50"}`}>
-                          <p className={`text-xs ${selectedBid.jobBudget === "TBD - Insurance Paid" ? "text-blue-600" : "text-muted-foreground"}`}>Budget Range</p>
-                          <p className={`mt-1 font-semibold ${selectedBid.jobBudget === "TBD - Insurance Paid" ? "text-blue-700" : "text-foreground"}`}>{selectedBid.jobBudget}</p>
-                          {selectedBid.jobBudget === "TBD - Insurance Paid" && (
-                            <p className="mt-0.5 text-[10px] text-blue-600">Inspection required before payment</p>
-                          )}
-                        </div>
-                        <div className="rounded-lg bg-muted/50 p-3 text-center lg:text-left">
-                          <p className="text-xs text-muted-foreground">Desired Timeline</p>
-                          <p className="mt-1 font-semibold text-foreground">{selectedBid.jobTimeline}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Your Bid */}
-                    <div className="border-b border-border p-6">
-                      <h4 className="mb-3 font-semibold text-foreground text-center lg:text-left">Your Bid</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="rounded-lg bg-green-50 p-4 text-center lg:text-left">
-                          <p className="text-xs text-green-600">Your Price</p>
-                          <p className="mt-1 text-2xl font-bold text-green-700">
-                            ${selectedBid.bidAmount.toLocaleString()}
-                          </p>
-                        </div>
-                        <div className="rounded-lg bg-blue-50 p-4 text-center lg:text-left">
-                          <p className="text-xs text-blue-600">Your Timeline</p>
-                          <p className="mt-1 text-2xl font-bold text-blue-700">{selectedBid.timeline}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Competition Info */}
-                    <div className="border-b border-border p-6">
-                      <div className="flex items-center gap-3 rounded-lg bg-amber-50 p-4">
-                        <Users className="h-5 w-5 text-amber-600" />
-                        <div>
-                          <p className="font-medium text-amber-800">Competition</p>
-                          <p className="text-sm text-amber-700">
-                            {selectedBid.otherBids} other contractors have bid on this job
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="space-y-2 p-6">
-                      {selectedBid.job_id && (
-                        <Button asChild variant="outline" className="w-full gap-2 bg-transparent">
-                          <Link href={`/jobs/${selectedBid.job_id}`}>
-                            <Eye className="h-4 w-4" />
-                            View Job Details
-                          </Link>
-                        </Button>
-                      )}
-                      <Button 
-                        className="w-full gap-2"
-                        onClick={() => handleOpenMessenger(selectedBid)}
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                        Message Homeowner
-                      </Button>
-                    </div>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="hidden lg:flex h-96 items-center justify-center rounded-xl border border-dashed border-border bg-card"
-                  >
-                    <div className="text-center">
-                      <Eye className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                      <p className="mt-4 text-muted-foreground">Select a bid to view details</p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+          <div className="rounded-xl border border-border bg-muted/40 p-4">
+            <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{crResult[crVersion]}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent"
+                onClick={() => { copyToClipboard(crResult[crVersion]); setCrCopied(true); setTimeout(() => setCrCopied(false), 2000); }}>
+                <Copy className="h-3 w-3" />{crCopied ? "Copied!" : "Copy"}
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent"
+                onClick={() => { window.location.href = `sms:?body=${encodeURIComponent(crResult[crVersion])}`; }}>
+                <Send className="h-3 w-3" /> Send via SMS
+              </Button>
             </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+
+  const aiContent = (
+    <>
+      {/* ── MOBILE: single-pane with back navigation ── */}
+      <div className="lg:hidden space-y-5">
+        {activeTool === null && (
+          <>
+            <div>
+              <h1 className="text-xl font-bold text-foreground">AI Tools</h1>
+              <p className="mt-1 text-sm text-muted-foreground">Your AI co-pilot for bids, pricing, and customer communication.</p>
+            </div>
+            {aiToolList}
+          </>
+        )}
+        {activeTool === "bid" && bidBuilderPane}
+        {activeTool === "pricecheck" && priceCheckPane}
+        {activeTool === "response" && customerResponsePane}
+      </div>
+
+      {/* ── DESKTOP: two-column workspace ── */}
+      <div className="hidden lg:flex lg:gap-6" style={{ minHeight: "calc(100vh - 200px)" }}>
+        {/* Left: tool list */}
+        <div className="w-64 shrink-0">
+          <div className="mb-4">
+            <h1 className="text-lg font-bold text-foreground">AI Tools</h1>
+            <p className="mt-0.5 text-xs text-muted-foreground">Select a tool to get started.</p>
+          </div>
+          {aiToolList}
+        </div>
+        {/* Right: active tool workspace */}
+        <div className="flex-1 min-w-0 rounded-xl border border-border bg-card p-6">
+          {activeTool === null && (
+            <div className="flex h-full flex-col items-center justify-center text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-3">
+                <Sparkles className="h-6 w-6 text-primary" />
+              </div>
+              <p className="font-semibold text-foreground">Choose a tool to get started</p>
+              <p className="mt-1 max-w-xs text-sm text-muted-foreground">Select Bid Builder, Price Check, or Customer Response from the panel on the left.</p>
+            </div>
+          )}
+          {activeTool === "bid" && bidBuilderPane}
+          {activeTool === "pricecheck" && priceCheckPane}
+          {activeTool === "response" && customerResponsePane}
+        </div>
+      </div>
+    </>
+  );
+
+  // ── ACCOUNT tab content ────────────────────────────────────────────────────
+
+  const accountContent = (
+    <div className="space-y-5">
+      <h1 className="text-xl font-bold text-foreground">Account</h1>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-start">
+        {/* Profile */}
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <h2 className="text-sm font-semibold text-foreground">Profile</h2>
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary">
+              {contractorName.charAt(0)}
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">{contractorName} Rodriguez</p>
+              <p className="text-xs text-muted-foreground">Contractor</p>
+            </div>
+          </div>
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-4 w-4 shrink-0" />contractor@homebids.demo</div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Phone className="h-4 w-4 shrink-0" />(480) 555-0192</div>
+          </div>
+        </div>
+
+        {/* Plan */}
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-2">
+          <h2 className="text-sm font-semibold text-primary">Your Plan</h2>
+          <p className="text-2xl font-bold text-foreground">$99 / month</p>
+          <ul className="space-y-1.5 pt-1">
+            {[
+              "Unlimited AI-generated bids",
+              "No bid fees — ever",
+              "HomeBids AI lead matching",
+              "Direct homeowner contact after approval",
+              "AI Bid Builder, Price Check, and Customer Response tools",
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-2 text-sm text-foreground">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Notifications */}
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3 lg:col-span-2">
+          <h2 className="text-sm font-semibold text-foreground">Notifications</h2>
+          <label className="flex cursor-pointer items-center justify-between">
+            <span className="flex items-center gap-2 text-sm text-foreground"><Bell className="h-4 w-4 text-muted-foreground" />New lead alerts</span>
+            <input type="checkbox" defaultChecked className="h-4 w-4 accent-primary" />
+          </label>
+          <label className="flex cursor-pointer items-center justify-between">
+            <span className="flex items-center gap-2 text-sm text-foreground"><User className="h-4 w-4 text-muted-foreground" />Homeowner approval alerts</span>
+            <input type="checkbox" defaultChecked className="h-4 w-4 accent-primary" />
+          </label>
+        </div>
+      </div>
+
+      <Button variant="outline" className="gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-600 bg-transparent" onClick={handleSignOut}>
+        <LogOut className="h-4 w-4" />
+        Sign Out
+      </Button>
+    </div>
+  );
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  const tabContent: Record<Tab, React.ReactNode> = {
+    home: homeContent,
+    leads: leadsContent,
+    ai: aiContent,
+    account: accountContent,
+  };
+
+  return (
+    <div className="flex min-h-screen flex-col bg-background">
+      <Header isContractor isSignedIn />
+      <ScrollToTop />
+
+      {/* Main content — full width, centered, hamburger-only nav */}
+      <main className="flex-1 min-w-0">
+        <div className="mx-auto w-full max-w-2xl px-4 pb-28 pt-6 lg:max-w-3xl lg:px-8 lg:pb-24 lg:pt-8">
+          {tabContent[activeTab]}
+        </div>
       </main>
 
-      {/* Edit Bid Modal */}
-      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+      {/* ── Bottom tab bar — all screen sizes ── */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background">
+        <div className="mx-auto flex max-w-3xl">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleTabChange(tab.id)}
+                className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors ${
+                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className={`h-5 w-5 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* ── Relay Modal ── */}
+      <Dialog open={showRelayModal} onOpenChange={(open) => { if (!open) setShowRelayModal(false); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Bid</DialogTitle>
+            <DialogTitle>Message via HomeBids AI</DialogTitle>
             <DialogDescription>
-              Update your bid details. Changes will be visible to the homeowner.
+              Your message will be relayed through HomeBids AI. The homeowner&apos;s contact info stays private until they approve direct messaging.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-amount">Bid Amount ($)</Label>
-              <Input
-                id="edit-amount"
-                type="number"
-                value={editAmount}
-                onChange={(e) => setEditAmount(e.target.value)}
-                placeholder="Enter amount"
-              />
+          {relaySent ? (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <CheckCircle2 className="h-10 w-10 text-green-600" />
+              <p className="font-semibold text-foreground">Message sent via HomeBids AI</p>
+              <p className="text-sm text-muted-foreground">You&apos;ll be notified when the homeowner responds or approves direct contact.</p>
+              <Button className="mt-2 w-full" onClick={() => setShowRelayModal(false)}>Done</Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-timeline">Timeline</Label>
-              <Input
-                id="edit-timeline"
-                value={editTimeline}
-                onChange={(e) => setEditTimeline(e.target.value)}
-                placeholder="e.g., 5-7 days"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-message">Message to Homeowner</Label>
-              <Textarea
-                id="edit-message"
-                value={editMessage}
-                onChange={(e) => setEditMessage(e.target.value)}
-                rows={4}
-                placeholder="Describe your approach..."
-              />
-            </div>
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => setShowEditModal(false)} className="bg-transparent">
-                Cancel
-              </Button>
-              <Button onClick={handleSaveEdit}>Save Changes</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Cancel Bid Confirmation Modal */}
-      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-5 w-5" />
-              Cancel Bid
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to cancel your bid for &quot;{bidToDelete?.jobTitle}&quot;? The property owner will be notified that you have withdrawn your bid. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} className="bg-transparent">
-              Go Back
-            </Button>
-            <Button variant="destructive" onClick={handleConfirmDelete}>
-              Cancel Bid
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Messenger Modal */}
-      <Dialog open={showMessenger} onOpenChange={setShowMessenger}>
-        <DialogContent className="sm:max-w-lg p-0 flex flex-col max-h-[80vh]">
-          {/* Header */}
-          <div className="border-b border-border px-6 py-4">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                  <span className="text-lg font-semibold text-primary">
-                    {messagingBid?.homeownerName?.charAt(0) || "H"}
-                  </span>
-                </div>
-                <div>
-                  <p className="font-semibold">{messagingBid?.homeownerName}</p>
-                  <p className="text-xs font-normal text-muted-foreground">
-                    {messagingBid?.jobTitle}
-                  </p>
-                </div>
-              </DialogTitle>
-            </DialogHeader>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-[300px]">
-            {messagingBid && messages[messagingBid.id]?.length > 0 ? (
-              messages[messagingBid.id].map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.sender === "contractor" ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
-                      msg.sender === "contractor"
-                        ? "bg-primary text-primary-foreground rounded-br-md"
-                        : "bg-muted text-foreground rounded-bl-md"
-                    }`}
-                  >
-                    <p className="text-sm">{msg.text}</p>
-                    <p className={`mt-1 text-xs ${msg.sender === "contractor" ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                      {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="flex h-full items-center justify-center text-center">
-                <div>
-                  <MessageCircle className="mx-auto h-12 w-12 text-muted-foreground/30" />
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    No messages yet. Start the conversation!
-                  </p>
-                </div>
+          ) : (
+            <div className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label htmlFor="relay-message">Your message</Label>
+                <Textarea id="relay-message" value={relayMessage} onChange={(e) => setRelayMessage(e.target.value)} rows={4} placeholder={relayLead?.suggestedResponse ?? "Hi, I wanted to follow up on your project..."} />
               </div>
-            )}
-          </div>
-
-          {/* Input */}
-          <div className="border-t border-border px-4 py-3">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSendMessage();
-              }}
-              className="flex items-center gap-2"
-            >
-              <Input
-                placeholder="Type a message..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                className="flex-1"
-              />
-              <Button type="submit" size="icon" disabled={!newMessage.trim()}>
-                <Send className="h-4 w-4" />
-              </Button>
-            </form>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Job Preview Popup - Full Details with Bid & Chat */}
-      <Dialog open={showJobPreview} onOpenChange={setShowJobPreview}>
-        <DialogContent className="flex h-[85vh] max-h-[700px] flex-col p-0 sm:max-w-lg">
-          <DialogHeader className="sr-only">
-            <DialogTitle>{previewJob?.title}</DialogTitle>
-            <DialogDescription>Job details, bid submission, and chat</DialogDescription>
-          </DialogHeader>
-          {/* Header */}
-          <div className="border-b border-border px-5 pt-5 pb-3">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                <Briefcase className="h-5 w-5 text-primary" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h2 className="text-base font-semibold text-foreground">{previewJob?.title}</h2>
-                <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                  <MapPin className="h-3 w-3 shrink-0" />
-                  <span>{previewJob?.location}</span>
-                  <span className="text-muted-foreground/40">|</span>
-                  <span>{previewJob?.homeownerName}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Tabs */}
-            <div className="mt-4 flex gap-1 rounded-lg bg-muted p-1">
-              {[
-                { key: "details" as const, label: "Details", icon: FileText },
-                { key: "bid" as const, label: "Place Bid", icon: DollarSign },
-                { key: "chat" as const, label: "Ask Question", icon: MessageCircle },
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setPreviewTab(tab.key)}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all ${
-                    previewTab === tab.key
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <tab.icon className="h-3.5 w-3.5" />
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Tab Content */}
-          <div className="flex-1 overflow-y-auto">
-            {previewJob && previewTab === "details" && (
-              <div className="space-y-4 p-5">
-                {/* Urgency & Category */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                    {previewJob.category}
-                  </span>
-                  {previewJob.urgency === "high" && (
-                    <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-bold text-red-700">Urgent</span>
-                  )}
-                  {previewJob.urgency === "medium" && (
-                    <span className="rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-700">Soon</span>
-                  )}
-                  {previewJob.urgency === "low" && (
-                    <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">Flexible</span>
-                  )}
-                  <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
-                    {previewJob.propertyType}
-                  </span>
-                </div>
-
-                {/* Description */}
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">Description</p>
-                  <p className="text-sm text-foreground leading-relaxed">{previewJob.description}</p>
-                </div>
-
-                {/* Details Grid */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg border border-border p-3">
-                          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Budget</p>
-                          <p className={`mt-1.5 flex items-center gap-1 text-sm font-bold ${previewJob.budget === "TBD - Insurance Paid" ? "text-blue-700" : "text-green-700"}`}>
-                            <DollarSign className="h-3.5 w-3.5" />
-                            {previewJob.budget === "TBD - Insurance Paid" ? "TBD" : previewJob.budget.replace("$", "")}
-                          </p>
-                          {previewJob.budget === "TBD - Insurance Paid" && (
-                            <p className="mt-1 text-[10px] text-blue-600">Insurance paid - inspection required</p>
-                          )}
-                  </div>
-                  <div className="rounded-lg border border-border p-3">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Timeline</p>
-                    <p className="mt-1.5 flex items-center gap-1 text-sm font-bold text-foreground">
-                      <Clock className="h-3.5 w-3.5" />
-                      {previewJob.timeline}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Competition */}
-                <div className="flex items-center gap-4 rounded-lg bg-amber-50 p-3">
-                  <div className="flex items-center gap-1.5">
-                    <Users className="h-4 w-4 text-amber-600" />
-                    <span className="text-xs font-medium text-amber-800">
-                      {previewJob.bidsCount} bid{previewJob.bidsCount !== 1 ? "s" : ""} so far
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="h-4 w-4 text-amber-600" />
-                    <span className="text-xs text-amber-700">
-                      Posted {Math.round((Date.now() - previewJob.postedAt.getTime()) / (1000 * 60 * 60))}h ago
-                    </span>
-                  </div>
-                </div>
-
-                {/* Homeowner Info */}
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-2">Homeowner</p>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                      {previewJob.homeownerName.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{previewJob.homeownerName}</p>
-                      <p className="text-xs text-muted-foreground">{previewJob.propertyType}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="flex gap-2 pt-1">
-                  <Button className="flex-1 gap-2" onClick={() => setPreviewTab("bid")}>
-                    <DollarSign className="h-4 w-4" />
-                    Place Bid
-                  </Button>
-                  <Button variant="outline" className="flex-1 gap-2 bg-transparent" onClick={() => setPreviewTab("chat")}>
-                    <MessageCircle className="h-4 w-4" />
-                    Ask Question
-                  </Button>
-                </div>
-
-                {/* View All Jobs Link */}
-                <Link href="/contractors/jobs" onClick={() => setShowJobPreview(false)}>
-                  <Button variant="ghost" className="w-full gap-2 text-muted-foreground hover:text-foreground">
-                    <Search className="h-4 w-4" />
-                    View All Matching Jobs
-                  </Button>
-                </Link>
-              </div>
-            )}
-
-            {/* Bid Tab */}
-            {previewJob && previewTab === "bid" && (
-              <div className="p-5">
-                {previewBidSubmitted ? (
-                  <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <AnimatePresence>
-                      {previewBidSubmitted && (
-                        <div className="pointer-events-none fixed inset-0 z-[100] overflow-hidden" aria-hidden="true">
-                          {Array.from({ length: 60 }).map((_, i) => {
-                            const left = Math.random() * 100;
-                            const delay = Math.random() * 0.8;
-                            const duration = 2.5 + Math.random() * 2;
-                            const size = 6 + Math.random() * 8;
-                            const rotation = Math.random() * 360;
-                            const colors = [
-                              "#22c55e", "#16a34a", "#facc15", "#f59e0b",
-                              "#3b82f6", "#ec4899", "#f97316", "#8b5cf6",
-                            ];
-                            const color = colors[i % colors.length];
-                            const shape = i % 3;
-
-                            return (
-                              <motion.div
-                                key={`confetti-${i}`}
-                                initial={{ y: -20, x: `${left}vw`, opacity: 1, rotate: rotation, scale: 1 }}
-                                animate={{
-                                  y: "110vh",
-                                  rotate: rotation + 720,
-                                  opacity: [1, 1, 0.8, 0],
-                                  x: `${left + (Math.random() - 0.5) * 20}vw`,
-                                }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration, delay, ease: "easeIn" }}
-                                className="absolute"
-                                style={{
-                                  width: shape === 2 ? size * 0.6 : size,
-                                  height: shape === 1 ? size * 0.6 : size,
-                                  backgroundColor: color,
-                                  borderRadius: shape === 0 ? "50%" : shape === 1 ? "2px" : "1px",
-                                }}
-                              />
-                            );
-                          })}
-                        </div>
-                      )}
-                    </AnimatePresence>
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                      <CheckCircle2 className="h-8 w-8 text-green-600" />
-                    </div>
-                    <h3 className="mt-4 text-lg font-semibold text-foreground">
-                      {previewBidMode === "inspection_only" ? "Inspection Request Sent" : "Bid Submitted"}
-                    </h3>
-                    <p className="mt-2 max-w-xs text-sm text-muted-foreground">
-                      {previewBidMode === "inspection_only"
-                        ? `Your inspection request has been sent to ${previewJob.homeownerName}. You'll need to place a bid through HomeBids after your visit.`
-                        : `Your bid of $${Number(previewBidAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been sent to ${previewJob.homeownerName}. You'll be notified when they respond.`}
-                    </p>
-                    <div className="mt-6 flex gap-2">
-                      <Button variant="outline" className="bg-transparent" onClick={() => setPreviewTab("chat")}>
-                        <MessageCircle className="mr-2 h-4 w-4" />
-                        Send a Message
-                      </Button>
-                      <Button onClick={() => setShowJobPreview(false)}>Done</Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Bid Mode Toggle */}
-                    <div>
-                      <p className="mb-2 text-xs font-medium text-foreground">How would you like to respond?</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {(
-                          [
-                            { key: "bid_only" as const, label: "Bid Only", desc: "Submit a bid based on the job description", icon: DollarSign, activeColor: "border-green-500 bg-green-50 ring-1 ring-green-200", iconColor: "text-green-600", textColor: "text-green-800", descColor: "text-green-600" },
-                            { key: "bid_and_inspection" as const, label: "Bid + Inspect", desc: "Submit a bid and schedule an on-site visit", icon: Eye, activeColor: "border-blue-500 bg-blue-50 ring-1 ring-blue-200", iconColor: "text-blue-600", textColor: "text-blue-800", descColor: "text-blue-600" },
-                            { key: "inspection_only" as const, label: "Inspect First", desc: "Visit the site before committing to a bid", icon: Search, activeColor: "border-amber-500 bg-amber-50 ring-1 ring-amber-200", iconColor: "text-amber-600", textColor: "text-amber-800", descColor: "text-amber-600" },
-                          ] as const
-                        ).map((mode) => {
-                          const ModeIcon = mode.icon;
-                          const isActive = previewBidMode === mode.key;
-                          return (
-                            <button
-                              key={mode.key}
-                              type="button"
-                              onClick={() => setPreviewBidMode(mode.key)}
-                              className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-all ${
-                                isActive
-                                  ? mode.activeColor
-                                  : "border-border bg-background hover:border-muted-foreground/40"
-                              }`}
-                            >
-                              <ModeIcon className={`h-4 w-4 ${isActive ? mode.iconColor : "text-muted-foreground"}`} />
-                              <span className={`text-[10px] font-semibold leading-tight sm:text-xs ${isActive ? mode.textColor : "text-foreground"}`}>
-                                {mode.label}
-                              </span>
-                              <span className={`hidden text-[9px] leading-tight sm:block ${isActive ? mode.descColor : "text-muted-foreground"}`}>
-                                {mode.desc}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Job Summary */}
-                    <div className="rounded-lg bg-muted/50 p-3">
-                      <p className="text-xs text-muted-foreground">
-                        {previewBidMode === "inspection_only" ? "Requesting inspection for" : "Bidding on"}
-                      </p>
-                      <p className="text-sm font-semibold text-foreground">{previewJob.title}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Budget: <span className={`font-medium ${previewJob.budget === "TBD - Insurance Paid" ? "text-blue-700" : "text-green-700"}`}>{previewJob.budget}</span>{previewJob.budget === "TBD - Insurance Paid" && " (inspection required)"} | Timeline: {previewJob.timeline}
-                      </p>
-                    </div>
-
-                    {/* Inspection-Only Notice */}
-                    {previewBidMode === "inspection_only" && (
-                      <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                        <p className="text-[10px] leading-relaxed text-amber-800 sm:text-xs">
-                          You will provide an on-site inspection without committing to a bid amount. After inspection, you are required to place your bid through HomeBids.
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Bid Amount & Timeline -- hidden for inspection_only */}
-                    {previewBidMode !== "inspection_only" && (
-                      <div className="space-y-3">
-                        <div>
-                          <Label htmlFor="preview-bid-amount" className="text-xs font-medium">Your Bid Amount</Label>
-                          <div className="relative mt-1">
-                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">$</span>
-                            <Input
-                              id="preview-bid-amount"
-                              type="number"
-                              placeholder="0.00"
-                              value={previewBidAmount}
-                              onChange={(e) => setPreviewBidAmount(e.target.value)}
-                              className="pl-7"
-                            />
-                          </div>
-                          {previewBidAmount && (
-                            <p className="mt-1 text-[10px] text-muted-foreground">
-                              ${Number(previewBidAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Deposit */}
-                        <div className="rounded-xl border border-border p-3">
-                          <Label className="text-xs font-medium">Upfront Deposit</Label>
-                          <p className="mt-0.5 text-[10px] text-muted-foreground">
-                            Applied to total bid amount. Non-refundable.
-                          </p>
-                          <div className="mt-2 flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setPreviewBidNoDeposit(previewBidNoDeposit === true ? null : true);
-                                setPreviewBidDepositAmount("");
-                              }}
-                              className={`rounded-lg border-2 px-2.5 py-1.5 text-[10px] font-medium transition-all ${
-                                previewBidNoDeposit === true
-                                  ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                                  : "border-border text-muted-foreground hover:border-muted-foreground/50"
-                              }`}
-                            >
-                              No Deposit
-                            </button>
-                            <span className="text-[10px] font-medium text-muted-foreground">OR</span>
-                            <div className="flex flex-1 items-center gap-1">
-                              <span className="text-xs text-muted-foreground">$</span>
-                              <Input
-                                type="number"
-                                placeholder="Deposit amount"
-                                value={previewBidDepositAmount}
-                                onChange={(e) => { setPreviewBidDepositAmount(e.target.value); setPreviewBidNoDeposit(false); }}
-                                className="h-8 text-xs"
-                              />
-                            </div>
-                          </div>
-                          {previewBidNoDeposit === false && previewBidDepositAmount && previewBidAmount && (
-                            <p className="mt-2 text-[10px] text-muted-foreground">
-                              Deposit of ${Number(previewBidDepositAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} covers material/labor costs upfront. Remaining balance: ${(Number(previewBidAmount) - Number(previewBidDepositAmount)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="rounded-xl border border-border p-3">
-                          <Label className="text-xs font-medium">Do You Offer Financing?</Label>
-                          <p className="mt-0.5 text-[10px] text-muted-foreground">
-                            Financing options available for homeowners
-                          </p>
-                          <div className="mt-2 flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setPreviewBidFinancing(previewBidFinancing === true ? null : true)}
-                              className={`flex-1 rounded-lg border-2 px-2.5 py-1.5 text-[10px] font-medium transition-all ${
-                                previewBidFinancing === true
-                                  ? "border-blue-500 bg-blue-50 text-blue-700"
-                                  : "border-border text-muted-foreground hover:border-muted-foreground/50"
-                              }`}
-                            >
-                              Yes
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setPreviewBidFinancing(previewBidFinancing === false ? null : false)}
-                              className={`flex-1 rounded-lg border-2 px-2.5 py-1.5 text-[10px] font-medium transition-all ${
-                                previewBidFinancing === false
-                                  ? "border-gray-500 bg-gray-50 text-gray-700"
-                                  : "border-border text-muted-foreground hover:border-muted-foreground/50"
-                              }`}
-                            >
-                              No
-                            </button>
-                          </div>
-                        </div>
-
-                        <div>
-                          <Label htmlFor="preview-bid-timeline" className="text-xs font-medium">Estimated Timeline</Label>
-                          <Input
-                            id="preview-bid-timeline"
-                            placeholder="e.g. 2-3 days"
-                            value={previewBidTimeline}
-                            onChange={(e) => setPreviewBidTimeline(e.target.value)}
-                            className="mt-1"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Message */}
-                    <div>
-                      <Label htmlFor="preview-bid-message" className="text-xs font-medium">Message to Homeowner</Label>
-                      <Textarea
-                        id="preview-bid-message"
-                        placeholder={
-                          previewBidMode === "inspection_only"
-                            ? "Let the homeowner know what to expect during your inspection visit..."
-                            : "Describe your experience, approach, and why you're a great fit..."
-                        }
-                        value={previewBidMessage}
-                        onChange={(e) => setPreviewBidMessage(e.target.value)}
-                        rows={3}
-                        className="mt-1"
-                      />
-                    </div>
-
-                    {/* Inspection Fee -- shown for bid_and_inspection and inspection_only */}
-                    {previewBidMode !== "bid_only" && (
-                      <div className="rounded-xl border border-border p-3">
-                        <Label className="text-xs font-medium">Inspection Fee</Label>
-                        <p className="mt-0.5 text-[10px] text-muted-foreground">
-                          Free or fee amount
-                        </p>
-                        <div className="mt-2 flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (previewBidFreeInspection) {
-                                setPreviewBidFreeInspection(false);
-                              } else {
-                                setPreviewBidFreeInspection(true);
-                                setPreviewBidInspectionFee("");
-                              }
-                            }}
-                            className={`rounded-lg border-2 px-2.5 py-1.5 text-[10px] font-medium transition-all ${
-                              previewBidFreeInspection
-                                ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                                : "border-border text-muted-foreground hover:border-muted-foreground/50"
-                            }`}
-                          >
-                            Free
-                          </button>
-                          <span className="text-[10px] font-medium text-muted-foreground">OR</span>
-                          <div className="flex flex-1 items-center gap-1">
-                            <span className="text-xs text-muted-foreground">$</span>
-                            <Input
-                              type="number"
-                              placeholder="Fee amount"
-                              value={previewBidInspectionFee}
-                              onChange={(e) => { setPreviewBidInspectionFee(e.target.value); setPreviewBidFreeInspection(false); }}
-                              className="h-8 text-xs"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <Button
-                      className="w-full gap-2"
-                      disabled={
-                        previewBidMode === "inspection_only"
-                          ? (!previewBidFreeInspection && !previewBidInspectionFee)
-                          : (!previewBidAmount || !previewBidTimeline)
-                      }
-                      onClick={handlePreviewSubmitBid}
-                    >
-                      <Send className="h-4 w-4" />
-                      {previewBidMode === "inspection_only" ? "Submit Inspection Request" : "Submit Bid"}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Chat Tab */}
-            {previewJob && previewTab === "chat" && (
-              <div className="flex h-full flex-col">
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4">
-                  {(() => {
-                    const chatMsgs = previewChatMessages[previewJob.id] || [];
-                    return chatMsgs.length === 0 ? (
-                      <div className="flex h-full flex-col items-center justify-center py-10 text-center">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-                          <MessageCircle className="h-6 w-6 text-muted-foreground/50" />
-                        </div>
-                        <p className="mt-3 text-sm font-medium text-foreground">Ask a question</p>
-                        <p className="mt-1 max-w-[220px] text-xs text-muted-foreground">
-                          Ask {previewJob.homeownerName} about job details, access, scheduling, or anything before placing your bid.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {chatMsgs.map((msg) => (
-                          <div key={msg.id} className={`flex ${msg.sender === "contractor" ? "justify-end" : "justify-start"}`}>
-                            <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
-                              msg.sender === "contractor"
-                                ? "rounded-br-md bg-primary text-primary-foreground"
-                                : "rounded-bl-md bg-muted text-foreground"
-                            }`}>
-                              <p className="text-sm leading-relaxed">{msg.text}</p>
-                              <p className={`mt-1 text-[10px] ${msg.sender === "contractor" ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
-                                {msg.time.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Chat Input */}
-                <div className="border-t border-border p-3">
-                  <form
-                    onSubmit={(e) => { e.preventDefault(); handlePreviewSendChat(); }}
-                    className="flex items-end gap-2"
-                  >
-                    <Textarea
-                      placeholder="Type your question..."
-                      value={previewChatInput}
-                      onChange={(e) => setPreviewChatInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handlePreviewSendChat();
-                        }
-                      }}
-                      className="min-h-[42px] max-h-[100px] flex-1 resize-none rounded-2xl px-4 py-2.5 text-sm"
-                      rows={1}
-                    />
-                    <button
-                      type="submit"
-                      disabled={!previewChatInput.trim()}
-                      className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
-                    >
-                      <Send className="h-4 w-4" />
-                    </button>
-                  </form>
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bid Confirmation Dialog */}
-      <Dialog open={showBidConfirm} onOpenChange={setShowBidConfirm}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {previewBidMode === "inspection_only" ? "Confirm Inspection Request" : "Confirm Your Bid"}
-            </DialogTitle>
-            <DialogDescription>
-              Please review the details below before submitting.
-            </DialogDescription>
-          </DialogHeader>
-          {previewJob && (
-            <div className="space-y-4">
-              {/* Type badge */}
-              <div className="flex justify-center">
-                <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-                  previewBidMode === "bid_only"
-                    ? "bg-green-50 text-green-700"
-                    : previewBidMode === "bid_and_inspection"
-                    ? "bg-blue-50 text-blue-700"
-                    : "bg-amber-50 text-amber-700"
-                }`}>
-                  {previewBidMode === "bid_only" ? "Bid Only" : previewBidMode === "bid_and_inspection" ? "Bid + Inspection" : "Inspection Only"}
-                </span>
-              </div>
-
-              <div className="rounded-lg bg-muted/50 p-4">
-                <p className="text-xs text-muted-foreground">Job</p>
-                <p className="text-sm font-semibold text-foreground">{previewJob.title}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{previewJob.location}</p>
-              </div>
-
-              {/* Bid amount & timeline -- not shown for inspection_only */}
-              {previewBidMode !== "inspection_only" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg bg-green-50 p-3">
-                    <p className="text-[10px] font-medium text-green-600">Your Bid</p>
-                    <p className="mt-1 text-lg font-bold text-green-700">
-                      ${Number(previewBidAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-blue-50 p-3">
-                    <p className="text-[10px] font-medium text-blue-600">Timeline</p>
-                    <p className="mt-1 text-lg font-bold text-blue-700">{previewBidTimeline}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Deposit -- shown when bid mode is not inspection_only */}
-              {previewBidMode !== "inspection_only" && previewBidNoDeposit !== null && (
-                <div className={`flex items-center gap-2 rounded-lg p-3 ${
-                  previewBidNoDeposit === true ? "bg-emerald-50" : "bg-violet-50"
-                }`}>
-                  <CreditCard className={`h-4 w-4 ${previewBidNoDeposit === true ? "text-emerald-600" : "text-violet-600"}`} />
-                  <div>
-                    <p className={`text-sm font-medium ${previewBidNoDeposit === true ? "text-emerald-700" : "text-violet-700"}`}>
-                      {previewBidNoDeposit === true ? "No Deposit Required" : `$${Number(previewBidDepositAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Deposit`}
-                    </p>
-                    {previewBidNoDeposit === false && previewBidDepositAmount && (
-                      <p className="text-[10px] text-violet-600">Non-refundable. Applied to total bid amount.</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Financing -- shown when selected */}
-              {previewBidFinancing !== null && (
-                <div className={`flex items-center gap-2 rounded-lg p-3 ${
-                  previewBidFinancing ? "bg-blue-50" : "bg-gray-50"
-                }`}>
-                  <DollarSign className={`h-4 w-4 ${previewBidFinancing ? "text-blue-600" : "text-gray-600"}`} />
-                  <p className={`text-sm font-medium ${previewBidFinancing ? "text-blue-700" : "text-gray-700"}`}>
-                    {previewBidFinancing ? "Financing Available" : "No Financing"}
-                  </p>
-                </div>
-              )}
-
-              {/* Inspection fee -- shown for bid_and_inspection and inspection_only */}
-              {previewBidMode !== "bid_only" && (previewBidFreeInspection || previewBidInspectionFee) && (
-                <div className={`flex items-center gap-2 rounded-lg p-3 ${
-                  previewBidFreeInspection ? "bg-emerald-50" : "bg-amber-50"
-                }`}>
-                  <Eye className={`h-4 w-4 ${previewBidFreeInspection ? "text-emerald-600" : "text-amber-600"}`} />
-                  <p className={`text-sm font-medium ${previewBidFreeInspection ? "text-emerald-700" : "text-amber-700"}`}>
-                    {previewBidFreeInspection ? "Free Inspection" : `$${Number(previewBidInspectionFee).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Inspection Fee`}
-                  </p>
-                </div>
-              )}
-
-              {/* Inspection-only reminder */}
-              {previewBidMode === "inspection_only" && (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                  <p className="text-xs leading-relaxed text-amber-800">
-                    After your on-site inspection, you will be required to submit a bid through HomeBids.
-                  </p>
-                </div>
-              )}
-
-              {previewBidMessage && (
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-[10px] font-medium text-muted-foreground">Your Message</p>
-                  <p className="mt-1 text-xs leading-relaxed text-foreground">{previewBidMessage}</p>
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  className="flex-1 bg-transparent"
-                  onClick={() => setShowBidConfirm(false)}
-                >
-                  Go Back
-                </Button>
-                <Button
-                  className="flex-1 gap-2"
-                  onClick={handleConfirmBidSubmit}
-                >
-                  <Send className="h-4 w-4" />
-                  {previewBidMode === "inspection_only" ? "Confirm Request" : "Confirm & Send"}
+              <p className="text-xs text-muted-foreground">Once the homeowner approves, direct SMS access will be unlocked.</p>
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setShowRelayModal(false)} className="bg-transparent">Cancel</Button>
+                <Button disabled={!relayMessage.trim()} onClick={() => setRelaySent(true)}>
+                  <Send className="mr-2 h-4 w-4" /> Send via AI Relay
                 </Button>
               </div>
             </div>
@@ -1910,7 +1109,81 @@ export default function ContractorDashboard() {
         </DialogContent>
       </Dialog>
 
-      <ScrollToTop />
+      {/* ── Lead Detail Modal ── */}
+      <Dialog open={showLeadDetail} onOpenChange={setShowLeadDetail}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              {selectedLead?.title}
+            </DialogTitle>
+            <DialogDescription>{selectedLead?.category} — {selectedLead?.location}</DialogDescription>
+          </DialogHeader>
+          {selectedLead && (
+            <div className="space-y-4 pt-1">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg bg-green-50 p-3">
+                  <p className="text-[10px] font-medium text-green-600">Estimated Value</p>
+                  <p className="mt-1 text-lg font-bold text-green-700">{selectedLead.estimatedValue}</p>
+                </div>
+                <div className="rounded-lg bg-blue-50 p-3">
+                  <p className="text-[10px] font-medium text-blue-600">Timeline</p>
+                  <p className="mt-1 text-lg font-bold text-blue-700">{selectedLead.timeline}</p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-border p-3">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Homeowner Goals</p>
+                <p className="text-sm text-foreground">{selectedLead.homeownerGoals}</p>
+              </div>
+              <div className="rounded-lg border border-border p-3">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Scope of Work</p>
+                <p className="text-sm text-foreground">{selectedLead.scope}</p>
+              </div>
+              <div className="rounded-lg bg-primary/5 border border-primary/20 p-3">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-primary/70">AI Notes</p>
+                <p className="text-sm text-foreground">{selectedLead.aiNotes}</p>
+              </div>
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-amber-700">Suggested Strategy</p>
+                <p className="text-sm text-amber-900">{selectedLead.suggestedStrategy}</p>
+              </div>
+              <div className="rounded-lg bg-green-50 border border-green-200 p-3">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-green-700">Recommended Price</p>
+                <p className="text-lg font-bold text-green-700">{selectedLead.recommendedPrice}</p>
+              </div>
+              <div className="rounded-lg border border-border p-3">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Suggested Response</p>
+                <p className="text-sm italic text-foreground">&quot;{selectedLead.suggestedResponse}&quot;</p>
+              </div>
+              <div className="rounded-lg border border-border p-3">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Objection Handling</p>
+                <ul className="space-y-1">
+                  {selectedLead.objections.map((obj, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" />
+                      {obj}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex flex-col gap-2 pt-1">
+                <Button className="w-full gap-2" onClick={() => { setShowLeadDetail(false); handleTabChange("ai"); setActiveTool("bid"); }}>
+                  <Calculator className="h-4 w-4" /> Build Bid in AI Tools
+                </Button>
+                {!selectedLead.directMessagingUnlocked ? (
+                  <Button variant="outline" className="w-full gap-2 bg-transparent" onClick={() => { setRelayLead(selectedLead); setRelayMessage(selectedLead.suggestedResponse); setRelaySent(false); setShowLeadDetail(false); setTimeout(() => setShowRelayModal(true), 150); }}>
+                    <MessageCircle className="h-4 w-4" /> Message via HomeBids AI
+                  </Button>
+                ) : (
+                  <Button className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white" onClick={() => { window.location.href = `sms:${selectedLead.homeownerPhone ?? ""}`; }}>
+                    <MessageCircle className="h-4 w-4" /> Text Homeowner
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

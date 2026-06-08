@@ -45,7 +45,6 @@ import {
   Star,
   Send,
   Eye,
-  CreditCard,
   ImageIcon,
   X,
   Loader2,
@@ -1040,14 +1039,6 @@ export default function ContractorJobsMarketplace() {
                     )}
                   </div>
 
-                  {/* Bid Fee Notice */}
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-                    <p className="text-xs font-semibold text-amber-800">Bid Fee</p>
-                    <p className="mt-1 text-[10px] text-amber-700">
-                      A bid fee will be charged when you submit. The fee depends on your current subscription plan (Starter: $10, Pro: $7, Elite: $4).
-                    </p>
-                  </div>
-
                   <div className="rounded-xl border border-border p-3">
                     <Label className="text-xs font-medium">Do You Offer Financing?</Label>
                     <p className="mt-0.5 text-[10px] text-muted-foreground">
@@ -1226,17 +1217,6 @@ export default function ContractorJobsMarketplace() {
                   <div className="rounded-lg bg-blue-50 p-3">
                     <p className="text-[10px] font-medium text-blue-600">Timeline</p>
                     <p className="mt-1 text-lg font-bold text-blue-700">{bidTimeline}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Bid Fee */}
-              {bidMode !== "inspection_only" && (
-                <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-3">
-                  <CreditCard className="h-4 w-4 text-amber-600" />
-                  <div>
-                    <p className="text-sm font-medium text-amber-700">Bid fee charged on submission</p>
-                    <p className="text-[10px] text-amber-600">Based on your subscription plan. Non-refundable.</p>
                   </div>
                 </div>
               )}
