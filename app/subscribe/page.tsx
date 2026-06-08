@@ -474,7 +474,7 @@ export default function SubscribePage() {
 
 // ── PlanCard ──────────────────────────────────────────────────────────────────
 function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan: SubscriptionPlan) => void }) {
-  const bidFee = plan.bidFeeInCents > 0 ? `$${(plan.bidFeeInCents / 100).toFixed(0)} per bid` : null;
+  const monthlyPrice = (plan.priceInCents / 100).toFixed(0);
 
   const ctaLabel =
     plan.id === "contractor-growth" ? "Start Free Trial"
@@ -530,12 +530,6 @@ function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan:
             </>
           )}
         </div>
-
-        {bidFee && (
-          <div className="mt-2 inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-            + {bidFee}
-          </div>
-        )}
 
         {plan.savingsCallout && (
           <div className="mt-2 inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
