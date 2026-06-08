@@ -4,8 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import React, { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle } from "lucide-react";
-import { homeownerNavItems, loggedOutNavItems, isNavItemActive } from "@/lib/navigation";
+import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle, LayoutDashboard, Sparkles, Users, DollarSign, Settings } from "lucide-react";
+import { homeownerNavItems, loggedOutNavItems, contractorNavItems, isNavItemActive } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
 import { SignInModal } from "@/components/sign-in-modal";
 import {
@@ -291,27 +291,25 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
               {/* Nav items — logged in contractor */}
               {isLoggedIn && isContractor && (
                 <>
-                  <Link href="/contractors/dashboard" className={`${menuItemClass} font-medium`} onClick={closeMenu}>
-                    <Hammer className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    Contractor Dashboard
-                  </Link>
-                  <Link href="/contractors/jobs" className={menuItemClass} onClick={closeMenu}>
-                    <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    Available Jobs
-                  </Link>
-                  <Link href="/inbox?type=contractor" className={menuItemClass} onClick={closeMenu}>
-                    <MessageCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="flex-1">Messages</span>
-                    {unreadCount > 0 && (
-                      <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
-                  </Link>
-                  <Link href="/contractors/dashboard" className={menuItemClass} onClick={closeMenu}>
-                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    My Bids
-                  </Link>
+                  {contractorNavItems.map((item) => {
+                    const active = isNavItemActive(item, pathname);
+                    return (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        className={`${menuItemClass}${active ? " bg-muted font-medium" : ""}`}
+                        onClick={closeMenu}
+                      >
+                        {item.label === "Dashboard"           && <LayoutDashboard className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                        {item.label === "HomeBids AI Leads"   && <Sparkles        className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                        {item.label === "My Leads"            && <Users           className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                        {item.label === "AI Generated Bids"   && <FileText        className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                        {item.label === "Pricing"             && <DollarSign      className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                        {item.label === "Settings"            && <Settings        className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                        {item.label}
+                      </Link>
+                    );
+                  })}
                   <div className={separatorClass} />
                   <button type="button" onClick={handleSignOut} className={`${menuItemClass} text-red-600 hover:text-red-600`}>
                     <LogOut className="h-4 w-4 shrink-0" />

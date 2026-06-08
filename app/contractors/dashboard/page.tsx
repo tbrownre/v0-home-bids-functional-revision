@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
@@ -20,16 +21,12 @@ import {
   DollarSign,
   Clock,
   MapPin,
-  Calendar,
   Edit3,
-  Trash2,
   MessageCircle,
   Eye,
   CheckCircle2,
   AlertCircle,
   MoreVertical,
-  Search,
-  Filter,
   TrendingUp,
   Users,
   FileText,
@@ -39,10 +36,13 @@ import {
   ArrowLeft,
   Calculator,
   ChevronDown,
-  ChevronUp,
   ImageIcon,
   Loader2,
   Copy,
+  Sparkles,
+  Lock,
+  Unlock,
+  ChevronRight,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -53,9 +53,9 @@ import {
 import Link from "next/link";
 import { getContractorBids } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
-import { getContractorBids as getDemoContractorBids, getOpenJobs as getDemoOpenJobs } from "@/lib/demo/services";
+import { getContractorBids as getDemoContractorBids } from "@/lib/demo/services";
 import { DEMO_CONTRACTOR_EMAIL } from "@/lib/demo-guard";
-import { getMockUser, mockSignOut, USE_MOCK_DATA } from "@/lib/mock-auth";
+import { getMockUser, USE_MOCK_DATA } from "@/lib/mock-auth";
 
 interface ActiveBid {
   id: string;
@@ -86,27 +86,111 @@ interface Message {
   timestamp: Date;
 }
 
-interface AvailableJob {
+// ── HomeBids AI Leads ──────────────────────────────────────────────────────────
+interface HomeBidsLead {
   id: string;
   title: string;
-  description: string;
-  location: string;
-  budget: string;
-  timeline: string;
-  postedAt: Date;
   category: string;
-  urgency: "low" | "medium" | "high";
-  bidsCount: number;
+  location: string;
+  estimatedValue: string;
+  timeline: string;
+  status: "new" | "bid_submitted" | "homeowner_reviewing";
+  directMessagingUnlocked: boolean;
   homeownerName: string;
-  propertyType: string;
+  homeownerGoals: string;
+  scope: string;
+  budgetRange: string;
+  aiNotes: string;
+  suggestedStrategy: string;
+  recommendedPrice: string;
+  suggestedResponse: string;
+  objections: string[];
+  nextAction: string;
+  homeownerPhone?: string;
 }
 
-interface JobMessage {
+const DEMO_HOMEBIDS_LEADS: HomeBidsLead[] = [
+  {
+    id: "hbl-1",
+    title: "Kitchen Cabinet Repaint",
+    category: "Interior Painting",
+    location: "Gilbert, AZ 85296",
+    estimatedValue: "$1,200–$1,800",
+    timeline: "1–2 weeks",
+    status: "new",
+    directMessagingUnlocked: false,
+    homeownerName: "Jennifer T.",
+    homeownerGoals: "Wants fresh, modern look — considering white or greige. Has kids so wants low-VOC paint.",
+    scope: "Upper and lower cabinets (32 doors), light sanding, primer, 2 coats. No hardware replacement.",
+    budgetRange: "$1,000–$2,000",
+    aiNotes: "Comparable Gilbert jobs this month averaged $1,450. Homeowner mentioned urgency — reply fast.",
+    suggestedStrategy: "Lead with low-VOC eco angle. Offer a free color consult to differentiate.",
+    recommendedPrice: "$1,350–$1,600",
+    suggestedResponse: "Hi Jennifer, I'd love to help refresh your cabinets with a low-VOC finish that's safe for your kids. I specialize in cabinet repaints in the Gilbert area and can get started within the week.",
+    objections: ["Too expensive — counter with longevity vs. full replacement cost", "Timeline concern — offer flexible scheduling"],
+    nextAction: "Generate Winning Bid",
+  },
+  {
+    id: "hbl-2",
+    title: "Backyard Turf Install",
+    category: "Landscaping",
+    location: "Chandler, AZ 85226",
+    estimatedValue: "$6,500–$9,000",
+    timeline: "2–3 weeks",
+    status: "bid_submitted",
+    directMessagingUnlocked: false,
+    homeownerName: "Marcus D.",
+    homeownerGoals: "Replace dead grass with low-maintenance turf. Has two dogs.",
+    scope: "Approx 800 sqft, existing sod removal, base prep, pet-friendly turf install, border edging.",
+    budgetRange: "$6,000–$10,000",
+    aiNotes: "Bid already submitted at $7,800. Homeowner viewed bid twice but hasn't responded. Consider follow-up.",
+    suggestedStrategy: "Highlight pet-friendly turf warranty and drainage. Follow up within 24h.",
+    recommendedPrice: "$7,500–$8,200",
+    suggestedResponse: "Hi Marcus, following up on my turf proposal. Happy to answer any questions about the pet-safe material or drainage setup.",
+    objections: ["HOA approval needed — offer to provide product spec sheet", "Price — emphasize 10-year lifespan vs. annual lawn care costs"],
+    nextAction: "Message via HomeBids AI",
+  },
+  {
+    id: "hbl-3",
+    title: "Bathroom Vanity Replacement",
+    category: "Plumbing / Remodel",
+    location: "Mesa, AZ 85201",
+    estimatedValue: "$850–$1,400",
+    timeline: "1 week",
+    status: "homeowner_reviewing",
+    directMessagingUnlocked: true,
+    homeownerName: "Rachel S.",
+    homeownerGoals: "Upgrade dated single vanity to double. Wants modern farmhouse style.",
+    scope: "Remove existing vanity, install customer-supplied 60\" double vanity, reconnect plumbing, patch drywall.",
+    budgetRange: "$700–$1,500",
+    aiNotes: "Homeowner approved direct contact. Follow up by phone or text today.",
+    suggestedStrategy: "She's close to deciding. Text directly and confirm availability this week.",
+    recommendedPrice: "$950–$1,200",
+    suggestedResponse: "Hi Rachel, just checking in on the vanity project — I have availability this week and can get started right away.",
+    objections: ["Scheduling — she wants it done before a family visit"],
+    nextAction: "Text Homeowner",
+    homeownerPhone: "",
+  },
+];
+
+// ── My Leads ──────────────────────────────────────────────────────────────────
+interface MyLead {
   id: string;
-  text: string;
-  sender: "contractor" | "homeowner";
-  time: Date;
+  customerName: string;
+  projectTitle: string;
+  category: string;
+  estimatedValue: string;
+  status: "open" | "in_progress";
+  lastActivity: string;
+  aiStatus: "estimate_ready" | "response_sent" | "followup_ready";
+  phone?: string;
 }
+
+const DEMO_MY_LEADS: MyLead[] = [
+  { id: "ml-1", customerName: "Sarah M.", projectTitle: "Interior Paint Estimate", category: "Interior Painting", estimatedValue: "$2,400", status: "open", lastActivity: "Waiting on estimate", aiStatus: "estimate_ready" },
+  { id: "ml-2", customerName: "Mike R.", projectTitle: "Drywall Repair Response", category: "Drywall", estimatedValue: "$380", status: "in_progress", lastActivity: "Sent response — awaiting reply", aiStatus: "response_sent" },
+  { id: "ml-3", customerName: "Janet B.", projectTitle: "Bathroom Remodel Follow-Up", category: "Remodel", estimatedValue: "$12,000", status: "open", lastActivity: "Follow-up draft ready", aiStatus: "followup_ready" },
+];
 
 // No sample data — bids are loaded from Supabase per authenticated user
   
@@ -210,8 +294,6 @@ export default function ContractorDashboard() {
       if (USE_MOCK_DATA) {
         const { bids: demoBids } = await getDemoContractorBids();
         setBids((demoBids ?? []).map((b) => mapBidFromDb(b as Record<string, unknown>)));
-        const { jobs: openJobs } = await getDemoOpenJobs();
-        setSuggestedJobs((openJobs ?? []).slice(0, 3) as AvailableJob[]);
         setBidsLoading(false);
         return;
       }
@@ -226,8 +308,6 @@ export default function ContractorDashboard() {
       if (user?.email === DEMO_CONTRACTOR_EMAIL) {
         const { bids: demoBids } = await getDemoContractorBids();
         setBids((demoBids ?? []).map((b) => mapBidFromDb(b as Record<string, unknown>)));
-        const { jobs: openJobs } = await getDemoOpenJobs();
-        setSuggestedJobs((openJobs ?? []).slice(0, 3) as AvailableJob[]);
         setBidsLoading(false);
         return;
       }
@@ -240,7 +320,6 @@ export default function ContractorDashboard() {
       setBidsLoading(false);
     })();
   }, []);
-  const [suggestedJobs, setSuggestedJobs] = useState<AvailableJob[]>([]);
   const [selectedBid, setSelectedBid] = useState<ActiveBid | null>(null);
   const [showMobileDetail, setShowMobileDetail] = useState(false);
   const [editingBid, setEditingBid] = useState<ActiveBid | null>(null);
@@ -251,84 +330,28 @@ export default function ContractorDashboard() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [showPipeline, setShowPipeline] = useState(false);
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
-  
+
+  // Tab state — reads from ?tab= search param (homebids | myleads | bids)
+  const searchParams = useSearchParams();
+  const tabParam = searchParams?.get("tab") ?? "";
+  const [activeTab, setActiveTab] = useState<"homebids" | "myleads">(
+    tabParam === "myleads" ? "myleads" : "homebids"
+  );
+
+  // Lead detail modal state
+  const [selectedLead, setSelectedLead] = useState<HomeBidsLead | null>(null);
+  const [showLeadDetail, setShowLeadDetail] = useState(false);
+  const [relayLeadMessage, setRelayLeadMessage] = useState("");
+  const [relayLeadSent, setRelayLeadSent] = useState(false);
+  const [showRelayLeadModal, setShowRelayLeadModal] = useState(false);
+
   // Messenger state
   const [showMessenger, setShowMessenger] = useState(false);
   const [messagingBid, setMessagingBid] = useState<ActiveBid | null>(null);
   const [newMessage, setNewMessage] = useState("");
 
-  // Job preview popup state
-  const [showJobPreview, setShowJobPreview] = useState(false);
-  const [previewJob, setPreviewJob] = useState<AvailableJob | null>(null);
-  const [previewTab, setPreviewTab] = useState<"details" | "bid" | "chat">("details");
-  const [previewBidAmount, setPreviewBidAmount] = useState("");
-  const [previewBidTimeline, setPreviewBidTimeline] = useState("");
-  const [previewBidMessage, setPreviewBidMessage] = useState("");
-  const [previewBidSubmitted, setPreviewBidSubmitted] = useState(false);
-  const [previewBidMode, setPreviewBidMode] = useState<"bid_only" | "bid_and_inspection" | "inspection_only">("bid_only");
-  const [previewBidNoDeposit, setPreviewBidNoDeposit] = useState<boolean | null>(null);
-  const [previewBidDepositAmount, setPreviewBidDepositAmount] = useState("");
-  const [previewBidInspectionFee, setPreviewBidInspectionFee] = useState("");
-  const [previewBidFreeInspection, setPreviewBidFreeInspection] = useState(false);
-  const [previewBidFinancing, setPreviewBidFinancing] = useState<boolean | null>(null);
-  const [showBidConfirm, setShowBidConfirm] = useState(false);
-  const [previewChatInput, setPreviewChatInput] = useState("");
-  const [previewChatMessages, setPreviewChatMessages] = useState<Record<string, JobMessage[]>>({});
+  // Legacy relay state — no longer triggered from UI but kept for type-safety
 
-  const handleOpenJobPreview = (job: AvailableJob) => {
-    setPreviewJob(job);
-    setPreviewTab("details");
-    setPreviewBidMode("bid_only");
-    setPreviewBidAmount("");
-    setPreviewBidTimeline("");
-    setPreviewBidMessage("");
-    setPreviewBidNoDeposit(null);
-    setPreviewBidDepositAmount("");
-    setPreviewBidInspectionFee("");
-    setPreviewBidFreeInspection(false);
-    setPreviewBidFinancing(null);
-    setPreviewBidSubmitted(false);
-    setPreviewChatInput("");
-    setShowJobPreview(true);
-  };
-
-  const handlePreviewSubmitBid = () => {
-    if (!previewJob) return;
-    if (previewBidMode === "inspection_only") {
-      if (!previewBidFreeInspection && !previewBidInspectionFee) return;
-    } else {
-      if (!previewBidAmount || !previewBidTimeline) return;
-    }
-    setShowBidConfirm(true);
-  };
-
-  const handleConfirmBidSubmit = () => {
-    setShowBidConfirm(false);
-    setPreviewBidSubmitted(true);
-  };
-
-  const handlePreviewSendChat = () => {
-    if (!previewChatInput.trim() || !previewJob) return;
-    const jobId = previewJob.id;
-    const msg: JobMessage = {
-      id: Date.now().toString(),
-      text: previewChatInput.trim(),
-      sender: "contractor",
-      time: new Date(),
-    };
-    setPreviewChatMessages((prev) => ({
-      ...prev,
-      [jobId]: [...(prev[jobId] || []), msg],
-    }));
-    setPreviewChatInput("");
-    // Real messaging will be handled via the inbox system — no simulated replies.
-  };
-
-  // Relay modal state (HomeBids leads — before homeowner approval)
-  const [showRelayModal, setShowRelayModal] = useState(false);
-  const [relayBid, setRelayBid] = useState<ActiveBid | null>(null);
-  const [relayMessage, setRelayMessage] = useState("");
-  const [relaySent, setRelaySent] = useState(false);
 
   // Payout calculator state removed — contractors keep 100% with no success fees
   // Messages start empty — never seed with fake threads tied to hardcoded bid IDs.
@@ -628,7 +651,58 @@ export default function ContractorDashboard() {
               )}
             </AnimatePresence>
 
-            {/* Earnings Breakdown */}
+            {/* Lead Count KPI Cards */}
+            <div className="mb-4 grid grid-cols-2 gap-3">
+              <motion.button
+                type="button"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 }}
+                onClick={() => setActiveTab("homebids")}
+                className={`rounded-xl border p-3 text-left transition-all ${
+                  activeTab === "homebids"
+                    ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-sm"
+                    : "border-border bg-card hover:border-primary/30 hover:shadow-sm"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${activeTab === "homebids" ? "bg-primary/20" : "bg-muted"}`}>
+                    <Sparkles className={`h-4 w-4 ${activeTab === "homebids" ? "text-primary" : "text-muted-foreground"}`} />
+                  </div>
+                  <p className={`text-xs font-medium ${activeTab === "homebids" ? "text-primary" : "text-muted-foreground"}`}>HomeBids AI Leads</p>
+                </div>
+                <p className={`mt-2 text-2xl font-bold ${activeTab === "homebids" ? "text-primary" : "text-foreground"}`}>
+                  {DEMO_HOMEBIDS_LEADS.length}
+                </p>
+                <p className="text-[10px] text-muted-foreground">{DEMO_HOMEBIDS_LEADS.filter(l => l.status === "new").length} new</p>
+              </motion.button>
+
+              <motion.button
+                type="button"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                onClick={() => setActiveTab("myleads")}
+                className={`rounded-xl border p-3 text-left transition-all ${
+                  activeTab === "myleads"
+                    ? "border-emerald-400 bg-emerald-50/50 ring-2 ring-emerald-300/40 shadow-sm"
+                    : "border-border bg-card hover:border-emerald-300 hover:shadow-sm"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${activeTab === "myleads" ? "bg-emerald-100" : "bg-muted"}`}>
+                    <Users className={`h-4 w-4 ${activeTab === "myleads" ? "text-emerald-600" : "text-muted-foreground"}`} />
+                  </div>
+                  <p className={`text-xs font-medium ${activeTab === "myleads" ? "text-emerald-700" : "text-muted-foreground"}`}>My Leads</p>
+                </div>
+                <p className={`mt-2 text-2xl font-bold ${activeTab === "myleads" ? "text-emerald-700" : "text-foreground"}`}>
+                  {DEMO_MY_LEADS.length}
+                </p>
+                <p className="text-[10px] text-muted-foreground">{DEMO_MY_LEADS.filter(l => l.status === "open").length} open</p>
+              </motion.button>
+            </div>
+
+            {/* Earnings Breakdown KPI cards */}
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
               {(
                 [
@@ -728,7 +802,7 @@ export default function ContractorDashboard() {
               })}
             </div>
 
-            {/* AI Generated Bids Section */}
+            {/* AI Generated Bids preview */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -740,376 +814,338 @@ export default function ContractorDashboard() {
                   <Calculator className="h-4 w-4 text-primary" />
                   <h3 className="text-sm font-semibold text-foreground sm:text-base">Your AI Generated Bids</h3>
                 </div>
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                  AI Workspace
-                </span>
+                <Link href="/contractors/bids" className="flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+                  See All <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
               </div>
-
-              <AiGeneratedBidsSection />
+              <AiGeneratedBidsSection preview />
             </motion.div>
           </div>
 
-          {/* Search and Filter - Hidden on mobile when viewing bid detail */}
-          <div className={`mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between ${showMobileDetail ? "hidden lg:flex" : "flex"}`}>
-            <div className="relative flex-1 max-w-md mx-auto sm:mx-0">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search bids..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex items-center justify-center gap-2 sm:justify-start">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          {/* Leads Tabs Section */}
+          <div className={showMobileDetail ? "hidden lg:block" : "block"}>
+            {/* Tab Bar */}
+            <div className="mb-6 flex gap-1 rounded-xl bg-muted p-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab("homebids")}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                  activeTab === "homebids"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
               >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="open">Open</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="not_selected">Not Selected</option>
-              </select>
+                <Sparkles className="h-3.5 w-3.5" />
+                HomeBids AI Leads
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${activeTab === "homebids" ? "bg-primary/10 text-primary" : "bg-muted-foreground/20 text-muted-foreground"}`}>
+                  {DEMO_HOMEBIDS_LEADS.length}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("myleads")}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                  activeTab === "myleads"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Users className="h-3.5 w-3.5" />
+                My Leads
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${activeTab === "myleads" ? "bg-emerald-100 text-emerald-700" : "bg-muted-foreground/20 text-muted-foreground"}`}>
+                  {DEMO_MY_LEADS.length}
+                </span>
+              </button>
             </div>
-          </div>
 
-          {/* Bids Grid */}
-          <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-            {/* Bids List - Hidden on mobile when detail is shown */}
-            <div className={`space-y-4 ${showMobileDetail ? "hidden lg:block" : "block"}`}>
-              <h2 className="text-lg font-semibold text-foreground text-center lg:text-left">Your Bids ({filteredBids.length})</h2>
-              
-              {bidsLoading ? (
-                <div className="flex items-center justify-center rounded-xl border border-border bg-card p-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : bidsError ? (
-                <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-8 text-center">
-                  <AlertCircle className="mx-auto h-8 w-8 text-destructive/60" />
-                  <p className="mt-3 text-sm font-medium text-destructive">Failed to load bids</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{bidsError}</p>
-                </div>
-              ) : filteredBids.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border p-8 text-center">
-                  <Briefcase className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                  <p className="mt-4 font-medium text-muted-foreground">No bids yet</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Browse open jobs to submit your first bid</p>
-                  <Button asChild className="mt-4" size="sm" variant="outline">
-                    <Link href="/contractors/jobs">Find Jobs</Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-14rem)] pr-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/20">
-                  {filteredBids.map((bid) => {
-                    const StatusIcon = statusConfig[bid.status].icon;
-                    const isEditable = bid.status === "open";
-
+            {/* HomeBids AI Leads Tab */}
+            {activeTab === "homebids" && (
+              <div>
+                <p className="mb-4 text-xs text-muted-foreground">
+                  Leads sourced by HomeBids — win homeowner approval before texting directly.
+                </p>
+                <div className="space-y-4">
+                  {DEMO_HOMEBIDS_LEADS.map((lead) => {
+                    const statusBadge =
+                      lead.status === "new"
+                        ? { label: "New", class: "bg-blue-100 text-blue-700" }
+                        : lead.status === "bid_submitted"
+                        ? { label: "Bid Submitted", class: "bg-amber-100 text-amber-700" }
+                        : { label: "Reviewing", class: "bg-purple-100 text-purple-700" };
                     return (
                       <motion.div
-                        key={bid.id}
+                        key={lead.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className={`cursor-pointer rounded-xl border p-4 transition-all ${
-                          selectedBid?.id === bid.id
-                            ? "border-primary bg-primary/5 shadow-sm"
-                            : "border-border bg-card hover:border-primary/30 hover:shadow-sm"
-                        }`}
-                        onClick={() => handleSelectBid(bid)}
+                        className="rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/30 hover:shadow-sm"
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-semibold text-foreground truncate">
-                                {bid.jobTitle}
-                              </h3>
-                              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${statusConfig[bid.status].color}`}>
-                                <StatusIcon className="h-3 w-3" />
-                                {statusConfig[bid.status].label}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-semibold text-foreground">{lead.title}</h3>
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadge.class}`}>
+                                {statusBadge.label}
+                              </span>
+                              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                {lead.category}
                               </span>
                             </div>
-                            <div className="mt-2 flex items-center gap-3 text-sm text-muted-foreground">
+                            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                               <span className="flex items-center gap-1">
-                                <MapPin className="h-3.5 w-3.5" />
-                                {bid.homeownerLocation}
+                                <MapPin className="h-3 w-3 shrink-0" />
+                                {lead.location}
                               </span>
                               <span className="flex items-center gap-1">
-                                <Calendar className="h-3.5 w-3.5" />
-                                {formatDate(bid.submittedAt)}
+                                <Clock className="h-3 w-3 shrink-0" />
+                                {lead.timeline}
                               </span>
+                              <span className="font-semibold text-foreground">{lead.estimatedValue}</span>
                             </div>
-<div className="mt-3 flex items-center gap-3 flex-wrap">
-                                              <span className="inline-flex items-center gap-1 rounded-lg bg-green-50 px-2.5 py-1 text-sm font-bold text-green-700">
-                                                <DollarSign className="h-4 w-4" />
-                                                {bid.bidAmount.toLocaleString()}
-                                              </span>
-                                              <span className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
-                                                <Clock className="h-3.5 w-3.5" />
-                                                {bid.timeline}
-                                              </span>
-                                              {bid.financingAvailable && (
-                                                <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                                                  <CreditCard className="h-3.5 w-3.5" />
-                                                  Financing
-                                                </span>
-                                              )}
-                                              <span className="text-xs text-muted-foreground">
-                                                <Users className="mr-1 inline h-3.5 w-3.5" />
-                                                {bid.otherBids} other bids
-                                              </span>
-                                            </div>
+                            <div className="mt-2 flex items-center gap-1.5">
+                              {lead.directMessagingUnlocked ? (
+                                <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">
+                                  <Unlock className="h-3 w-3" />
+                                  Direct texting unlocked
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
+                                  <Lock className="h-3 w-3" />
+                                  Contact locked — win approval first
+                                </span>
+                              )}
+                            </div>
                           </div>
+                        </div>
 
-                          {isEditable && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="shrink-0"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleOpenMessenger(bid)}>
-                                  <MessageCircle className="mr-2 h-4 w-4" />
-                                  Message Homeowner
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleEditBid(bid)}>
-                                  <Edit3 className="mr-2 h-4 w-4" />
-                                  Edit Bid
-                                </DropdownMenuItem>
-                              <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => handleDeleteClick(bid)}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 gap-1 px-2.5 text-xs bg-transparent"
+                            onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}
+                          >
+                            <Eye className="h-3 w-3" />
+                            View Details
+                          </Button>
+                          {!lead.directMessagingUnlocked ? (
+                            <>
+                              <Button size="sm" className="h-7 gap-1 px-2.5 text-xs">
+                                <Calculator className="h-3 w-3" />
+                                Generate Winning Bid
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 gap-1 px-2.5 text-xs bg-transparent"
+                                onClick={() => {
+                                  setSelectedLead(lead);
+                                  setRelayLeadMessage("");
+                                  setRelayLeadSent(false);
+                                  setShowRelayLeadModal(true);
+                                }}
                               >
-                              <X className="mr-2 h-4 w-4" />
-                              Cancel Bid
-                              </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                                <MessageCircle className="h-3 w-3" />
+                                Message via HomeBids AI
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              size="sm"
+                              className="h-7 gap-1 px-2.5 text-xs bg-green-600 hover:bg-green-700 text-white"
+                              onClick={() => { window.location.href = `sms:${lead.homeownerPhone ?? ""}`; }}
+                            >
+                              <MessageCircle className="h-3 w-3" />
+                              Text Homeowner
+                            </Button>
                           )}
                         </div>
                       </motion.div>
                     );
                   })}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* Bid Detail Panel - Full screen on mobile when shown */}
-            <div ref={detailPanelRef} className={`lg:sticky lg:top-8 lg:self-start ${showMobileDetail ? "block" : "hidden lg:block"}`}>
-              <AnimatePresence mode="wait">
-                {selectedBid ? (
-                  <motion.div
-                    key={selectedBid.id}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    className="rounded-xl border border-border bg-card overflow-y-auto max-h-[calc(100vh-4rem)] lg:max-h-[calc(100vh-14rem)] scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/20"
-                  >
-                    {/* Mobile Back Button */}
-                    <div className="flex items-center gap-3 border-b border-border p-4 lg:hidden">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleBackToList}
-                        className="gap-2 bg-transparent"
+            {/* My Leads Tab */}
+            {activeTab === "myleads" && (
+              <div>
+                <p className="mb-4 text-xs text-muted-foreground">
+                  Your own leads — full control, text directly any time.
+                </p>
+                <div className="space-y-4">
+                  {DEMO_MY_LEADS.map((lead) => {
+                    const aiStatusBadge =
+                      lead.aiStatus === "estimate_ready"
+                        ? { label: "Estimate Ready", class: "bg-blue-100 text-blue-700" }
+                        : lead.aiStatus === "response_sent"
+                        ? { label: "Response Sent", class: "bg-amber-100 text-amber-700" }
+                        : { label: "Follow-Up Ready", class: "bg-purple-100 text-purple-700" };
+                    return (
+                      <motion.div
+                        key={lead.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="rounded-xl border border-border bg-card p-4 transition-all hover:border-emerald-300 hover:shadow-sm"
                       >
-                        <ArrowLeft className="h-4 w-4" />
-                        Back to Bids
-                      </Button>
-                    </div>
-
-                    {/* Detail Header */}
-                    <div className="border-b border-border p-6">
-                      <div className="flex flex-col items-center text-center lg:flex-row lg:items-start lg:justify-between lg:text-left">
-                        <div>
-                          <h3 className="text-xl font-bold text-foreground">{selectedBid.jobTitle}</h3>
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${statusConfig[selectedBid.status].color}`}>
-                              {statusConfig[selectedBid.status].label}
-                            </span>
-                            {selectedBid.leadSource === "homebids" && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                                HomeBids Lead
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
+                                {lead.customerName.charAt(0)}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-foreground">{lead.customerName}</p>
+                                <p className="text-xs text-muted-foreground">{lead.projectTitle}</p>
+                              </div>
+                            </div>
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                {lead.category}
                               </span>
-                            )}
-                            {selectedBid.directMessagingUnlocked && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
-                                <CheckCircle2 className="h-3 w-3" />
-                                Direct messaging unlocked
+                              <span className="font-semibold text-sm text-foreground">{lead.estimatedValue}</span>
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${aiStatusBadge.class}`}>
+                                {aiStatusBadge.label}
                               </span>
-                            )}
+                            </div>
+                            <p className="mt-1.5 text-[11px] text-muted-foreground">{lead.lastActivity}</p>
                           </div>
                         </div>
-                        <div className="mt-4 flex flex-wrap justify-center gap-2 lg:mt-0">
-                          {selectedBid.status === "open" && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleEditBid(selectedBid)}
-                                className="gap-1.5 bg-transparent"
-                              >
-                                <Edit3 className="h-4 w-4" />
-                                Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleDeleteClick(selectedBid)}
-                                className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive bg-transparent"
-                              >
-                                <X className="h-4 w-4" />
-                                Cancel
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
 
-                    {/* Job Details */}
-                    <div className="border-b border-border p-6">
-                      <h4 className="mb-3 font-semibold text-foreground text-center lg:text-left">Job Details</h4>
-                      <p className="text-sm text-muted-foreground leading-relaxed text-center lg:text-left">
-                        {selectedBid.jobDescription}
-                      </p>
-                      {selectedBid.imageCount > 0 && (
-                        <button
-                          type="button"
-                          className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
-                        >
-                          <ImageIcon className="h-3.5 w-3.5" />
-                          See Images ({selectedBid.imageCount} photos from homeowner)
-                        </button>
-                      )}
-                      <div className="mt-4 grid grid-cols-2 gap-4">
-                        <div className={`rounded-lg p-3 text-center lg:text-left ${selectedBid.jobBudget === "TBD - Insurance Paid" ? "bg-blue-50 border border-blue-200" : "bg-muted/50"}`}>
-                          <p className={`text-xs ${selectedBid.jobBudget === "TBD - Insurance Paid" ? "text-blue-600" : "text-muted-foreground"}`}>Budget Range</p>
-                          <p className={`mt-1 font-semibold ${selectedBid.jobBudget === "TBD - Insurance Paid" ? "text-blue-700" : "text-foreground"}`}>{selectedBid.jobBudget}</p>
-                          {selectedBid.jobBudget === "TBD - Insurance Paid" && (
-                            <p className="mt-0.5 text-[10px] text-blue-600">Inspection required before payment</p>
-                          )}
-                        </div>
-                        <div className="rounded-lg bg-muted/50 p-3 text-center lg:text-left">
-                          <p className="text-xs text-muted-foreground">Desired Timeline</p>
-                          <p className="mt-1 font-semibold text-foreground">{selectedBid.jobTimeline}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Your Bid */}
-                    <div className="border-b border-border p-6">
-                      <h4 className="mb-3 font-semibold text-foreground text-center lg:text-left">Your Bid</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="rounded-lg bg-green-50 p-4 text-center lg:text-left">
-                          <p className="text-xs text-green-600">Your Price</p>
-                          <p className="mt-1 text-2xl font-bold text-green-700">
-                            ${selectedBid.bidAmount.toLocaleString()}
-                          </p>
-                        </div>
-                        <div className="rounded-lg bg-blue-50 p-4 text-center lg:text-left">
-                          <p className="text-xs text-blue-600">Your Timeline</p>
-                          <p className="mt-1 text-2xl font-bold text-blue-700">{selectedBid.timeline}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Competition Info */}
-                    <div className="border-b border-border p-6">
-                      <div className="flex items-center gap-3 rounded-lg bg-amber-50 p-4">
-                        <Users className="h-5 w-5 text-amber-600" />
-                        <div>
-                          <p className="font-medium text-amber-800">Competition</p>
-                          <p className="text-sm text-amber-700">
-                            {selectedBid.otherBids} other contractors have bid on this job
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="space-y-2 p-6">
-                      {selectedBid.job_id && (
-                        <Button asChild variant="outline" className="w-full gap-2 bg-transparent">
-                          <Link href={`/jobs/${selectedBid.job_id}`}>
-                            <Eye className="h-4 w-4" />
-                            View Job Details
-                          </Link>
-                        </Button>
-                      )}
-
-                      {/* Communication workflow */}
-                      {selectedBid.leadSource === "homebids" && !selectedBid.directMessagingUnlocked ? (
-                        /* HomeBids lead — relay required */
-                        <Button
-                          className="w-full gap-2"
-                          variant="outline"
-                          onClick={() => {
-                            setRelayBid(selectedBid);
-                            setRelayMessage("");
-                            setRelaySent(false);
-                            setShowRelayModal(true);
-                          }}
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                          Message via HomeBids AI
-                        </Button>
-                      ) : selectedBid.leadSource === "homebids" && selectedBid.directMessagingUnlocked ? (
-                        /* HomeBids lead — approved, direct SMS unlocked */
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-center gap-1.5 rounded-lg bg-green-50 px-3 py-2 text-xs font-medium text-green-700">
-                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                            Direct messaging unlocked
-                          </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent">
+                            <Eye className="h-3 w-3" />
+                            View Lead
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent">
+                            <Calculator className="h-3 w-3" />
+                            Generate Estimate
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent">
+                            <FileText className="h-3 w-3" />
+                            Generate Response
+                          </Button>
                           <Button
-                            className="w-full gap-2"
-                            onClick={() => {
-                              const phone = selectedBid.homeownerPhone ?? "";
-                              window.location.href = `sms:${phone}`;
-                            }}
+                            size="sm"
+                            className="h-7 gap-1 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                            onClick={() => { window.location.href = `sms:${lead.phone ?? ""}`; }}
                           >
-                            <MessageCircle className="h-4 w-4" />
-                            Text Homeowner
+                            <MessageCircle className="h-3 w-3" />
+                            Text Customer
                           </Button>
                         </div>
-                      ) : (
-                        /* Contractor-owned lead — text directly */
-                        <Button
-                          className="w-full gap-2"
-                          onClick={() => {
-                            const phone = selectedBid.homeownerPhone ?? "";
-                            window.location.href = `sms:${phone}`;
-                          }}
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                          Text Customer
-                        </Button>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Bid Detail Panel (kept for clicking KPI pipeline bids) */}
+          {showMobileDetail && (
+          <div ref={detailPanelRef} className="block lg:hidden">{/* mobile detail shown inline if a pipeline bid is selected */}</div>
+          )}
+          {selectedBid && (
+          <div ref={detailPanelRef} className={`mt-6 lg:sticky lg:top-8 lg:self-start ${showMobileDetail ? "block" : "hidden"}`}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={selectedBid.id}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="rounded-xl border border-border bg-card overflow-y-auto max-h-[calc(100vh-4rem)] lg:max-h-[calc(100vh-14rem)]"
+              >
+                {/* Mobile Back Button */}
+                <div className="flex items-center gap-3 border-b border-border p-4 lg:hidden">
+                  <Button variant="ghost" size="sm" onClick={handleBackToList} className="gap-2 bg-transparent">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back
+                  </Button>
+                </div>
+                {/* Detail Header */}
+                <div className="border-b border-border p-6">
+                  <div className="flex flex-col items-center text-center lg:flex-row lg:items-start lg:justify-between lg:text-left">
+                    <div>
+                      <h3 className="text-xl font-bold text-foreground">{selectedBid.jobTitle}</h3>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${statusConfig[selectedBid.status].color}`}>
+                          {statusConfig[selectedBid.status].label}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex flex-wrap justify-center gap-2 lg:mt-0">
+                      {selectedBid.status === "open" && (
+                        <>
+                          <Button size="sm" variant="outline" onClick={() => handleEditBid(selectedBid)} className="gap-1.5 bg-transparent">
+                            <Edit3 className="h-4 w-4" />
+                            Edit
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handleDeleteClick(selectedBid)} className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive bg-transparent">
+                            <X className="h-4 w-4" />
+                            Cancel
+                          </Button>
+                        </>
                       )}
                     </div>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="hidden lg:flex h-96 items-center justify-center rounded-xl border border-dashed border-border bg-card"
-                  >
-                    <div className="text-center">
-                      <Eye className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                      <p className="mt-4 text-muted-foreground">Select a bid to view details</p>
+                  </div>
+                </div>
+                {/* Job Details */}
+                <div className="border-b border-border p-6">
+                  <h4 className="mb-3 font-semibold text-foreground">Job Details</h4>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{selectedBid.jobDescription}</p>
+                  {selectedBid.imageCount > 0 && (
+                    <button type="button" className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20">
+                      <ImageIcon className="h-3.5 w-3.5" />
+                      See Images ({selectedBid.imageCount} photos)
+                    </button>
+                  )}
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    <div className="rounded-lg bg-muted/50 p-3">
+                      <p className="text-xs text-muted-foreground">Budget Range</p>
+                      <p className="mt-1 font-semibold text-foreground">{selectedBid.jobBudget}</p>
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                    <div className="rounded-lg bg-muted/50 p-3">
+                      <p className="text-xs text-muted-foreground">Timeline</p>
+                      <p className="mt-1 font-semibold text-foreground">{selectedBid.jobTimeline}</p>
+                    </div>
+                  </div>
+                </div>
+                {/* Your Bid */}
+                <div className="border-b border-border p-6">
+                  <h4 className="mb-3 font-semibold text-foreground">Your Bid</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-lg bg-green-50 p-4">
+                      <p className="text-xs text-green-600">Your Price</p>
+                      <p className="mt-1 text-2xl font-bold text-green-700">${selectedBid.bidAmount.toLocaleString()}</p>
+                    </div>
+                    <div className="rounded-lg bg-blue-50 p-4">
+                      <p className="text-xs text-blue-600">Your Timeline</p>
+                      <p className="mt-1 text-2xl font-bold text-blue-700">{selectedBid.timeline}</p>
+                    </div>
+                  </div>
+                </div>
+                {/* Actions */}
+                <div className="space-y-2 p-6">
+                  {selectedBid.job_id && (
+                    <Button asChild variant="outline" className="w-full gap-2 bg-transparent">
+                      <Link href={`/jobs/${selectedBid.job_id}`}>
+                        <Eye className="h-4 w-4" />
+                        View Job Details
+                      </Link>
+                    </Button>
+                  )}
+                  <Button
+                    className="w-full gap-2"
+                    onClick={() => { handleOpenMessenger(selectedBid); }}
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Message Homeowner
+                  </Button>
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
+          )}
         </div>
       </main>
 
@@ -1264,664 +1300,8 @@ export default function ContractorDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Job Preview Popup - Full Details with Bid & Chat */}
-      <Dialog open={showJobPreview} onOpenChange={setShowJobPreview}>
-        <DialogContent className="flex h-[85vh] max-h-[700px] flex-col p-0 sm:max-w-lg">
-          <DialogHeader className="sr-only">
-            <DialogTitle>{previewJob?.title}</DialogTitle>
-            <DialogDescription>Job details, bid submission, and chat</DialogDescription>
-          </DialogHeader>
-          {/* Header */}
-          <div className="border-b border-border px-5 pt-5 pb-3">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                <Briefcase className="h-5 w-5 text-primary" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h2 className="text-base font-semibold text-foreground">{previewJob?.title}</h2>
-                <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                  <MapPin className="h-3 w-3 shrink-0" />
-                  <span>{previewJob?.location}</span>
-                  <span className="text-muted-foreground/40">|</span>
-                  <span>{previewJob?.homeownerName}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Tabs */}
-            <div className="mt-4 flex gap-1 rounded-lg bg-muted p-1">
-              {[
-                { key: "details" as const, label: "Details", icon: FileText },
-                { key: "bid" as const, label: "Place Bid", icon: DollarSign },
-                { key: "chat" as const, label: "Ask Question", icon: MessageCircle },
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setPreviewTab(tab.key)}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all ${
-                    previewTab === tab.key
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <tab.icon className="h-3.5 w-3.5" />
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Tab Content */}
-          <div className="flex-1 overflow-y-auto">
-            {previewJob && previewTab === "details" && (
-              <div className="space-y-4 p-5">
-                {/* Urgency & Category */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                    {previewJob.category}
-                  </span>
-                  {previewJob.urgency === "high" && (
-                    <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-bold text-red-700">Urgent</span>
-                  )}
-                  {previewJob.urgency === "medium" && (
-                    <span className="rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-700">Soon</span>
-                  )}
-                  {previewJob.urgency === "low" && (
-                    <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">Flexible</span>
-                  )}
-                  <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
-                    {previewJob.propertyType}
-                  </span>
-                </div>
-
-                {/* Description */}
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">Description</p>
-                  <p className="text-sm text-foreground leading-relaxed">{previewJob.description}</p>
-                </div>
-
-                {/* Details Grid */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg border border-border p-3">
-                          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Budget</p>
-                          <p className={`mt-1.5 flex items-center gap-1 text-sm font-bold ${previewJob.budget === "TBD - Insurance Paid" ? "text-blue-700" : "text-green-700"}`}>
-                            <DollarSign className="h-3.5 w-3.5" />
-                            {previewJob.budget === "TBD - Insurance Paid" ? "TBD" : previewJob.budget.replace("$", "")}
-                          </p>
-                          {previewJob.budget === "TBD - Insurance Paid" && (
-                            <p className="mt-1 text-[10px] text-blue-600">Insurance paid - inspection required</p>
-                          )}
-                  </div>
-                  <div className="rounded-lg border border-border p-3">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Timeline</p>
-                    <p className="mt-1.5 flex items-center gap-1 text-sm font-bold text-foreground">
-                      <Clock className="h-3.5 w-3.5" />
-                      {previewJob.timeline}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Competition */}
-                <div className="flex items-center gap-4 rounded-lg bg-amber-50 p-3">
-                  <div className="flex items-center gap-1.5">
-                    <Users className="h-4 w-4 text-amber-600" />
-                    <span className="text-xs font-medium text-amber-800">
-                      {previewJob.bidsCount} bid{previewJob.bidsCount !== 1 ? "s" : ""} so far
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="h-4 w-4 text-amber-600" />
-                    <span className="text-xs text-amber-700">
-                      Posted {Math.round((Date.now() - previewJob.postedAt.getTime()) / (1000 * 60 * 60))}h ago
-                    </span>
-                  </div>
-                </div>
-
-                {/* Homeowner Info */}
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-2">Homeowner</p>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                      {previewJob.homeownerName.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{previewJob.homeownerName}</p>
-                      <p className="text-xs text-muted-foreground">{previewJob.propertyType}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="flex gap-2 pt-1">
-                  <Button className="flex-1 gap-2" onClick={() => setPreviewTab("bid")}>
-                    <DollarSign className="h-4 w-4" />
-                    Place Bid
-                  </Button>
-                  <Button variant="outline" className="flex-1 gap-2 bg-transparent" onClick={() => setPreviewTab("chat")}>
-                    <MessageCircle className="h-4 w-4" />
-                    Ask Question
-                  </Button>
-                </div>
-
-                {/* View All Jobs Link */}
-                <Link href="/contractors/jobs" onClick={() => setShowJobPreview(false)}>
-                  <Button variant="ghost" className="w-full gap-2 text-muted-foreground hover:text-foreground">
-                    <Search className="h-4 w-4" />
-                    View All Matching Jobs
-                  </Button>
-                </Link>
-              </div>
-            )}
-
-            {/* Bid Tab */}
-            {previewJob && previewTab === "bid" && (
-              <div className="p-5">
-                {previewBidSubmitted ? (
-                  <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <AnimatePresence>
-                      {previewBidSubmitted && (
-                        <div className="pointer-events-none fixed inset-0 z-[100] overflow-hidden" aria-hidden="true">
-                          {Array.from({ length: 60 }).map((_, i) => {
-                            const left = Math.random() * 100;
-                            const delay = Math.random() * 0.8;
-                            const duration = 2.5 + Math.random() * 2;
-                            const size = 6 + Math.random() * 8;
-                            const rotation = Math.random() * 360;
-                            const colors = [
-                              "#22c55e", "#16a34a", "#facc15", "#f59e0b",
-                              "#3b82f6", "#ec4899", "#f97316", "#8b5cf6",
-                            ];
-                            const color = colors[i % colors.length];
-                            const shape = i % 3;
-
-                            return (
-                              <motion.div
-                                key={`confetti-${i}`}
-                                initial={{ y: -20, x: `${left}vw`, opacity: 1, rotate: rotation, scale: 1 }}
-                                animate={{
-                                  y: "110vh",
-                                  rotate: rotation + 720,
-                                  opacity: [1, 1, 0.8, 0],
-                                  x: `${left + (Math.random() - 0.5) * 20}vw`,
-                                }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration, delay, ease: "easeIn" }}
-                                className="absolute"
-                                style={{
-                                  width: shape === 2 ? size * 0.6 : size,
-                                  height: shape === 1 ? size * 0.6 : size,
-                                  backgroundColor: color,
-                                  borderRadius: shape === 0 ? "50%" : shape === 1 ? "2px" : "1px",
-                                }}
-                              />
-                            );
-                          })}
-                        </div>
-                      )}
-                    </AnimatePresence>
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                      <CheckCircle2 className="h-8 w-8 text-green-600" />
-                    </div>
-                    <h3 className="mt-4 text-lg font-semibold text-foreground">
-                      {previewBidMode === "inspection_only" ? "Inspection Request Sent" : "Bid Submitted"}
-                    </h3>
-                    <p className="mt-2 max-w-xs text-sm text-muted-foreground">
-                      {previewBidMode === "inspection_only"
-                        ? `Your inspection request has been sent to ${previewJob.homeownerName}. You'll need to place a bid through HomeBids after your visit.`
-                        : `Your bid of $${Number(previewBidAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been sent to ${previewJob.homeownerName}. You'll be notified when they respond.`}
-                    </p>
-                    <div className="mt-6 flex gap-2">
-                      <Button variant="outline" className="bg-transparent" onClick={() => setPreviewTab("chat")}>
-                        <MessageCircle className="mr-2 h-4 w-4" />
-                        Send a Message
-                      </Button>
-                      <Button onClick={() => setShowJobPreview(false)}>Done</Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Bid Mode Toggle */}
-                    <div>
-                      <p className="mb-2 text-xs font-medium text-foreground">How would you like to respond?</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {(
-                          [
-                            { key: "bid_only" as const, label: "Bid Only", desc: "Submit a bid based on the job description", icon: DollarSign, activeColor: "border-green-500 bg-green-50 ring-1 ring-green-200", iconColor: "text-green-600", textColor: "text-green-800", descColor: "text-green-600" },
-                            { key: "bid_and_inspection" as const, label: "Bid + Inspect", desc: "Submit a bid and schedule an on-site visit", icon: Eye, activeColor: "border-blue-500 bg-blue-50 ring-1 ring-blue-200", iconColor: "text-blue-600", textColor: "text-blue-800", descColor: "text-blue-600" },
-                            { key: "inspection_only" as const, label: "Inspect First", desc: "Visit the site before committing to a bid", icon: Search, activeColor: "border-amber-500 bg-amber-50 ring-1 ring-amber-200", iconColor: "text-amber-600", textColor: "text-amber-800", descColor: "text-amber-600" },
-                          ] as const
-                        ).map((mode) => {
-                          const ModeIcon = mode.icon;
-                          const isActive = previewBidMode === mode.key;
-                          return (
-                            <button
-                              key={mode.key}
-                              type="button"
-                              onClick={() => setPreviewBidMode(mode.key)}
-                              className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-center transition-all ${
-                                isActive
-                                  ? mode.activeColor
-                                  : "border-border bg-background hover:border-muted-foreground/40"
-                              }`}
-                            >
-                              <ModeIcon className={`h-4 w-4 ${isActive ? mode.iconColor : "text-muted-foreground"}`} />
-                              <span className={`text-[10px] font-semibold leading-tight sm:text-xs ${isActive ? mode.textColor : "text-foreground"}`}>
-                                {mode.label}
-                              </span>
-                              <span className={`hidden text-[9px] leading-tight sm:block ${isActive ? mode.descColor : "text-muted-foreground"}`}>
-                                {mode.desc}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Job Summary */}
-                    <div className="rounded-lg bg-muted/50 p-3">
-                      <p className="text-xs text-muted-foreground">
-                        {previewBidMode === "inspection_only" ? "Requesting inspection for" : "Bidding on"}
-                      </p>
-                      <p className="text-sm font-semibold text-foreground">{previewJob.title}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Budget: <span className={`font-medium ${previewJob.budget === "TBD - Insurance Paid" ? "text-blue-700" : "text-green-700"}`}>{previewJob.budget}</span>{previewJob.budget === "TBD - Insurance Paid" && " (inspection required)"} | Timeline: {previewJob.timeline}
-                      </p>
-                    </div>
-
-                    {/* Inspection-Only Notice */}
-                    {previewBidMode === "inspection_only" && (
-                      <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                        <p className="text-[10px] leading-relaxed text-amber-800 sm:text-xs">
-                          You will provide an on-site inspection without committing to a bid amount. After inspection, you are required to place your bid through HomeBids.
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Bid Amount & Timeline -- hidden for inspection_only */}
-                    {previewBidMode !== "inspection_only" && (
-                      <div className="space-y-3">
-                        <div>
-                          <Label htmlFor="preview-bid-amount" className="text-xs font-medium">Your Bid Amount</Label>
-                          <div className="relative mt-1">
-                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">$</span>
-                            <Input
-                              id="preview-bid-amount"
-                              type="number"
-                              placeholder="0.00"
-                              value={previewBidAmount}
-                              onChange={(e) => setPreviewBidAmount(e.target.value)}
-                              className="pl-7"
-                            />
-                          </div>
-                          {previewBidAmount && (
-                            <p className="mt-1 text-[10px] text-muted-foreground">
-                              ${Number(previewBidAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Deposit */}
-                        <div className="rounded-xl border border-border p-3">
-                          <Label className="text-xs font-medium">Upfront Deposit</Label>
-                          <p className="mt-0.5 text-[10px] text-muted-foreground">
-                            Applied to total bid amount. Non-refundable.
-                          </p>
-                          <div className="mt-2 flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setPreviewBidNoDeposit(previewBidNoDeposit === true ? null : true);
-                                setPreviewBidDepositAmount("");
-                              }}
-                              className={`rounded-lg border-2 px-2.5 py-1.5 text-[10px] font-medium transition-all ${
-                                previewBidNoDeposit === true
-                                  ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                                  : "border-border text-muted-foreground hover:border-muted-foreground/50"
-                              }`}
-                            >
-                              No Deposit
-                            </button>
-                            <span className="text-[10px] font-medium text-muted-foreground">OR</span>
-                            <div className="flex flex-1 items-center gap-1">
-                              <span className="text-xs text-muted-foreground">$</span>
-                              <Input
-                                type="number"
-                                placeholder="Deposit amount"
-                                value={previewBidDepositAmount}
-                                onChange={(e) => { setPreviewBidDepositAmount(e.target.value); setPreviewBidNoDeposit(false); }}
-                                className="h-8 text-xs"
-                              />
-                            </div>
-                          </div>
-                          {previewBidNoDeposit === false && previewBidDepositAmount && previewBidAmount && (
-                            <p className="mt-2 text-[10px] text-muted-foreground">
-                              Deposit of ${Number(previewBidDepositAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} covers material/labor costs upfront. Remaining balance: ${(Number(previewBidAmount) - Number(previewBidDepositAmount)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="rounded-xl border border-border p-3">
-                          <Label className="text-xs font-medium">Do You Offer Financing?</Label>
-                          <p className="mt-0.5 text-[10px] text-muted-foreground">
-                            Financing options available for homeowners
-                          </p>
-                          <div className="mt-2 flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setPreviewBidFinancing(previewBidFinancing === true ? null : true)}
-                              className={`flex-1 rounded-lg border-2 px-2.5 py-1.5 text-[10px] font-medium transition-all ${
-                                previewBidFinancing === true
-                                  ? "border-blue-500 bg-blue-50 text-blue-700"
-                                  : "border-border text-muted-foreground hover:border-muted-foreground/50"
-                              }`}
-                            >
-                              Yes
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setPreviewBidFinancing(previewBidFinancing === false ? null : false)}
-                              className={`flex-1 rounded-lg border-2 px-2.5 py-1.5 text-[10px] font-medium transition-all ${
-                                previewBidFinancing === false
-                                  ? "border-gray-500 bg-gray-50 text-gray-700"
-                                  : "border-border text-muted-foreground hover:border-muted-foreground/50"
-                              }`}
-                            >
-                              No
-                            </button>
-                          </div>
-                        </div>
-
-                        <div>
-                          <Label htmlFor="preview-bid-timeline" className="text-xs font-medium">Estimated Timeline</Label>
-                          <Input
-                            id="preview-bid-timeline"
-                            placeholder="e.g. 2-3 days"
-                            value={previewBidTimeline}
-                            onChange={(e) => setPreviewBidTimeline(e.target.value)}
-                            className="mt-1"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Message */}
-                    <div>
-                      <Label htmlFor="preview-bid-message" className="text-xs font-medium">Message to Homeowner</Label>
-                      <Textarea
-                        id="preview-bid-message"
-                        placeholder={
-                          previewBidMode === "inspection_only"
-                            ? "Let the homeowner know what to expect during your inspection visit..."
-                            : "Describe your experience, approach, and why you're a great fit..."
-                        }
-                        value={previewBidMessage}
-                        onChange={(e) => setPreviewBidMessage(e.target.value)}
-                        rows={3}
-                        className="mt-1"
-                      />
-                    </div>
-
-                    {/* Inspection Fee -- shown for bid_and_inspection and inspection_only */}
-                    {previewBidMode !== "bid_only" && (
-                      <div className="rounded-xl border border-border p-3">
-                        <Label className="text-xs font-medium">Inspection Fee</Label>
-                        <p className="mt-0.5 text-[10px] text-muted-foreground">
-                          Free or fee amount
-                        </p>
-                        <div className="mt-2 flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (previewBidFreeInspection) {
-                                setPreviewBidFreeInspection(false);
-                              } else {
-                                setPreviewBidFreeInspection(true);
-                                setPreviewBidInspectionFee("");
-                              }
-                            }}
-                            className={`rounded-lg border-2 px-2.5 py-1.5 text-[10px] font-medium transition-all ${
-                              previewBidFreeInspection
-                                ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                                : "border-border text-muted-foreground hover:border-muted-foreground/50"
-                            }`}
-                          >
-                            Free
-                          </button>
-                          <span className="text-[10px] font-medium text-muted-foreground">OR</span>
-                          <div className="flex flex-1 items-center gap-1">
-                            <span className="text-xs text-muted-foreground">$</span>
-                            <Input
-                              type="number"
-                              placeholder="Fee amount"
-                              value={previewBidInspectionFee}
-                              onChange={(e) => { setPreviewBidInspectionFee(e.target.value); setPreviewBidFreeInspection(false); }}
-                              className="h-8 text-xs"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <Button
-                      className="w-full gap-2"
-                      disabled={
-                        previewBidMode === "inspection_only"
-                          ? (!previewBidFreeInspection && !previewBidInspectionFee)
-                          : (!previewBidAmount || !previewBidTimeline)
-                      }
-                      onClick={handlePreviewSubmitBid}
-                    >
-                      <Send className="h-4 w-4" />
-                      {previewBidMode === "inspection_only" ? "Submit Inspection Request" : "Submit Bid"}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Chat Tab */}
-            {previewJob && previewTab === "chat" && (
-              <div className="flex h-full flex-col">
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4">
-                  {(() => {
-                    const chatMsgs = previewChatMessages[previewJob.id] || [];
-                    return chatMsgs.length === 0 ? (
-                      <div className="flex h-full flex-col items-center justify-center py-10 text-center">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-                          <MessageCircle className="h-6 w-6 text-muted-foreground/50" />
-                        </div>
-                        <p className="mt-3 text-sm font-medium text-foreground">Ask a question</p>
-                        <p className="mt-1 max-w-[220px] text-xs text-muted-foreground">
-                          Ask {previewJob.homeownerName} about job details, access, scheduling, or anything before placing your bid.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {chatMsgs.map((msg) => (
-                          <div key={msg.id} className={`flex ${msg.sender === "contractor" ? "justify-end" : "justify-start"}`}>
-                            <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
-                              msg.sender === "contractor"
-                                ? "rounded-br-md bg-primary text-primary-foreground"
-                                : "rounded-bl-md bg-muted text-foreground"
-                            }`}>
-                              <p className="text-sm leading-relaxed">{msg.text}</p>
-                              <p className={`mt-1 text-[10px] ${msg.sender === "contractor" ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
-                                {msg.time.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Chat Input */}
-                <div className="border-t border-border p-3">
-                  <form
-                    onSubmit={(e) => { e.preventDefault(); handlePreviewSendChat(); }}
-                    className="flex items-end gap-2"
-                  >
-                    <Textarea
-                      placeholder="Type your question..."
-                      value={previewChatInput}
-                      onChange={(e) => setPreviewChatInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handlePreviewSendChat();
-                        }
-                      }}
-                      className="min-h-[42px] max-h-[100px] flex-1 resize-none rounded-2xl px-4 py-2.5 text-sm"
-                      rows={1}
-                    />
-                    <button
-                      type="submit"
-                      disabled={!previewChatInput.trim()}
-                      className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
-                    >
-                      <Send className="h-4 w-4" />
-                    </button>
-                  </form>
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bid Confirmation Dialog */}
-      <Dialog open={showBidConfirm} onOpenChange={setShowBidConfirm}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {previewBidMode === "inspection_only" ? "Confirm Inspection Request" : "Confirm Your Bid"}
-            </DialogTitle>
-            <DialogDescription>
-              Please review the details below before submitting.
-            </DialogDescription>
-          </DialogHeader>
-          {previewJob && (
-            <div className="space-y-4">
-              {/* Type badge */}
-              <div className="flex justify-center">
-                <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-                  previewBidMode === "bid_only"
-                    ? "bg-green-50 text-green-700"
-                    : previewBidMode === "bid_and_inspection"
-                    ? "bg-blue-50 text-blue-700"
-                    : "bg-amber-50 text-amber-700"
-                }`}>
-                  {previewBidMode === "bid_only" ? "Bid Only" : previewBidMode === "bid_and_inspection" ? "Bid + Inspection" : "Inspection Only"}
-                </span>
-              </div>
-
-              <div className="rounded-lg bg-muted/50 p-4">
-                <p className="text-xs text-muted-foreground">Job</p>
-                <p className="text-sm font-semibold text-foreground">{previewJob.title}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{previewJob.location}</p>
-              </div>
-
-              {/* Bid amount & timeline -- not shown for inspection_only */}
-              {previewBidMode !== "inspection_only" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg bg-green-50 p-3">
-                    <p className="text-[10px] font-medium text-green-600">Your Bid</p>
-                    <p className="mt-1 text-lg font-bold text-green-700">
-                      ${Number(previewBidAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-blue-50 p-3">
-                    <p className="text-[10px] font-medium text-blue-600">Timeline</p>
-                    <p className="mt-1 text-lg font-bold text-blue-700">{previewBidTimeline}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Deposit -- shown when bid mode is not inspection_only */}
-              {previewBidMode !== "inspection_only" && previewBidNoDeposit !== null && (
-                <div className={`flex items-center gap-2 rounded-lg p-3 ${
-                  previewBidNoDeposit === true ? "bg-emerald-50" : "bg-violet-50"
-                }`}>
-                  <CreditCard className={`h-4 w-4 ${previewBidNoDeposit === true ? "text-emerald-600" : "text-violet-600"}`} />
-                  <div>
-                    <p className={`text-sm font-medium ${previewBidNoDeposit === true ? "text-emerald-700" : "text-violet-700"}`}>
-                      {previewBidNoDeposit === true ? "No Deposit Required" : `$${Number(previewBidDepositAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Deposit`}
-                    </p>
-                    {previewBidNoDeposit === false && previewBidDepositAmount && (
-                      <p className="text-[10px] text-violet-600">Non-refundable. Applied to total bid amount.</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Financing -- shown when selected */}
-              {previewBidFinancing !== null && (
-                <div className={`flex items-center gap-2 rounded-lg p-3 ${
-                  previewBidFinancing ? "bg-blue-50" : "bg-gray-50"
-                }`}>
-                  <DollarSign className={`h-4 w-4 ${previewBidFinancing ? "text-blue-600" : "text-gray-600"}`} />
-                  <p className={`text-sm font-medium ${previewBidFinancing ? "text-blue-700" : "text-gray-700"}`}>
-                    {previewBidFinancing ? "Financing Available" : "No Financing"}
-                  </p>
-                </div>
-              )}
-
-              {/* Inspection fee -- shown for bid_and_inspection and inspection_only */}
-              {previewBidMode !== "bid_only" && (previewBidFreeInspection || previewBidInspectionFee) && (
-                <div className={`flex items-center gap-2 rounded-lg p-3 ${
-                  previewBidFreeInspection ? "bg-emerald-50" : "bg-amber-50"
-                }`}>
-                  <Eye className={`h-4 w-4 ${previewBidFreeInspection ? "text-emerald-600" : "text-amber-600"}`} />
-                  <p className={`text-sm font-medium ${previewBidFreeInspection ? "text-emerald-700" : "text-amber-700"}`}>
-                    {previewBidFreeInspection ? "Free Inspection" : `$${Number(previewBidInspectionFee).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Inspection Fee`}
-                  </p>
-                </div>
-              )}
-
-              {/* Inspection-only reminder */}
-              {previewBidMode === "inspection_only" && (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                  <p className="text-xs leading-relaxed text-amber-800">
-                    After your on-site inspection, you will be required to submit a bid through HomeBids.
-                  </p>
-                </div>
-              )}
-
-              {previewBidMessage && (
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-[10px] font-medium text-muted-foreground">Your Message</p>
-                  <p className="mt-1 text-xs leading-relaxed text-foreground">{previewBidMessage}</p>
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  className="flex-1 bg-transparent"
-                  onClick={() => setShowBidConfirm(false)}
-                >
-                  Go Back
-                </Button>
-                <Button
-                  className="flex-1 gap-2"
-                  onClick={handleConfirmBidSubmit}
-                >
-                  <Send className="h-4 w-4" />
-                  {previewBidMode === "inspection_only" ? "Confirm Request" : "Confirm & Send"}
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* HomeBids AI Relay Modal */}
-      <Dialog open={showRelayModal} onOpenChange={(open) => { if (!open) setShowRelayModal(false); }}>
+      {/* HomeBids AI Relay Modal (for leads) */}
+      <Dialog open={showRelayLeadModal} onOpenChange={(open) => { if (!open) setShowRelayLeadModal(false); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Message via HomeBids AI</DialogTitle>
@@ -1929,43 +1309,151 @@ export default function ContractorDashboard() {
               Your message will be relayed through HomeBids AI. The homeowner&apos;s contact info stays private until they approve direct messaging.
             </DialogDescription>
           </DialogHeader>
-          {relaySent ? (
+          {relayLeadSent ? (
             <div className="flex flex-col items-center gap-3 py-6 text-center">
               <CheckCircle2 className="h-10 w-10 text-green-600" />
               <p className="font-semibold text-foreground">Message sent via HomeBids AI</p>
               <p className="text-sm text-muted-foreground">
                 The homeowner will receive your message through our relay system. You&apos;ll be notified when they respond or approve direct contact.
               </p>
-              <Button className="mt-2 w-full" onClick={() => setShowRelayModal(false)}>
+              <Button className="mt-2 w-full" onClick={() => setShowRelayLeadModal(false)}>
                 Done
               </Button>
             </div>
           ) : (
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
-                <Label htmlFor="relay-message">Your message</Label>
+                <Label htmlFor="relay-lead-message">Your message</Label>
                 <Textarea
-                  id="relay-message"
-                  value={relayMessage}
-                  onChange={(e) => setRelayMessage(e.target.value)}
+                  id="relay-lead-message"
+                  value={relayLeadMessage}
+                  onChange={(e) => setRelayLeadMessage(e.target.value)}
                   rows={4}
-                  placeholder="Hi, I wanted to follow up on your project..."
+                  placeholder={selectedLead?.suggestedResponse ?? "Hi, I wanted to follow up on your project..."}
                 />
               </div>
               <p className="text-xs text-muted-foreground">
                 HomeBids AI will relay this message to the homeowner on your behalf. Once they approve, direct SMS access will be unlocked.
               </p>
               <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setShowRelayModal(false)} className="bg-transparent">
-                  Cancel
-                </Button>
-                <Button
-                  disabled={!relayMessage.trim()}
-                  onClick={() => setRelaySent(true)}
-                >
+                <Button variant="outline" onClick={() => setShowRelayLeadModal(false)} className="bg-transparent">Cancel</Button>
+                <Button disabled={!relayLeadMessage.trim()} onClick={() => setRelayLeadSent(true)}>
                   <Send className="mr-2 h-4 w-4" />
                   Send via AI Relay
                 </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* HomeBids Lead Detail Modal */}
+      <Dialog open={showLeadDetail} onOpenChange={setShowLeadDetail}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              {selectedLead?.title}
+            </DialogTitle>
+            <DialogDescription>{selectedLead?.category} — {selectedLead?.location}</DialogDescription>
+          </DialogHeader>
+          {selectedLead && (
+            <div className="space-y-4 pt-1">
+              {/* Value + timeline */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg bg-green-50 p-3">
+                  <p className="text-[10px] font-medium text-green-600">Estimated Value</p>
+                  <p className="mt-1 text-lg font-bold text-green-700">{selectedLead.estimatedValue}</p>
+                </div>
+                <div className="rounded-lg bg-blue-50 p-3">
+                  <p className="text-[10px] font-medium text-blue-600">Timeline</p>
+                  <p className="mt-1 text-lg font-bold text-blue-700">{selectedLead.timeline}</p>
+                </div>
+              </div>
+
+              {/* Homeowner goals */}
+              <div className="rounded-lg border border-border p-3">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Homeowner Goals</p>
+                <p className="text-sm text-foreground">{selectedLead.homeownerGoals}</p>
+              </div>
+
+              {/* Scope */}
+              <div className="rounded-lg border border-border p-3">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Scope of Work</p>
+                <p className="text-sm text-foreground">{selectedLead.scope}</p>
+              </div>
+
+              {/* Budget + AI notes */}
+              <div className="rounded-lg border border-border p-3">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Budget Range</p>
+                <p className="text-sm font-semibold text-foreground">{selectedLead.budgetRange}</p>
+              </div>
+
+              <div className="rounded-lg bg-primary/5 border border-primary/20 p-3">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-primary/70">AI Notes</p>
+                <p className="text-sm text-foreground">{selectedLead.aiNotes}</p>
+              </div>
+
+              {/* Suggested strategy */}
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-amber-700">Suggested Strategy</p>
+                <p className="text-sm text-amber-900">{selectedLead.suggestedStrategy}</p>
+              </div>
+
+              {/* Recommended price */}
+              <div className="rounded-lg bg-green-50 border border-green-200 p-3">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-green-700">Recommended Price Range</p>
+                <p className="text-lg font-bold text-green-700">{selectedLead.recommendedPrice}</p>
+              </div>
+
+              {/* Suggested response */}
+              <div className="rounded-lg border border-border p-3">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Suggested Response</p>
+                <p className="text-sm italic text-foreground">&quot;{selectedLead.suggestedResponse}&quot;</p>
+              </div>
+
+              {/* Objections */}
+              <div className="rounded-lg border border-border p-3">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Objection Handling Tips</p>
+                <ul className="space-y-1">
+                  {selectedLead.objections.map((obj, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                      <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" />
+                      {obj}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col gap-2 pt-1">
+                <Button className="w-full gap-2">
+                  <Calculator className="h-4 w-4" />
+                  Generate Bid
+                </Button>
+                {!selectedLead.directMessagingUnlocked ? (
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 bg-transparent"
+                    onClick={() => {
+                      setRelayLeadMessage(selectedLead.suggestedResponse);
+                      setRelayLeadSent(false);
+                      setShowLeadDetail(false);
+                      setTimeout(() => setShowRelayLeadModal(true), 150);
+                    }}
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Message via HomeBids AI
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => { window.location.href = `sms:${selectedLead.homeownerPhone ?? ""}`; }}
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Text Homeowner
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -2003,7 +1491,7 @@ const typeBadge: Record<AiBid["type"], { label: string; class: string }> = {
   draft:     { label: "Draft",     class: "bg-gray-100 text-gray-600" },
 };
 
-function AiGeneratedBidsSection() {
+function AiGeneratedBidsSection({ preview = false }: { preview?: boolean }) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   // Build dates after mount so server and client agree on the initial render.
   const [bids, setBids] = useState<AiBid[]>(() =>
@@ -2024,6 +1512,8 @@ function AiGeneratedBidsSection() {
     );
     setMounted(true);
   }, []);
+
+  const displayBids = preview ? bids.slice(0, 3) : bids;
 
   const handleCopy = (id: string, summary: string) => {
     navigator.clipboard.writeText(summary).catch(() => {});
@@ -2046,7 +1536,7 @@ function AiGeneratedBidsSection() {
 
   return (
     <div className="space-y-3">
-      {bids.map((bid) => {
+      {displayBids.map((bid) => {
         const badge = typeBadge[bid.type];
         const isCopied = copiedId === bid.id;
         return (

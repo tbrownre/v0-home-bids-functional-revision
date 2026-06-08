@@ -26,6 +26,17 @@ export const homeownerNavItems: NavItem[] = [
   { label: "New Job",      href: "/new-job" },
 ];
 
+// Single source of truth for contractor logged-in navigation.
+// Sign Out is intentionally excluded — it must be appended as an action, not a link.
+export const contractorNavItems: NavItem[] = [
+  { label: "Dashboard",         href: "/contractors/dashboard",          match: ["/contractors/dashboard"] },
+  { label: "HomeBids AI Leads", href: "/contractors/dashboard?tab=homebids", match: [] },
+  { label: "My Leads",          href: "/contractors/dashboard?tab=myleads",  match: [] },
+  { label: "AI Generated Bids", href: "/contractors/bids",               match: ["/contractors/bids"] },
+  { label: "Pricing",           href: "/subscribe",                      match: ["/subscribe"] },
+  { label: "Settings",          href: "/contractors/settings",           match: ["/contractors/settings"] },
+];
+
 // Helper to determine whether a nav item should be highlighted.
 export function isNavItemActive(item: NavItem, pathname: string): boolean {
   // Exact match on href (strip query strings for comparison)
