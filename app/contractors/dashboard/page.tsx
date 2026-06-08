@@ -225,36 +225,7 @@ function getCustomerResponse(message: string, tone: string, goal: string) {
 type Tab = "home" | "leads" | "ai" | "account";
 type AiTool = "bid" | "pricecheck" | "response" | null;
 
-// ── Sidebar nav item ──────────────────────────────────────────────────────────
 
-function SidebarNavItem({
-  id,
-  label,
-  icon: Icon,
-  isActive,
-  onClick,
-}: {
-  id: Tab;
-  label: string;
-  icon: React.ElementType;
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-        isActive
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-      }`}
-    >
-      <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
-      {label}
-    </button>
-  );
-}
 
 // ── Main component ────────────────────────────────────────────────────────────
 
@@ -1074,56 +1045,16 @@ export default function ContractorDashboard() {
       <Header isContractor isSignedIn />
       <ScrollToTop />
 
-      {/*
-        Mobile: full-width single column, bottom nav
-        Desktop: fixed left sidebar + scrollable main content area
-      */}
-      <div className="flex flex-1">
+      {/* Main content — full width, centered, hamburger-only nav */}
+      <main className="flex-1 min-w-0">
+        <div className="mx-auto w-full max-w-2xl px-4 pb-28 pt-6 lg:max-w-3xl lg:px-8 lg:pb-24 lg:pt-8">
+          {tabContent[activeTab]}
+        </div>
+      </main>
 
-        {/* ── Desktop left sidebar ── */}
-        <aside className="hidden lg:flex lg:w-56 lg:flex-col lg:border-r lg:border-border lg:bg-card">
-          {/* Sticky inner */}
-          <div className="sticky top-0 flex flex-col gap-1 p-4 pt-8">
-            <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Workspace</p>
-            {tabs.map((tab) => (
-              <SidebarNavItem
-                key={tab.id}
-                id={tab.id}
-                label={tab.label}
-                icon={tab.icon}
-                isActive={activeTab === tab.id}
-                onClick={() => handleTabChange(tab.id)}
-              />
-            ))}
-            <div className="mt-4 border-t border-border pt-4">
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600"
-              >
-                <LogOut className="h-4 w-4 shrink-0" />
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </aside>
-
-        {/* ── Main content ── */}
-        <main className="flex-1 min-w-0">
-          {/* Mobile: compact padding + bottom nav offset */}
-          <div className="mx-auto w-full max-w-lg px-4 pb-28 pt-6 lg:hidden">
-            {tabContent[activeTab]}
-          </div>
-          {/* Desktop: generous padding, no bottom nav offset, wider container */}
-          <div className="hidden lg:block mx-auto w-full max-w-5xl px-8 py-8">
-            {tabContent[activeTab]}
-          </div>
-        </main>
-      </div>
-
-      {/* ── Mobile bottom tab bar (hidden on desktop) ── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background lg:hidden">
-        <div className="mx-auto flex max-w-lg">
+      {/* ── Bottom tab bar — all screen sizes ── */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background">
+        <div className="mx-auto flex max-w-3xl">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
