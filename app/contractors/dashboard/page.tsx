@@ -24,7 +24,6 @@ import {
   Eye,
   CheckCircle2,
   Users,
-  FileText,
   Send,
   Calculator,
   Sparkles,
@@ -44,12 +43,6 @@ import {
   ExternalLink,
   DollarSign,
   TrendingUp,
-  ChevronDown,
-  ChevronUp,
-  Plus,
-  X,
-  AlertCircle,
-  Download,
   Shield,
 } from "lucide-react";
 import { BidBuilderChat, type BidLeadType, type BidChatLeadContext } from "@/components/bid-builder-chat";
@@ -97,15 +90,6 @@ interface MyLead {
   lastActivity: string;
   aiStatus: "estimate_ready" | "response_sent" | "followup_ready";
   phone?: string;
-}
-
-interface ScopeItem {
-  id: string;
-  label: string;
-  description: string;
-  included: boolean;
-  type: "labor" | "materials" | "optional" | "excluded";
-  editable: boolean;
 }
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
@@ -192,18 +176,6 @@ const DEMO_MY_LEADS: MyLead[] = [
   { id: "ml-3", customerName: "Janet B.", projectTitle: "Bathroom Remodel Follow-Up", category: "Remodel", estimatedValue: "$12,000", status: "open", lastActivity: "Follow-up draft ready", aiStatus: "followup_ready" },
 ];
 
-const DEFAULT_SCOPE_ITEMS: ScopeItem[] = [
-  { id: "1", label: "Remove cabinet doors and hardware", description: "All doors, drawers, and hardware labeled and safely stored", included: true, type: "labor", editable: true },
-  { id: "2", label: "Clean and degrease surfaces", description: "TSP wash to remove grease and contaminants", included: true, type: "labor", editable: true },
-  { id: "3", label: "Sand and prep cabinet faces", description: "Light sanding (220 grit) for paint adhesion", included: true, type: "labor", editable: true },
-  { id: "4", label: "Prime surfaces", description: "High-adhesion bonding primer", included: true, type: "materials", editable: true },
-  { id: "5", label: "Apply professional finish coat (2 coats)", description: "Benjamin Moore Advance or Sherwin Williams Emerald Urethane", included: true, type: "materials", editable: true },
-  { id: "6", label: "Reinstall doors and hardware", description: "All components reinstalled and aligned", included: true, type: "labor", editable: true },
-  { id: "7", label: "Cleanup work area", description: "Remove dust, debris, and protect floors", included: true, type: "labor", editable: true },
-  { id: "8", label: "Soft-close hinges upgrade", description: "Add soft-close hardware to all doors (optional upgrade)", included: false, type: "optional", editable: true },
-  { id: "9", label: "Cabinet box replacement", description: "Replacement of cabinet boxes not included", included: false, type: "excluded", editable: true },
-];
-
 // ── AI helper functions ────────────────────────────────────────────────────────
 
 function getBidDefenderResponse(projectType: string, bidAmount: string, objection: string) {
@@ -232,7 +204,6 @@ function getBidDefenderResponse(projectType: string, bidAmount: string, objectio
 
 type Tab = "home" | "leads" | "ai" | "account";
 type AiTool = "bid" | "defender" | null;
-type BidStep = "notes" | "review" | "scope" | "pricing" | "draft";
 
 // ── AI assistant suggestions ───────────────────────────────────────────────────
 
@@ -349,6 +320,11 @@ export default function ContractorDashboard() {
     setUnlockedLeadIds((prev) => new Set(prev).add(leadId));
   }
 
+  // A HomeBids lead's direct messaging is unlocked if it started unlocked OR was approved this session
+  function isMessagingUnlocked(lead: HomeBidsLead) {
+    return lead.directMessagingUnlocked || unlockedLeadIds.has(lead.id);
+  }
+
   // ── Bid Defender state ─────────────────────────────────────────────────────
 
   const [defProject, setDefProject] = useState("");
@@ -421,7 +397,7 @@ export default function ContractorDashboard() {
         </div>
         <p className="mt-2 text-[11px] italic text-primary/80">{lead.aiNotes}</p>
         <div className="mt-2">
-          {lead.directMessagingUnlocked ? (
+          {isMessagingUnlocked(lead) ? (
             <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700 w-fit">
               <Unlock className="h-3 w-3" /> Direct texting unlocked
             </span>
@@ -435,13 +411,13 @@ export default function ContractorDashboard() {
           <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
             <Eye className="h-3.5 w-3.5" /> Details
           </Button>
-          {lead.directMessagingUnlocked ? (
+          {isMessagingUnlocked(lead) ? (
             <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => openSms(lead.homeownerPhone)}>
               <MessageCircle className="h-3 w-3" /> Text Homeowner
             </Button>
           ) : lead.status === "new" ? (
-            <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => openBidBuilder(lead)}>
-              <Calculator className="h-3 w-3" /> Build Bid
+            <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => startBidFromHomeBidsLead(lead)}>
+              <MessageCircle className="h-3 w-3" /> Start Bid by Text
             </Button>
           ) : (
             <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); }}>
@@ -490,7 +466,7 @@ export default function ContractorDashboard() {
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Suggested actions</h2>
           <div className="space-y-2">
             {[
-              { icon: Calculator, label: "Build a professional bid", sub: "Kitchen Cabinet Repaint", action: () => openBidBuilder(DEMO_HOMEBIDS_LEADS[0]) },
+              { icon: MessageCircle, label: "Build a professional bid", sub: "Kitchen Cabinet Repaint", action: () => startBidFromHomeBidsLead(DEMO_HOMEBIDS_LEADS[0]) },
               { icon: Eye, label: "Homeowner reviewing bid", sub: "Backyard Turf Install", action: () => handleTabChange("leads") },
               { icon: Unlock, label: "Approval unlocked", sub: "Bathroom Vanity Replacement", action: () => handleTabChange("leads") },
               { icon: Shield, label: "Defend a lost bid", sub: "Use Bid Defender to recover leads", action: () => { handleTabChange("ai"); setActiveTool("defender"); } },
@@ -630,7 +606,7 @@ export default function ContractorDashboard() {
                 </div>
                 <p className="mt-1.5 text-[11px] italic text-primary/80 line-clamp-2">{lead.aiNotes}</p>
                 <div className="mt-1.5">
-                  {lead.directMessagingUnlocked ? (
+                  {isMessagingUnlocked(lead) ? (
                     <span className="flex w-fit items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">
                       <Unlock className="h-3 w-3" /> Direct messaging unlocked
                     </span>
@@ -642,10 +618,10 @@ export default function ContractorDashboard() {
                   <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
                     <Eye className="h-3 w-3" /> Details
                   </Button>
-                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => openBidBuilder(lead)}>
-                    <Calculator className="h-3 w-3" /> Build Bid
+                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => startBidFromHomeBidsLead(lead)}>
+                    <MessageCircle className="h-3 w-3" /> Start Bid by Text
                   </Button>
-                  {lead.directMessagingUnlocked ? (
+                  {isMessagingUnlocked(lead) ? (
                     <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => openSms(lead.homeownerPhone)}>
                       <MessageCircle className="h-3 w-3" /> Text Homeowner
                     </Button>
@@ -768,6 +744,7 @@ export default function ContractorDashboard() {
             companyName={companyName}
             onClose={closeBidBuilder}
             onHomeownerApproved={handleHomeownerApproved}
+            onOpenDefender={() => setActiveTool("defender")}
           />
         </div>
       );
@@ -799,27 +776,27 @@ export default function ContractorDashboard() {
           {/* Bid Builder card */}
           <button
             type="button"
-            onClick={() => createNewBid()}
+            onClick={() => startBidByText("my", null)}
             className="group flex flex-col rounded-2xl border-2 border-border bg-card p-6 text-left transition-all hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5"
           >
             <div className="flex items-start justify-between">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary/20">
-                <Calculator className="h-6 w-6 text-primary" />
+                <MessageCircle className="h-6 w-6 text-primary" />
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
             </div>
             <h3 className="mt-4 text-lg font-bold text-foreground">Bid Builder</h3>
             <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-              Build professional estimates with a live PDF preview. AI guides your scope, pricing, and wording in real time.
+              Text rough job notes and HomeBids AI writes the whole bid for you — scope, pricing, and wording. Approve it and we generate the PDF.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              {["Scope Builder", "Live PDF Preview", "AI Guidance", "Submit"].map((tag) => (
+              {["Text-to-Bid", "AI Drafting", "Live PDF", "One-Tap Approve"].map((tag) => (
                 <span key={tag} className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-medium text-primary">{tag}</span>
               ))}
             </div>
             <div className="mt-5">
               <span className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors group-hover:bg-primary/90">
-                <Zap className="h-4 w-4" /> Create New Bid
+                <MessageCircle className="h-4 w-4" /> Start Bid by Text
               </span>
             </div>
           </button>
@@ -862,7 +839,7 @@ export default function ContractorDashboard() {
                 <button
                   key={lead.id}
                   type="button"
-                  onClick={() => openBidBuilder(lead)}
+                  onClick={() => startBidFromHomeBidsLead(lead)}
                   className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
                 >
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -1058,10 +1035,10 @@ export default function ContractorDashboard() {
                 </ul>
               </div>
               <div className="flex flex-col gap-2 pt-1">
-                <Button className="w-full gap-2" onClick={() => { setShowLeadDetail(false); openBidBuilder(selectedLead); }}>
-                  <Calculator className="h-4 w-4" /> Build Bid
-                </Button>
-                {!selectedLead.directMessagingUnlocked ? (
+              <Button className="w-full gap-2" onClick={() => { setShowLeadDetail(false); startBidFromHomeBidsLead(selectedLead); }}>
+                <MessageCircle className="h-4 w-4" /> Start Bid by Text
+              </Button>
+                {!isMessagingUnlocked(selectedLead) ? (
                   <Button variant="outline" className="w-full gap-2 bg-transparent" onClick={() => { setRelayLead(selectedLead); setRelayMessage(selectedLead.suggestedResponse); setRelaySent(false); setShowLeadDetail(false); setTimeout(() => setShowRelayModal(true), 150); }}>
                     <MessageCircle className="h-4 w-4" /> Message via HomeBids AI
                   </Button>

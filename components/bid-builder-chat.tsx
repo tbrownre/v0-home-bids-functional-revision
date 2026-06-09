@@ -74,6 +74,8 @@ interface Props {
   onClose: () => void;
   // Called for HomeBids leads when the homeowner approves the bid in the demo flow
   onHomeownerApproved?: (leadId: string) => void;
+  // Switch the dashboard to the Bid Defender tool (lead recovery)
+  onOpenDefender?: () => void;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -102,12 +104,35 @@ function titleCase(s: string) {
 }
 
 // Pull a dollar amount from free text → returns formatted "$5,200"
+// Prefers $-prefixed or budget/price-context numbers and skips phone-number fragments.
 function extractPrice(text: string): string | null {
-  const m = text.match(/\$?\s?(\d{1,3}(?:[,\s]\d{3})+|\d{3,6})(?:\.\d{2})?/);
-  if (!m) return null;
-  const num = parseInt(m[1].replace(/[,\s]/g, ""), 10);
-  if (isNaN(num) || num < 50) return null;
-  return `$${num.toLocaleString()}`;
+  // Strip phone-number-like sequences so they aren't mistaken for pricing
+  const cleaned = text.replace(/\b\d{3}[-.\s]\d{3}[-.\s]\d{4}\b/g, " ").replace(/\b\d{3}[-.\s]\d{4}\b/g, " ");
+
+  const toPrice = (raw: string): string | null => {
+    const num = parseInt(raw.replace(/[,\s]/g, ""), 10);
+    if (isNaN(num) || num < 100) return null;
+    return `$${num.toLocaleString()}`;
+  };
+
+  // 1) Explicit $ amount
+  const dollar = cleaned.match(/\$\s?(\d{1,3}(?:[,\s]\d{3})+|\d{3,7})(?:\.\d{2})?/);
+  if (dollar) {
+    const p = toPrice(dollar[1]);
+    if (p) return p;
+  }
+
+  // 2) Amount following a pricing keyword (budget, price, around, about, ~, cost)
+  const ctx = cleaned.match(/(?:budget|price|around|about|approx(?:imately)?|cost|total|roughly|~)\D{0,12}(\d{1,3}(?:[,\s]\d{3})+|\d{3,7})/i);
+  if (ctx) {
+    const p = toPrice(ctx[1]);
+    if (p) return p;
+  }
+
+  // 3) Fallback: first standalone number that looks like money
+  const any = cleaned.match(/\b(\d{1,3}(?:[,\s]\d{3})+|\d{3,7})\b/);
+  if (any) return toPrice(any[1]);
+  return null;
 }
 
 function extractTimeline(text: string): string | null {
@@ -225,6 +250,7 @@ export function BidBuilderChat({
   companyName,
   onClose,
   onHomeownerApproved,
+  onOpenDefender,
 }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -688,7 +714,7 @@ export function BidBuilderChat({
       )}
 
       {phase === "declined" && (
-        <Button size="sm" className="w-full gap-1.5 bg-emerald-600 text-xs text-white hover:bg-emerald-700" onClick={onClose}>
+        <Button size="sm" className="w-full gap-1.5 bg-emerald-600 text-xs text-white hover:bg-emerald-700" onClick={() => (onOpenDefender ?? onClose)()}>
           <Shield className="h-3.5 w-3.5" /> Open Bid Defender
         </Button>
       )}
