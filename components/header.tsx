@@ -3,9 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import React, { useState, useEffect, useRef, useSyncExternalStore } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle, LayoutDashboard, Sparkles, Users, Wrench } from "lucide-react";
-import { homeownerNavItems, loggedOutNavItems, contractorNavItems, isNavItemActive } from "@/lib/navigation";
+import { homeownerNavItems, loggedOutNavItems, contractorNavItems } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
 import { SignInModal } from "@/components/sign-in-modal";
 import {
@@ -47,12 +47,19 @@ function getNotificationColor(type: NotificationType) {
   }
 }
 
-export function Header({ isContractor: isContractorProp = false, isSignedIn: isSignedInProp = false, backHref, backLabel, onSignIn }: HeaderProps) {
+export function Header({
+  isContractor: isContractorProp = false,
+  isSignedIn: isSignedInProp = false,
+  backHref,
+  backLabel,
+  onSignIn,
+}: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
-  const menuRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
 
   const closeMenu = () => {
@@ -60,9 +67,6 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
     (document.activeElement as HTMLElement)?.blur();
   };
 
-  // Imperative logo navigation — always goes to "/" regardless of auth state.
-  // Using router.push instead of a Link href avoids any query-param conflicts
-  // and ensures the click fires even when the menu is partially open.
   const handleLogoClick = (e: React.MouseEvent | React.KeyboardEvent) => {
     if ("key" in e && e.key !== "Enter" && e.key !== " ") return;
     e.preventDefault();
@@ -70,18 +74,14 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
     router.push("/");
   };
 
-  // Close menu on every route change (catches both Link clicks and window.location)
-  useEffect(() => {
-    closeMenu();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+  // Close on route change
+  useEffect(() => { closeMenu(); }, [pathname]);
 
-  // Close when tab loses focus (handles window.location navigations)
+  // Close when tab loses focus
   useEffect(() => {
     const handler = () => { if (document.hidden) closeMenu(); };
     document.addEventListener("visibilitychange", handler);
     return () => document.removeEventListener("visibilitychange", handler);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Close on outside click
@@ -89,39 +89,30 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
     if (!menuOpen) return;
     function handleOutside(e: MouseEvent) {
       const target = e.target as Node;
-      if (!menuRef.current?.contains(target) && !panelRef.current?.contains(target)) {
+      if (!triggerRef.current?.contains(target) && !panelRef.current?.contains(target)) {
         closeMenu();
       }
     }
     document.addEventListener("mousedown", handleOutside);
     return () => document.removeEventListener("mousedown", handleOutside);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [menuOpen]);
 
-  // Close on Escape key
+  // Close on Escape
   useEffect(() => {
     if (!menuOpen) return;
-    function handleEscape(e: KeyboardEvent) {
-      if (e.key === "Escape") closeMenu();
-    }
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") closeMenu(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
   }, [menuOpen]);
 
-  // Auth state — initialise from props (same on server and client) and
-  // correct for mock/Supabase data after mount in the effect below.
+  // Auth state — safe initial values match server render
   const [isSignedIn, setIsSignedIn] = useState(isSignedInProp);
   const [isContractor, setIsContractor] = useState(isContractorProp);
   const isLoggedIn = isContractor || isSignedIn;
-
-  // Track client mount so hydration-sensitive values (unread badge, auth
-  // from window/localStorage) are only applied after the first render.
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-
     if (USE_MOCK_DATA) {
       const user = getMockUser();
       if (user) {
@@ -130,7 +121,6 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
       }
       return;
     }
-
     let subscription: { unsubscribe: () => void } | null = null;
     try {
       const supabase = createClient();
@@ -150,68 +140,191 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
     return () => subscription?.unsubscribe();
   }, []);
 
-  // Inbox state — server snapshot always returns 0 to avoid hydration mismatch.
+  // Unread badge — server snapshot is always 0 to prevent hydration mismatch
   const unreadSnapshot = useSyncExternalStore(
     subscribeInbox,
     isContractor ? getContractorUnreadSnapshot : getHomeownerUnreadSnapshot,
     () => 0,
   );
-  // Only use the live count after mount so server HTML and first client render match.
   const unreadCount = mounted && isLoggedIn ? unreadSnapshot : 0;
 
   const handleSignOut = async () => {
     closeMenu();
-    if (USE_MOCK_DATA) {
-      mockSignOut();
-      return;
-    }
+    if (USE_MOCK_DATA) { mockSignOut(); return; }
     const supabase = createClient();
     await supabase.auth.signOut();
     window.location.href = "/";
   };
 
-  const menuItemClass = "flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted cursor-pointer";
-  const separatorClass = "my-1 border-t border-border";
+  // Determine active contractor tab from search param so only one item highlights
+  const activeContractorTab = searchParams?.get("tab") ?? "home";
+
+  const menuItemBase = "flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted cursor-pointer";
+  const menuItemActive = "bg-primary/10 text-primary font-medium";
+  const separator = "my-1 border-t border-border";
 
   return (
     <header className="relative shrink-0 border-b border-border bg-background">
-      <div className="mx-auto grid grid-cols-[1fr_auto_1fr] items-center px-4 py-2 md:px-6">
+      <div className="mx-auto grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-2 md:px-5">
 
-        {/* Left: menu button + optional back link */}
-        <div className="flex items-center gap-1">
-          {/* Trigger */}
+        {/* Left: hamburger trigger — wrapped in a relative container so the
+            panel can be anchored to THIS element, not the header edge */}
+        <div className="relative flex items-center">
           <button
-            ref={menuRef as React.RefObject<HTMLButtonElement>}
+            ref={triggerRef}
             type="button"
             onClick={() => setMenuOpen((o) => !o)}
-            className="relative flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="relative flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             aria-label={`Menu${unreadCount > 0 ? ` (${unreadCount} notifications)` : ""}`}
             aria-expanded={menuOpen}
             aria-haspopup="true"
           >
-            <Menu style={{ width: "22px", height: "22px" }} />
+            <Menu className="h-5 w-5" />
             {isLoggedIn && unreadCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </button>
+
+          {/* Dropdown panel — anchored to the trigger container */}
+          {menuOpen && (
+            <div
+              ref={panelRef}
+              role="menu"
+              className="absolute left-0 top-[calc(100%+6px)] z-[200] w-56 rounded-xl border border-border bg-background shadow-xl ring-1 ring-black/5"
+              style={{ padding: "6px" }}
+            >
+              {/* Signed-out nav */}
+              {!isLoggedIn && (
+                <>
+                  {loggedOutNavItems.map((item) => {
+                    const hrefPath = item.href.split("?")[0];
+                    const isActive = hrefPath === "/" ? pathname === "/" : pathname.startsWith(hrefPath);
+                    return (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        role="menuitem"
+                        className={`${menuItemBase} ${isActive ? menuItemActive : ""}`}
+                        onClick={closeMenu}
+                      >
+                        {item.label === "Home"         && <Home       className="h-4 w-4 shrink-0" />}
+                        {item.label === "How It Works" && <HelpCircle className="h-4 w-4 shrink-0" />}
+                        {item.label === "Services"     && <Briefcase  className="h-4 w-4 shrink-0" />}
+                        {item.label === "Contractors"  && <Hammer     className="h-4 w-4 shrink-0" />}
+                        {item.label === "Pricing"      && <FileText   className="h-4 w-4 shrink-0" />}
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                  <div className={separator} />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { setMenuOpen(false); setShowSignIn(true); }}
+                    className={menuItemBase}
+                  >
+                    <LogIn className="h-4 w-4 shrink-0" />
+                    Contractor Sign In
+                  </button>
+                </>
+              )}
+
+              {/* Homeowner nav */}
+              {isLoggedIn && !isContractor && (
+                <>
+                  {homeownerNavItems.map((item) => {
+                    const hrefPath = item.href.split("?")[0];
+                    const isActive =
+                      (hrefPath === "/" && pathname === "/") ||
+                      (hrefPath !== "/" && pathname.startsWith(hrefPath)) ||
+                      (item.match?.some((m) => pathname === m || pathname.startsWith(m + "/")) ?? false);
+                    const isInbox = item.match?.includes("/inbox");
+                    const isHome = item.label === "Home";
+                    return (
+                      <React.Fragment key={item.label}>
+                        {item.label === "Your Jobs" && <div className={separator} />}
+                        <Link
+                          href={item.href}
+                          role="menuitem"
+                          className={`${menuItemBase} ${isActive ? menuItemActive : ""}`}
+                          onClick={() => {
+                            if (isHome) window.dispatchEvent(new CustomEvent("hb:home"));
+                            closeMenu();
+                          }}
+                        >
+                          {item.label === "Home"         && <Home          className="h-4 w-4 shrink-0" />}
+                          {item.label === "Services"     && <Briefcase     className="h-4 w-4 shrink-0" />}
+                          {item.label === "How It Works" && <HelpCircle    className="h-4 w-4 shrink-0" />}
+                          {item.label === "Your Jobs"    && <FileText      className="h-4 w-4 shrink-0" />}
+                          {item.label === "Inbox"        && <MessageCircle className="h-4 w-4 shrink-0" />}
+                          {item.label === "Profile"      && <Home          className="h-4 w-4 shrink-0" />}
+                          {item.label === "New Job"      && <PlusCircle    className="h-4 w-4 shrink-0" />}
+                          <span className="flex-1">{item.label}</span>
+                          {isInbox && unreadCount > 0 && (
+                            <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white leading-none">
+                              {unreadCount > 9 ? "9+" : unreadCount}
+                            </span>
+                          )}
+                        </Link>
+                      </React.Fragment>
+                    );
+                  })}
+                  <div className={separator} />
+                  <button type="button" role="menuitem" onClick={handleSignOut} className={`${menuItemBase} text-red-600 hover:text-red-600`}>
+                    <LogOut className="h-4 w-4 shrink-0" />
+                    Sign Out
+                  </button>
+                </>
+              )}
+
+              {/* Contractor nav */}
+              {isLoggedIn && isContractor && (
+                <>
+                  {contractorNavItems.map((item) => {
+                    const tabParam = item.href.split("tab=")[1] ?? "home";
+                    const isActive = activeContractorTab === tabParam;
+                    return (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        role="menuitem"
+                        className={`${menuItemBase} ${isActive ? menuItemActive : ""}`}
+                        onClick={closeMenu}
+                      >
+                        {item.label === "Home"     && <LayoutDashboard className="h-4 w-4 shrink-0" />}
+                        {item.label === "Leads"    && <Users           className="h-4 w-4 shrink-0" />}
+                        {item.label === "AI Tools" && <Sparkles        className="h-4 w-4 shrink-0" />}
+                        {item.label === "Account"  && <Wrench          className="h-4 w-4 shrink-0" />}
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                  <div className={separator} />
+                  <button type="button" role="menuitem" onClick={handleSignOut} className={`${menuItemBase} text-red-600 hover:text-red-600`}>
+                    <LogOut className="h-4 w-4 shrink-0" />
+                    Sign Out
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Center: Logo — imperative navigation to "/" on click/tap/keyboard */}
+        {/* Center: Logo */}
         <button
           type="button"
           aria-label="Go to HomeBids homepage"
           onClick={handleLogoClick}
           onKeyDown={handleLogoClick}
-          className="flex items-center justify-center cursor-pointer"
+          className="flex items-center justify-center"
           style={{
             background: "none",
             border: "none",
-            padding: "4px 8px",
-            zIndex: 10,
-            position: "relative",
+            padding: 0,
             WebkitTapHighlightColor: "transparent",
+            cursor: "pointer",
           }}
         >
           <Image
@@ -220,14 +333,14 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
             width={480}
             height={120}
             className="object-contain pointer-events-none"
-            style={{ height: "clamp(112px, 20vw, 160px)", width: "auto" }}
+            style={{ height: "clamp(56px, 12vw, 96px)", width: "auto" }}
             priority
           />
         </button>
 
-        {/* Right: spacer that mirrors the left column so the logo stays mathematically centered */}
+        {/* Right: back link or spacer */}
         <div className="flex items-center justify-end">
-          {backHref && (
+          {backHref ? (
             <Link
               href={backHref}
               className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -235,118 +348,14 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">{backLabel || "Back"}</span>
             </Link>
+          ) : (
+            // Spacer to keep logo centered
+            <div className="w-9" />
           )}
         </div>
       </div>
 
-      {/* Dropdown menu panel — rendered as direct child of <header> so
-          position:absolute is relative to the header, not the grid column.
-          This prevents overflow clipping from the grid layout. */}
-      {menuOpen && (
-        <div
-          ref={panelRef}
-          role="menu"
-          className="absolute left-3 top-full z-50 w-64 rounded-xl border border-border bg-background p-1.5 shadow-lg"
-        >
-          {/* Nav items — logged out */}
-          {!isLoggedIn && (
-            <>
-              {loggedOutNavItems.map((item) => (
-                <Link key={item.label} href={item.href} className={menuItemClass} onClick={closeMenu}>
-                  {item.label === "Home"         && <Home       className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                  {item.label === "How It Works" && <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                  {item.label === "Services"     && <Briefcase  className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                  {item.label === "Contractors"  && <Hammer     className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                  {item.label === "Pricing"      && <FileText   className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                  {item.label}
-                </Link>
-              ))}
-              <div className={separatorClass} />
-              <button
-                type="button"
-                onClick={() => { setMenuOpen(false); setShowSignIn(true); }}
-                className={menuItemClass}
-              >
-                <LogIn className="h-4 w-4 shrink-0 text-muted-foreground" />
-                Contractor Sign In
-              </button>
-            </>
-          )}
-
-          {/* Nav items — logged in homeowner */}
-          {isLoggedIn && !isContractor && (
-            <>
-              {homeownerNavItems.map((item) => {
-                const active = isNavItemActive(item, pathname);
-                const isInbox = item.match?.includes("/inbox");
-                const isHome = item.label === "Home";
-                return (
-                  <React.Fragment key={item.label}>
-                    {item.label === "Your Jobs" && <div className="my-2 border-t border-border" />}
-                    <Link
-                      href={item.href}
-                      className={`${menuItemClass}${active ? " bg-muted font-medium" : ""}`}
-                      onClick={() => {
-                        if (isHome) window.dispatchEvent(new CustomEvent("hb:home"));
-                        closeMenu();
-                      }}
-                    >
-                      {item.label === "Home"         && <Home          className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      {item.label === "Services"     && <Briefcase     className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      {item.label === "How It Works" && <HelpCircle    className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      {item.label === "Your Jobs"    && <FileText      className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      {item.label === "Inbox"        && <MessageCircle className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      {item.label === "Profile"      && <Home          className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      {item.label === "New Job"      && <PlusCircle    className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      <span className="flex-1">{item.label}</span>
-                      {isInbox && unreadCount > 0 && (
-                        <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                          {unreadCount > 9 ? "9+" : unreadCount}
-                        </span>
-                      )}
-                    </Link>
-                  </React.Fragment>
-                );
-              })}
-              <div className={separatorClass} />
-              <button type="button" onClick={handleSignOut} className={`${menuItemClass} text-red-600 hover:text-red-600`}>
-                <LogOut className="h-4 w-4 shrink-0" />
-                Sign Out
-              </button>
-            </>
-          )}
-
-          {/* Nav items — logged in contractor */}
-          {isLoggedIn && isContractor && (
-            <>
-              {contractorNavItems.map((item) => {
-                const active = isNavItemActive(item, pathname);
-                return (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className={`${menuItemClass}${active ? " bg-muted font-medium" : ""}`}
-                    onClick={closeMenu}
-                  >
-                    {item.label === "Home"     && <LayoutDashboard className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                    {item.label === "Leads"    && <Users           className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                    {item.label === "AI Tools" && <Sparkles        className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                    {item.label === "Account"  && <Wrench          className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                    {item.label}
-                  </Link>
-                );
-              })}
-              <div className={separatorClass} />
-              <button type="button" onClick={handleSignOut} className={`${menuItemClass} text-red-600 hover:text-red-600`}>
-                <LogOut className="h-4 w-4 shrink-0" />
-                Sign Out
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Sign In Modal */}      {!isLoggedIn && (
+      {!isLoggedIn && (
         <SignInModal
           open={showSignIn}
           onOpenChange={(val) => {
@@ -358,9 +367,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
             setMenuOpen(false);
             if (type === "homeowner") {
               onSignIn?.();
-              if (!onSignIn) {
-                window.location.href = "/?showJobs=true";
-              }
+              if (!onSignIn) window.location.href = "/?showJobs=true";
             }
           }}
         />

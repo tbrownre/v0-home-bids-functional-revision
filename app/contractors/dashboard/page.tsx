@@ -1467,33 +1467,10 @@ export default function ContractorDashboard() {
       <ScrollToTop />
 
       <main className="flex-1 min-w-0">
-        <div className="mx-auto w-full max-w-2xl px-4 pb-28 pt-6 lg:max-w-4xl lg:px-8 lg:pb-24 lg:pt-8">
+        <div className="mx-auto w-full max-w-2xl px-4 pb-8 pt-6 lg:max-w-4xl lg:px-8 lg:pb-12 lg:pt-8">
           {tabContent[activeTab]}
         </div>
       </main>
-
-      {/* Bottom tab bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background">
-        <div className="mx-auto flex max-w-3xl">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => handleTabChange(tab.id)}
-                className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors ${
-                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Icon className={`h-5 w-5 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
 
       {/* Relay Modal */}
       <Dialog open={showRelayModal} onOpenChange={(open) => { if (!open) setShowRelayModal(false); }}>
