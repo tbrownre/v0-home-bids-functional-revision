@@ -231,7 +231,7 @@ function getBidDefenderResponse(projectType: string, bidAmount: string, objectio
 
 type Tab = "home" | "leads" | "ai" | "account";
 type AiTool = "bid" | "defender" | null;
-type BidStep = "review" | "scope" | "pricing" | "draft";
+type BidStep = "notes" | "review" | "scope" | "pricing" | "draft";
 
 // ── AI assistant suggestions ───────────────────────────────────────────────────
 
@@ -309,7 +309,18 @@ export default function ContractorDashboard() {
   // ── Bid Builder state ──────────────────────────────────────────────────────
 
   const [bidBuilderLead, setBidBuilderLead] = useState<HomeBidsLead | null>(null);
-  const [bidStep, setBidStep] = useState<BidStep>("review");
+  const [bidStep, setBidStep] = useState<BidStep>("notes");
+
+  // Rough notes entry (step 1)
+  const [roughNotes, setRoughNotes] = useState("");
+  const [roughCustomer, setRoughCustomer] = useState("");
+  const [roughLocation, setRoughLocation] = useState("");
+  const [roughTimeline, setRoughTimeline] = useState("");
+  const [roughBudget, setRoughBudget] = useState("");
+
+  // AI follow-up answers
+  const [aiFollowUpAnswers, setAiFollowUpAnswers] = useState<string[]>(["", "", "", ""]);
+  const [aiOrganizing, setAiOrganizing] = useState(false);
   const [scopeItems, setScopeItems] = useState<ScopeItem[]>(DEFAULT_SCOPE_ITEMS);
   const [expandedScopes, setExpandedScopes] = useState<Record<string, boolean>>({});
   const [laborCost, setLaborCost] = useState("800");
@@ -383,9 +394,17 @@ export default function ContractorDashboard() {
     setBidDraft(draft);
   }
 
-  function openBidBuilder(lead: HomeBidsLead) {
-    setBidBuilderLead(lead);
-    setBidStep("review");
+  function createNewBid(lead?: HomeBidsLead) {
+    // Always start completely fresh — no stale data ever carries over
+    setBidBuilderLead(lead ?? null);
+    setBidStep("notes");
+    setRoughNotes(lead ? `${lead.title}. ${lead.scope}` : "");
+    setRoughCustomer(lead ? lead.homeownerName : "");
+    setRoughLocation(lead ? lead.location : "");
+    setRoughTimeline(lead ? lead.timeline : "");
+    setRoughBudget(lead ? lead.budgetRange : "");
+    setAiFollowUpAnswers(["", "", "", ""]);
+    setAiOrganizing(false);
     setScopeItems(DEFAULT_SCOPE_ITEMS);
     setLaborCost("800");
     setMaterialCost("400");
@@ -398,15 +417,34 @@ export default function ContractorDashboard() {
     setActiveTab("ai");
   }
 
+  // Legacy alias so existing lead card buttons still work
+  const openBidBuilder = createNewBid;
+
   function closeBidBuilder() {
     setBidBuilderLead(null);
-    setBidStep("review");
+    setBidStep("notes");
+    setRoughNotes("");
+    setRoughCustomer("");
+    setRoughLocation("");
+    setRoughTimeline("");
+    setRoughBudget("");
+    setAiFollowUpAnswers(["", "", "", ""]);
+    setAiOrganizing(false);
     setActiveTool(null);
   }
 
   function goToStep(step: BidStep) {
     if (step === "draft") generateBidDraft();
     setBidStep(step);
+  }
+
+  // Simulate AI organizing rough notes → moves to review step
+  function organizeWithAI() {
+    setAiOrganizing(true);
+    setTimeout(() => {
+      setAiOrganizing(false);
+      setBidStep("review");
+    }, 1800);
   }
 
   // Rotate AI suggestions in Bid Mode
@@ -662,8 +700,12 @@ export default function ContractorDashboard() {
                   <span className="text-[11px] text-muted-foreground">· {lead.lastActivity}</span>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => handleTabChange("ai")}>
-                    <Calculator className="h-3 w-3" /> Build Bid
+                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => {
+                    setRoughNotes(lead.projectTitle);
+                    setRoughCustomer(lead.customerName);
+                    createNewBid();
+                  }}>
+                    <Calculator className="h-3 w-3" /> Create New Bid
                   </Button>
                   <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => openSms(lead.phone)}>
                     <MessageCircle className="h-3 w-3" /> Text Customer
@@ -816,64 +858,37 @@ export default function ContractorDashboard() {
     </div>
   );
 
-  // Bid Builder — full immersive workspace
-  const bidBuilderWorkspace = !bidBuilderLead ? (
-    // Entry state: select a lead
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-4">
-        <Calculator className="h-8 w-8 text-primary" />
-      </div>
-      <h2 className="text-xl font-bold text-foreground">Bid Builder</h2>
-      <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-        Select a lead from your Home or Leads tab and click &quot;Build Bid&quot; to enter Bid Mode.
-      </p>
-      <div className="mt-6 space-y-2 w-full max-w-xs">
-        {DEMO_HOMEBIDS_LEADS.filter((l) => l.status === "new").map((lead) => (
-          <button
-            key={lead.id}
-            type="button"
-            onClick={() => openBidBuilder(lead)}
-            className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-              <Calculator className="h-4 w-4 text-primary" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-foreground truncate">{lead.title}</p>
-              <p className="text-xs text-muted-foreground">{lead.estimatedValue} · {lead.location}</p>
-            </div>
-            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-          </button>
-        ))}
-      </div>
-    </div>
-  ) : (
-    // Bid Mode — full workspace
+  // Create New Bid — full immersive workspace
+  // Always renders the workspace; bidBuilderLead is optional context
+  const bidBuilderWorkspace = (
+    // Create New Bid workspace
     <div className="flex flex-col">
-      {/* Bid Mode top bar */}
+      {/* Top bar */}
       <div className="flex items-center justify-between border-b border-border px-4 py-3 lg:px-6 flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
             <Calculator className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <p className="text-sm font-bold text-foreground">Bid Mode</p>
-            <p className="text-[10px] text-muted-foreground">{bidBuilderLead.title} · {bidBuilderLead.homeownerName}</p>
+            <p className="text-sm font-bold text-foreground">Create New Bid</p>
+            <p className="text-[10px] text-muted-foreground">
+              {bidBuilderLead ? `${bidBuilderLead.title} · ${bidBuilderLead.homeownerName}` : "New bid — no lead selected"}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {/* Step pills */}
           <div className="hidden sm:flex items-center gap-1">
-            {(["review", "scope", "pricing", "draft"] as BidStep[]).map((step, i) => {
-              const labels: Record<BidStep, string> = { review: "Review", scope: "Scope", pricing: "Pricing", draft: "Draft" };
-              const steps: BidStep[] = ["review", "scope", "pricing", "draft"];
+            {(["notes", "review", "scope", "pricing", "draft"] as BidStep[]).map((step, i) => {
+              const labels: Record<BidStep, string> = { notes: "Details", review: "Review", scope: "Scope", pricing: "Pricing", draft: "Draft" };
+              const steps: BidStep[] = ["notes", "review", "scope", "pricing", "draft"];
               const isPast = steps.indexOf(bidStep) > i;
               const isActive = bidStep === step;
               return (
                 <button
                   key={step}
                   type="button"
-                  onClick={() => goToStep(step)}
+                  onClick={() => step !== "notes" || bidStep !== "notes" ? goToStep(step) : undefined}
                   className={`rounded-full px-3 py-1 text-[10px] font-semibold transition-colors ${
                     isActive ? "bg-primary text-primary-foreground" :
                     isPast ? "bg-primary/20 text-primary" :
@@ -899,9 +914,9 @@ export default function ContractorDashboard() {
 
           {/* Mobile step pills */}
           <div className="mb-4 flex items-center gap-1 sm:hidden overflow-x-auto pb-1">
-            {(["review", "scope", "pricing", "draft"] as BidStep[]).map((step, i) => {
-              const labels: Record<BidStep, string> = { review: "Review", scope: "Scope", pricing: "Pricing", draft: "Draft" };
-              const steps: BidStep[] = ["review", "scope", "pricing", "draft"];
+            {(["notes", "review", "scope", "pricing", "draft"] as BidStep[]).map((step, i) => {
+              const labels: Record<BidStep, string> = { notes: "Details", review: "Review", scope: "Scope", pricing: "Pricing", draft: "Draft" };
+              const steps: BidStep[] = ["notes", "review", "scope", "pricing", "draft"];
               const isActive = bidStep === step;
               const isPast = steps.indexOf(bidStep) > i;
               return (
@@ -921,6 +936,103 @@ export default function ContractorDashboard() {
             })}
           </div>
 
+          {/* Step 0: Rough Notes + AI Questions */}
+          {bidStep === "notes" && (
+            <div className="space-y-5">
+              <div>
+                <h3 className="text-base font-bold text-foreground">Create New Bid</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Add rough project details and HomeBids AI will turn them into a clean, professional bid.
+                </p>
+              </div>
+
+              {/* Primary: rough notes textarea */}
+              <div className="space-y-1.5">
+                <Label htmlFor="rough-notes" className="text-xs font-medium">Project notes <span className="text-muted-foreground font-normal">(required)</span></Label>
+                <Textarea
+                  id="rough-notes"
+                  rows={4}
+                  placeholder={"e.g. Kitchen cabinet repaint, 28 doors, white finish, homeowner wants it done next month.\nor: Backyard turf install, about 900 sqft, needs removal of old grass.\nor: Bathroom vanity replacement, homeowner has vanity already, need install and plumbing hookup."}
+                  value={roughNotes}
+                  onChange={(e) => setRoughNotes(e.target.value)}
+                  className="text-sm resize-none"
+                />
+              </div>
+
+              {/* Optional detail fields */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="rough-customer" className="text-xs font-medium">Customer name <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                  <Input id="rough-customer" placeholder="e.g. Sarah M." value={roughCustomer} onChange={(e) => setRoughCustomer(e.target.value)} className="text-sm" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="rough-location" className="text-xs font-medium">Location <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                  <Input id="rough-location" placeholder="e.g. Gilbert, AZ" value={roughLocation} onChange={(e) => setRoughLocation(e.target.value)} className="text-sm" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="rough-timeline" className="text-xs font-medium">Timeline <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                  <Input id="rough-timeline" placeholder="e.g. 1–2 weeks" value={roughTimeline} onChange={(e) => setRoughTimeline(e.target.value)} className="text-sm" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="rough-budget" className="text-xs font-medium">Approx budget or bid amount <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                  <Input id="rough-budget" placeholder="e.g. $1,500 or $1,000–$2,000" value={roughBudget} onChange={(e) => setRoughBudget(e.target.value)} className="text-sm" />
+                </div>
+              </div>
+
+              {/* AI follow-up questions — appear once notes are typed */}
+              {roughNotes.trim().length > 20 && (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15">
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <p className="text-sm font-semibold text-foreground">HomeBids AI — a few quick questions</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground -mt-2">
+                    Got it. I&apos;ll help build this into a professional bid. Answer what you can — AI will fill the rest.
+                  </p>
+                  {[
+                    "Are there any specific materials, brands, or products the customer wants?",
+                    "Are there items that should be explicitly excluded from scope?",
+                    "Any optional upgrades or upsells you want to include?",
+                    "Any special conditions — access issues, timing constraints, permits needed?",
+                  ].map((question, i) => (
+                    <div key={i} className="space-y-1.5">
+                      <Label className="text-xs font-medium text-foreground">{question}</Label>
+                      <Input
+                        placeholder="Type your answer or leave blank — AI will infer"
+                        value={aiFollowUpAnswers[i]}
+                        onChange={(e) => {
+                          const updated = [...aiFollowUpAnswers];
+                          updated[i] = e.target.value;
+                          setAiFollowUpAnswers(updated);
+                        }}
+                        className="text-sm"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <Button
+                className="w-full gap-2"
+                disabled={roughNotes.trim().length < 5 || aiOrganizing}
+                onClick={organizeWithAI}
+              >
+                {aiOrganizing ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                    AI is organizing your bid...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" /> Let AI Build My Bid
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
           {/* Step 1: Review */}
           {bidStep === "review" && (
             <div className="space-y-4">
@@ -928,10 +1040,10 @@ export default function ContractorDashboard() {
 
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {[
-                  { label: "Category", value: bidBuilderLead.category },
-                  { label: "Location", value: bidBuilderLead.location },
-                  { label: "Timeline", value: bidBuilderLead.timeline },
-                  { label: "Budget Range", value: bidBuilderLead.budgetRange },
+                  { label: "Category", value: bidBuilderLead?.category ?? roughNotes.split(",")[0] ?? "—" },
+                  { label: "Location", value: bidBuilderLead?.location ?? (roughLocation || "—") },
+                  { label: "Timeline", value: bidBuilderLead?.timeline ?? (roughTimeline || "—") },
+                  { label: "Budget Range", value: bidBuilderLead?.budgetRange ?? (roughBudget || "—") },
                 ].map(({ label, value }) => (
                   <div key={label} className="rounded-lg bg-muted p-2.5">
                     <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
@@ -943,26 +1055,26 @@ export default function ContractorDashboard() {
               <div className="space-y-3 rounded-xl border border-border bg-card p-4">
                 <div>
                   <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Homeowner Goals</p>
-                  <p className="text-sm text-foreground">{bidBuilderLead.homeownerGoals}</p>
+                  <p className="text-sm text-foreground">{bidBuilderLead?.homeownerGoals ?? "Based on your project notes above."}</p>
                 </div>
                 <div className="border-t border-border pt-3">
                   <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Known Scope</p>
-                  <p className="text-sm text-foreground">{bidBuilderLead.scope}</p>
+                  <p className="text-sm text-foreground">{bidBuilderLead?.scope ?? roughNotes}</p>
                 </div>
-                {bidBuilderLead.photos && bidBuilderLead.photos > 0 && (
+                {(bidBuilderLead?.photos ?? 0) > 0 && (
                   <div className="flex items-center gap-2 border-t border-border pt-3">
                     <FileText className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-xs text-muted-foreground">{bidBuilderLead.photos} photo{bidBuilderLead.photos !== 1 ? "s" : ""} attached</p>
+                    <p className="text-xs text-muted-foreground">{bidBuilderLead!.photos} photo{bidBuilderLead!.photos !== 1 ? "s" : ""} attached</p>
                   </div>
                 )}
               </div>
 
-              {bidBuilderLead.missingInfo && bidBuilderLead.missingInfo.length > 0 && (
+              {(bidBuilderLead?.missingInfo?.length ?? 0) > 0 && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                   <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-amber-700">
                     <AlertCircle className="h-3.5 w-3.5" /> Missing Information
                   </p>
-                  {bidBuilderLead.missingInfo.map((item, i) => (
+                  {bidBuilderLead!.missingInfo!.map((item, i) => (
                     <p key={i} className="text-sm text-amber-900">• {item}</p>
                   ))}
                 </div>
@@ -971,10 +1083,10 @@ export default function ContractorDashboard() {
               <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
                 <p className="text-xs text-muted-foreground">AI Confidence</p>
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                  bidBuilderLead.aiConfidence === "High" ? "bg-green-100 text-green-700" :
-                  bidBuilderLead.aiConfidence === "Medium" ? "bg-amber-100 text-amber-700" :
-                  "bg-red-100 text-red-700"
-                }`}>{bidBuilderLead.aiConfidence ?? "Unknown"}</span>
+                  bidBuilderLead?.aiConfidence === "High" ? "bg-green-100 text-green-700" :
+                  bidBuilderLead?.aiConfidence === "Medium" ? "bg-amber-100 text-amber-700" :
+                  "bg-blue-100 text-blue-700"
+                }`}>{bidBuilderLead?.aiConfidence ?? "Ready"}</span>
               </div>
 
               <Button className="w-full gap-2" onClick={() => goToStep("scope")}>
@@ -1124,17 +1236,17 @@ export default function ContractorDashboard() {
                 </Button>
               </div>
 
-              {bidBuilderLead.directMessagingUnlocked ? (
-                <Button className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white" onClick={() => openSms(bidBuilderLead.homeownerPhone, "Hi! I've completed your estimate — I'll send the PDF shortly.")}>
+              {bidBuilderLead?.directMessagingUnlocked ? (
+                <Button className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white" onClick={() => openSms(bidBuilderLead?.homeownerPhone, "Hi! I've completed your estimate — I'll send the PDF shortly.")}>
                   <MessageCircle className="h-4 w-4" /> Text Homeowner
                 </Button>
-              ) : (
+              ) : bidBuilderLead ? (
                 <Button className="w-full gap-2" onClick={() => { setRelayLead(bidBuilderLead); setRelayMessage(`Hi ${bidBuilderLead.homeownerName}, I've completed your estimate for ${bidBuilderLead.title}. I'd love to discuss the details.`); setRelaySent(false); setShowRelayModal(true); closeBidBuilder(); }}>
                   <Send className="h-4 w-4" /> Submit via HomeBids AI
                 </Button>
-              )}
+              ) : null}
               <Button variant="outline" className="w-full bg-transparent gap-2" onClick={closeBidBuilder}>
-                <CheckCircle2 className="h-4 w-4" /> Done — Close Bid Builder
+                <CheckCircle2 className="h-4 w-4" /> Done — Save &amp; Close
               </Button>
             </div>
           )}
@@ -1308,7 +1420,7 @@ export default function ContractorDashboard() {
           {/* Bid Builder card */}
           <button
             type="button"
-            onClick={() => setActiveTool("bid")}
+            onClick={() => createNewBid()}
             className="group flex flex-col rounded-2xl border-2 border-border bg-card p-6 text-left transition-all hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5"
           >
             <div className="flex items-start justify-between">
@@ -1328,7 +1440,7 @@ export default function ContractorDashboard() {
             </div>
             <div className="mt-5">
               <span className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors group-hover:bg-primary/90">
-                <Zap className="h-4 w-4" /> Enter Bid Mode
+                <Zap className="h-4 w-4" /> Create New Bid
               </span>
             </div>
           </button>
