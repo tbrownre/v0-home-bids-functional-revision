@@ -174,7 +174,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
   const separatorClass = "my-1 border-t border-border";
 
   return (
-    <header className="relative shrink-0 border-b border-border bg-background overflow-x-hidden">
+    <header className="relative shrink-0 border-b border-border bg-background">
       <div className="mx-auto grid grid-cols-[1fr_auto_1fr] items-center px-4 py-2 md:px-6">
 
         {/* Left: menu button + optional back link */}
@@ -196,117 +196,6 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
               </span>
             )}
           </button>
-
-          {/* Popover panel */}
-          {menuOpen && (
-            <div
-              ref={panelRef}
-              role="menu"
-              className="absolute left-3 top-full z-50 w-56 rounded-xl border border-border bg-background p-1.5 shadow-lg"
-            >
-              {/* Nav items — logged out */}
-              {!isLoggedIn && (
-                <>
-                  {loggedOutNavItems.map((item) => (
-                    <Link key={item.label} href={item.href} className={menuItemClass} onClick={closeMenu}>
-                      {item.label === "Home"         && <Home       className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      {item.label === "How It Works" && <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      {item.label === "Services"     && <Briefcase  className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      {item.label === "Contractors"  && <Hammer     className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      {item.label === "Pricing"      && <FileText   className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                      {item.label}
-                    </Link>
-                  ))}
-                  <div className={separatorClass} />
-                  <button
-                    type="button"
-                    onClick={() => { setMenuOpen(false); setShowSignIn(true); }}
-                    className={menuItemClass}
-                  >
-                    <LogIn className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    Contractor Sign In
-                  </button>
-                </>
-              )}
-
-              {/* Nav items — logged in homeowner */}
-              {isLoggedIn && !isContractor && (
-                <>
-                  {homeownerNavItems.map((item) => {
-                    const active = isNavItemActive(item, pathname);
-                    const isInbox = item.match?.includes("/inbox");
-                    const isHome = item.label === "Home";
-                    return (
-                      <React.Fragment key={item.label}>
-                        {/* Divider between marketing nav and app nav */}
-                        {item.label === "Your Jobs" && (
-                          <div className="my-2 border-t border-border" />
-                        )}
-                        <Link
-                          href={item.href}
-                          className={`${menuItemClass}${active ? " bg-muted font-medium" : ""}`}
-                          onClick={(e) => {
-                            if (isHome) {
-                              window.dispatchEvent(new CustomEvent("hb:home"));
-                            }
-                            closeMenu();
-                          }}
-                        >
-                          {item.label === "Home"         && <Home          className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                          {item.label === "Services"     && <Briefcase     className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                          {item.label === "How It Works" && <HelpCircle    className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                          {item.label === "Your Jobs"    && <FileText      className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                          {item.label === "Inbox"        && <MessageCircle className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                          {item.label === "Profile"      && <Home          className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                          {item.label === "New Job"      && <PlusCircle    className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                          <span className="flex-1">{item.label}</span>
-                          {isInbox && unreadCount > 0 && (
-                            <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                              {unreadCount > 9 ? "9+" : unreadCount}
-                            </span>
-                          )}
-                        </Link>
-                      </React.Fragment>
-                    );
-                  })}
-                  <div className={separatorClass} />
-                  <button type="button" onClick={handleSignOut} className={`${menuItemClass} text-red-600 hover:text-red-600`}>
-                    <LogOut className="h-4 w-4 shrink-0" />
-                    Sign Out
-                  </button>
-                </>
-              )}
-
-              {/* Nav items — logged in contractor */}
-              {isLoggedIn && isContractor && (
-                <>
-                  {contractorNavItems.map((item) => {
-                    const active = isNavItemActive(item, pathname);
-                    return (
-                      <Link
-                        key={item.label}
-                        href={item.href}
-                        className={`${menuItemClass}${active ? " bg-muted font-medium" : ""}`}
-                        onClick={closeMenu}
-                      >
-                        {item.label === "Home"      && <LayoutDashboard className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                        {item.label === "Leads"     && <Users           className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                        {item.label === "AI Tools"  && <Sparkles        className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                        {item.label === "Account"   && <Wrench          className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                        {item.label}
-                      </Link>
-                    );
-                  })}
-                  <div className={separatorClass} />
-                  <button type="button" onClick={handleSignOut} className={`${menuItemClass} text-red-600 hover:text-red-600`}>
-                    <LogOut className="h-4 w-4 shrink-0" />
-                    Sign Out
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-
         </div>
 
         {/* Center: Logo — imperative navigation to "/" on click/tap/keyboard */}
@@ -331,7 +220,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
             width={480}
             height={120}
             className="object-contain pointer-events-none"
-            style={{ height: "clamp(56px, 10vw, 80px)", width: "auto" }}
+            style={{ height: "clamp(112px, 20vw, 160px)", width: "auto" }}
             priority
           />
         </button>
@@ -350,8 +239,114 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
         </div>
       </div>
 
-      {/* Sign In Modal */}
-      {!isLoggedIn && (
+      {/* Dropdown menu panel — rendered as direct child of <header> so
+          position:absolute is relative to the header, not the grid column.
+          This prevents overflow clipping from the grid layout. */}
+      {menuOpen && (
+        <div
+          ref={panelRef}
+          role="menu"
+          className="absolute left-3 top-full z-50 w-64 rounded-xl border border-border bg-background p-1.5 shadow-lg"
+        >
+          {/* Nav items — logged out */}
+          {!isLoggedIn && (
+            <>
+              {loggedOutNavItems.map((item) => (
+                <Link key={item.label} href={item.href} className={menuItemClass} onClick={closeMenu}>
+                  {item.label === "Home"         && <Home       className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                  {item.label === "How It Works" && <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                  {item.label === "Services"     && <Briefcase  className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                  {item.label === "Contractors"  && <Hammer     className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                  {item.label === "Pricing"      && <FileText   className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                  {item.label}
+                </Link>
+              ))}
+              <div className={separatorClass} />
+              <button
+                type="button"
+                onClick={() => { setMenuOpen(false); setShowSignIn(true); }}
+                className={menuItemClass}
+              >
+                <LogIn className="h-4 w-4 shrink-0 text-muted-foreground" />
+                Contractor Sign In
+              </button>
+            </>
+          )}
+
+          {/* Nav items — logged in homeowner */}
+          {isLoggedIn && !isContractor && (
+            <>
+              {homeownerNavItems.map((item) => {
+                const active = isNavItemActive(item, pathname);
+                const isInbox = item.match?.includes("/inbox");
+                const isHome = item.label === "Home";
+                return (
+                  <React.Fragment key={item.label}>
+                    {item.label === "Your Jobs" && <div className="my-2 border-t border-border" />}
+                    <Link
+                      href={item.href}
+                      className={`${menuItemClass}${active ? " bg-muted font-medium" : ""}`}
+                      onClick={() => {
+                        if (isHome) window.dispatchEvent(new CustomEvent("hb:home"));
+                        closeMenu();
+                      }}
+                    >
+                      {item.label === "Home"         && <Home          className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "Services"     && <Briefcase     className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "How It Works" && <HelpCircle    className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "Your Jobs"    && <FileText      className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "Inbox"        && <MessageCircle className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "Profile"      && <Home          className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      {item.label === "New Job"      && <PlusCircle    className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                      <span className="flex-1">{item.label}</span>
+                      {isInbox && unreadCount > 0 && (
+                        <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
+                    </Link>
+                  </React.Fragment>
+                );
+              })}
+              <div className={separatorClass} />
+              <button type="button" onClick={handleSignOut} className={`${menuItemClass} text-red-600 hover:text-red-600`}>
+                <LogOut className="h-4 w-4 shrink-0" />
+                Sign Out
+              </button>
+            </>
+          )}
+
+          {/* Nav items — logged in contractor */}
+          {isLoggedIn && isContractor && (
+            <>
+              {contractorNavItems.map((item) => {
+                const active = isNavItemActive(item, pathname);
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className={`${menuItemClass}${active ? " bg-muted font-medium" : ""}`}
+                    onClick={closeMenu}
+                  >
+                    {item.label === "Home"     && <LayoutDashboard className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                    {item.label === "Leads"    && <Users           className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                    {item.label === "AI Tools" && <Sparkles        className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                    {item.label === "Account"  && <Wrench          className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                    {item.label}
+                  </Link>
+                );
+              })}
+              <div className={separatorClass} />
+              <button type="button" onClick={handleSignOut} className={`${menuItemClass} text-red-600 hover:text-red-600`}>
+                <LogOut className="h-4 w-4 shrink-0" />
+                Sign Out
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Sign In Modal */}      {!isLoggedIn && (
         <SignInModal
           open={showSignIn}
           onOpenChange={(val) => {
