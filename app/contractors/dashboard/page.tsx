@@ -24,7 +24,6 @@ import {
   Eye,
   CheckCircle2,
   Users,
-  FileText,
   Send,
   Calculator,
   Sparkles,
@@ -44,14 +43,9 @@ import {
   ExternalLink,
   DollarSign,
   TrendingUp,
-  ChevronDown,
-  ChevronUp,
-  Plus,
-  X,
-  AlertCircle,
-  Download,
   Shield,
 } from "lucide-react";
+import { BidBuilderChat, type BidLeadType, type BidChatLeadContext } from "@/components/bid-builder-chat";
 import { getMockUser, mockSignOut, USE_MOCK_DATA } from "@/lib/mock-auth";
 import { getContractorBids } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
@@ -96,15 +90,6 @@ interface MyLead {
   lastActivity: string;
   aiStatus: "estimate_ready" | "response_sent" | "followup_ready";
   phone?: string;
-}
-
-interface ScopeItem {
-  id: string;
-  label: string;
-  description: string;
-  included: boolean;
-  type: "labor" | "materials" | "optional" | "excluded";
-  editable: boolean;
 }
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
@@ -191,18 +176,6 @@ const DEMO_MY_LEADS: MyLead[] = [
   { id: "ml-3", customerName: "Janet B.", projectTitle: "Bathroom Remodel Follow-Up", category: "Remodel", estimatedValue: "$12,000", status: "open", lastActivity: "Follow-up draft ready", aiStatus: "followup_ready" },
 ];
 
-const DEFAULT_SCOPE_ITEMS: ScopeItem[] = [
-  { id: "1", label: "Remove cabinet doors and hardware", description: "All doors, drawers, and hardware labeled and safely stored", included: true, type: "labor", editable: true },
-  { id: "2", label: "Clean and degrease surfaces", description: "TSP wash to remove grease and contaminants", included: true, type: "labor", editable: true },
-  { id: "3", label: "Sand and prep cabinet faces", description: "Light sanding (220 grit) for paint adhesion", included: true, type: "labor", editable: true },
-  { id: "4", label: "Prime surfaces", description: "High-adhesion bonding primer", included: true, type: "materials", editable: true },
-  { id: "5", label: "Apply professional finish coat (2 coats)", description: "Benjamin Moore Advance or Sherwin Williams Emerald Urethane", included: true, type: "materials", editable: true },
-  { id: "6", label: "Reinstall doors and hardware", description: "All components reinstalled and aligned", included: true, type: "labor", editable: true },
-  { id: "7", label: "Cleanup work area", description: "Remove dust, debris, and protect floors", included: true, type: "labor", editable: true },
-  { id: "8", label: "Soft-close hinges upgrade", description: "Add soft-close hardware to all doors (optional upgrade)", included: false, type: "optional", editable: true },
-  { id: "9", label: "Cabinet box replacement", description: "Replacement of cabinet boxes not included", included: false, type: "excluded", editable: true },
-];
-
 // ── AI helper functions ────────────────────────────────────────────────────────
 
 function getBidDefenderResponse(projectType: string, bidAmount: string, objection: string) {
@@ -231,7 +204,6 @@ function getBidDefenderResponse(projectType: string, bidAmount: string, objectio
 
 type Tab = "home" | "leads" | "ai" | "account";
 type AiTool = "bid" | "defender" | null;
-type BidStep = "notes" | "review" | "scope" | "pricing" | "draft";
 
 // ── AI assistant suggestions ───────────────────────────────────────────────────
 
@@ -297,139 +269,60 @@ export default function ContractorDashboard() {
   // Active AI tool
   const [activeTool, setActiveTool] = useState<AiTool>(null);
 
-  // ── Bid Builder state ──────────────────────────────────────────────────────
+  // ── Bid Builder (chat) state ─────────────────────────────────────────────────
 
-  const [bidBuilderLead, setBidBuilderLead] = useState<HomeBidsLead | null>(null);
-  const [bidStep, setBidStep] = useState<BidStep>("notes");
+  const [bidChatLeadType, setBidChatLeadType] = useState<BidLeadType>("my");
+  const [bidChatLead, setBidChatLead] = useState<BidChatLeadContext | null>(null);
+  // Track HomeBids leads that have become approved (direct messaging unlocked) in this session
+  const [unlockedLeadIds, setUnlockedLeadIds] = useState<Set<string>>(new Set());
 
-  // Rough notes entry (step 1)
-  const [roughNotes, setRoughNotes] = useState("");
-  const [roughCustomer, setRoughCustomer] = useState("");
-  const [roughLocation, setRoughLocation] = useState("");
-  const [roughTimeline, setRoughTimeline] = useState("");
-  const [roughBudget, setRoughBudget] = useState("");
+  const companyName = "[Your Company Name]";
 
-  // AI follow-up answers
-  const [aiOrganizing, setAiOrganizing] = useState(false);
-  const [scopeItems, setScopeItems] = useState<ScopeItem[]>(DEFAULT_SCOPE_ITEMS);
-  const [expandedScopes, setExpandedScopes] = useState<Record<string, boolean>>({});
-  const [laborCost, setLaborCost] = useState("800");
-  const [materialCost, setMaterialCost] = useState("400");
-  const [markup, setMarkup] = useState("15");
-  const [complexity, setComplexity] = useState<"low" | "medium" | "high">("medium");
-  const [bidNotes, setBidNotes] = useState("");
-  const [bidDraft, setBidDraft] = useState("");
-  const [draftCopied, setDraftCopied] = useState(false);
-
-  const laborNum = parseFloat(laborCost) || 0;
-  const materialNum = parseFloat(materialCost) || 0;
-  const markupNum = parseFloat(markup) || 0;
-  const subtotal = laborNum + materialNum;
-  const markupAmount = subtotal * (markupNum / 100);
-  const totalPrice = subtotal + markupAmount;
-
-  const priceRangeAI = complexity === "low" ? "$1,100–$1,400" : complexity === "medium" ? "$1,300–$1,700" : "$1,600–$2,100";
-  const priceWarning =
-    totalPrice < 1100 ? "Your bid may be too low for this scope. Consider increasing labor or materials." :
-    totalPrice > 2100 ? "Your bid is on the high end. Make sure to justify value in your proposal." :
-    null;
-
-  function toggleScope(id: string) {
-    setExpandedScopes((prev) => ({ ...prev, [id]: !prev[id] }));
-  }
-
-  function toggleScopeIncluded(id: string) {
-    setScopeItems((prev) => prev.map((item) => item.id === id ? { ...item, included: !item.included } : item));
-  }
-
-  function updateScopeDescription(id: string, description: string) {
-    setScopeItems((prev) => prev.map((item) => item.id === id ? { ...item, description } : item));
-  }
-
-  function moveScopeUp(id: string) {
-    const idx = scopeItems.findIndex((s) => s.id === id);
-    if (idx <= 0) return;
-    const next = [...scopeItems];
-    [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
-    setScopeItems(next);
-  }
-
-  function moveScopeDown(id: string) {
-    const idx = scopeItems.findIndex((s) => s.id === id);
-    if (idx < 0 || idx >= scopeItems.length - 1) return;
-    const next = [...scopeItems];
-    [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
-    setScopeItems(next);
-  }
-
-  function addCustomScope() {
-    const newId = `custom-${Date.now()}`;
-    setScopeItems((prev) => [
-      ...prev,
-      { id: newId, label: "New custom item", description: "Click edit to customize", included: true, type: "labor", editable: true },
-    ]);
-  }
-
-  function deleteScope(id: string) {
-    setScopeItems((prev) => prev.filter((s) => s.id !== id));
-  }
-
-  function generateBidDraft() {
-    const includedItems = scopeItems.filter((s) => s.included && s.type !== "excluded");
-    const optionalItems = scopeItems.filter((s) => s.type === "optional");
-    const excludedItems = scopeItems.filter((s) => s.type === "excluded");
-    const draft = `PROJECT ESTIMATE\n\n${bidBuilderLead?.title ?? "Project"}\n${bidBuilderLead?.location ?? ""}\n\nHomeowner: ${bidBuilderLead?.homeownerName ?? "Homeowner"}\nContractor: [Your Company Name]\nDate: ${new Date().toLocaleDateString()}\nEstimate Valid Through: ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}\n\n---\n\nPROJECT SUMMARY\n\n${bidBuilderLead?.scope ?? "As discussed"}\n\n---\n\nSCOPE OF WORK\n\n${includedItems.map((item, i) => `${i + 1}. ${item.label}\n   ${item.description}`).join("\n\n")}\n\n---\n\nPRICING BREAKDOWN\n\nLabor: $${laborNum.toFixed(2)}\nMaterials: $${materialNum.toFixed(2)}\nSubtotal: $${subtotal.toFixed(2)}\nMarkup (${markupNum}%): $${markupAmount.toFixed(2)}\n\nTotal Estimate: $${totalPrice.toFixed(2)}\n\n---\n\nOPTIONAL UPGRADES\n\n${optionalItems.length > 0 ? optionalItems.map((item) => `• ${item.label} — ${item.description}`).join("\n") : "None"}\n\n---\n\nEXCLUSIONS\n\n${excludedItems.length > 0 ? excludedItems.map((item) => `• ${item.label}`).join("\n") : "None"}\n\n---\n\nPAYMENT TERMS\n\n50% deposit upon acceptance\n50% upon completion\n\n---\n\nTIMELINE\n\n${bidBuilderLead?.timeline ?? "1–2 weeks"}\n\n---\n\nNOTES\n\n${bidNotes || "This estimate is based on the information provided. Any changes to scope may require a revised estimate. All work guaranteed for 1 year."}\n\n---\n\nACCEPTANCE\n\nI accept the above estimate and authorize work to begin.\n\nHomeowner Signature: _____________________  Date: __________`;
-    setBidDraft(draft);
-  }
-
-  function createNewBid(lead?: HomeBidsLead) {
-    // Always start completely fresh — no stale data ever carries over
-    setBidBuilderLead(lead ?? null);
-    setBidStep("notes");
-    setRoughNotes(lead ? `${lead.title}. ${lead.scope}` : "");
-    setRoughCustomer(lead ? lead.homeownerName : "");
-    setRoughLocation(lead ? lead.location : "");
-    setRoughTimeline(lead ? lead.timeline : "");
-    setRoughBudget(lead ? lead.budgetRange : "");
-    setAiOrganizing(false);
-    setScopeItems(DEFAULT_SCOPE_ITEMS);
-    setLaborCost("800");
-    setMaterialCost("400");
-    setMarkup("15");
-    setComplexity("medium");
-    setBidNotes("");
-    setBidDraft("");
+  // Open the chat-based Bid Builder. leadType drives messaging/approval rules.
+  function startBidByText(leadType: BidLeadType, lead?: BidChatLeadContext | null) {
+    setBidChatLeadType(leadType);
+    setBidChatLead(lead ?? null);
     setActiveTool("bid");
     setActiveTab("ai");
   }
 
-  // Legacy alias so existing lead card buttons still work
-  const openBidBuilder = createNewBid;
+  // Start from a HomeBids lead
+  function startBidFromHomeBidsLead(lead: HomeBidsLead) {
+    startBidByText("homebids", {
+      id: lead.id,
+      projectTitle: lead.title,
+      category: lead.category,
+      ownerName: lead.homeownerName,
+      ownerPhone: lead.homeownerPhone,
+      address: lead.location,
+      timeline: lead.timeline,
+      scope: lead.scope,
+    });
+  }
+
+  // Start from one of the contractor's own leads
+  function startBidFromMyLead(lead: MyLead) {
+    startBidByText("my", {
+      id: lead.id,
+      projectTitle: lead.projectTitle,
+      category: lead.category,
+      ownerName: lead.customerName,
+      ownerPhone: lead.phone,
+    });
+  }
 
   function closeBidBuilder() {
-    setBidBuilderLead(null);
-    setBidStep("notes");
-    setRoughNotes("");
-    setRoughCustomer("");
-    setRoughLocation("");
-    setRoughTimeline("");
-    setRoughBudget("");
-    setAiOrganizing(false);
+    setBidChatLead(null);
     setActiveTool(null);
   }
 
-  function goToStep(step: BidStep) {
-    if (step === "draft") generateBidDraft();
-    setBidStep(step);
+  function handleHomeownerApproved(leadId: string) {
+    setUnlockedLeadIds((prev) => new Set(prev).add(leadId));
   }
 
-  // Simulate AI organizing rough notes → moves to review step
-  function organizeWithAI() {
-    setAiOrganizing(true);
-    setTimeout(() => {
-      setAiOrganizing(false);
-      setBidStep("review");
-    }, 1800);
+  // A HomeBids lead's direct messaging is unlocked if it started unlocked OR was approved this session
+  function isMessagingUnlocked(lead: HomeBidsLead) {
+    return lead.directMessagingUnlocked || unlockedLeadIds.has(lead.id);
   }
 
   // ── Bid Defender state ─────────────────────────────────────────────────────
@@ -504,7 +397,7 @@ export default function ContractorDashboard() {
         </div>
         <p className="mt-2 text-[11px] italic text-primary/80">{lead.aiNotes}</p>
         <div className="mt-2">
-          {lead.directMessagingUnlocked ? (
+          {isMessagingUnlocked(lead) ? (
             <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700 w-fit">
               <Unlock className="h-3 w-3" /> Direct texting unlocked
             </span>
@@ -518,13 +411,13 @@ export default function ContractorDashboard() {
           <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
             <Eye className="h-3.5 w-3.5" /> Details
           </Button>
-          {lead.directMessagingUnlocked ? (
+          {isMessagingUnlocked(lead) ? (
             <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => openSms(lead.homeownerPhone)}>
               <MessageCircle className="h-3 w-3" /> Text Homeowner
             </Button>
           ) : lead.status === "new" ? (
-            <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => openBidBuilder(lead)}>
-              <Calculator className="h-3 w-3" /> Build Bid
+            <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => startBidFromHomeBidsLead(lead)}>
+              <MessageCircle className="h-3 w-3" /> Start Bid by Text
             </Button>
           ) : (
             <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); }}>
@@ -573,7 +466,7 @@ export default function ContractorDashboard() {
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Suggested actions</h2>
           <div className="space-y-2">
             {[
-              { icon: Calculator, label: "Build a professional bid", sub: "Kitchen Cabinet Repaint", action: () => openBidBuilder(DEMO_HOMEBIDS_LEADS[0]) },
+              { icon: MessageCircle, label: "Build a professional bid", sub: "Kitchen Cabinet Repaint", action: () => startBidFromHomeBidsLead(DEMO_HOMEBIDS_LEADS[0]) },
               { icon: Eye, label: "Homeowner reviewing bid", sub: "Backyard Turf Install", action: () => handleTabChange("leads") },
               { icon: Unlock, label: "Approval unlocked", sub: "Bathroom Vanity Replacement", action: () => handleTabChange("leads") },
               { icon: Shield, label: "Defend a lost bid", sub: "Use Bid Defender to recover leads", action: () => { handleTabChange("ai"); setActiveTool("defender"); } },
@@ -675,12 +568,8 @@ export default function ContractorDashboard() {
                   <span className="text-[11px] text-muted-foreground">· {lead.lastActivity}</span>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => {
-                    setRoughNotes(lead.projectTitle);
-                    setRoughCustomer(lead.customerName);
-                    createNewBid();
-                  }}>
-                    <Calculator className="h-3 w-3" /> Create New Bid
+                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => startBidFromMyLead(lead)}>
+                    <MessageCircle className="h-3 w-3" /> Start Bid by Text
                   </Button>
                   <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => openSms(lead.phone)}>
                     <MessageCircle className="h-3 w-3" /> Text Customer
@@ -717,7 +606,7 @@ export default function ContractorDashboard() {
                 </div>
                 <p className="mt-1.5 text-[11px] italic text-primary/80 line-clamp-2">{lead.aiNotes}</p>
                 <div className="mt-1.5">
-                  {lead.directMessagingUnlocked ? (
+                  {isMessagingUnlocked(lead) ? (
                     <span className="flex w-fit items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">
                       <Unlock className="h-3 w-3" /> Direct messaging unlocked
                     </span>
@@ -729,10 +618,10 @@ export default function ContractorDashboard() {
                   <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
                     <Eye className="h-3 w-3" /> Details
                   </Button>
-                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => openBidBuilder(lead)}>
-                    <Calculator className="h-3 w-3" /> Build Bid
+                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => startBidFromHomeBidsLead(lead)}>
+                    <MessageCircle className="h-3 w-3" /> Start Bid by Text
                   </Button>
-                  {lead.directMessagingUnlocked ? (
+                  {isMessagingUnlocked(lead) ? (
                     <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => openSms(lead.homeownerPhone)}>
                       <MessageCircle className="h-3 w-3" /> Text Homeowner
                     </Button>
@@ -750,464 +639,6 @@ export default function ContractorDashboard() {
     </div>
   );
 
-        {/* ── LEFT: My Leads (primary) ── */}
-  // ── AI TOOLS tab ───────────────────────────────────────────────────────────
-
-  // Live PDF preview (used in Bid Mode right panel)
-  const livePdfPreview = (
-    <div className="rounded-xl border border-border bg-white text-[11px] leading-relaxed text-foreground shadow-sm">
-      {/* PDF header */}
-      <div className="border-b border-border bg-muted/30 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-bold text-foreground">[Your Company Name]</p>
-            <p className="text-muted-foreground">Professional Estimate</p>
-          </div>
-          <div className="text-right text-muted-foreground">
-            <p>Date: {new Date().toLocaleDateString()}</p>
-            <p>Valid 30 days</p>
-          </div>
-        </div>
-      </div>
-      {/* Client + project */}
-      <div className="border-b border-border px-4 py-3">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="font-semibold text-muted-foreground uppercase tracking-wider" style={{ fontSize: "9px" }}>Client</p>
-            <p className="font-medium">{bidBuilderLead?.homeownerName ?? "Homeowner"}</p>
-            <p className="text-muted-foreground">{bidBuilderLead?.location ?? ""}</p>
-          </div>
-          <div>
-            <p className="font-semibold text-muted-foreground uppercase tracking-wider" style={{ fontSize: "9px" }}>Project</p>
-            <p className="font-medium">{bidBuilderLead?.title ?? "Project"}</p>
-            <p className="text-muted-foreground">{bidBuilderLead?.timeline ?? ""}</p>
-          </div>
-        </div>
-      </div>
-      {/* Scope */}
-      <div className="border-b border-border px-4 py-3">
-        <p className="mb-2 font-semibold text-muted-foreground uppercase tracking-wider" style={{ fontSize: "9px" }}>Scope of Work</p>
-        {scopeItems.filter((s) => s.included && s.type !== "excluded").map((item, i) => (
-          <div key={item.id} className="mb-1 flex gap-2">
-            <span className="shrink-0 font-medium">{i + 1}.</span>
-            <div>
-              <span className="font-medium">{item.label}</span>
-              <span className="text-muted-foreground"> — {item.description}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-      {/* Pricing */}
-      <div className="border-b border-border px-4 py-3">
-        <p className="mb-2 font-semibold text-muted-foreground uppercase tracking-wider" style={{ fontSize: "9px" }}>Pricing</p>
-        <div className="space-y-0.5">
-          <div className="flex justify-between"><span>Labor</span><span>${laborNum.toFixed(2)}</span></div>
-          <div className="flex justify-between"><span>Materials</span><span>${materialNum.toFixed(2)}</span></div>
-          {markupNum > 0 && <div className="flex justify-between text-muted-foreground"><span>Markup ({markupNum}%)</span><span>${markupAmount.toFixed(2)}</span></div>}
-          <div className="flex justify-between border-t border-border pt-1 font-bold">
-            <span>Total Estimate</span><span>${totalPrice.toFixed(2)}</span>
-          </div>
-        </div>
-      </div>
-      {/* Exclusions */}
-      {scopeItems.some((s) => s.type === "excluded") && (
-        <div className="border-b border-border px-4 py-3">
-          <p className="mb-1.5 font-semibold text-muted-foreground uppercase tracking-wider" style={{ fontSize: "9px" }}>Exclusions</p>
-          {scopeItems.filter((s) => s.type === "excluded").map((item) => (
-            <p key={item.id} className="text-muted-foreground">• {item.label}</p>
-          ))}
-        </div>
-      )}
-      {/* Notes + acceptance */}
-      {bidNotes && (
-        <div className="border-b border-border px-4 py-3">
-          <p className="mb-1 font-semibold text-muted-foreground uppercase tracking-wider" style={{ fontSize: "9px" }}>Notes</p>
-          <p className="text-muted-foreground">{bidNotes}</p>
-        </div>
-      )}
-      <div className="px-4 py-3">
-        <p className="mb-2 font-semibold text-muted-foreground uppercase tracking-wider" style={{ fontSize: "9px" }}>Acceptance</p>
-        <p className="text-muted-foreground">Homeowner Signature: _____________________ &nbsp; Date: __________</p>
-        <p className="mt-2 text-muted-foreground" style={{ fontSize: "9px" }}>50% deposit on acceptance · 50% on completion · 1-year workmanship guarantee</p>
-      </div>
-    </div>
-  );
-
-  // Create New Bid — full immersive workspace
-  // Always renders the workspace; bidBuilderLead is optional context
-  const bidBuilderWorkspace = (
-    // Create New Bid workspace
-    <div className="flex flex-col">
-      {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-3 lg:px-6 flex-wrap gap-2">
-        <div className="flex items-center gap-3">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-            <Calculator className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-foreground">Create New Bid</p>
-            <p className="text-[10px] text-muted-foreground">
-              {bidBuilderLead ? `${bidBuilderLead.title} · ${bidBuilderLead.homeownerName}` : "New bid — no lead selected"}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Step pills */}
-          <div className="hidden sm:flex items-center gap-1">
-            {(["notes", "review", "scope", "pricing", "draft"] as BidStep[]).map((step, i) => {
-              const labels: Record<BidStep, string> = { notes: "Details", review: "Review", scope: "Scope", pricing: "Pricing", draft: "Draft" };
-              const steps: BidStep[] = ["notes", "review", "scope", "pricing", "draft"];
-              const isPast = steps.indexOf(bidStep) > i;
-              const isActive = bidStep === step;
-              return (
-                <button
-                  key={step}
-                  type="button"
-                  onClick={() => step !== "notes" || bidStep !== "notes" ? goToStep(step) : undefined}
-                  className={`rounded-full px-3 py-1 text-[10px] font-semibold transition-colors ${
-                    isActive ? "bg-primary text-primary-foreground" :
-                    isPast ? "bg-primary/20 text-primary" :
-                    "bg-muted text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {i + 1}. {labels[step]}
-                </button>
-              );
-            })}
-          </div>
-          <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={closeBidBuilder}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Bid Mode content */}
-      <div className="flex flex-col lg:flex-row lg:min-h-[600px]">
-
-        {/* ── LEFT: Scope workspace ── */}
-        <div className="flex-1 min-w-0 px-4 py-5 lg:px-6">
-
-          {/* Mobile step pills */}
-          <div className="mb-4 flex items-center gap-1 sm:hidden overflow-x-auto pb-1">
-            {(["notes", "review", "scope", "pricing", "draft"] as BidStep[]).map((step, i) => {
-              const labels: Record<BidStep, string> = { notes: "Details", review: "Review", scope: "Scope", pricing: "Pricing", draft: "Draft" };
-              const steps: BidStep[] = ["notes", "review", "scope", "pricing", "draft"];
-              const isActive = bidStep === step;
-              const isPast = steps.indexOf(bidStep) > i;
-              return (
-                <button
-                  key={step}
-                  type="button"
-                  onClick={() => goToStep(step)}
-                  className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-semibold transition-colors ${
-                    isActive ? "bg-primary text-primary-foreground" :
-                    isPast ? "bg-primary/20 text-primary" :
-                    "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {i + 1}. {labels[step]}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Step 0: Rough Notes + AI Questions */}
-          {bidStep === "notes" && (
-            <div className="space-y-5">
-              <div>
-                <h3 className="text-base font-bold text-foreground">Create New Bid</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Add rough project details and HomeBids AI will turn them into a clean, professional bid.
-                </p>
-              </div>
-
-              {/* Primary: rough notes textarea */}
-              <div className="space-y-1.5">
-                <Label htmlFor="rough-notes" className="text-xs font-medium">Project notes <span className="text-muted-foreground font-normal">(required)</span></Label>
-                <Textarea
-                  id="rough-notes"
-                  rows={4}
-                  placeholder={"e.g. Kitchen cabinet repaint, 28 doors, white finish, homeowner wants it done next month.\nor: Backyard turf install, about 900 sqft, needs removal of old grass.\nor: Bathroom vanity replacement, homeowner has vanity already, need install and plumbing hookup."}
-                  value={roughNotes}
-                  onChange={(e) => setRoughNotes(e.target.value)}
-                  className="text-sm resize-none"
-                />
-              </div>
-
-              {/* Optional detail fields */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="rough-customer" className="text-xs font-medium">Customer name <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                  <Input id="rough-customer" placeholder="e.g. Sarah M." value={roughCustomer} onChange={(e) => setRoughCustomer(e.target.value)} className="text-sm" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="rough-location" className="text-xs font-medium">Location <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                  <Input id="rough-location" placeholder="e.g. Gilbert, AZ" value={roughLocation} onChange={(e) => setRoughLocation(e.target.value)} className="text-sm" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="rough-timeline" className="text-xs font-medium">Timeline <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                  <Input id="rough-timeline" placeholder="e.g. 1–2 weeks" value={roughTimeline} onChange={(e) => setRoughTimeline(e.target.value)} className="text-sm" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="rough-budget" className="text-xs font-medium">Approx budget or bid amount <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                  <Input id="rough-budget" placeholder="e.g. $1,500 or $1,000–$2,000" value={roughBudget} onChange={(e) => setRoughBudget(e.target.value)} className="text-sm" />
-                </div>
-              </div>
-
-              <Button
-                className="w-full gap-2"
-                disabled={roughNotes.trim().length < 5 || aiOrganizing}
-                onClick={organizeWithAI}
-              >
-                {aiOrganizing ? (
-                  <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                    AI is organizing your bid...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" /> Let AI Build My Bid
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-
-          {/* Step 1: Review */}
-          {bidStep === "review" && (
-            <div className="space-y-4">
-              <h3 className="text-base font-bold text-foreground">Project Details</h3>
-
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {[
-                  { label: "Category", value: bidBuilderLead?.category ?? roughNotes.split(",")[0] ?? "—" },
-                  { label: "Location", value: bidBuilderLead?.location ?? (roughLocation || "—") },
-                  { label: "Timeline", value: bidBuilderLead?.timeline ?? (roughTimeline || "—") },
-                  { label: "Budget Range", value: bidBuilderLead?.budgetRange ?? (roughBudget || "—") },
-                ].map(({ label, value }) => (
-                  <div key={label} className="rounded-lg bg-muted p-2.5">
-                    <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-                    <p className="mt-0.5 text-sm font-semibold text-foreground">{value}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-3 rounded-xl border border-border bg-card p-4">
-                <div>
-                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Homeowner Goals</p>
-                  <p className="text-sm text-foreground">{bidBuilderLead?.homeownerGoals ?? "Based on your project notes above."}</p>
-                </div>
-                <div className="border-t border-border pt-3">
-                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Known Scope</p>
-                  <p className="text-sm text-foreground">{bidBuilderLead?.scope ?? roughNotes}</p>
-                </div>
-                {(bidBuilderLead?.photos ?? 0) > 0 && (
-                  <div className="flex items-center gap-2 border-t border-border pt-3">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-xs text-muted-foreground">{bidBuilderLead!.photos} photo{bidBuilderLead!.photos !== 1 ? "s" : ""} attached</p>
-                  </div>
-                )}
-              </div>
-
-              {(bidBuilderLead?.missingInfo?.length ?? 0) > 0 && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                  <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-amber-700">
-                    <AlertCircle className="h-3.5 w-3.5" /> Missing Information
-                  </p>
-                  {bidBuilderLead!.missingInfo!.map((item, i) => (
-                    <p key={i} className="text-sm text-amber-900">• {item}</p>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
-                <p className="text-xs text-muted-foreground">AI Confidence</p>
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                  bidBuilderLead?.aiConfidence === "High" ? "bg-green-100 text-green-700" :
-                  bidBuilderLead?.aiConfidence === "Medium" ? "bg-amber-100 text-amber-700" :
-                  "bg-blue-100 text-blue-700"
-                }`}>{bidBuilderLead?.aiConfidence ?? "Ready"}</span>
-              </div>
-
-              <Button className="w-full gap-2" onClick={() => goToStep("scope")}>
-                Continue to Scope Builder <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-
-          {/* Step 2: Scope Builder */}
-          {bidStep === "scope" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-foreground">Scope Builder</h3>
-                <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs" onClick={() => goToStep("review")}><ArrowLeft className="h-3.5 w-3.5" />Back</Button>
-              </div>
-              <p className="text-sm text-muted-foreground">Check, reorder, and customize scope items. The live preview updates automatically.</p>
-
-              <div className="space-y-2">
-                {scopeItems.map((item, idx) => (
-                  <div key={item.id} className={`rounded-xl border p-3 ${item.included ? "border-primary/30 bg-primary/5" : "border-border bg-card"}`}>
-                    <div className="flex items-start gap-2">
-                      <Checkbox checked={item.included} onCheckedChange={() => toggleScopeIncluded(item.id)} className="mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium ${item.included ? "text-foreground" : "text-muted-foreground line-through"}`}>
-                          {item.label}
-                          {item.type === "optional" && <span className="ml-2 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-semibold text-blue-700">Optional</span>}
-                          {item.type === "excluded" && <span className="ml-2 rounded-full bg-red-100 px-1.5 py-0.5 text-[9px] font-semibold text-red-700">Excluded</span>}
-                        </p>
-                        {expandedScopes[item.id] ? (
-                          <Textarea value={item.description} onChange={(e) => updateScopeDescription(item.id, e.target.value)} rows={2} className="mt-2 text-xs resize-none" />
-                        ) : (
-                          <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{item.description}</p>
-                        )}
-                      </div>
-                      <div className="flex shrink-0 gap-1">
-                        <button type="button" onClick={() => toggleScope(item.id)} className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground">
-                          {expandedScopes[item.id] ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                        </button>
-                        <button type="button" onClick={() => moveScopeUp(item.id)} disabled={idx === 0} className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground disabled:opacity-30">
-                          <ChevronUp className="h-3.5 w-3.5" />
-                        </button>
-                        <button type="button" onClick={() => moveScopeDown(item.id)} disabled={idx === scopeItems.length - 1} className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground disabled:opacity-30">
-                          <ChevronDown className="h-3.5 w-3.5" />
-                        </button>
-                        {item.id.startsWith("custom-") && (
-                          <button type="button" onClick={() => deleteScope(item.id)} className="flex h-7 w-7 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100">
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <Button variant="outline" size="sm" className="gap-2 bg-transparent" onClick={addCustomScope}>
-                <Plus className="h-4 w-4" /> Add Custom Item
-              </Button>
-
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1 bg-transparent" onClick={() => goToStep("review")}><ArrowLeft className="h-4 w-4 mr-2" />Back</Button>
-                <Button className="flex-1 gap-2" onClick={() => goToStep("pricing")}>Continue to Pricing <ChevronRight className="h-4 w-4" /></Button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Pricing */}
-          {bidStep === "pricing" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-foreground">Pricing</h3>
-                <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs" onClick={() => goToStep("scope")}><ArrowLeft className="h-3.5 w-3.5" />Back</Button>
-              </div>
-
-              <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="labor" className="text-xs font-medium">Labor ($)</Label>
-                  <Input id="labor" type="number" value={laborCost} onChange={(e) => setLaborCost(e.target.value)} className="text-sm" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="materials" className="text-xs font-medium">Materials ($)</Label>
-                  <Input id="materials" type="number" value={materialCost} onChange={(e) => setMaterialCost(e.target.value)} className="text-sm" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="markup" className="text-xs font-medium">Markup (%)</Label>
-                  <Input id="markup" type="number" value={markup} onChange={(e) => setMarkup(e.target.value)} className="text-sm" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Complexity</Label>
-                  <div className="flex gap-2">
-                    {(["low", "medium", "high"] as const).map((c) => (
-                      <button key={c} type="button" onClick={() => setComplexity(c)}
-                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium capitalize transition-colors ${
-                          complexity === c ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground hover:text-foreground"
-                        }`}>
-                        {c}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="bid-notes" className="text-xs font-medium">Notes (optional)</Label>
-                  <Textarea id="bid-notes" value={bidNotes} onChange={(e) => setBidNotes(e.target.value)} rows={2} className="text-xs resize-none" placeholder="Any special conditions, warranty info, or clarifications..." />
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-primary/80 mb-1">Your Total</p>
-                <p className="text-3xl font-bold text-foreground">${totalPrice.toFixed(2)}</p>
-                <p className="mt-1 text-xs text-muted-foreground">AI suggested range: <span className="font-semibold text-foreground">{priceRangeAI}</span></p>
-                {priceWarning && (
-                  <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
-                    <p className="text-xs text-amber-900">{priceWarning}</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1 bg-transparent" onClick={() => goToStep("scope")}><ArrowLeft className="h-4 w-4 mr-2" />Back</Button>
-                <Button className="flex-1 gap-2" onClick={() => goToStep("draft")}>Generate Bid Draft <ChevronRight className="h-4 w-4" /></Button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 4: Draft + Submit */}
-          {bidStep === "draft" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-foreground">Bid Draft</h3>
-                <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs" onClick={() => goToStep("pricing")}><ArrowLeft className="h-3.5 w-3.5" />Back</Button>
-              </div>
-
-              <div className="rounded-xl border border-border bg-muted/40 p-4 max-h-72 overflow-y-auto">
-                <pre className="whitespace-pre-wrap text-xs leading-relaxed text-foreground">{bidDraft}</pre>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" className="gap-1 bg-transparent" onClick={() => { copyToClipboard(bidDraft).then(() => { setDraftCopied(true); setTimeout(() => setDraftCopied(false), 2000); }); }}>
-                  <Copy className="h-3.5 w-3.5" />{draftCopied ? "Copied!" : "Copy Bid"}
-                </Button>
-                <Button size="sm" variant="outline" className="gap-1 bg-transparent" onClick={() => window.print()}>
-                  <Download className="h-3.5 w-3.5" /> Download PDF
-                </Button>
-                <Button size="sm" variant="outline" className="gap-1 bg-transparent" onClick={() => openSms(undefined, bidDraft.slice(0, 300) + "...")}>
-                  <Send className="h-3.5 w-3.5" /> Send via SMS
-                </Button>
-              </div>
-
-              {bidBuilderLead?.directMessagingUnlocked ? (
-                <Button className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white" onClick={() => openSms(bidBuilderLead?.homeownerPhone, "Hi! I've completed your estimate — I'll send the PDF shortly.")}>
-                  <MessageCircle className="h-4 w-4" /> Text Homeowner
-                </Button>
-              ) : bidBuilderLead ? (
-                <Button className="w-full gap-2" onClick={() => { setRelayLead(bidBuilderLead); setRelayMessage(`Hi ${bidBuilderLead.homeownerName}, I've completed your estimate for ${bidBuilderLead.title}. I'd love to discuss the details.`); setRelaySent(false); setShowRelayModal(true); closeBidBuilder(); }}>
-                  <Send className="h-4 w-4" /> Submit via HomeBids AI
-                </Button>
-              ) : null}
-              <Button variant="outline" className="w-full bg-transparent gap-2" onClick={closeBidBuilder}>
-                <CheckCircle2 className="h-4 w-4" /> Done — Save &amp; Close
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* ── RIGHT: AI assistant + live PDF preview (desktop only) ── */}
-        <div className="hidden lg:flex lg:w-72 xl:w-80 shrink-0 flex-col border-l border-border overflow-hidden">
-          {/* Live PDF preview */}
-          <div className="flex-1 overflow-y-auto p-4 min-h-0">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Live PDF Preview</p>
-              <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[9px] font-medium text-green-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" /> Live
-              </span>
-            </div>
-            {livePdfPreview}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
   // Bid Defender pane
   const bidDefenderPane = (
@@ -1302,11 +733,19 @@ export default function ContractorDashboard() {
 
   // AI Tools content — picker or active tool
   const aiContent = (() => {
-    // Bid Builder is full-screen when active
+    // Bid Builder is full-screen when active — chat-first experience
     if (activeTool === "bid") {
       return (
-        <div className="-mx-4 lg:-mx-8">
-          {bidBuilderWorkspace}
+        <div className="-mx-4 overflow-hidden rounded-none border-y border-border bg-background lg:-mx-8 lg:rounded-2xl lg:border">
+          <BidBuilderChat
+            leadType={bidChatLeadType}
+            lead={bidChatLead}
+            contractorName={`${contractorName}`}
+            companyName={companyName}
+            onClose={closeBidBuilder}
+            onHomeownerApproved={handleHomeownerApproved}
+            onOpenDefender={() => setActiveTool("defender")}
+          />
         </div>
       );
     }
@@ -1337,27 +776,27 @@ export default function ContractorDashboard() {
           {/* Bid Builder card */}
           <button
             type="button"
-            onClick={() => createNewBid()}
+            onClick={() => startBidByText("my", null)}
             className="group flex flex-col rounded-2xl border-2 border-border bg-card p-6 text-left transition-all hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5"
           >
             <div className="flex items-start justify-between">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary/20">
-                <Calculator className="h-6 w-6 text-primary" />
+                <MessageCircle className="h-6 w-6 text-primary" />
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
             </div>
             <h3 className="mt-4 text-lg font-bold text-foreground">Bid Builder</h3>
             <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-              Build professional estimates with a live PDF preview. AI guides your scope, pricing, and wording in real time.
+              Text rough job notes and HomeBids AI writes the whole bid for you — scope, pricing, and wording. Approve it and we generate the PDF.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              {["Scope Builder", "Live PDF Preview", "AI Guidance", "Submit"].map((tag) => (
+              {["Text-to-Bid", "AI Drafting", "Live PDF", "One-Tap Approve"].map((tag) => (
                 <span key={tag} className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-medium text-primary">{tag}</span>
               ))}
             </div>
             <div className="mt-5">
               <span className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors group-hover:bg-primary/90">
-                <Zap className="h-4 w-4" /> Create New Bid
+                <MessageCircle className="h-4 w-4" /> Start Bid by Text
               </span>
             </div>
           </button>
@@ -1400,7 +839,7 @@ export default function ContractorDashboard() {
                 <button
                   key={lead.id}
                   type="button"
-                  onClick={() => openBidBuilder(lead)}
+                  onClick={() => startBidFromHomeBidsLead(lead)}
                   className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
                 >
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -1596,10 +1035,10 @@ export default function ContractorDashboard() {
                 </ul>
               </div>
               <div className="flex flex-col gap-2 pt-1">
-                <Button className="w-full gap-2" onClick={() => { setShowLeadDetail(false); openBidBuilder(selectedLead); }}>
-                  <Calculator className="h-4 w-4" /> Build Bid
-                </Button>
-                {!selectedLead.directMessagingUnlocked ? (
+              <Button className="w-full gap-2" onClick={() => { setShowLeadDetail(false); startBidFromHomeBidsLead(selectedLead); }}>
+                <MessageCircle className="h-4 w-4" /> Start Bid by Text
+              </Button>
+                {!isMessagingUnlocked(selectedLead) ? (
                   <Button variant="outline" className="w-full gap-2 bg-transparent" onClick={() => { setRelayLead(selectedLead); setRelayMessage(selectedLead.suggestedResponse); setRelaySent(false); setShowLeadDetail(false); setTimeout(() => setShowRelayModal(true), 150); }}>
                     <MessageCircle className="h-4 w-4" /> Message via HomeBids AI
                   </Button>
