@@ -463,9 +463,9 @@ export default function ContractorsPage() {
                   <Label htmlFor="contractor-password" className="text-sm font-medium">
                     Password
                   </Label>
-                  <a href="#" className="text-xs text-muted-foreground hover:text-primary">
+                  <button type="button" className="text-xs text-muted-foreground hover:text-primary" onClick={() => alert("Password reset — contact support@homebids.ai")}>
                     Forgot password?
-                  </a>
+                  </button>
                 </div>
                 <Input
                   id="contractor-password"

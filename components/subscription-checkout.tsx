@@ -12,7 +12,12 @@ import { getMockUser, USE_MOCK_DATA } from '@/lib/mock-auth'
 import { CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+// Defer Stripe initialization — only call loadStripe when the publishable key
+// is actually present. Passing null tells EmbeddedCheckoutProvider to wait,
+// avoiding the "publishable key undefined" runtime error in environments where
+// the env var has not been configured yet.
+const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
 
 interface SubscriptionCheckoutProps {
   planId: string
@@ -65,6 +70,20 @@ export function SubscriptionCheckout({ planId, onSuccess, onCancel }: Subscripti
   const handleComplete = useCallback(() => {
     setIsComplete(true)
   }, [])
+
+  if (!stripeKey) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 border border-destructive/30">
+          <AlertCircle className="h-8 w-8 text-destructive" />
+        </div>
+        <h3 className="mt-4 text-xl font-semibold text-foreground">Payments not configured</h3>
+        <p className="mt-2 text-muted-foreground">
+          Add your <code className="font-mono text-sm">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> environment variable to enable checkout.
+        </p>
+      </div>
+    )
+  }
 
   if (error) {
     return (
