@@ -319,7 +319,6 @@ export default function ContractorDashboard() {
   const [roughBudget, setRoughBudget] = useState("");
 
   // AI follow-up answers
-  const [aiFollowUpAnswers, setAiFollowUpAnswers] = useState<string[]>(["", "", "", ""]);
   const [aiOrganizing, setAiOrganizing] = useState(false);
   const [scopeItems, setScopeItems] = useState<ScopeItem[]>(DEFAULT_SCOPE_ITEMS);
   const [expandedScopes, setExpandedScopes] = useState<Record<string, boolean>>({});
@@ -403,7 +402,6 @@ export default function ContractorDashboard() {
     setRoughLocation(lead ? lead.location : "");
     setRoughTimeline(lead ? lead.timeline : "");
     setRoughBudget(lead ? lead.budgetRange : "");
-    setAiFollowUpAnswers(["", "", "", ""]);
     setAiOrganizing(false);
     setScopeItems(DEFAULT_SCOPE_ITEMS);
     setLaborCost("800");
@@ -428,7 +426,6 @@ export default function ContractorDashboard() {
     setRoughLocation("");
     setRoughTimeline("");
     setRoughBudget("");
-    setAiFollowUpAnswers(["", "", "", ""]);
     setAiOrganizing(false);
     setActiveTool(null);
   }
@@ -978,41 +975,6 @@ export default function ContractorDashboard() {
                   <Input id="rough-budget" placeholder="e.g. $1,500 or $1,000–$2,000" value={roughBudget} onChange={(e) => setRoughBudget(e.target.value)} className="text-sm" />
                 </div>
               </div>
-
-              {/* AI follow-up questions — appear once notes are typed */}
-              {roughNotes.trim().length > 20 && (
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15">
-                      <Sparkles className="h-3.5 w-3.5 text-primary" />
-                    </div>
-                    <p className="text-sm font-semibold text-foreground">HomeBids AI — a few quick questions</p>
-                  </div>
-                  <p className="text-sm text-muted-foreground -mt-2">
-                    Got it. I&apos;ll help build this into a professional bid. Answer what you can — AI will fill the rest.
-                  </p>
-                  {[
-                    "Are there any specific materials, brands, or products the customer wants?",
-                    "Are there items that should be explicitly excluded from scope?",
-                    "Any optional upgrades or upsells you want to include?",
-                    "Any special conditions — access issues, timing constraints, permits needed?",
-                  ].map((question, i) => (
-                    <div key={i} className="space-y-1.5">
-                      <Label className="text-xs font-medium text-foreground">{question}</Label>
-                      <Input
-                        placeholder="Type your answer or leave blank — AI will infer"
-                        value={aiFollowUpAnswers[i]}
-                        onChange={(e) => {
-                          const updated = [...aiFollowUpAnswers];
-                          updated[i] = e.target.value;
-                          setAiFollowUpAnswers(updated);
-                        }}
-                        className="text-sm"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
 
               <Button
                 className="w-full gap-2"
