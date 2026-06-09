@@ -235,15 +235,6 @@ type BidStep = "notes" | "review" | "scope" | "pricing" | "draft";
 
 // ── AI assistant suggestions ───────────────────────────────────────────────────
 
-const AI_SUGGESTIONS = [
-  "Cabinet jobs like this typically include hardware removal and door labeling to avoid reinstall errors.",
-  "The homeowner mentioned timeline urgency — you may want to add a rush availability note.",
-  "Consider excluding drywall repair unless it's been confirmed in scope. It's a common surprise cost.",
-  "Similar projects in Gilbert this month averaged $4,800–$6,200. Your pricing looks competitive.",
-  "Adding a soft-close hinge upsell here could increase your ticket by $150–$250 with minimal effort.",
-  "Homeowner mentioned kids at home — lead with your low-VOC paint selection in the proposal intro.",
-];
-
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function ContractorDashboard() {
@@ -329,8 +320,6 @@ export default function ContractorDashboard() {
   const [bidNotes, setBidNotes] = useState("");
   const [bidDraft, setBidDraft] = useState("");
   const [draftCopied, setDraftCopied] = useState(false);
-  const [aiSuggestionIdx, setAiSuggestionIdx] = useState(0);
-  const suggestionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const laborNum = parseFloat(laborCost) || 0;
   const materialNum = parseFloat(materialCost) || 0;
@@ -410,7 +399,6 @@ export default function ContractorDashboard() {
     setComplexity("medium");
     setBidNotes("");
     setBidDraft("");
-    setAiSuggestionIdx(0);
     setActiveTool("bid");
     setActiveTab("ai");
   }
@@ -443,16 +431,6 @@ export default function ContractorDashboard() {
       setBidStep("review");
     }, 1800);
   }
-
-  // Rotate AI suggestions in Bid Mode
-  useEffect(() => {
-    if (activeTool === "bid" && bidBuilderLead) {
-      suggestionTimerRef.current = setInterval(() => {
-        setAiSuggestionIdx((i) => (i + 1) % AI_SUGGESTIONS.length);
-      }, 8000);
-    }
-    return () => { if (suggestionTimerRef.current) clearInterval(suggestionTimerRef.current); };
-  }, [activeTool, bidBuilderLead]);
 
   // ── Bid Defender state ─────────────────────────────────────────────────────
 
@@ -631,7 +609,7 @@ export default function ContractorDashboard() {
     </div>
   );
 
-  // ── LEADS tab ──────────────────────────────────────────────────────────────
+  // ── LEADS tab ──���───────────────────────────────────────────────────────────
 
   const leadsContent = (
     <div className="space-y-5">
@@ -1216,29 +1194,6 @@ export default function ContractorDashboard() {
 
         {/* ── RIGHT: AI assistant + live PDF preview (desktop only) ── */}
         <div className="hidden lg:flex lg:w-72 xl:w-80 shrink-0 flex-col border-l border-border overflow-hidden">
-          {/* AI assistant */}
-          <div className="border-b border-border bg-muted/20 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
-              </div>
-              <p className="text-xs font-semibold text-foreground">AI Assistant</p>
-            </div>
-            <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 min-h-[56px]">
-              <p className="text-xs leading-relaxed text-foreground italic">{AI_SUGGESTIONS[aiSuggestionIdx]}</p>
-            </div>
-            <div className="mt-2 flex justify-center gap-1">
-              {AI_SUGGESTIONS.map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setAiSuggestionIdx(i)}
-                  className={`h-1.5 rounded-full transition-all ${i === aiSuggestionIdx ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30"}`}
-                />
-              ))}
-            </div>
-          </div>
-
           {/* Live PDF preview */}
           <div className="flex-1 overflow-y-auto p-4 min-h-0">
             <div className="mb-2 flex items-center justify-between">
