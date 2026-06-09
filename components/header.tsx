@@ -55,14 +55,9 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
   const pathname = usePathname();
   const router = useRouter();
 
-  const [closing, setClosing] = useState(false);
-
   const closeMenu = () => {
-    setClosing(true);
     setMenuOpen(false);
     (document.activeElement as HTMLElement)?.blur();
-    // brief pointer-events guard so fast clicks can't reopen
-    setTimeout(() => setClosing(false), 150);
   };
 
   // Imperative logo navigation — always goes to "/" regardless of auth state.
@@ -188,8 +183,8 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
           <button
             ref={menuRef as React.RefObject<HTMLButtonElement>}
             type="button"
-            onClick={() => !closing && setMenuOpen((o) => !o)}
-            className={`relative flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground${closing ? " pointer-events-none" : ""}`}
+            onClick={() => setMenuOpen((o) => !o)}
+            className="relative flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             aria-label={`Menu${unreadCount > 0 ? ` (${unreadCount} notifications)` : ""}`}
             aria-expanded={menuOpen}
             aria-haspopup="true"
