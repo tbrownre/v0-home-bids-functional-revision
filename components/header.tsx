@@ -179,8 +179,8 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
   const separatorClass = "my-1 border-t border-border";
 
   return (
-    <header className="relative shrink-0 border-b border-border bg-background">
-      <div className="mx-auto grid grid-cols-[1fr_auto_1fr] items-center px-4 py-2 md:px-6" style={{ marginTop: "-35px", marginBottom: "-35px" }}>
+    <header className="relative shrink-0 border-b border-border bg-background overflow-x-hidden">
+      <div className="mx-auto grid grid-cols-[1fr_auto_1fr] items-center px-4 py-2 md:px-6">
 
         {/* Left: menu button + optional back link */}
         <div className="flex items-center gap-1">
@@ -324,9 +324,8 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
           style={{
             background: "none",
             border: "none",
-            padding: "8px",          // generous touch target
-            margin: "-8px",          // cancel padding so layout is unchanged
-            zIndex: 10,              // sit above any overlay fragments
+            padding: "4px 8px",
+            zIndex: 10,
             position: "relative",
             WebkitTapHighlightColor: "transparent",
           }}
@@ -337,7 +336,7 @@ export function Header({ isContractor: isContractorProp = false, isSignedIn: isS
             width={480}
             height={120}
             className="object-contain pointer-events-none"
-            style={{ height: "clamp(120px, 20vw, 180px)", width: "auto" }}
+            style={{ height: "clamp(56px, 10vw, 80px)", width: "auto" }}
             priority
           />
         </button>

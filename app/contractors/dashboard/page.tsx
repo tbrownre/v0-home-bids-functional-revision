@@ -438,6 +438,19 @@ export default function ContractorDashboard() {
     setTimeout(() => { setDefResult(getBidDefenderResponse(defProject, defBid, defObjection)); setDefLoading(false); }, 1000);
   }
 
+  function openSms(phone: string | undefined, body?: string) {
+    // phone is required for direct-contact leads; body-only SMS uses an empty recipient
+    const target = phone ?? "";
+    if (!phone && !body) {
+      alert("Phone number not available. Contact has not been unlocked yet.");
+      return;
+    }
+    const href = body
+      ? `sms:${target}${body ? `?body=${encodeURIComponent(body)}` : ""}`
+      : `sms:${target}`;
+    window.location.href = href;
+  }
+
   const handleSignOut = () => mockSignOut();
 
   const newLeads = DEMO_HOMEBIDS_LEADS.filter((l) => l.status === "new").length;
@@ -495,7 +508,7 @@ export default function ContractorDashboard() {
             <Eye className="h-3.5 w-3.5" /> Details
           </Button>
           {lead.directMessagingUnlocked ? (
-            <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => { window.location.href = `sms:${lead.homeownerPhone ?? ""}`; }}>
+            <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => openSms(lead.homeownerPhone)}>
               <MessageCircle className="h-3 w-3" /> Text Homeowner
             </Button>
           ) : lead.status === "new" ? (
@@ -654,7 +667,7 @@ export default function ContractorDashboard() {
                       <Eye className="h-3 w-3" /> Details
                     </Button>
                     {lead.directMessagingUnlocked ? (
-                      <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => { window.location.href = `sms:${lead.homeownerPhone ?? ""}`; }}>
+                      <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => openSms(lead.homeownerPhone)}>
                         <MessageCircle className="h-3 w-3" /> Text Homeowner
                       </Button>
                     ) : (
@@ -705,7 +718,7 @@ export default function ContractorDashboard() {
                     <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => handleTabChange("ai")}>
                       <Sparkles className="h-3 w-3" /> AI Tools
                     </Button>
-                    <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { window.location.href = `sms:${lead.phone ?? ""}`; }}>
+                    <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => openSms(lead.phone)}>
                       <MessageCircle className="h-3 w-3" /> Text Customer
                     </Button>
                   </div>
@@ -833,9 +846,9 @@ export default function ContractorDashboard() {
     </div>
   ) : (
     // Bid Mode — full workspace
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col">
       {/* Bid Mode top bar */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-3 lg:px-6">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3 lg:px-6 flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
             <Calculator className="h-4 w-4 text-primary" />
@@ -876,10 +889,10 @@ export default function ContractorDashboard() {
       </div>
 
       {/* Bid Mode content */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col lg:flex-row lg:min-h-[600px]">
 
         {/* ── LEFT: Scope workspace ── */}
-        <div className="flex-1 min-w-0 overflow-y-auto px-4 py-5 lg:px-6">
+        <div className="flex-1 min-w-0 px-4 py-5 lg:px-6">
 
           {/* Mobile step pills */}
           <div className="mb-4 flex items-center gap-1 sm:hidden overflow-x-auto pb-1">
@@ -1103,13 +1116,13 @@ export default function ContractorDashboard() {
                 <Button size="sm" variant="outline" className="gap-1 bg-transparent" onClick={() => window.print()}>
                   <Download className="h-3.5 w-3.5" /> Download PDF
                 </Button>
-                <Button size="sm" variant="outline" className="gap-1 bg-transparent" onClick={() => { window.location.href = `sms:?body=${encodeURIComponent(bidDraft.slice(0, 300) + "...")}`; }}>
+                <Button size="sm" variant="outline" className="gap-1 bg-transparent" onClick={() => openSms(undefined, bidDraft.slice(0, 300) + "...")}>
                   <Send className="h-3.5 w-3.5" /> Send via SMS
                 </Button>
               </div>
 
               {bidBuilderLead.directMessagingUnlocked ? (
-                <Button className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white" onClick={() => { window.location.href = `sms:${bidBuilderLead.homeownerPhone ?? ""}?body=${encodeURIComponent("Hi! I've completed your estimate — I'll send the PDF shortly.")}`; }}>
+                <Button className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white" onClick={() => openSms(bidBuilderLead.homeownerPhone, "Hi! I've completed your estimate — I'll send the PDF shortly.")}>
                   <MessageCircle className="h-4 w-4" /> Text Homeowner
                 </Button>
               ) : (
@@ -1125,7 +1138,7 @@ export default function ContractorDashboard() {
         </div>
 
         {/* ── RIGHT: AI assistant + live PDF preview (desktop only) ── */}
-        <div className="hidden lg:flex lg:w-80 xl:w-96 shrink-0 flex-col border-l border-border">
+        <div className="hidden lg:flex lg:w-72 xl:w-80 shrink-0 flex-col border-l border-border overflow-hidden">
           {/* AI assistant */}
           <div className="border-b border-border bg-muted/20 p-4">
             <div className="flex items-center gap-2 mb-3">
@@ -1150,7 +1163,7 @@ export default function ContractorDashboard() {
           </div>
 
           {/* Live PDF preview */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4 min-h-0">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Live PDF Preview</p>
               <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[9px] font-medium text-green-700">
@@ -1232,7 +1245,7 @@ export default function ContractorDashboard() {
               <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { copyToClipboard(defResult.response); setDefCopied(true); setTimeout(() => setDefCopied(false), 2000); }}>
                 <Copy className="h-3 w-3" />{defCopied ? "Copied!" : "Copy"}
               </Button>
-              <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { window.location.href = `sms:?body=${encodeURIComponent(defResult.response)}`; }}>
+              <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => openSms(undefined, defResult.response)}>
                 <Send className="h-3 w-3" /> Send via SMS
               </Button>
             </div>
@@ -1260,7 +1273,7 @@ export default function ContractorDashboard() {
     // Bid Builder is full-screen when active
     if (activeTool === "bid") {
       return (
-        <div className="-mx-4 -mt-6 lg:-mx-8 lg:-mt-8 flex flex-col" style={{ minHeight: "calc(100vh - 120px)" }}>
+        <div className="-mx-4 lg:-mx-8">
           {bidBuilderWorkspace}
         </div>
       );
@@ -1269,7 +1282,7 @@ export default function ContractorDashboard() {
     // Bid Defender takes up the content area
     if (activeTool === "defender") {
       return (
-        <div className="-mx-4 -mt-6 lg:-mx-8 lg:-mt-8">
+        <div className="-mx-4 lg:-mx-8">
           <div className="border-b border-border px-4 py-3 lg:px-6">
             <button type="button" onClick={() => setActiveTool(null)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="h-4 w-4" /> Back to AI Tools
@@ -1449,7 +1462,7 @@ export default function ContractorDashboard() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-background overflow-x-hidden">
       <Header isContractor isSignedIn />
       <ScrollToTop />
 
@@ -1582,7 +1595,7 @@ export default function ContractorDashboard() {
                     <MessageCircle className="h-4 w-4" /> Message via HomeBids AI
                   </Button>
                 ) : (
-                  <Button className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white" onClick={() => { window.location.href = `sms:${selectedLead.homeownerPhone ?? ""}`; }}>
+                  <Button className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white" onClick={() => openSms(selectedLead.homeownerPhone)}>
                     <MessageCircle className="h-4 w-4" /> Text Homeowner
                   </Button>
                 )}
