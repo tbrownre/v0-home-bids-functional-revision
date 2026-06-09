@@ -292,7 +292,8 @@ export default function ContractorDashboard() {
     load();
   }, []);
 
-  // Relay modal
+  // Leads segment — "myleads" is the default
+  const [leadsSegment, setLeadsSegment] = useState<"myleads" | "homebids">("myleads");
   const [showRelayModal, setShowRelayModal] = useState(false);
   const [relayLead, setRelayLead] = useState<HomeBidsLead | null>(null);
   const [relayMessage, setRelayMessage] = useState("");
@@ -601,142 +602,138 @@ export default function ContractorDashboard() {
     <div className="space-y-5">
       <h1 className="text-xl font-bold text-foreground">Leads</h1>
 
-      {/* Desktop: two-column split — My Leads (65%) + HomeBids Leads (35%)
-          Mobile: stacked, My Leads first */}
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-6">
-
-        {/* ── LEFT: My Leads (primary) ── */}
-        <div className="lg:w-[63%]">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-foreground">My Leads</h2>
-              <p className="text-xs text-muted-foreground">Your customers and personal opportunities</p>
-            </div>
-            <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-emerald-100 px-1.5 text-[10px] font-bold text-emerald-700">
-              {DEMO_MY_LEADS.length}
+      {/* Segmented toggle */}
+      <div className="inline-flex rounded-lg border border-border bg-muted p-0.5">
+        {([
+          { id: "myleads",  label: "My Leads",        count: DEMO_MY_LEADS.length        },
+          { id: "homebids", label: "HomeBids Leads",   count: DEMO_HOMEBIDS_LEADS.length  },
+        ] as const).map((seg) => (
+          <button
+            key={seg.id}
+            type="button"
+            onClick={() => setLeadsSegment(seg.id)}
+            className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-sm font-medium transition-all duration-150 ${
+              leadsSegment === seg.id
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {seg.label}
+            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${
+              leadsSegment === seg.id
+                ? seg.id === "myleads"
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-primary/10 text-primary"
+                : "bg-muted-foreground/15 text-muted-foreground"
+            }`}>
+              {seg.count}
             </span>
-          </div>
-          <div className="space-y-3">
-            {DEMO_MY_LEADS.map((lead) => {
-              const aiStatusBadge =
-                lead.aiStatus === "estimate_ready"  ? { label: "Estimate Ready",  cls: "bg-blue-100 text-blue-700"    }
-                : lead.aiStatus === "response_sent" ? { label: "Response Sent",   cls: "bg-amber-100 text-amber-700"  }
-                :                                    { label: "Follow-Up Ready",  cls: "bg-purple-100 text-purple-700" };
-              const statusDot =
-                lead.status === "in_progress" ? "bg-emerald-500" : "bg-muted-foreground/40";
-
-              return (
-                <div key={lead.id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/20">
-                  {/* Row 1: avatar + name + value */}
-                  <div className="flex items-center gap-3">
-                    <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-700 text-sm">
-                      {lead.customerName.charAt(0)}
-                      <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background ${statusDot}`} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-foreground">{lead.customerName}</p>
-                      <p className="text-xs text-muted-foreground truncate">{lead.projectTitle}</p>
-                    </div>
-                    <span className="shrink-0 text-sm font-semibold text-foreground">{lead.estimatedValue}</span>
-                  </div>
-                  {/* Row 2: badges + last activity */}
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${aiStatusBadge.cls}`}>{aiStatusBadge.label}</span>
-                    <span className="text-[11px] text-muted-foreground">· {lead.lastActivity}</span>
-                  </div>
-                  {/* Row 3: CTAs */}
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => handleTabChange("ai")}>
-                      <Calculator className="h-3 w-3" /> Build Bid
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => openSms(lead.phone)}>
-                      <MessageCircle className="h-3 w-3" /> Text Customer
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Vertical divider (desktop only) */}
-        <div className="hidden lg:block w-px self-stretch bg-border" />
-
-        {/* ── RIGHT: HomeBids Leads (secondary) ── */}
-        <div className="lg:flex-1">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-foreground">HomeBids Leads</h2>
-              <p className="text-xs text-muted-foreground">Opportunities sourced through HomeBids</p>
-            </div>
-            <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary/10 px-1.5 text-[10px] font-bold text-primary">
-              {DEMO_HOMEBIDS_LEADS.length}
-            </span>
-          </div>
-          <div className="space-y-3">
-            {DEMO_HOMEBIDS_LEADS.map((lead) => {
-              const statusBadge =
-                lead.status === "new"              ? { label: "New",          cls: "bg-blue-100 text-blue-700"    }
-                : lead.status === "bid_submitted"  ? { label: "Bid Sent",     cls: "bg-amber-100 text-amber-700"  }
-                :                                   { label: "Reviewing",     cls: "bg-purple-100 text-purple-700" };
-
-              return (
-                <div key={lead.id} className="rounded-xl border border-border bg-card p-3.5 transition-colors hover:border-primary/20">
-                  {/* Row 1: status + value */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadge.cls}`}>{statusBadge.label}</span>
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
-                    </div>
-                    <span className="shrink-0 text-sm font-semibold text-foreground">{lead.estimatedValue}</span>
-                  </div>
-                  {/* Row 2: title + location */}
-                  <p className="mt-1.5 text-sm font-semibold text-foreground">{lead.title}</p>
-                  <div className="mt-0.5 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3 shrink-0" />{lead.location}</span>
-                    <span className="flex items-center gap-1"><Clock className="h-3 w-3 shrink-0" />{lead.timeline}</span>
-                  </div>
-                  {/* Row 3: AI insight */}
-                  <p className="mt-1.5 text-[11px] italic text-primary/80 line-clamp-2">{lead.aiNotes}</p>
-                  {/* Row 4: approval status */}
-                  <div className="mt-1.5">
-                    {lead.directMessagingUnlocked ? (
-                      <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700 w-fit">
-                        <Unlock className="h-3 w-3" /> Direct messaging unlocked
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-muted-foreground">Direct messaging unlocks after homeowner approval.</span>
-                    )}
-                  </div>
-                  {/* Row 5: CTAs */}
-                  <div className="mt-2.5 flex flex-wrap gap-2">
-                    <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
-                      <Eye className="h-3 w-3" /> Details
-                    </Button>
-                    <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => openBidBuilder(lead)}>
-                      <Calculator className="h-3 w-3" /> Build Bid
-                    </Button>
-                    {lead.directMessagingUnlocked ? (
-                      <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => openSms(lead.homeownerPhone)}>
-                        <MessageCircle className="h-3 w-3" /> Text Homeowner
-                      </Button>
-                    ) : (
-                      <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); }}>
-                        <MessageCircle className="h-3 w-3" /> Send via HomeBids AI
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
+          </button>
+        ))}
       </div>
+
+      {/* My Leads */}
+      {leadsSegment === "myleads" && (
+        <div className="space-y-3">
+          {DEMO_MY_LEADS.map((lead) => {
+            const aiStatusBadge =
+              lead.aiStatus === "estimate_ready"  ? { label: "Estimate Ready",  cls: "bg-blue-100 text-blue-700"     }
+              : lead.aiStatus === "response_sent" ? { label: "Response Sent",   cls: "bg-amber-100 text-amber-700"   }
+              :                                    { label: "Follow-Up Ready",  cls: "bg-purple-100 text-purple-700" };
+            const statusDot =
+              lead.status === "in_progress" ? "bg-emerald-500" : "bg-muted-foreground/40";
+
+            return (
+              <div key={lead.id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/20">
+                <div className="flex items-center gap-3">
+                  <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
+                    {lead.customerName.charAt(0)}
+                    <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background ${statusDot}`} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-foreground">{lead.customerName}</p>
+                    <p className="truncate text-xs text-muted-foreground">{lead.projectTitle}</p>
+                  </div>
+                  <span className="shrink-0 text-sm font-semibold text-foreground">{lead.estimatedValue}</span>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${aiStatusBadge.cls}`}>{aiStatusBadge.label}</span>
+                  <span className="text-[11px] text-muted-foreground">· {lead.lastActivity}</span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => handleTabChange("ai")}>
+                    <Calculator className="h-3 w-3" /> Build Bid
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => openSms(lead.phone)}>
+                    <MessageCircle className="h-3 w-3" /> Text Customer
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* HomeBids Leads */}
+      {leadsSegment === "homebids" && (
+        <div className="space-y-3">
+          {DEMO_HOMEBIDS_LEADS.map((lead) => {
+            const statusBadge =
+              lead.status === "new"             ? { label: "New",        cls: "bg-blue-100 text-blue-700"     }
+              : lead.status === "bid_submitted" ? { label: "Bid Sent",   cls: "bg-amber-100 text-amber-700"   }
+              :                                  { label: "Reviewing",   cls: "bg-purple-100 text-purple-700" };
+
+            return (
+              <div key={lead.id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/20">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadge.cls}`}>{statusBadge.label}</span>
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
+                  </div>
+                  <span className="shrink-0 text-sm font-semibold text-foreground">{lead.estimatedValue}</span>
+                </div>
+                <p className="mt-2 font-semibold text-foreground">{lead.title}</p>
+                <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3 shrink-0" />{lead.location}</span>
+                  <span className="flex items-center gap-1"><Clock className="h-3 w-3 shrink-0" />{lead.timeline}</span>
+                </div>
+                <p className="mt-1.5 text-[11px] italic text-primary/80 line-clamp-2">{lead.aiNotes}</p>
+                <div className="mt-1.5">
+                  {lead.directMessagingUnlocked ? (
+                    <span className="flex w-fit items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">
+                      <Unlock className="h-3 w-3" /> Direct messaging unlocked
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">Direct messaging unlocks after homeowner approval.</span>
+                  )}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
+                    <Eye className="h-3 w-3" /> Details
+                  </Button>
+                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => openBidBuilder(lead)}>
+                    <Calculator className="h-3 w-3" /> Build Bid
+                  </Button>
+                  {lead.directMessagingUnlocked ? (
+                    <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => openSms(lead.homeownerPhone)}>
+                      <MessageCircle className="h-3 w-3" /> Text Homeowner
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); }}>
+                      <MessageCircle className="h-3 w-3" /> Send via HomeBids AI
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 
+        {/* ── LEFT: My Leads (primary) ── */}
   // ── AI TOOLS tab ───────────────────────────────────────────────────────────
 
   // Live PDF preview (used in Bid Mode right panel)
