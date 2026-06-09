@@ -482,8 +482,9 @@ export function BidBuilderChat({
           `Approved. I've generated the PDF and sent it to ${owner} for review. I'll relay messages until they approve — their contact stays private for now.`,
           "system",
         );
+        const fromLine = contractorName && contractorName.toLowerCase() !== "there" ? `${contractorName} from ${companyName}` : companyName;
         pushAi(
-          `Sent to ${owner}: "Hi ${owner.split(" ")[0]}, ${contractorName} from ${companyName} sent you a bid for your project${bidRef.current.address ? ` at ${bidRef.current.address}` : ""}. Review your bid here: [Bid Link]"`,
+          `Sent to ${owner}: "Hi ${owner.split(" ")[0]}, ${fromLine} sent you a bid for your project${bidRef.current.address ? ` at ${bidRef.current.address}` : ""}. Review your bid here: [Bid Link]"`,
         );
       }
     }, 1300);
