@@ -118,6 +118,10 @@ export default function HomePage() {
     if (USE_MOCK_DATA) {
       // Mock mode — read session synchronously, no network call.
       const user = getMockUser();
+      if (!user) {
+        window.location.replace("/gateway");
+        return;
+      }
       if (user) {
         if (user.role === "contractor") {
           window.location.replace("/contractors/dashboard");
@@ -130,6 +134,7 @@ export default function HomePage() {
         setIsSignedIn(true);
         setIsContractor(false);
         setUserEmail(user.email);
+
         if (
           !creatingNewJobRef.current &&
           !showJobsBoardRef.current &&
@@ -149,6 +154,10 @@ export default function HomePage() {
     try {
       const supabase = createClient();
       supabase.auth.getUser().then(async ({ data: { user } }) => {
+        if (!user) {
+          window.location.replace("/gateway");
+          return;
+        }
         if (user) {
           const type = user.user_metadata?.user_type;
           if (type === "contractor") {
@@ -183,7 +192,12 @@ export default function HomePage() {
         }
       });
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === "INITIAL_SESSION") return;
+        if (event === "INITIAL_SESSION") {
+          if (!session?.user) {
+            window.location.replace("/gateway");
+          }
+          return;
+        }
         if (session?.user) {
           const type = session.user.user_metadata?.user_type;
           if (type === "contractor") {
