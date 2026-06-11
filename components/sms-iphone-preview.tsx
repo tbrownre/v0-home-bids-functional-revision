@@ -87,14 +87,20 @@ function Ios5G() {
   );
 }
 
-// Battery: iOS pill with terminal nub
+// Battery: iOS pill — green fill with percentage label like reference (94%)
 function IosBattery() {
   return (
-    <svg width="28" height="13" viewBox="0 0 28 13" fill="none">
-      <rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke="rgba(0,0,0,0.35)" strokeWidth="1" />
-      <rect x="2" y="2" width="17" height="9" rx="2" fill="#000" />
-      <path d="M24.5 4.25v4.5a2.25 2.25 0 0 0 0-4.5z" fill="rgba(0,0,0,0.4)" />
-    </svg>
+    <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+      <span style={{ fontSize: 11, fontWeight: 500, color: "#000", letterSpacing: "-0.1px" }}>94%</span>
+      <svg width="27" height="13" viewBox="0 0 27 13" fill="none">
+        {/* Outer case */}
+        <rect x="0.5" y="0.5" width="22" height="12" rx="3.5" stroke="rgba(0,0,0,0.35)" strokeWidth="1" />
+        {/* Green fill ~94% */}
+        <rect x="2" y="2" width="17.5" height="9" rx="2" fill="#30D158" />
+        {/* Nub */}
+        <path d="M23.5 4.5v4a2 2 0 0 0 0-4z" fill="rgba(0,0,0,0.4)" />
+      </svg>
+    </div>
   );
 }
 
@@ -179,36 +185,38 @@ export function SmsIphonePreview() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex items-start justify-center">
+      {/* Outer wrapper — fixed size, never clips */}
       <div className="relative" style={{ width: 300 }}>
 
         {/* ── iPhone shell ────────────────────────────────────────────── */}
         <div
-          className="relative flex flex-col overflow-hidden bg-white"
+          className="relative flex flex-col overflow-hidden"
           style={{
-            height: 580,
-            borderRadius: 48,
+            height: 620,
+            borderRadius: 50,
             border: "10px solid #1C1C1E",
+            background: "#F2F2F7",
             boxShadow: [
               "0 0 0 1px #3A3A3C",
-              "0 28px 60px -8px rgba(0,0,0,0.55)",
+              "0 32px 64px -8px rgba(0,0,0,0.50)",
               "inset 0 0 0 1px rgba(255,255,255,0.06)",
             ].join(", "),
           }}
         >
 
           {/* ── Dynamic Island ────────────────────────────────────────── */}
-          <div className="relative flex shrink-0 items-center justify-center bg-white pt-[11px] pb-[2px]">
-            {/* Pill */}
+          <div className="relative flex shrink-0 items-center justify-center bg-[#F2F2F7] pt-[11px] pb-[2px]">
             <div
-              className="relative flex items-center justify-end"
               style={{
                 width: 120,
                 height: 34,
                 borderRadius: 20,
                 background: "#000",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
               }}
             >
-              {/* Front camera lens */}
               <div
                 style={{
                   width: 11,
@@ -223,8 +231,7 @@ export function SmsIphonePreview() {
           </div>
 
           {/* ── Status bar ────────────────────────────────────────────── */}
-          <div className="flex shrink-0 items-center justify-between bg-white px-[18px] pb-[2px] pt-[1px]">
-            {/* Time — left, bold, with person/contact icon */}
+          <div className="flex shrink-0 items-center justify-between bg-[#F2F2F7] px-[18px] pb-[2px] pt-[1px]">
             <div className="flex items-center gap-[5px]">
               <span
                 className="tabular-nums"
@@ -232,13 +239,11 @@ export function SmsIphonePreview() {
               >
                 9:41
               </span>
-              {/* Person icon — tiny, like iOS status bar contact indicator */}
               <svg width="11" height="13" viewBox="0 0 11 13" fill="none">
                 <circle cx="5.5" cy="4" r="2.8" fill="#000" />
                 <path d="M0.5 12c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="#000" strokeWidth="1.2" strokeLinecap="round" fill="none" />
               </svg>
             </div>
-            {/* Right icons: signal, 5G, battery */}
             <div className="flex items-center gap-[5px]">
               <IosSignal />
               <Ios5G />
@@ -248,97 +253,105 @@ export function SmsIphonePreview() {
 
           {/* ── iMessage header ───────────────────────────────────────── */}
           <div
-            className="relative flex shrink-0 items-center bg-white px-[8px] pb-[8px] pt-[4px]"
-            style={{ borderBottom: "0.5px solid rgba(0,0,0,0.15)" }}
+            className="relative flex shrink-0 items-center bg-[#F2F2F7] px-[10px] pb-[10px] pt-[4px]"
+            style={{ borderBottom: "0.5px solid rgba(0,0,0,0.12)" }}
           >
-            {/* Back button: dark pill with < and unread count — matches reference */}
+            {/* Back button: white rounded pill with chevron + badge — matches reference */}
             <button
-              className="flex items-center gap-[5px]"
-              style={{ minWidth: 56 }}
+              style={{ minWidth: 60, flexShrink: 0 }}
               tabIndex={-1}
             >
               <div
                 style={{
-                  display: "flex",
+                  display: "inline-flex",
                   alignItems: "center",
-                  gap: 4,
-                  background: "rgba(0,0,0,0.08)",
-                  borderRadius: 20,
-                  padding: "4px 10px 4px 8px",
-                  height: 28,
+                  gap: 5,
+                  background: "#fff",
+                  borderRadius: 22,
+                  padding: "5px 10px 5px 8px",
+                  height: 32,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.10)",
                 }}
               >
-                {/* iOS back chevron */}
-                <svg width="8" height="14" viewBox="0 0 8 14" fill="none">
-                  <path d="M7 1 1 7l6 6" stroke="#007AFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                <svg width="8" height="13" viewBox="0 0 8 13" fill="none">
+                  <path d="M7 1 1 6.5 7 12" stroke="#007AFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                {/* Unread badge */}
                 <div
                   style={{
-                    width: 18,
-                    height: 18,
+                    width: 20,
+                    height: 20,
                     borderRadius: "50%",
-                    background: "#fff",
+                    background: "#1C1C1E",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#000", lineHeight: 1 }}>1</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", lineHeight: 1 }}>1</span>
                 </div>
               </div>
             </button>
 
-            {/* Center: avatar + name (absolutely centered in the header row) */}
-            <div className="absolute inset-x-0 flex flex-col items-center">
-              {/* Avatar circle */}
+            {/* Center: avatar + name */}
+            <div className="absolute inset-x-0 flex flex-col items-center pointer-events-none">
               <div
-                className="flex items-center justify-center"
                 style={{
-                  width: 36,
-                  height: 36,
+                  width: 46,
+                  height: 46,
                   borderRadius: "50%",
-                  background: "linear-gradient(135deg, #0A84FF 0%, #34aaff 100%)",
+                  background: "linear-gradient(145deg, #6E54C8 0%, #4A90D9 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   flexShrink: 0,
                 }}
               >
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>HB</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: "-0.3px" }}>HB</span>
               </div>
-              {/* Name row */}
-              <div className="flex items-center gap-[2px] mt-[2px]">
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#000", lineHeight: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 2, marginTop: 2 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#000", lineHeight: 1 }}>
                   HomeBids AI
                 </span>
-                {/* Chevron after name */}
-                <svg width="6" height="9" viewBox="0 0 6 9" fill="none">
-                  <path d="M1 1l4 3.5L1 8" stroke="#8E8E93" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                <svg width="6" height="10" viewBox="0 0 6 10" fill="none">
+                  <path d="M1 1.5l4 3.5-4 3.5" stroke="#8E8E93" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              {/* iMessage / typing subtitle */}
               <span style={{ fontSize: 11, color: "#8E8E93", lineHeight: 1, marginTop: 1 }}>
                 {typing ? "typing\u2026" : "iMessage"}
               </span>
             </div>
 
-            {/* Video icon — right */}
-            <div className="ml-auto">
-              {/* iOS FaceTime video icon: filled rounded rect + play triangle */}
-              <svg width="28" height="20" viewBox="0 0 28 20" fill="none">
-                <rect x="1" y="3" width="17" height="14" rx="3.5" fill="#007AFF" />
-                <path d="M18 7.5 26 3.5v13L18 12.5V7.5z" fill="#007AFF" />
-              </svg>
+            {/* Video icon — white rounded rect outline + camera shape, matches reference */}
+            <div className="ml-auto" style={{ flexShrink: 0 }}>
+              <div
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  background: "#fff",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.10)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <svg width="20" height="14" viewBox="0 0 20 14" fill="none">
+                  <rect x="0.75" y="1.75" width="12" height="10.5" rx="2.5" stroke="#000" strokeWidth="1.5" />
+                  <path d="M13 5.2 19 2v10l-6-3.2V5.2z" stroke="#000" strokeWidth="1.5" strokeLinejoin="round" />
+                </svg>
+              </div>
             </div>
           </div>
 
           {/* ── Messages ──────────────────────────────────────────────── */}
           <div
             ref={scrollRef}
-            className="flex flex-1 flex-col overflow-y-auto bg-white"
+            className="flex flex-1 flex-col overflow-y-auto"
             style={{
+              background: "#F2F2F7",
               padding: "12px 10px 6px",
               gap: 0,
               scrollbarWidth: "none",
-              // Prevent text from centering — align-items default is stretch
               alignItems: "stretch",
             }}
           >
@@ -439,9 +452,10 @@ export function SmsIphonePreview() {
 
           {/* ── Input bar ─────────────────────────────────────────────── */}
           <div
-            className="flex shrink-0 items-center bg-white"
+            className="flex shrink-0 items-center"
             style={{
-              borderTop: "0.5px solid rgba(0,0,0,0.15)",
+              background: "#F2F2F7",
+              borderTop: "0.5px solid rgba(0,0,0,0.12)",
               padding: "7px 10px 8px",
               gap: 8,
             }}
@@ -492,8 +506,8 @@ export function SmsIphonePreview() {
 
           {/* ── Home indicator ────────────────────────────────────────── */}
           <div
-            className="flex shrink-0 justify-center bg-white"
-            style={{ paddingTop: 5, paddingBottom: 8 }}
+            className="flex shrink-0 justify-center"
+            style={{ background: "#F2F2F7", paddingTop: 5, paddingBottom: 8 }}
           >
             <div
               style={{
