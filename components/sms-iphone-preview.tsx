@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Types & data
+// ─────────────────────────────────────────────────────────────────────────────
 interface Message {
   sender: "user" | "ai";
   text: string;
@@ -10,122 +13,142 @@ interface Message {
 }
 
 const SCENARIOS: Message[][] = [
-  // 1. HVAC Repair
   [
-    { sender: "user", text: "Hey HomeBids, I need help with my AC not cooling properly.", delay: 600 },
-    { sender: "ai",   text: "Happy to help. Is the system still turning on, or is it completely unresponsive?", delay: 900 },
-    { sender: "user", text: "It turns on, but the house never really cools down.", delay: 700 },
-    { sender: "ai",   text: "Got it. About how old is the unit, and when did you first notice the issue?", delay: 850 },
-    { sender: "user", text: "It's about 11 years old. Started last week.", delay: 700 },
-    { sender: "ai",   text: "That helps. Are you in a house, condo, or townhome?", delay: 900 },
-    { sender: "user", text: "Single family home, about 2,400 sq ft.", delay: 650 },
-    { sender: "ai",   text: "I have everything I need to find the right pros for this.", delay: 800 },
+    { sender: "user", text: "Hey HomeBids, I need help with my AC not cooling.", delay: 600 },
+    { sender: "ai",   text: "Happy to help. Is the system still turning on, or completely unresponsive?", delay: 900 },
+    { sender: "user", text: "It turns on, but the house never cools down.", delay: 700 },
+    { sender: "ai",   text: "Got it. How old is the unit, and when did the issue start?", delay: 850 },
+    { sender: "user", text: "About 11 years old. Started last week.", delay: 700 },
+    { sender: "ai",   text: "Single family home or condo?", delay: 900 },
+    { sender: "user", text: "Single family, about 2,400 sq ft.", delay: 650 },
+    { sender: "ai",   text: "I have everything I need to find the right pros.", delay: 800 },
   ],
-  // 2. Kitchen Remodel
   [
     { sender: "user", text: "Hey HomeBids, I need help remodeling my kitchen.", delay: 600 },
-    { sender: "ai",   text: "Great project. Are you looking at a full remodel or updating specific things like cabinets and counters?", delay: 900 },
-    { sender: "user", text: "Full remodel — cabinets, counters, island, and new appliances.", delay: 700 },
-    { sender: "ai",   text: "Do you have a budget range in mind, even a rough one?", delay: 850 },
-    { sender: "user", text: "Somewhere between $40k and $60k.", delay: 650 },
-    { sender: "ai",   text: "That's a solid range. What's your timeline looking like?", delay: 900 },
-    { sender: "user", text: "Hoping to start within the next 4–6 weeks.", delay: 700 },
-    { sender: "ai",   text: "Perfect. I have what I need to connect you with the right contractors.", delay: 800 },
+    { sender: "ai",   text: "Full remodel or updating specific things like cabinets?", delay: 900 },
+    { sender: "user", text: "Full remodel — cabinets, counters, island, appliances.", delay: 700 },
+    { sender: "ai",   text: "Do you have a budget range in mind?", delay: 850 },
+    { sender: "user", text: "Between $40k and $60k.", delay: 650 },
+    { sender: "ai",   text: "Solid range. What's your timeline?", delay: 900 },
+    { sender: "user", text: "Hoping to start in 4–6 weeks.", delay: 700 },
+    { sender: "ai",   text: "I have what I need to connect you with the right contractors.", delay: 800 },
   ],
-  // 3. Roof Leak
   [
-    { sender: "user", text: "Hey HomeBids, I need help with a roof leak after the last storm.", delay: 600 },
-    { sender: "ai",   text: "Let's get that sorted. Is water actively coming in, or are you seeing staining on the ceiling?", delay: 900 },
+    { sender: "user", text: "Hey HomeBids, I need help with a roof leak after the storm.", delay: 600 },
+    { sender: "ai",   text: "Is water actively coming in or just ceiling staining?", delay: 900 },
     { sender: "user", text: "There's a stain on the ceiling in the master bedroom.", delay: 700 },
-    { sender: "ai",   text: "Do you have any idea how old the roof is?", delay: 850 },
-    { sender: "user", text: "Around 14 years. We bought the house 3 years ago.", delay: 700 },
-    { sender: "ai",   text: "Has anyone been up to look at it yet, or is this the first step?", delay: 900 },
-    { sender: "user", text: "First step. Haven't touched it yet.", delay: 600 },
-    { sender: "ai",   text: "I have enough to find qualified roofers who can inspect and provide estimates.", delay: 800 },
-  ],
-  // 4. Bathroom Remodel
-  [
-    { sender: "user", text: "Hey HomeBids, I need help updating my bathroom.", delay: 600 },
-    { sender: "ai",   text: "Is this the primary bathroom, a guest bath, or both?", delay: 900 },
-    { sender: "user", text: "The master bathroom. It's pretty outdated.", delay: 650 },
-    { sender: "ai",   text: "What are you hoping to change — tile, vanity, shower, or the whole layout?", delay: 900 },
-    { sender: "user", text: "Everything. New tile, walk-in shower, double vanity.", delay: 700 },
-    { sender: "ai",   text: "Got it. Any flexibility on timing?", delay: 850 },
-    { sender: "user", text: "Ideally done within the next couple months.", delay: 650 },
-    { sender: "ai",   text: "I have what I need to put your project in front of the right contractors.", delay: 800 },
-  ],
-  // 5. Landscaping
-  [
-    { sender: "user", text: "Hey HomeBids, I need help redesigning my backyard landscaping.", delay: 600 },
-    { sender: "ai",   text: "What's the current state of the backyard?", delay: 900 },
-    { sender: "user", text: "Pretty bare. Just grass and an old concrete patio.", delay: 700 },
-    { sender: "ai",   text: "Are you thinking plants and garden beds, hardscaping, or a full redesign?", delay: 900 },
-    { sender: "user", text: "Full redesign — plants, a new patio, maybe some lighting.", delay: 700 },
-    { sender: "ai",   text: "What's the approximate size of the backyard?", delay: 850 },
-    { sender: "user", text: "Maybe 50 by 60 feet.", delay: 600 },
-    { sender: "ai",   text: "I have what I need to connect you with landscape designers nearby.", delay: 800 },
+    { sender: "ai",   text: "Do you know how old the roof is?", delay: 850 },
+    { sender: "user", text: "Around 14 years. We bought 3 years ago.", delay: 700 },
+    { sender: "ai",   text: "Has anyone been up to look at it yet?", delay: 900 },
+    { sender: "user", text: "No, this is the first step.", delay: 600 },
+    { sender: "ai",   text: "I have enough to find qualified roofers for estimates.", delay: 800 },
   ],
 ];
 
 const TYPING_DURATION = 1300;
-const RESTART_DELAY  = 4500;
+const RESTART_DELAY = 4000;
 
 function pickScenario(): Message[] {
   return SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
 }
 
-// Groups consecutive messages from the same sender
-function groupMessages(messages: Message[]): Array<{ sender: "user" | "ai"; items: { msg: Message; idx: number }[] }> {
+function groupMessages(msgs: Message[]): Array<{ sender: "user" | "ai"; items: { msg: Message; idx: number }[] }> {
   const groups: Array<{ sender: "user" | "ai"; items: { msg: Message; idx: number }[] }> = [];
-  messages.forEach((msg, idx) => {
+  msgs.forEach((msg, idx) => {
     const last = groups[groups.length - 1];
-    if (last && last.sender === msg.sender) {
-      last.items.push({ msg, idx });
-    } else {
-      groups.push({ sender: msg.sender, items: [{ msg, idx }] });
-    }
+    if (last && last.sender === msg.sender) last.items.push({ msg, idx });
+    else groups.push({ sender: msg.sender, items: [{ msg, idx }] });
   });
   return groups;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// iOS-accurate SVG status bar icons
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Signal: 4 vertical bars, iOS style (left-to-right short→tall, first 3 filled)
+function IosSignal() {
+  const bars = [
+    { h: 5,  y: 9 },
+    { h: 7,  y: 7 },
+    { h: 9,  y: 5 },
+    { h: 12, y: 2 },
+  ];
+  return (
+    <svg width="17" height="14" viewBox="0 0 17 14" fill="none">
+      {bars.map((b, i) => (
+        <rect
+          key={i}
+          x={i * 4 + 0.5}
+          y={b.y}
+          width="3"
+          height={b.h}
+          rx="1"
+          fill={i < 3 ? "#000" : "rgba(0,0,0,0.25)"}
+        />
+      ))}
+    </svg>
+  );
+}
+
+// WiFi: 3 arcs + dot, iOS style
+function IosWifi() {
+  return (
+    <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+      {/* dot */}
+      <circle cx="8" cy="11" r="1.3" fill="#000" />
+      {/* inner arc */}
+      <path d="M5.2 8.4a4 4 0 0 1 5.6 0" stroke="#000" strokeWidth="1.4" strokeLinecap="round" />
+      {/* middle arc */}
+      <path d="M2.8 5.9a7.4 7.4 0 0 1 10.4 0" stroke="#000" strokeWidth="1.4" strokeLinecap="round" />
+      {/* outer arc */}
+      <path d="M0.5 3.4A10.7 10.7 0 0 1 15.5 3.4" stroke="#000" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Battery: iOS pill with nub, ~75% charged
+function IosBattery() {
+  return (
+    <svg width="27" height="13" viewBox="0 0 27 13" fill="none">
+      {/* outer case */}
+      <rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke="rgba(0,0,0,0.35)" strokeWidth="1" />
+      {/* inner fill ~75% */}
+      <rect x="2" y="2" width="16" height="9" rx="2" fill="#000" />
+      {/* nub */}
+      <path d="M24.5 4.5v4a2 2 0 0 0 0-4z" fill="rgba(0,0,0,0.4)" />
+    </svg>
+  );
+}
+
+// Typing dots
 function TypingDots() {
   return (
-    <div className="flex items-center gap-[3px] px-0.5 py-[2px]">
+    <div className="flex items-center gap-[3px] px-1 py-[3px]">
       {[0, 1, 2].map((i) => (
         <motion.div
           key={i}
           className="h-[7px] w-[7px] rounded-full"
           style={{ background: "#8E8E93" }}
-          animate={{ opacity: [0.3, 1, 0.3] }}
-          transition={{ duration: 1, repeat: Infinity, delay: i * 0.2, ease: "easeInOut" }}
+          animate={{ opacity: [0.35, 1, 0.35] }}
+          transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.22, ease: "easeInOut" }}
         />
       ))}
     </div>
   );
 }
 
-// Signal strength bars — 4 bars like iOS
-function SignalBars() {
-  return (
-    <div className="flex items-end gap-[2px]">
-      {[3, 5, 7, 9].map((h, i) => (
-        <div
-          key={i}
-          className="w-[3px] rounded-[1px]"
-          style={{ height: h, background: i < 3 ? "#000" : "rgba(0,0,0,0.3)" }}
-        />
-      ))}
-    </div>
-  );
-}
-
+// ─────────────────────────────────────────────────────────────────────────────
+// Main component
+// ─────────────────────────────────────────────────────────────────────────────
 export function SmsIphonePreview() {
   const [conversation, setConversation] = useState<Message[]>(() => pickScenario());
   const [visible, setVisible] = useState<number[]>([]);
-  const [typing, setTyping]   = useState(false);
-  const timerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [typing, setTyping] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Auto-scroll to bottom when messages arrive
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -133,7 +156,10 @@ export function SmsIphonePreview() {
   }, [visible, typing]);
 
   const clear = () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  const schedule = (fn: () => void, ms: number) => { clear(); timerRef.current = setTimeout(fn, ms); };
+  const schedule = (fn: () => void, ms: number) => {
+    clear();
+    timerRef.current = setTimeout(fn, ms);
+  };
 
   const runStep = (conv: Message[], idx: number) => {
     if (idx >= conv.length) {
@@ -142,7 +168,7 @@ export function SmsIphonePreview() {
         setTyping(false);
         const next = pickScenario();
         setConversation(next);
-        schedule(() => runStep(next, 0), 500);
+        schedule(() => runStep(next, 0), 400);
       }, RESTART_DELAY);
       return;
     }
@@ -173,170 +199,203 @@ export function SmsIphonePreview() {
   const visibleMessages = conversation.filter((_, i) => visible.includes(i));
   const groups = groupMessages(visibleMessages);
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex items-center justify-center">
-      <div className="relative w-[272px] sm:w-[300px]">
+    <div className="flex items-start justify-center">
+      <div className="relative" style={{ width: 300 }}>
 
-        {/* ── iPhone shell ─────────────────────────────────────────────── */}
+        {/* ── iPhone shell ────────────────────────────────────────────── */}
         <div
           className="relative flex flex-col overflow-hidden bg-white"
           style={{
-            height: 560,
-            borderRadius: "44px",
-            border: "9px solid #1C1C1E",
-            boxShadow:
-              "0 0 0 1px #3A3A3C, 0 32px 64px -8px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.08)",
+            height: 580,
+            borderRadius: 48,
+            border: "10px solid #1C1C1E",
+            boxShadow: [
+              "0 0 0 1px #3A3A3C",
+              "0 28px 60px -8px rgba(0,0,0,0.55)",
+              "inset 0 0 0 1px rgba(255,255,255,0.06)",
+            ].join(", "),
           }}
         >
-          {/* ── Dynamic Island ─────────────────────────────────────────── */}
-          <div className="relative flex shrink-0 justify-center pt-[10px] pb-[4px] bg-white">
+
+          {/* ── Dynamic Island ────────────────────────────────────────── */}
+          <div className="relative flex shrink-0 items-center justify-center bg-white pt-[11px] pb-[2px]">
+            {/* Pill */}
             <div
-              className="flex h-[30px] w-[118px] items-center justify-end rounded-full pr-[9px]"
-              style={{ background: "#1C1C1E" }}
+              className="relative flex items-center justify-end"
+              style={{
+                width: 120,
+                height: 34,
+                borderRadius: 20,
+                background: "#000",
+              }}
             >
-              {/* Front camera */}
+              {/* Front camera lens */}
               <div
-                className="h-[9px] w-[9px] rounded-full"
                 style={{
-                  background: "radial-gradient(circle at 35% 35%, #2a2a2e, #0d0d0f)",
-                  boxShadow: "0 0 0 1.5px #3a3a3c, inset 0 0 3px rgba(255,255,255,0.08)",
+                  width: 11,
+                  height: 11,
+                  borderRadius: "50%",
+                  background: "radial-gradient(circle at 38% 38%, #1e2428, #080a0c)",
+                  boxShadow: "0 0 0 1.5px #2a2a2a, inset 0 0 4px rgba(100,160,255,0.12)",
+                  marginRight: 10,
                 }}
               />
             </div>
           </div>
 
-          {/* ── Status bar ─────────────────────────────────────────────── */}
-          <div className="flex shrink-0 items-center justify-between bg-white px-5 pb-[3px]">
-            {/* Time */}
-            <span className="text-[13px] font-semibold leading-none tracking-tight" style={{ color: "#000" }}>
+          {/* ── Status bar ────────────────────────────────────────────── */}
+          <div className="flex shrink-0 items-center justify-between bg-white px-[18px] pb-[2px] pt-[1px]">
+            {/* Time — left, bold */}
+            <span
+              className="tabular-nums"
+              style={{ fontSize: 15, fontWeight: 600, color: "#000", letterSpacing: "-0.3px", lineHeight: 1 }}
+            >
               9:41
             </span>
             {/* Right icons */}
             <div className="flex items-center gap-[6px]">
-              <SignalBars />
-              {/* WiFi */}
-              <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-                <path d="M8 9.5a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5z" fill="#000"/>
-                <path d="M4.3 6.7a5.2 5.2 0 0 1 7.4 0" stroke="#000" strokeWidth="1.4" strokeLinecap="round" fill="none"/>
-                <path d="M1.5 3.9a9.1 9.1 0 0 1 13 0" stroke="#000" strokeWidth="1.4" strokeLinecap="round" fill="none"/>
-              </svg>
-              {/* Battery */}
-              <div className="flex items-center gap-[1px]">
-                <div
-                  className="flex h-[11px] w-[22px] items-center rounded-[2.5px] p-[2px]"
-                  style={{ border: "1px solid rgba(0,0,0,0.35)" }}
-                >
-                  <div className="h-full w-[15px] rounded-[1.5px]" style={{ background: "#000" }} />
-                </div>
-                <div
-                  className="h-[4px] w-[1.5px] rounded-r-[1px]"
-                  style={{ background: "rgba(0,0,0,0.4)" }}
-                />
-              </div>
+              <IosSignal />
+              <IosWifi />
+              <IosBattery />
             </div>
           </div>
 
-          {/* ── iMessage chat header ────────────────────────────────────── */}
+          {/* ── iMessage header ───────────────────────────────────────── */}
           <div
-            className="flex shrink-0 flex-col items-center pb-2 pt-0 bg-white"
-            style={{ borderBottom: "0.5px solid rgba(0,0,0,0.12)" }}
+            className="relative flex shrink-0 items-center bg-white px-[8px] pb-[8px] pt-[4px]"
+            style={{ borderBottom: "0.5px solid rgba(0,0,0,0.15)" }}
           >
-            {/* Row: back < | centered avatar+name | video icon */}
-            <div className="flex w-full items-start px-2 pt-0.5">
-              {/* Back button */}
-              <button className="flex items-center gap-[2px] pt-1 pl-1">
-                <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
-                  <path d="M8.5 1.5 2 8l6.5 6.5" stroke="#007AFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span className="text-[15px] font-normal" style={{ color: "#007AFF" }}>6</span>
-              </button>
+            {/* Back button: chevron + "Messages" */}
+            <button
+              className="flex items-center gap-[2px] pl-[2px]"
+              style={{ minWidth: 60 }}
+              tabIndex={-1}
+            >
+              {/* iOS chevron — thin, rounded */}
+              <svg width="9" height="16" viewBox="0 0 9 16" fill="none">
+                <path
+                  d="M7.5 1 1.5 8l6 7"
+                  stroke="#007AFF"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span style={{ fontSize: 15, color: "#007AFF", fontWeight: 400 }}>
+                Messages
+              </span>
+            </button>
 
-              {/* Center: avatar + name + subtitle */}
-              <div className="flex flex-1 flex-col items-center">
-                {/* Avatar */}
-                <div
-                  className="flex h-[48px] w-[48px] items-center justify-center rounded-full"
-                  style={{ background: "linear-gradient(135deg, #0A84FF, #34aaff)" }}
-                >
-                  <span className="text-[15px] font-bold text-white">HB</span>
-                </div>
-                {/* Name row with chevron */}
-                <div className="mt-[2px] flex items-center gap-[3px]">
-                  <span className="text-[13px] font-semibold" style={{ color: "#000" }}>HomeBids AI</span>
-                  <svg width="7" height="11" viewBox="0 0 7 11" fill="none">
-                    <path d="M1.5 1 6 5.5 1.5 10" stroke="#8E8E93" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-                {/* Subtitle */}
-                <span className="text-[11px] leading-none" style={{ color: "#8E8E93" }}>
-                  {typing ? "typing…" : "iMessage"}
-                </span>
+            {/* Center: avatar + name (absolutely centered in the header row) */}
+            <div className="absolute inset-x-0 flex flex-col items-center">
+              {/* Avatar circle */}
+              <div
+                className="flex items-center justify-center"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #0A84FF 0%, #34aaff 100%)",
+                  flexShrink: 0,
+                }}
+              >
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>HB</span>
               </div>
-
-              {/* FaceTime video icon */}
-              <button className="pt-1 pr-1">
-                <svg width="24" height="18" viewBox="0 0 24 18" fill="none">
-                  <rect x="1" y="2" width="15" height="14" rx="3" fill="#007AFF"/>
-                  <path d="M16 6.5l6-4v13l-6-4V6.5z" fill="#007AFF"/>
+              {/* Name row */}
+              <div className="flex items-center gap-[2px] mt-[2px]">
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#000", lineHeight: 1 }}>
+                  HomeBids AI
+                </span>
+                {/* Chevron after name */}
+                <svg width="6" height="9" viewBox="0 0 6 9" fill="none">
+                  <path d="M1 1l4 3.5L1 8" stroke="#8E8E93" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-              </button>
+              </div>
+              {/* iMessage / typing subtitle */}
+              <span style={{ fontSize: 11, color: "#8E8E93", lineHeight: 1, marginTop: 1 }}>
+                {typing ? "typing\u2026" : "iMessage"}
+              </span>
+            </div>
+
+            {/* Video icon — right */}
+            <div className="ml-auto">
+              {/* iOS FaceTime video icon: filled rounded rect + play triangle */}
+              <svg width="28" height="20" viewBox="0 0 28 20" fill="none">
+                <rect x="1" y="3" width="17" height="14" rx="3.5" fill="#007AFF" />
+                <path d="M18 7.5 26 3.5v13L18 12.5V7.5z" fill="#007AFF" />
+              </svg>
             </div>
           </div>
 
-          {/* ── Message list ────────────────────────────────────────────── */}
+          {/* ── Messages ──────────────────────────────────────────────── */}
           <div
             ref={scrollRef}
-            className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-white px-[10px] pt-3 pb-1"
-            style={{ scrollbarWidth: "none", gap: 0 }}
+            className="flex flex-1 flex-col overflow-y-auto bg-white"
+            style={{
+              padding: "12px 10px 6px",
+              gap: 0,
+              scrollbarWidth: "none",
+              // Prevent text from centering — align-items default is stretch
+              alignItems: "stretch",
+            }}
           >
             {/* Timestamp */}
-            <div className="mb-3 flex justify-center">
-              <span className="text-[11px] font-medium" style={{ color: "#8E8E93" }}>
+            <div style={{ textAlign: "center", marginBottom: 12 }}>
+              <span style={{ fontSize: 11, color: "#8E8E93", fontWeight: 500 }}>
                 Today 9:41 AM
               </span>
             </div>
 
-            <AnimatePresence mode="popLayout">
+            <AnimatePresence>
               {groups.map((group, gi) => {
                 const isUser = group.sender === "user";
                 return (
                   <motion.div
-                    key={`group-${gi}-${group.items[0]?.idx}`}
-                    layout
-                    initial={{ opacity: 0, y: 6 }}
+                    key={`g${gi}-${group.items[0]?.idx}`}
+                    initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                    className={`flex flex-col ${isUser ? "items-end" : "items-start"} mb-[10px]`}
+                    transition={{ type: "spring", stiffness: 480, damping: 32 }}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      // Sent messages align RIGHT, received LEFT — no centering
+                      alignItems: isUser ? "flex-end" : "flex-start",
+                      marginBottom: 10,
+                    }}
                   >
                     {group.items.map(({ msg, idx }, bi) => {
-                      const isFirst  = bi === 0;
-                      const isLast   = bi === group.items.length - 1;
+                      const isLast = bi === group.items.length - 1;
 
-                      // Real iMessage radius rules:
-                      // All corners 18px except the "tail" corner:
-                      // - Sent (right): last bubble → bottom-right = 4px
-                      // - Received (left): last bubble → bottom-left = 4px
-                      // Non-last bubbles in a group: all 18px but reduce top-left (received) or top-right (sent) slightly for consecutive
-                      const br = isUser
-                        ? `18px 18px ${isLast ? "4px" : "18px"} 18px`
-                        : `18px 18px 18px ${isLast ? "4px" : "18px"}`;
+                      // iOS iMessage tail rules:
+                      // Sent (right): last bubble bottom-right corner = 4px, rest = 18px
+                      // Received (left): last bubble bottom-left corner = 4px, rest = 18px
+                      const R = 18;
+                      const tail = 4;
+                      const borderRadius = isUser
+                        ? `${R}px ${R}px ${isLast ? tail : R}px ${R}px`
+                        : `${R}px ${R}px ${R}px ${isLast ? tail : R}px`;
 
                       return (
                         <motion.div
-                          key={`msg-${idx}`}
-                          layout
-                          initial={{ opacity: 0, scale: 0.85 }}
+                          key={`m${idx}`}
+                          initial={{ opacity: 0, scale: 0.88 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                          className={`mb-[2px] max-w-[78%] break-words px-[12px] py-[7px] text-[14px] leading-[1.35] ${
-                            isUser
-                              ? "bg-[#007AFF] text-white"
-                              : "text-black"
-                          }`}
+                          transition={{ type: "spring", stiffness: 480, damping: 30 }}
                           style={{
-                            borderRadius: br,
+                            // CRITICAL: text-align left always, even for sent bubbles
+                            textAlign: "left",
+                            maxWidth: "78%",
+                            marginBottom: 2,
+                            padding: "7px 12px",
+                            borderRadius,
                             background: isUser ? "#007AFF" : "#E9E9EB",
+                            color: isUser ? "#fff" : "#000",
+                            fontSize: 14,
+                            lineHeight: 1.38,
+                            wordBreak: "break-word",
                           }}
                         >
                           {msg.text}
@@ -353,16 +412,22 @@ export function SmsIphonePreview() {
               {typing && (
                 <motion.div
                   key="typing"
-                  layout
                   initial={{ opacity: 0, scale: 0.85, y: 4 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.85 }}
                   transition={{ type: "spring", stiffness: 450, damping: 28 }}
-                  className="mb-[10px] flex items-start"
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    marginBottom: 10,
+                  }}
                 >
                   <div
-                    className="px-[12px] py-[9px]"
-                    style={{ borderRadius: "18px 18px 18px 4px", background: "#E9E9EB" }}
+                    style={{
+                      borderRadius: "18px 18px 18px 4px",
+                      background: "#E9E9EB",
+                      padding: "8px 10px",
+                    }}
                   >
                     <TypingDots />
                   </div>
@@ -371,73 +436,90 @@ export function SmsIphonePreview() {
             </AnimatePresence>
           </div>
 
-          {/* ── Input bar ───────────────────────────────────────────────── */}
+          {/* ── Input bar ─────────────────────────────────────────────── */}
           <div
-            className="flex shrink-0 items-center gap-[8px] bg-white px-[10px] py-[8px]"
-            style={{ borderTop: "0.5px solid rgba(0,0,0,0.12)" }}
+            className="flex shrink-0 items-center bg-white"
+            style={{
+              borderTop: "0.5px solid rgba(0,0,0,0.15)",
+              padding: "7px 10px 8px",
+              gap: 8,
+            }}
           >
-            {/* Apps icon */}
+            {/* Apps button — iOS uses a "+" icon in a circle */}
             <div
-              className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-full"
-              style={{ background: "#E9E9EB" }}
+              className="flex shrink-0 items-center justify-center"
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: "50%",
+                background: "#E9E9EB",
+              }}
             >
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                <path d="M6.5 1v11M1 6.5h11" stroke="#8E8E93" strokeWidth="1.75" strokeLinecap="round"/>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M7 1v12M1 7h12" stroke="#8E8E93" strokeWidth="1.8" strokeLinecap="round" />
               </svg>
             </div>
 
             {/* Input pill */}
             <div
-              className="flex flex-1 items-center rounded-full px-[12px] py-[6px]"
+              className="flex flex-1 items-center"
               style={{
                 border: "1px solid #C7C7CC",
-                minHeight: "32px",
+                borderRadius: 20,
+                minHeight: 34,
+                padding: "5px 12px",
               }}
             >
-              <span className="text-[13px]" style={{ color: "#8E8E93" }}>iMessage</span>
+              <span style={{ fontSize: 14, color: "#8E8E93" }}>iMessage</span>
             </div>
 
-            {/* Send button */}
+            {/* Send arrow */}
             <div
-              className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-full"
-              style={{ background: "#007AFF" }}
+              className="flex shrink-0 items-center justify-center"
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: "50%",
+                background: "#007AFF",
+              }}
             >
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                <path d="M6.5 11V2M2 6.5l4.5-4.5 4.5 4.5" stroke="white" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path
+                  d="M7 12V2M3 6l4-4 4 4"
+                  stroke="#fff"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </div>
           </div>
 
-          {/* ── Home indicator ──────────────────────────────────────────── */}
-          <div className="flex shrink-0 justify-center bg-white pb-[8px] pt-[4px]">
+          {/* ── Home indicator ────────────────────────────────────────── */}
+          <div
+            className="flex shrink-0 justify-center bg-white"
+            style={{ paddingTop: 5, paddingBottom: 8 }}
+          >
             <div
-              className="h-[5px] w-[120px] rounded-full"
-              style={{ background: "rgba(0,0,0,0.18)" }}
+              style={{
+                width: 130,
+                height: 5,
+                borderRadius: 3,
+                background: "rgba(0,0,0,0.18)",
+              }}
             />
           </div>
         </div>
 
-        {/* ── Physical side buttons ─────────────────────────────────────── */}
+        {/* ── Physical buttons ─────────────────────────────────────────── */}
         {/* Silent switch */}
-        <div
-          className="absolute rounded-l-full"
-          style={{ left: -5, top: 88, width: 4, height: 28, background: "#1C1C1E" }}
-        />
+        <div style={{ position: "absolute", left: -4, top: 90, width: 3, height: 26, background: "#1C1C1E", borderRadius: "2px 0 0 2px" }} />
         {/* Volume up */}
-        <div
-          className="absolute rounded-l-full"
-          style={{ left: -5, top: 132, width: 4, height: 52, background: "#1C1C1E" }}
-        />
+        <div style={{ position: "absolute", left: -4, top: 134, width: 3, height: 50, background: "#1C1C1E", borderRadius: "2px 0 0 2px" }} />
         {/* Volume down */}
-        <div
-          className="absolute rounded-l-full"
-          style={{ left: -5, top: 196, width: 4, height: 52, background: "#1C1C1E" }}
-        />
+        <div style={{ position: "absolute", left: -4, top: 196, width: 3, height: 50, background: "#1C1C1E", borderRadius: "2px 0 0 2px" }} />
         {/* Power */}
-        <div
-          className="absolute rounded-r-full"
-          style={{ right: -5, top: 152, width: 4, height: 72, background: "#1C1C1E" }}
-        />
+        <div style={{ position: "absolute", right: -4, top: 155, width: 3, height: 70, background: "#1C1C1E", borderRadius: "0 2px 2px 0" }} />
       </div>
     </div>
   );

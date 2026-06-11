@@ -354,14 +354,8 @@ export function GatewayLanding() {
                 }}
                 aria-hidden="true"
               />
-              {/* Float animation — no `layout` prop so wrapper never resizes */}
-              <motion.div
-                animate={{ y: [0, -8, 0] }}
-                transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
-                style={{ position: "absolute", inset: 0 }}
-              >
-                <SmsIphonePreview />
-              </motion.div>
+              {/* No float — static after entrance so it doesn't bob */}
+              <SmsIphonePreview />
             </div>
           </motion.div>
         )}
