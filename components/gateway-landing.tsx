@@ -203,21 +203,21 @@ export function GatewayLanding() {
           {/* Nav — right-aligned, noticeably smaller than the logo */}
           <nav className="flex shrink-0 items-center gap-2">
             {/* Log in — text link style */}
-            <Button
-              asChild
-              variant="ghost"
-              className="h-8 rounded-full px-4 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-black/6"
+            <Link
+              href="/auth/sign-in"
+              className="inline-flex h-8 items-center rounded-full px-3.5 text-sm font-medium text-foreground/70 hover:text-foreground transition-colors"
             >
-              <Link href="/auth/sign-in">Log in</Link>
-            </Button>
+              Log in
+            </Link>
 
             {/* Try for free — opens role picker */}
-            <Button
+            <button
+              type="button"
               onClick={openRolePicker}
-              className="h-8 rounded-full px-4 text-sm font-semibold bg-[#0A84FF] text-white hover:bg-[#0A84FF]/90"
+              className="inline-flex h-8 items-center rounded-full px-3.5 text-sm font-semibold bg-[#0A84FF] text-white hover:bg-[#006EDB] transition-colors"
             >
               Try for free
-            </Button>
+            </button>
           </nav>
         </div>
       </header>
