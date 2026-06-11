@@ -328,7 +328,7 @@ export default function NewJobPage() {
     const user = getMockUser();
     if (!user) { router.replace("/?signIn=true"); return; }
     if (user.role === "contractor") { router.replace("/contractors/dashboard"); return; }
-    if (user.role === "admin") { router.replace("/admin"); return; }
+    if (user.role === "admin") { setAuthReady(true); return; }
     setAuthReady(true);
   }, [router]);
 
