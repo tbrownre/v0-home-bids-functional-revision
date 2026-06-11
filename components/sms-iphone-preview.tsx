@@ -316,9 +316,7 @@ export function SmsIphonePreview() {
                   <path d="M1 1.5l4 3.5-4 3.5" stroke="#8E8E93" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <span style={{ fontSize: 11, color: "#8E8E93", lineHeight: 1, marginTop: 1 }}>
-                {typing ? "typing\u2026" : "iMessage"}
-              </span>
+
             </div>
 
             {/* Video icon — white rounded rect outline + camera shape, matches reference */}
