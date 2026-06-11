@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Home, Wrench } from "lucide-react";
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
 import { Button } from "@/components/ui/button";
+import { useSignInModal } from "@/components/sign-in-modal-provider";
 import {
   Dialog,
   DialogContent,
@@ -200,6 +201,7 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
 export function GatewayLanding() {
   const [mounted, setMounted] = useState(false);
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
+  const { openSignIn } = useSignInModal();
 
   useEffect(() => setMounted(true), []);
 
@@ -257,13 +259,14 @@ export function GatewayLanding() {
 
           {/* Nav — right-aligned, noticeably smaller than the logo */}
           <nav className="flex shrink-0 items-center gap-2">
-            {/* Log in — text link style */}
-            <Link
-              href="/auth/sign-in"
+            {/* Log in — opens sign-in modal */}
+            <button
+              type="button"
+              onClick={openSignIn}
               className="inline-flex h-8 items-center rounded-full px-3.5 text-sm font-medium text-foreground/70 hover:text-foreground transition-colors"
             >
               Log in
-            </Link>
+            </button>
 
             {/* Try for free — opens role picker */}
             <button
@@ -354,14 +357,8 @@ export function GatewayLanding() {
                 }}
                 aria-hidden="true"
               />
-              {/* Float animation — no `layout` prop so wrapper never resizes */}
-              <motion.div
-                animate={{ y: [0, -8, 0] }}
-                transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
-                style={{ position: "absolute", inset: 0 }}
-              >
-                <SmsIphonePreview />
-              </motion.div>
+              {/* No float — static after entrance so it doesn't bob */}
+              <SmsIphonePreview />
             </div>
           </motion.div>
         )}

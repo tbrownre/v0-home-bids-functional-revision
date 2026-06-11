@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Header } from "@/components/header";
+import { useSignInModal } from "@/components/sign-in-modal-provider";
 import { getMockUser, mockSignOut, USE_MOCK_DATA, type MockUser } from "@/lib/mock-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,6 +142,7 @@ function Section({
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
+  const { openSignIn } = useSignInModal();
   const [user, setUser] = useState<MockUser | null>(null);
   const [profile, setProfile] = useState<StoredProfile | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -166,9 +168,7 @@ export default function ProfilePage() {
         <Header isSignedIn={false} isContractor={false} />
         <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
           <p className="text-muted-foreground">Please sign in to view your profile.</p>
-          <Button asChild>
-            <a href="/auth/sign-in">Sign In</a>
-          </Button>
+          <Button onClick={openSignIn}>Sign In</Button>
         </main>
       </div>
     );

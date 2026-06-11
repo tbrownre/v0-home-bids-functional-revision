@@ -6,6 +6,7 @@ import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollToTop } from "@/components/scroll-to-top";
+import { useSignInModal } from "@/components/sign-in-modal-provider";
 import {
   ArrowRight,
   CheckCircle2,
@@ -92,6 +93,7 @@ const PLAN_FEATURES = [
 ];
 
 export default function ContractorLandingPage() {
+  const { openSignIn } = useSignInModal();
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -390,9 +392,9 @@ export default function ContractorLandingPage() {
                 size="lg"
                 variant="outline"
                 className="h-12 rounded-full border-primary-foreground/30 px-8 text-base font-semibold text-primary-foreground hover:bg-primary-foreground/10"
-                asChild
+                onClick={openSignIn}
               >
-                <Link href="/auth/sign-in">Contractor Login</Link>
+                Contractor Login
               </Button>
             </div>
             <p className="mt-6 text-sm text-primary-foreground/60">
