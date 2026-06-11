@@ -128,8 +128,8 @@ export default function HomePage() {
           return;
         }
         if (user.role === "admin") {
-          window.location.replace("/admin");
-          return;
+          // Admin route removed — treat as homeowner
+          setIsSignedIn(true);
         }
         setIsSignedIn(true);
         setIsContractor(false);

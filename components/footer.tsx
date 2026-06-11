@@ -80,8 +80,8 @@ function FlyoutGroup({ label, items }: { label: string; items: { href?: string; 
 
 export function Footer() {
   const pathname = usePathname();
-  // Admin pages have their own layout with a footer — skip from root layout there.
-  if (pathname?.startsWith("/admin")) return null;
+  // admin-demo has its own layout — skip footer there
+  if (pathname?.startsWith("/admin-demo")) return null;
 
   const [showContact, setShowContact] = useState(false);
   const [contactType, setContactType] = useState<"homeowner" | "contractor">("homeowner");
