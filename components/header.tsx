@@ -7,7 +7,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle, LayoutDashboard, Sparkles, Users, Wrench } from "lucide-react";
 import { homeownerNavItems, loggedOutNavItems, contractorNavItems } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
-import { SignInModal } from "@/components/sign-in-modal";
+import { useSignInModal } from "@/components/sign-in-modal-provider";
 import {
   subscribeInbox,
   getHomeownerUnreadSnapshot,
@@ -55,7 +55,7 @@ export function Header({
   onSignIn,
 }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showSignIn, setShowSignIn] = useState(false);
+  const { openSignIn } = useSignInModal();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -237,7 +237,7 @@ export function Header({
                   <button
                     type="button"
                     role="menuitem"
-                    onClick={() => { setMenuOpen(false); setShowSignIn(true); }}
+                    onClick={() => { setMenuOpen(false); openSignIn(); }}
                     className={menuItemBase}
                   >
                     <LogIn className="h-4 w-4 shrink-0" />
@@ -397,23 +397,7 @@ export function Header({
         </div>
       </div>
 
-      {!isLoggedIn && (
-        <SignInModal
-          open={showSignIn}
-          onOpenChange={(val) => {
-            setShowSignIn(val);
-            if (!val) setMenuOpen(false);
-          }}
-          onSignIn={(type) => {
-            setShowSignIn(false);
-            setMenuOpen(false);
-            if (type === "homeowner") {
-              onSignIn?.();
-              if (!onSignIn) window.location.href = "/?showJobs=true";
-            }
-          }}
-        />
-      )}
+      {/* SignInModal is rendered globally via SignInModalProvider in the root layout */}
     </header>
   );
 }
