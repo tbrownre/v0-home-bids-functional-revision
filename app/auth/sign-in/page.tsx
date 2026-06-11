@@ -193,7 +193,7 @@ export default function SignInPage() {
             alt="HomeBids"
             width={240}
             height={60}
-            className="h-[52px] w-auto object-contain"
+            className="h-[78px] w-auto object-contain"
             style={{ mixBlendMode: "multiply" }}
             priority
           />

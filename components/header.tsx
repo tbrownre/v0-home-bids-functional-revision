@@ -375,7 +375,7 @@ export function Header({
             width={480}
             height={120}
             className="object-contain pointer-events-none"
-            style={{ height: "clamp(44px, 9vw, 72px)", width: "auto", mixBlendMode: "multiply" }}
+            style={{ height: "clamp(66px, 13.5vw, 108px)", width: "auto", mixBlendMode: "multiply" }}
             priority
           />
         </button>

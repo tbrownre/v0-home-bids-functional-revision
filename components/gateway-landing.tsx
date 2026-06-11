@@ -194,7 +194,7 @@ export function GatewayLanding() {
               height={120}
               className="pointer-events-none object-contain object-left"
               style={{
-                height: "clamp(44px, 8vw, 68px)",
+                height: "clamp(66px, 12vw, 102px)",
                 width: "auto",
                 mixBlendMode: "multiply",
               }}
