@@ -66,57 +66,34 @@ function groupMessages(msgs: Message[]): Array<{ sender: "user" | "ai"; items: {
 // iOS-accurate SVG status bar icons
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Signal: 4 vertical bars, iOS style (left-to-right short→tall, first 3 filled)
+// Signal: 4 vertical bars iOS style
 function IosSignal() {
-  const bars = [
-    { h: 5,  y: 9 },
-    { h: 7,  y: 7 },
-    { h: 9,  y: 5 },
-    { h: 12, y: 2 },
-  ];
   return (
-    <svg width="17" height="14" viewBox="0 0 17 14" fill="none">
-      {bars.map((b, i) => (
-        <rect
-          key={i}
-          x={i * 4 + 0.5}
-          y={b.y}
-          width="3"
-          height={b.h}
-          rx="1"
-          fill={i < 3 ? "#000" : "rgba(0,0,0,0.25)"}
-        />
-      ))}
+    <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
+      <rect x="0"  y="8"  width="3" height="4"  rx="0.8" fill="#000" />
+      <rect x="5"  y="5"  width="3" height="7"  rx="0.8" fill="#000" />
+      <rect x="10" y="2"  width="3" height="10" rx="0.8" fill="#000" />
+      <rect x="15" y="0"  width="3" height="12" rx="0.8" fill="rgba(0,0,0,0.22)" />
     </svg>
   );
 }
 
-// WiFi: 3 arcs + dot, iOS style
-function IosWifi() {
+// 5G badge — matches iOS status bar "5G" label
+function Ios5G() {
   return (
-    <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-      {/* dot */}
-      <circle cx="8" cy="11" r="1.3" fill="#000" />
-      {/* inner arc */}
-      <path d="M5.2 8.4a4 4 0 0 1 5.6 0" stroke="#000" strokeWidth="1.4" strokeLinecap="round" />
-      {/* middle arc */}
-      <path d="M2.8 5.9a7.4 7.4 0 0 1 10.4 0" stroke="#000" strokeWidth="1.4" strokeLinecap="round" />
-      {/* outer arc */}
-      <path d="M0.5 3.4A10.7 10.7 0 0 1 15.5 3.4" stroke="#000" strokeWidth="1.4" strokeLinecap="round" />
-    </svg>
+    <span style={{ fontSize: 12, fontWeight: 600, color: "#000", letterSpacing: "-0.2px" }}>
+      5G
+    </span>
   );
 }
 
-// Battery: iOS pill with nub, ~75% charged
+// Battery: iOS pill with terminal nub
 function IosBattery() {
   return (
-    <svg width="27" height="13" viewBox="0 0 27 13" fill="none">
-      {/* outer case */}
+    <svg width="28" height="13" viewBox="0 0 28 13" fill="none">
       <rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke="rgba(0,0,0,0.35)" strokeWidth="1" />
-      {/* inner fill ~75% */}
-      <rect x="2" y="2" width="16" height="9" rx="2" fill="#000" />
-      {/* nub */}
-      <path d="M24.5 4.5v4a2 2 0 0 0 0-4z" fill="rgba(0,0,0,0.4)" />
+      <rect x="2" y="2" width="17" height="9" rx="2" fill="#000" />
+      <path d="M24.5 4.25v4.5a2.25 2.25 0 0 0 0-4.5z" fill="rgba(0,0,0,0.4)" />
     </svg>
   );
 }
@@ -247,17 +224,24 @@ export function SmsIphonePreview() {
 
           {/* ── Status bar ────────────────────────────────────────────── */}
           <div className="flex shrink-0 items-center justify-between bg-white px-[18px] pb-[2px] pt-[1px]">
-            {/* Time — left, bold */}
-            <span
-              className="tabular-nums"
-              style={{ fontSize: 15, fontWeight: 600, color: "#000", letterSpacing: "-0.3px", lineHeight: 1 }}
-            >
-              9:41
-            </span>
-            {/* Right icons */}
-            <div className="flex items-center gap-[6px]">
+            {/* Time — left, bold, with person/contact icon */}
+            <div className="flex items-center gap-[5px]">
+              <span
+                className="tabular-nums"
+                style={{ fontSize: 15, fontWeight: 600, color: "#000", letterSpacing: "-0.3px", lineHeight: 1 }}
+              >
+                9:41
+              </span>
+              {/* Person icon — tiny, like iOS status bar contact indicator */}
+              <svg width="11" height="13" viewBox="0 0 11 13" fill="none">
+                <circle cx="5.5" cy="4" r="2.8" fill="#000" />
+                <path d="M0.5 12c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="#000" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+              </svg>
+            </div>
+            {/* Right icons: signal, 5G, battery */}
+            <div className="flex items-center gap-[5px]">
               <IosSignal />
-              <IosWifi />
+              <Ios5G />
               <IosBattery />
             </div>
           </div>
@@ -267,25 +251,42 @@ export function SmsIphonePreview() {
             className="relative flex shrink-0 items-center bg-white px-[8px] pb-[8px] pt-[4px]"
             style={{ borderBottom: "0.5px solid rgba(0,0,0,0.15)" }}
           >
-            {/* Back button: chevron + "Messages" */}
+            {/* Back button: dark pill with < and unread count — matches reference */}
             <button
-              className="flex items-center gap-[2px] pl-[2px]"
-              style={{ minWidth: 60 }}
+              className="flex items-center gap-[5px]"
+              style={{ minWidth: 56 }}
               tabIndex={-1}
             >
-              {/* iOS chevron — thin, rounded */}
-              <svg width="9" height="16" viewBox="0 0 9 16" fill="none">
-                <path
-                  d="M7.5 1 1.5 8l6 7"
-                  stroke="#007AFF"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <span style={{ fontSize: 15, color: "#007AFF", fontWeight: 400 }}>
-                Messages
-              </span>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  background: "rgba(0,0,0,0.08)",
+                  borderRadius: 20,
+                  padding: "4px 10px 4px 8px",
+                  height: 28,
+                }}
+              >
+                {/* iOS back chevron */}
+                <svg width="8" height="14" viewBox="0 0 8 14" fill="none">
+                  <path d="M7 1 1 7l6 6" stroke="#007AFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {/* Unread badge */}
+                <div
+                  style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: "50%",
+                    background: "#fff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#000", lineHeight: 1 }}>1</span>
+                </div>
+              </div>
             </button>
 
             {/* Center: avatar + name (absolutely centered in the header row) */}
@@ -473,24 +474,18 @@ export function SmsIphonePreview() {
               <span style={{ fontSize: 14, color: "#8E8E93" }}>iMessage</span>
             </div>
 
-            {/* Send arrow */}
+            {/* Mic icon — shown when input is empty, matches reference */}
             <div
               className="flex shrink-0 items-center justify-center"
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: "50%",
-                background: "#007AFF",
-              }}
+              style={{ width: 30, height: 30 }}
             >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path
-                  d="M7 12V2M3 6l4-4 4 4"
-                  stroke="#fff"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+              <svg width="16" height="22" viewBox="0 0 16 22" fill="none">
+                {/* Mic body */}
+                <rect x="4" y="0.5" width="8" height="13" rx="4" stroke="#8E8E93" strokeWidth="1.5" />
+                {/* Arc */}
+                <path d="M1 10.5a7 7 0 0 0 14 0" stroke="#8E8E93" strokeWidth="1.5" strokeLinecap="round" />
+                {/* Stem */}
+                <line x1="8" y1="17.5" x2="8" y2="21" stroke="#8E8E93" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </div>
           </div>
