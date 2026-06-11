@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Home, Hammer, AlertCircle, Loader2, ArrowLeft } from "lucide-react";
+import { Home, Hammer, AlertCircle, Loader2, ArrowLeft, LayoutDashboard } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,7 @@ interface SignInModalProps {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) {
+  const router = useRouter();
   const [screen, setScreen] = useState<ModalScreen>("home");
   const [pending, setPending] = useState<PendingAuth | null>(null);
   const [phone, setPhone] = useState("");
@@ -230,6 +232,20 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
                 </button>
               </div>
             </div>
+
+            {/* View Admin Demo */}
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                handleClose();
+                router.push("/admin-demo");
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[#0A84FF]/40 bg-[#0A84FF]/5 px-3 py-2.5 text-sm font-medium text-[#0A84FF] transition-colors hover:bg-[#0A84FF]/10 disabled:opacity-50 cursor-pointer"
+            >
+              <LayoutDashboard className="h-4 w-4 shrink-0" />
+              View Admin Demo
+            </button>
 
             <p className="text-center text-xs text-muted-foreground/60">
               Demo mode: authentication is mocked for flow testing.
