@@ -106,13 +106,9 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
               boxShadow: "0 32px 80px rgba(10,132,255,0.18), 0 8px 24px rgba(0,0,0,0.10)",
             }}
           >
-            {/* Top accent bar */}
-            <div
-              className="h-1.5 w-full rounded-t-3xl"
-              style={{ background: "linear-gradient(90deg, #0A84FF, #34aaff, #0A84FF)" }}
-            />
+            {/* Top accent bar removed */}
 
-            <div className="flex flex-col items-center px-8 pt-7 pb-8">
+            <div className="flex flex-col items-center px-8 pt-8 pb-8">
 
               {/* Logo — 3x the original h-10, so h-[120px] equivalent via explicit size */}
               <div className="mb-6 flex justify-center">
@@ -127,12 +123,9 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
                 />
               </div>
 
-              {/* Question — no title, straight to the point */}
-              <p className="mb-1 text-center text-[22px] font-extrabold leading-tight tracking-tight text-foreground">
+              {/* Question */}
+              <p className="mb-7 text-center text-[22px] font-extrabold leading-tight tracking-tight text-foreground">
                 Are you a homeowner or a home service professional?
-              </p>
-              <p className="mb-7 text-center text-sm text-muted-foreground">
-                We&apos;ll open your messages so you can get started instantly.
               </p>
 
               {/* Choice cards */}
@@ -142,27 +135,20 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
                 <button
                   type="button"
                   onClick={handleHomeowner}
-                  className="group relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border border-[#0A84FF]/20 bg-white px-5 py-4 text-left shadow-sm transition-all duration-200 hover:border-[#0A84FF]/60 hover:shadow-[0_4px_20px_rgba(10,132,255,0.18)] active:scale-[0.98]"
+                  className="group relative flex w-full flex-col items-center gap-3 overflow-hidden rounded-2xl border border-[#0A84FF]/20 bg-white px-5 py-5 text-center shadow-sm transition-all duration-200 hover:border-[#0A84FF]/60 hover:shadow-[0_4px_20px_rgba(10,132,255,0.18)] active:scale-[0.98]"
                 >
                   {/* Icon */}
                   <span
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white transition-transform duration-200 group-hover:scale-110"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl text-white transition-transform duration-200 group-hover:scale-110"
                     style={{ background: "linear-gradient(135deg, #0A84FF, #34aaff)" }}
                   >
                     <Home className="h-5 w-5" />
                   </span>
 
-                  <div className="flex-1">
+                  <div>
                     <p className="text-[15px] font-bold text-foreground">{"I'm a Homeowner"}</p>
                     <p className="text-xs text-muted-foreground">Get bids from verified pros via text</p>
                   </div>
-
-                  {/* Arrow */}
-                  <span className="text-[#0A84FF] opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                      <path d="M4 9h10M10 5l4 4-4 4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </span>
 
                   {/* Hover shimmer */}
                   <div
@@ -175,27 +161,20 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
                 <button
                   type="button"
                   onClick={handlePro}
-                  className="group relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border border-foreground/10 bg-white px-5 py-4 text-left shadow-sm transition-all duration-200 hover:border-foreground/25 hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] active:scale-[0.98]"
+                  className="group relative flex w-full flex-col items-center gap-3 overflow-hidden rounded-2xl border border-foreground/10 bg-white px-5 py-5 text-center shadow-sm transition-all duration-200 hover:border-foreground/25 hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] active:scale-[0.98]"
                 >
                   {/* Icon */}
                   <span
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white transition-transform duration-200 group-hover:scale-110"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl text-white transition-transform duration-200 group-hover:scale-110"
                     style={{ background: "linear-gradient(135deg, #1c1c1e, #3a3a3c)" }}
                   >
                     <Wrench className="h-5 w-5" />
                   </span>
 
-                  <div className="flex-1">
+                  <div>
                     <p className="text-[15px] font-bold text-foreground">{"I'm a Home Service Pro"}</p>
                     <p className="text-xs text-muted-foreground">Build winning bids with AI</p>
                   </div>
-
-                  {/* Arrow */}
-                  <span className="text-foreground/40 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                      <path d="M4 9h10M10 5l4 4-4 4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </span>
 
                   {/* Hover shimmer */}
                   <div
