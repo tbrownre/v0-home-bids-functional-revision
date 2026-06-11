@@ -111,27 +111,29 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
 
             <div className="flex flex-col gap-3 px-8 pb-8 pt-6">
               <Button
-                asChild
                 size="lg"
                 className="h-12 w-full gap-2.5 rounded-full text-base font-semibold bg-[#0A84FF] text-white hover:bg-[#0A84FF]/90"
-                onClick={onClose}
+                onClick={() => {
+                  onClose();
+                  localStorage.setItem("homebids_audience", "homeowner");
+                  window.location.href = "/homeowners";
+                }}
               >
-                <Link href="/?home=1">
-                  <Home className="h-[18px] w-[18px] shrink-0" />
-                  {"I'm a Homeowner"}
-                </Link>
+                <Home className="h-[18px] w-[18px] shrink-0" />
+                {"I'm a Homeowner"}
               </Button>
               <Button
-                asChild
                 variant="outline"
                 size="lg"
                 className="h-12 w-full gap-2.5 rounded-full text-base font-semibold bg-white hover:bg-white/90"
-                onClick={onClose}
+                onClick={() => {
+                  onClose();
+                  localStorage.setItem("homebids_audience", "contractor");
+                  window.location.href = "/contractors/landing";
+                }}
               >
-                <Link href="/contractors/dashboard">
-                  <Wrench className="h-[18px] w-[18px] shrink-0" />
-                  {"I'm a Home Service Pro"}
-                </Link>
+                <Wrench className="h-[18px] w-[18px] shrink-0" />
+                {"I'm a Home Service Pro"}
               </Button>
             </div>
           </DialogContent>
@@ -251,26 +253,28 @@ export function GatewayLanding() {
 
           {/* CTA buttons */}
           <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Button
-              asChild
+              <Button
               size="lg"
               className="h-12 gap-2.5 rounded-full px-8 text-base font-semibold bg-[#0A84FF] text-white hover:bg-[#0A84FF]/90"
+              onClick={() => {
+                localStorage.setItem("homebids_audience", "homeowner");
+                window.location.href = "/homeowners";
+              }}
             >
-              <Link href="/?home=1">
-                <Home className="h-[18px] w-[18px] shrink-0" />
-                {"I'm a Homeowner"}
-              </Link>
+              <Home className="h-[18px] w-[18px] shrink-0" />
+              {"I'm a Homeowner"}
             </Button>
             <Button
-              asChild
               variant="outline"
               size="lg"
               className="h-12 gap-2.5 rounded-full px-8 text-base font-semibold bg-white/80 hover:bg-white"
+              onClick={() => {
+                localStorage.setItem("homebids_audience", "contractor");
+                window.location.href = "/contractors/landing";
+              }}
             >
-              <Link href="/contractors/dashboard">
-                <Wrench className="h-[18px] w-[18px] shrink-0" />
-                {"I'm a Home Service Pro"}
-              </Link>
+              <Wrench className="h-[18px] w-[18px] shrink-0" />
+              {"I'm a Home Service Pro"}
             </Button>
           </div>
         </motion.div>

@@ -156,6 +156,21 @@ export function Header({
     window.location.href = "/";
   };
 
+  // Audience preference — for switching between homeowner and contractor experiences
+  const [audience, setAudience] = useState<"homeowner" | "contractor" | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("homebids_audience") as "homeowner" | "contractor" | null;
+    setAudience(stored);
+  }, [pathname]);
+
+  const handleAudienceSwitch = (next: "homeowner" | "contractor") => {
+    localStorage.setItem("homebids_audience", next);
+    setAudience(next);
+    closeMenu();
+    window.location.href = next === "homeowner" ? "/homeowners" : "/contractors/landing";
+  };
+
   // Determine active contractor tab from search param so only one item highlights
   const activeContractorTab = searchParams?.get("tab") ?? "home";
 
@@ -228,6 +243,33 @@ export function Header({
                     <LogIn className="h-4 w-4 shrink-0" />
                     Contractor Sign In
                   </button>
+                  {/* Audience switcher — only shown after a selection has been made */}
+                  {mounted && audience && (
+                    <>
+                      <div className={separator} />
+                      {audience === "homeowner" ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => handleAudienceSwitch("contractor")}
+                          className={menuItemBase}
+                        >
+                          <Wrench className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <span className="text-muted-foreground">Switch to Contractor</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => handleAudienceSwitch("homeowner")}
+                          className={menuItemBase}
+                        >
+                          <Home className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <span className="text-muted-foreground">Switch to Homeowner</span>
+                        </button>
+                      )}
+                    </>
+                  )}
                 </>
               )}
 
