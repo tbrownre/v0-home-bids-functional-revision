@@ -328,12 +328,12 @@ export function Header({
           }}
         >
           <Image
-            src="/images/homebids-logo-new.png?v=2"
+            src="/images/homebids-wordmark.png"
             alt="HomeBids"
             width={480}
             height={120}
             className="object-contain pointer-events-none"
-            style={{ height: "clamp(56px, 12vw, 96px)", width: "auto" }}
+            style={{ height: "clamp(44px, 9vw, 72px)", width: "auto", mixBlendMode: "multiply" }}
             priority
           />
         </button>

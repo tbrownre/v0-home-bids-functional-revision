@@ -189,11 +189,12 @@ export default function SignInPage() {
           style={{ pointerEvents: "auto" }}
         >
           <Image
-            src="/images/homebids-logo-new.png?v=2"
+            src="/images/homebids-wordmark.png"
             alt="HomeBids"
             width={240}
             height={60}
-            className="h-[56px] w-auto object-contain"
+            className="h-[52px] w-auto object-contain"
+            style={{ mixBlendMode: "multiply" }}
             priority
           />
         </Link>
