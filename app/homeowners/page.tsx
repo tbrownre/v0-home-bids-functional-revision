@@ -16,7 +16,6 @@ import {
   Phone,
   Shield,
   Star,
-  ChevronDown,
 } from "lucide-react";
 
 const fadeInUp = {
@@ -115,17 +114,6 @@ export default function HomeownersPage() {
                 >
                   <Phone className="h-[18px] w-[18px] shrink-0" />
                   Text Us to Start Your Project
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-12 rounded-full px-8 text-base font-semibold"
-                  asChild
-                >
-                  <Link href="#how-it-works">
-                    How It Works
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                  </Link>
                 </Button>
               </div>
 
@@ -307,7 +295,7 @@ export default function HomeownersPage() {
             >
               {/* Status bar */}
               <div
-                className="flex items-center justify-between px-5 pt-2 pb-1"
+                className="relative flex items-center justify-between px-5 pt-2 pb-1"
                 style={{ background: "#F2F2F7" }}
               >
                 <span style={{ fontSize: 12, fontWeight: 600, color: "#000" }}>9:41</span>
