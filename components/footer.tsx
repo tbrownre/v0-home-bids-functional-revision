@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from "react";
 import Link from "next/link";
+import React, { useState, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Home, Building2, Send, CheckCircle2, ChevronUp } from "lucide-react";
+import { HomeBidsLogo } from "@/components/homebids-logo";
 
 // Flyout group — keeps open while hovering trigger or panel
 function FlyoutGroup({ label, items }: { label: string; items: { href?: string; label: string; onClick?: () => void }[] }) {
@@ -134,11 +135,11 @@ export function Footer() {
                 ]}
               />
             </nav>
-            <div className="border-t border-border w-full pt-4 text-center">
-              <Link href="/" className="text-sm font-semibold text-foreground hover:text-primary transition-colors">
-                HomeBids.ai
-              </Link>
-              <p className="mt-1 text-xs text-muted-foreground">
+            <div className="border-t border-border w-full pt-4 flex flex-col items-center gap-1">
+              <div className="overflow-hidden">
+                <HomeBidsLogo height="20px" />
+              </div>
+              <p className="text-xs text-muted-foreground">
                 &copy; {new Date().getFullYear()} HomeBids.ai. All rights reserved.
               </p>
             </div>
@@ -147,9 +148,9 @@ export function Footer() {
           {/* Desktop: single-line layout */}
           <div className="hidden sm:flex flex-wrap items-center justify-between gap-y-2 py-3">
             <div className="flex items-center gap-3">
-              <Link href="/" className="text-sm font-semibold text-foreground hover:text-primary transition-colors">
-                HomeBids.ai
-              </Link>
+              <div className="overflow-hidden">
+                <HomeBidsLogo height="18px" />
+              </div>
               <span className="text-muted-foreground/40">|</span>
               <span className="text-xs text-muted-foreground">
                 &copy; {new Date().getFullYear()} HomeBids.ai. All rights reserved.
