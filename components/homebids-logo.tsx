@@ -1,44 +1,51 @@
-import Image from "next/image";
 import Link from "next/link";
 
 interface HomeBidsLogoProps {
   /**
-   * Visual height of the wordmark in any valid CSS value.
-   * Width scales automatically from the 1094×323 cropped canvas (aspect 3.384:1).
+   * Font-size of the wordmark. Width is determined naturally by the text.
+   * Defaults to a responsive clamp suitable for the main header.
    */
-  height?: string;
+  size?: string;
   /** Wrap in a <Link href="/">. Defaults to true. */
   linked?: boolean;
   className?: string;
 }
 
 /**
- * Single source-of-truth HomeBids wordmark.
- * The PNG is pre-cropped — no padding, no clipping tricks needed.
- * Import only this wherever the logo appears.
+ * HomeBids wordmark — pure CSS, no image required.
+ * "HOME" in brand blue, "BIDS" in near-black, bold, uppercase,
+ * tight letter-spacing, transparent background.
  */
 export function HomeBidsLogo({
-  height = "clamp(28px, 4vw, 40px)",
+  size = "clamp(20px, 3vw, 28px)",
   linked = true,
   className = "",
 }: HomeBidsLogoProps) {
-  const img = (
-    <Image
-      src="/images/homebids-wordmark.png"
-      alt="HomeBids"
-      width={1094}
-      height={323}
-      className={`pointer-events-none select-none ${className}`}
-      style={{ height, width: "auto" }}
-      priority
-      draggable={false}
-    />
+  const wordmark = (
+    <span
+      className={`select-none pointer-events-none inline-flex items-baseline leading-none ${className}`}
+      aria-hidden="true"
+      style={{
+        fontFamily: "'Red Hat Display', system-ui, sans-serif",
+        fontSize: size,
+        fontWeight: 800,
+        letterSpacing: "-0.02em",
+        lineHeight: 1,
+      }}
+    >
+      <span style={{ color: "#2B7FE8" }}>HOME</span>
+      <span style={{ color: "#0D0D0D" }}>BIDS</span>
+    </span>
   );
 
   if (!linked) {
     return (
-      <span aria-label="HomeBids" role="img" className="inline-flex items-center">
-        {img}
+      <span
+        aria-label="HomeBids"
+        role="img"
+        className="inline-flex items-center"
+      >
+        {wordmark}
       </span>
     );
   }
@@ -50,7 +57,7 @@ export function HomeBidsLogo({
       className="inline-flex items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
-      {img}
+      {wordmark}
     </Link>
   );
 }

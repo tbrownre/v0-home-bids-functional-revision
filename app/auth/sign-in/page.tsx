@@ -188,7 +188,7 @@ export default function SignInPage() {
           className="absolute left-1/2 -translate-x-1/2 flex items-center focus-visible:outline-none"
           style={{ pointerEvents: "auto" }}
         >
-          <HomeBidsLogo height="clamp(40px, 5.5vw, 56px)" linked={false} />
+          <HomeBidsLogo size="clamp(22px, 3vw, 28px)" linked={false} />
         </Link>
       </div>
 

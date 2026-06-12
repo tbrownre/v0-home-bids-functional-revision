@@ -50,7 +50,7 @@ export default function HomeownerSignUpPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mb-3 flex justify-center">
-            <HomeBidsLogo height="clamp(40px, 5.5vw, 56px)" />
+            <HomeBidsLogo size="clamp(22px, 3vw, 28px)" />
           </div>
           <CardTitle className="text-2xl">Create your account</CardTitle>
           <CardDescription>Start receiving contractor bids for free</CardDescription>
