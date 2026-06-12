@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { getSmsLink } from "@/lib/sms-config";
 import Link from "next/link";
 import Image from "next/image";
 import { Header } from "@/components/header";
@@ -110,7 +111,7 @@ export default function HomeownersPage() {
                 <Button
                   size="lg"
                   className="h-12 gap-2.5 rounded-full px-8 text-base font-semibold"
-                  onClick={() => window.open("sms:+1?body=Hi%2C%20I%27d%20like%20to%20start%20a%20home%20project", "_blank")}
+                  onClick={() => window.location.href = getSmsLink()}
                 >
                   <Phone className="h-[18px] w-[18px] shrink-0" />
                   Text Us to Start Your Project
@@ -489,12 +490,7 @@ export default function HomeownersPage() {
               <Button
                 size="lg"
                 className="h-12 gap-2.5 rounded-full bg-white px-8 text-base font-semibold text-primary hover:bg-white/90"
-                onClick={() =>
-                  window.open(
-                    "sms:+1?body=Hi%2C%20I%27d%20like%20to%20start%20a%20home%20project",
-                    "_blank"
-                  )
-                }
+                onClick={() => window.location.href = getSmsLink()}
               >
                 <Phone className="h-[18px] w-[18px] shrink-0" />
                 Text Us to Start Your Project

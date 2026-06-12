@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { getSmsLink } from "@/lib/sms-config";
 import { Header } from "@/components/header";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
 import { getMockUser, mockSignOut, USE_MOCK_DATA, type MockUser } from "@/lib/mock-auth";
@@ -536,7 +537,7 @@ export default function ProfilePage() {
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <Button variant="outline" size="sm" asChild>
-                <a href="/new-job">Post a New Job</a>
+                <a href={getSmsLink()}>Post a New Job</a>
               </Button>
             </div>
           </Section>
