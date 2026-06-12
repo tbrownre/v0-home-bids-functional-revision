@@ -187,7 +187,7 @@ function ROICalculator() {
               aria-label="Average job value"
             />
             <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-              <span>$1,000</span>
+              <span>$100</span>
               <span>$25,000</span>
             </div>
           </div>
