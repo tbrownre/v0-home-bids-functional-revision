@@ -28,13 +28,12 @@ export function HomeBidsLogo({
       style={{
         fontFamily: "'Red Hat Display', system-ui, sans-serif",
         fontSize: size,
-        fontWeight: 800,
         letterSpacing: "-0.02em",
         lineHeight: 1,
       }}
     >
-      <span style={{ color: "#2B7FE8" }}>HOME</span>
-      <span style={{ color: "#0D0D0D" }}>BIDS</span>
+      <span style={{ color: "#2B7FE8", fontWeight: 800 }}>HOME</span>
+      <span style={{ color: "#0D0D0D", fontWeight: 400 }}>BIDS</span>
     </span>
   );
 
