@@ -26,7 +26,6 @@ import {
   FileText,
   Building2,
   LogIn,
-  Star,
   TrendingUp,
   Clock,
   DollarSign,
@@ -138,16 +137,6 @@ const tools = [
     description: "Respond faster, follow up smarter, and run your business like a team of five — even when you're alone.",
     glow: "#2B7FE8",
   },
-];
-
-/* ─── Social proof reviews ─── */
-const reviews = [
-  { name: "Marcus T.", trade: "Roofing", stars: 5, quote: "I closed two extra jobs last month just from responding faster. This is a game changer." },
-  { name: "David R.", trade: "Remodeling", stars: 5, quote: "My bids look more professional than contractors twice my size. Homeowners take me seriously now." },
-  { name: "Elena S.", trade: "Painting", stars: 5, quote: "Used to take me 45 minutes to write an estimate. Now it's under 10. I love this tool." },
-  { name: "James K.", trade: "Plumbing", stars: 5, quote: "Bid Defender is worth the subscription alone. Stopped losing jobs to follow-up delays." },
-  { name: "Tyler M.", trade: "Landscaping", stars: 5, quote: "Feels like I hired a business assistant. Everything is more organized and professional." },
-  { name: "Priya N.", trade: "Electrical", stars: 5, quote: "The AI response assistant helped me handle pricing objections I used to fumble every time." },
 ];
 
 /* ─── Plan features ─── */
@@ -690,48 +679,6 @@ export default function ContractorsPage() {
             <motion.div variants={fadeUp}>
               <ROICalculator />
             </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ── SOCIAL PROOF ── */}
-      <section className="overflow-hidden px-4 py-24 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-6xl">
-          <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-            <motion.div variants={fadeUp} className="mb-14 text-center">
-              <span className="text-xs font-semibold uppercase tracking-widest text-primary">Reviews</span>
-              <h2 className="mt-3 text-3xl font-bold text-foreground sm:text-4xl">
-                Contractors Who Made the Switch
-              </h2>
-            </motion.div>
-
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {reviews.map((r, i) => (
-                <motion.div
-                  key={i}
-                  variants={fadeUp}
-                  whileHover={{ y: -3 }}
-                  className="rounded-2xl border border-border p-6"
-                  style={{ background: "rgba(255,255,255,0.7)", backdropFilter: "blur(10px)" }}
-                >
-                  <div className="flex gap-0.5">
-                    {Array.from({ length: r.stars }).map((_, s) => (
-                      <Star key={s} className="h-3.5 w-3.5 fill-primary text-primary" />
-                    ))}
-                  </div>
-                  <p className="mt-3 text-sm leading-relaxed text-foreground">&ldquo;{r.quote}&rdquo;</p>
-                  <div className="mt-4 flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                      {r.name[0]}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{r.name}</p>
-                      <p className="text-xs text-muted-foreground">{r.trade}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
           </motion.div>
         </div>
       </section>

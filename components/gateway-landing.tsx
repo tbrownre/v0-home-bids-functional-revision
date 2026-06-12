@@ -306,7 +306,7 @@ export function GatewayLanding() {
               className="h-12 gap-2.5 rounded-full px-8 text-base font-semibold bg-white/80 hover:bg-white"
               onClick={() => {
                 localStorage.setItem("homebids_audience", "contractor");
-                window.location.href = "/contractors/landing";
+                window.location.href = "/contractors";
               }}
             >
               <Wrench className="h-[18px] w-[18px] shrink-0" />
