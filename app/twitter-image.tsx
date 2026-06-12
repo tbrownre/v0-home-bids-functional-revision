@@ -33,7 +33,7 @@ export default async function Image() {
             lineHeight: 1,
           }}
         >
-          <span style={{ color: "#0A84FF" }}>HOME</span>
+          <span style={{ color: "#2B7FE8" }}>HOME</span>
           <span style={{ color: "#000000" }}>BIDS</span>
         </div>
 

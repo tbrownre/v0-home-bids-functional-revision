@@ -136,7 +136,7 @@ export function Footer() {
               />
             </nav>
             <div className="border-t border-border w-full pt-4 flex flex-col items-center gap-1">
-              <HomeBidsLogo height="28px" />
+              <HomeBidsLogo height="32px" />
               <p className="text-xs text-muted-foreground">
                 &copy; {new Date().getFullYear()} HomeBids.ai. All rights reserved.
               </p>
@@ -146,7 +146,7 @@ export function Footer() {
           {/* Desktop: single-line layout */}
           <div className="hidden sm:flex flex-wrap items-center justify-between gap-y-2 py-3">
             <div className="flex items-center gap-3">
-              <HomeBidsLogo height="24px" />
+              <HomeBidsLogo height="28px" />
               <span className="text-muted-foreground/40">|</span>
               <span className="text-xs text-muted-foreground">
                 &copy; {new Date().getFullYear()} HomeBids.ai. All rights reserved.

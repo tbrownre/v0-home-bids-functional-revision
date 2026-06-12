@@ -13,7 +13,7 @@ export default function AdminDemoLayout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-40 border-b border-black/8 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3">
           {/* Logo → home */}
-          <HomeBidsLogo height="clamp(32px, 4vw, 44px)" />
+          <HomeBidsLogo height="clamp(40px, 5.5vw, 56px)" />
 
           <div className="flex items-center gap-3">
             {/* Demo badge */}

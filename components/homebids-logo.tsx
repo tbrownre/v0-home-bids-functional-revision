@@ -3,18 +3,21 @@ import Link from "next/link";
 
 interface HomeBidsLogoProps {
   /**
-   * Height of the *visible wordmark artwork* in CSS units.
-   * The source PNG (966×499) has ~37% transparent padding top/bottom
-   * and ~27% left/right. We render the full canvas at the correct
-   * scale and clip it so only the artwork is visible.
+   * Height of the *visible wordmark artwork* in any valid CSS unit.
    *
-   * Measured ratios:
-   *   - Visible text height = 26% of canvas height  → scale = 1/0.26 = 3.846×
-   *   - Visible text width  = 46% of canvas width   → aspect = 3.42:1
-   *   - Canvas aspect ratio = 966/499 = 1.936
-   *   - Full rendered canvas width = height × 3.846 × 1.936 = height × 7.446
-   *   - top  offset = −(3.846 − 1) / 2 × height = −1.423 × height
-   *   - left offset = −(7.446 − 3.42) / 2 × height = −2.013 × height
+   * PNG canvas: 966 × 499 px
+   * Measured visible artwork bounds:
+   *   left  ~27%  right  ~73%  → text width  = 46% of 966 = ~445 px
+   *   top   ~33%  bottom ~66%  → text height = 33% of 499 = ~165 px
+   *   visible aspect ratio     = 445 / 165 ≈ 2.70
+   *   canvas aspect ratio      = 966 / 499 ≈ 1.936
+   *
+   * Derived multipliers (height = desired visual height H):
+   *   canvas rendered height   = H / 0.33  = H × 3.030
+   *   canvas rendered width    = H × 3.030 × 1.936 = H × 5.866
+   *   top  offset = −((3.030 − 1) / 2) × H = −1.015 × H
+   *   left offset = −(0.27 × 5.866) × H    = −1.584 × H
+   *   wrapper width            = H × 2.70
    */
   height?: string;
   /** Wrap in a <Link href="/">. Defaults to true. */
@@ -24,10 +27,10 @@ interface HomeBidsLogoProps {
 
 /**
  * Single source-of-truth HomeBids wordmark component.
- * Import this — and only this — wherever the logo appears.
+ * Import ONLY this wherever the logo appears — never reference the PNG directly.
  */
 export function HomeBidsLogo({
-  height = "clamp(36px, 5vw, 52px)",
+  height = "clamp(40px, 5.5vw, 56px)",
   linked = true,
   className = "",
 }: HomeBidsLogoProps) {
@@ -36,8 +39,8 @@ export function HomeBidsLogo({
       className={`inline-block overflow-hidden pointer-events-none select-none ${className}`}
       style={{
         height,
-        width:    `calc(${height} * 3.42)`,
-        position: "relative",
+        width:      `calc(${height} * 2.70)`,
+        position:   "relative",
         flexShrink: 0,
       }}
       aria-hidden="true"
@@ -49,10 +52,10 @@ export function HomeBidsLogo({
         height={499}
         className="absolute"
         style={{
-          height:   `calc(${height} * 3.846)`,
+          height:   `calc(${height} * 3.030)`,
           width:    "auto",
-          top:      `calc(${height} * -1.423)`,
-          left:     `calc(${height} * -2.013)`,
+          top:      `calc(${height} * -1.015)`,
+          left:     `calc(${height} * -1.584)`,
           maxWidth: "none",
         }}
         priority
@@ -84,4 +87,3 @@ export function HomeBidsLogo({
     </Link>
   );
 }
-
