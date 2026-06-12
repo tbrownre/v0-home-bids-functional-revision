@@ -282,8 +282,8 @@ export function GatewayLanding() {
 
       {/* ── Main — z-10, centered column ────────────────────────────────── */}
       <main
-        className="relative mx-auto flex max-w-2xl flex-col items-center px-5 pb-16 pt-4 text-center"
-        style={{ zIndex: 10 }}
+        className="relative mx-auto flex max-w-2xl flex-col items-center px-5 pt-4 text-center"
+        style={{ zIndex: 10, paddingBottom: "47px" }}
       >
         {/* Hero copy */}
         <motion.div
@@ -346,7 +346,7 @@ export function GatewayLanding() {
           >
             <div
               className="relative flex-shrink-0"
-              style={{ width: 320, height: 590 }}
+              style={{ width: 320, height: 640 }}
             >
               {/* Subtle blue ambient glow */}
               <div
