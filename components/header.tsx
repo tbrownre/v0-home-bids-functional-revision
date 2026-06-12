@@ -348,7 +348,7 @@ export function Header({
 
         {/* Center: Logo */}
         <div className="flex items-center justify-center">
-          <HomeBidsLogo height="clamp(54px, 11vw, 88px)" />
+          <HomeBidsLogo size="clamp(20px, 2.5vw, 26px)" />
         </div>
 
         {/* Right: back link or spacer */}

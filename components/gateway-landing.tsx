@@ -2,10 +2,10 @@
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useAnimationFrame, motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
 import Link from "next/link";
 import { Home, Wrench } from "lucide-react";
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
+import { HomeBidsLogo } from "@/components/homebids-logo";
 import { Button } from "@/components/ui/button";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
 import {
@@ -111,17 +111,9 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
 
             <div className="flex flex-col items-center px-8 pt-8 pb-8">
 
-              {/* Logo — 3x the original h-10, so h-[120px] equivalent via explicit size */}
+              {/* Logo */}
               <div className="mb-6 flex justify-center">
-                <Image
-                  src="/images/homebids-wordmark.png"
-                  alt="HomeBids"
-                  width={480}
-                  height={120}
-                  className="w-auto object-contain"
-                  style={{ height: "120px", mixBlendMode: "multiply" }}
-                  priority
-                />
+                <HomeBidsLogo size="32px" linked={false} />
               </div>
 
               {/* Question */}
@@ -241,21 +233,9 @@ export function GatewayLanding() {
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
 
           {/* Logo — left-aligned, prominent */}
-          <Link href="/" className="shrink-0" tabIndex={0}>
-            <Image
-              src="/images/homebids-wordmark.png"
-              alt="HomeBids"
-              width={480}
-              height={120}
-              className="pointer-events-none object-contain object-left"
-              style={{
-                height: "clamp(66px, 12vw, 102px)",
-                width: "auto",
-                mixBlendMode: "multiply",
-              }}
-              priority
-            />
-          </Link>
+          <div className="shrink-0">
+            <HomeBidsLogo size="clamp(20px, 2.5vw, 26px)" />
+          </div>
 
           {/* Nav — right-aligned, noticeably smaller than the logo */}
           <nav className="flex shrink-0 items-center gap-2">

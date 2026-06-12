@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AlertCircle, Loader2 } from "lucide-react";
 import { signUpHomeowner } from "@/lib/supabase/actions";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
+import { HomeBidsLogo } from "@/components/homebids-logo";
 
 export default function HomeownerSignUpPage() {
   const router = useRouter();
@@ -48,9 +49,9 @@ export default function HomeownerSignUpPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <Link href="/" className="mb-2 inline-block text-lg font-bold text-primary">
-            HomeBids.ai
-          </Link>
+          <div className="mb-3 flex justify-center">
+            <HomeBidsLogo size="clamp(22px, 3vw, 28px)" />
+          </div>
           <CardTitle className="text-2xl">Create your account</CardTitle>
           <CardDescription>Start receiving contractor bids for free</CardDescription>
         </CardHeader>

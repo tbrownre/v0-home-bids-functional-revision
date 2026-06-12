@@ -1,45 +1,63 @@
-import Image from "next/image";
 import Link from "next/link";
 
 interface HomeBidsLogoProps {
-  /** Rendered height via CSS clamp — defaults to the same clamp used in the main Header. */
-  height?: string;
-  /** If true, wraps in a <Link href="/">. Defaults to true. */
+  /**
+   * Font-size of the wordmark. Width is determined naturally by the text.
+   * Defaults to a responsive clamp suitable for the main header.
+   */
+  size?: string;
+  /** Wrap in a <Link href="/">. Defaults to true. */
   linked?: boolean;
   className?: string;
 }
 
 /**
- * Single shared HomeBids wordmark logo.
- * Used in Header, AdminDemoLayout, SignInPage, and anywhere else the logo appears.
+ * HomeBids wordmark — pure CSS, no image required.
+ * "HOME" in brand blue, "BIDS" in near-black, bold, uppercase,
+ * tight letter-spacing, transparent background.
  */
 export function HomeBidsLogo({
-  height = "clamp(54px, 11vw, 88px)",
+  size = "clamp(20px, 3vw, 28px)",
   linked = true,
   className = "",
 }: HomeBidsLogoProps) {
-  const img = (
-    <Image
-      src="/images/homebids-wordmark.png"
-      alt="HomeBids"
-      width={480}
-      height={120}
-      className={`w-auto object-contain pointer-events-none ${className}`}
-      style={{ height, mixBlendMode: "multiply" }}
-      priority
-    />
+  const wordmark = (
+    <span
+      className={`select-none pointer-events-none inline-flex items-baseline leading-none ${className}`}
+      aria-hidden="true"
+      style={{
+        fontFamily: "'Red Hat Display', system-ui, sans-serif",
+        fontSize: size,
+        fontWeight: 800,
+        letterSpacing: "-0.02em",
+        lineHeight: 1,
+      }}
+    >
+      <span style={{ color: "#2B7FE8" }}>HOME</span>
+      <span style={{ color: "#0D0D0D" }}>BIDS</span>
+    </span>
   );
 
-  if (!linked) return img;
+  if (!linked) {
+    return (
+      <span
+        aria-label="HomeBids"
+        role="img"
+        className="inline-flex items-center"
+      >
+        {wordmark}
+      </span>
+    );
+  }
 
   return (
     <Link
       href="/"
       aria-label="Go to HomeBids homepage"
-      className="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md"
+      className="inline-flex items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
-      {img}
+      {wordmark}
     </Link>
   );
 }
