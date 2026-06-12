@@ -343,7 +343,7 @@ export async function getJobBids(jobId: string) {
     ...bid,
     business_name:
       contractorProfileMap[bid.contractor_id]?.business_name ??
-      (bid.profiles as any)?.full_name ??
+      (bid.profiles as { full_name?: string | null } | null)?.full_name ??
       "Contractor",
   }));
 
@@ -411,8 +411,8 @@ export async function submitBid(formData: {
   await fireWebhook("bid.submitted", {
     bid_id: data.id,
     job_id: formData.job_id,
-    job_title: (data.jobs as any)?.title ?? "",
-    homeowner_id: (data.jobs as any)?.homeowner_id ?? "",
+    job_title: (data.jobs as { title?: string } | null)?.title ?? "",
+    homeowner_id: (data.jobs as { homeowner_id?: string } | null)?.homeowner_id ?? "",
     contractor_id: user.id,
     amount: formData.amount,
     message: formData.message,
@@ -456,7 +456,7 @@ export async function acceptBid(bidId: string, jobId: string) {
   await fireWebhook("bid.accepted", {
     bid_id: bidId,
     job_id: jobId,
-    job_title: (acceptedBid?.jobs as any)?.title ?? "",
+    job_title: (acceptedBid?.jobs as { title?: string } | null)?.title ?? "",
     contractor_id: acceptedBid?.contractor_id ?? "",
     homeowner_id: user.id,
     amount: acceptedBid?.amount ?? 0,
@@ -481,7 +481,7 @@ export async function getContractorBids() {
   return { bids: data ?? [] };
 }
 
-// ── Messages ─────────────────────────────────────────────────────────────��───
+// ── Messages ─────────────────────────────────────────────────────────────���───
 
 export async function sendMessage(formData: {
   job_id: string;

@@ -9,7 +9,7 @@ export default function FoundingContractorPresalePage() {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   const handleNextStep = () => {
-    setStep((prev) => (prev < 4 ? (prev + 1) as any : prev));
+    setStep((prev) => (prev < 4 ? ((prev + 1) as 1 | 2 | 3 | 4) : prev));
   };
 
   // Step 1: Landing / Offer Page

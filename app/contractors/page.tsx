@@ -35,7 +35,7 @@ import {
 /* ─── Animation variants ─── */
 const fadeUp = {
   hidden: { opacity: 0, y: 32 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const } },
 };
 const stagger = {
   show: { transition: { staggerChildren: 0.1 } },
@@ -62,7 +62,7 @@ function RotatingWord() {
           initial={{ y: 40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -40, opacity: 0 }}
-          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] as const }}
           className="inline-block text-primary"
         >
           {rotatingWords[index]}
@@ -88,17 +88,19 @@ function AnimatedNumber({ target, suffix = "", prefix = "" }: { target: number; 
 
 /* ─── Floating particle background ─── */
 function ParticleField() {
-  const particles = Array.from({ length: 28 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 2 + 1,
-    duration: Math.random() * 14 + 10,
-    delay: Math.random() * 6,
-  }));
+  const particles = useRef(
+    Array.from({ length: 28 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 2 + 1,
+      duration: Math.random() * 14 + 10,
+      delay: Math.random() * 6,
+    }))
+  );
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      {particles.map((p) => (
+      {particles.current.map((p) => (
         <motion.div
           key={p.id}
           className="absolute rounded-full bg-primary/20"
