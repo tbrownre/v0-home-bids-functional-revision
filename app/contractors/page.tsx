@@ -425,8 +425,8 @@ export default function ContractorsPage() {
             style={{ background: "rgba(255,255,255,0.6)", backdropFilter: "blur(16px)" }}
           >
             {[
-              { value: 5, suffix: "min", label: "Average bid time" },
-              { value: 3, suffix: "x", label: "Faster estimates" },
+              { value: 3, suffix: "min", label: "Average bid time" },
+              { value: 10, suffix: "x", label: "Faster estimates" },
               { value: 99, suffix: "", label: "Per month, all-in" },
             ].map((s, i) => (
               <div key={i} className="px-4 text-center">
