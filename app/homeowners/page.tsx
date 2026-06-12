@@ -177,7 +177,7 @@ export default function HomeownersPage() {
       </section>
 
       {/* ── HOW IT WORKS ───────────────────────────────────────────────── */}
-      <section id="how-it-works" className="px-4 py-24 sm:px-6 lg:px-8">
+      <section id="how-it-works" className="px-4 py-24 sm:px-6 lg:px-8" style={{ marginTop: "28px" }}>
         <div className="mx-auto max-w-5xl">
           <motion.div {...fadeInUp} className="text-center">
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
