@@ -296,7 +296,7 @@ export default function HomeownersPage() {
             >
               {/* Status bar */}
               <div
-                className="flex items-center justify-between px-5 pt-2 pb-1"
+                className="relative flex items-center justify-between px-5 pt-2 pb-1"
                 style={{ background: "#F2F2F7" }}
               >
                 <span style={{ fontSize: 12, fontWeight: 600, color: "#000" }}>9:41</span>
