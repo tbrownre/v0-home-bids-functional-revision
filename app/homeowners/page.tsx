@@ -116,17 +116,13 @@ export default function HomeownersPage() {
                   <Phone className="h-[18px] w-[18px] shrink-0" />
                   Text Us to Start Your Project
                 </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-12 rounded-full px-8 text-base font-semibold"
-                  asChild
+                <Link
+                  href="#how-it-works"
+                  className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <Link href="#how-it-works">
-                    How It Works
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
+                  How It Works
+                  <ChevronDown className="h-4 w-4" />
+                </Link>
               </div>
 
               {/* Trust strip */}
