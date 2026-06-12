@@ -184,9 +184,9 @@ export function SmsIphonePreview() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex items-start justify-center">
-      {/* Outer wrapper — fixed size, never clips */}
-      <div className="relative" style={{ width: 300, flexShrink: 0 }}>
+    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", width: 300, height: 640, flexShrink: 0 }}>
+      {/* Outer wrapper — fixed dimensions, never grows with message content */}
+      <div className="relative" style={{ width: 300, height: 640, flexShrink: 0 }}>
 
         {/* ── iPhone shell ────────────────────────────────────────────── */}
         <div
