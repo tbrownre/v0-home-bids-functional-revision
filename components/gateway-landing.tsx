@@ -346,7 +346,7 @@ export function GatewayLanding() {
           >
             <div
               className="relative flex-shrink-0"
-              style={{ width: 320, height: 590 }}
+              style={{ width: 320, height: 640 }}
             >
               {/* Subtle blue ambient glow */}
               <div
