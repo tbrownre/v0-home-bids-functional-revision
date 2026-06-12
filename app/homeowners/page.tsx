@@ -16,7 +16,6 @@ import {
   Phone,
   Shield,
   Star,
-  ChevronDown,
 } from "lucide-react";
 
 const fadeInUp = {
@@ -434,15 +433,7 @@ export default function HomeownersPage() {
               </div>
 
               {/* Home indicator */}
-              <div className="flex flex-col items-center gap-1 pb-2 pt-1" style={{ background: "#fff" }}>
-                <Link
-                  href="#how-it-works"
-                  className="flex items-center gap-0.5 transition-opacity hover:opacity-70"
-                  style={{ fontSize: 11, color: "#0A84FF", fontWeight: 500 }}
-                >
-                  How It Works
-                  <ChevronDown style={{ width: 12, height: 12 }} />
-                </Link>
+              <div className="flex justify-center pb-2 pt-1" style={{ background: "#fff" }}>
                 <div style={{ width: 100, height: 4, borderRadius: 2, background: "#1C1C1E" }} />
               </div>
             </div>
