@@ -434,22 +434,21 @@ export default function HomeownersPage() {
               </div>
 
               {/* Home indicator */}
-              <div className="flex justify-center pb-2 pt-1" style={{ background: "#fff" }}>
+              <div className="flex flex-col items-center gap-1 pb-2 pt-1" style={{ background: "#fff" }}>
+                <Link
+                  href="#how-it-works"
+                  className="flex items-center gap-0.5 transition-opacity hover:opacity-70"
+                  style={{ fontSize: 11, color: "#0A84FF", fontWeight: 500 }}
+                >
+                  How It Works
+                  <ChevronDown style={{ width: 12, height: 12 }} />
+                </Link>
                 <div style={{ width: 100, height: 4, borderRadius: 2, background: "#1C1C1E" }} />
               </div>
             </div>
             <p className="mt-3 text-center text-xs text-muted-foreground">
               HomeBids handles the introduction — you stay in control
             </p>
-            <div className="mt-4 flex justify-center">
-              <Link
-                href="#how-it-works"
-                className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                How It Works
-                <ChevronDown className="h-4 w-4" />
-              </Link>
-            </div>
           </motion.div>
         </div>
       </section>
