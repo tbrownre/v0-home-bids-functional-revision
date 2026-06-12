@@ -116,13 +116,6 @@ export default function HomeownersPage() {
                   <Phone className="h-[18px] w-[18px] shrink-0" />
                   Text Us to Start Your Project
                 </Button>
-                <Link
-                  href="#how-it-works"
-                  className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  How It Works
-                  <ChevronDown className="h-4 w-4" />
-                </Link>
               </div>
 
               {/* Trust strip */}
@@ -448,6 +441,15 @@ export default function HomeownersPage() {
             <p className="mt-3 text-center text-xs text-muted-foreground">
               HomeBids handles the introduction — you stay in control
             </p>
+            <div className="mt-4 flex justify-center">
+              <Link
+                href="#how-it-works"
+                className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                How It Works
+                <ChevronDown className="h-4 w-4" />
+              </Link>
+            </div>
           </motion.div>
         </div>
       </section>
