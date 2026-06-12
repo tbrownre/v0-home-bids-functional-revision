@@ -160,7 +160,7 @@ export function Header({
     localStorage.setItem("homebids_audience", next);
     setAudience(next);
     closeMenu();
-    window.location.href = next === "homeowner" ? "/homeowners" : "/contractors/landing";
+    window.location.href = next === "homeowner" ? "/homeowners" : "/contractors";
   };
 
   // Determine active contractor tab from search param so only one item highlights
