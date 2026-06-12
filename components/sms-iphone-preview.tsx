@@ -254,7 +254,7 @@ export function SmsIphonePreview() {
           {/* ── iMessage header ───────────────────────────────────────── */}
           <div
             className="relative flex shrink-0 items-center bg-[#F2F2F7] px-[10px] pb-[10px] pt-[4px]"
-            style={{ borderBottom: "0.5px solid rgba(0,0,0,0.12)" }}
+            style={{ borderBottom: "0.5px solid rgba(0,0,0,0.12)", lineHeight: "3.1em" }}
           >
             {/* Back button: white rounded pill with chevron + badge — matches reference */}
             <button
