@@ -21,6 +21,9 @@ import {
   Award,
   CheckCircle2,
   Infinity,
+  Shield,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 // ─── Animation variants ───────────────────────────────────────────────
@@ -52,7 +55,6 @@ function useAnimatedNumber(target: number, duration = 600): number {
       if (startRef.current === null) startRef.current = timestamp;
       const elapsed = timestamp - startRef.current;
       const progress = Math.min(elapsed / duration, 1);
-      // Ease out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
       setDisplayed(Math.round(from + (target - from) * eased));
 
@@ -71,8 +73,9 @@ function useAnimatedNumber(target: number, duration = 600): number {
   return displayed;
 }
 
-// ─── Earnings counter ─────────────────────────────────────────────────
-const COUNTER_STEPS = [0, 347, 1284, 4920, 11760, 28440];
+// ─── Earnings counter (based on $99/mo × 20% = $19.80/contractor) ─────
+// Steps: 1, 5, 10, 25, 50, 100 contractors
+const COUNTER_STEPS = [0, 99, 495, 990, 2475, 4950, 9900];
 
 function EarningsCounter() {
   const [index, setIndex] = useState(0);
@@ -94,40 +97,39 @@ function EarningsCounter() {
 
 // ─── Floating social proof ────────────────────────────────────────────
 const NOTIFICATION_MESSAGES = [
-  "Alex just earned $1,240",
-  "Sarah just earned $1,875",
-  "Michael just earned $2,310",
-  "Jessica just earned $3,420",
-  "Chris just earned $4,180",
-  "Amanda just earned $5,760",
-  "Ryan just earned $2,950",
-  "Lauren just earned $6,430",
-  "Brandon just earned $7,125",
-  "Ashley just earned $3,880",
-  "Jason just earned $8,240",
-  "Megan just earned $1,690",
+  "Alex just earned $1,188",
+  "Sarah just earned $1,980",
+  "Michael just earned $2,376",
+  "Jessica just earned $3,564",
+  "Chris just earned $4,356",
+  "Amanda just earned $5,940",
+  "Ryan just earned $2,970",
+  "Lauren just earned $6,732",
+  "Brandon just earned $7,128",
+  "Ashley just earned $3,960",
+  "Jason just earned $8,316",
+  "Megan just earned $1,782",
   "Tyler just earned $4,950",
-  "Brittany just earned $5,210",
-  "Kevin just earned $9,875",
-  "Nicole just earned $2,760",
-  "Daniel just earned $6,890",
-  "Rachel just earned $3,140",
-  "Justin just earned $7,640",
-  "Emily just earned $4,720",
-  "Matt just earned $1,995",
+  "Brittany just earned $5,148",
+  "Kevin just earned $9,900",
+  "Nicole just earned $2,772",
+  "Daniel just earned $6,930",
+  "Rachel just earned $3,168",
+  "Justin just earned $7,920",
+  "Emily just earned $4,752",
+  "Matt just earned $1,980",
   "Olivia just earned $8,910",
-  "Andrew just earned $5,480",
-  "Samantha just earned $2,425",
-  "Jordan just earned $6,275",
-  "Taylor just earned $3,995",
-  "Morgan just earned $9,240",
-  "Casey just earned $4,360",
-  "Dylan just earned $7,890",
-  "Brooke just earned $5,995",
+  "Andrew just earned $5,544",
+  "Samantha just earned $2,376",
+  "Jordan just earned $6,336",
+  "Taylor just earned $3,960",
+  "Morgan just earned $9,108",
+  "Casey just earned $4,356",
+  "Dylan just earned $7,920",
+  "Brooke just earned $5,940",
 ];
 
 function FloatingSocialProof() {
-  // { text, id } — id changes each cycle so AnimatePresence remounts cleanly
   const [toast, setToast] = useState<{ text: string; id: number } | null>(null);
   const indexRef = useRef(0);
   const idRef = useRef(0);
@@ -138,12 +140,9 @@ function FloatingSocialProof() {
       indexRef.current += 1;
       idRef.current += 1;
       setToast({ text, id: idRef.current });
-
-      // Hide after 3.6 s
       setTimeout(() => setToast(null), 3600);
     };
 
-    // First popup after 4 s, then every 8 s (3.6 s visible + 4.4 s gap)
     const first = setTimeout(show, 4000);
     const loop  = setInterval(show, 8000);
     return () => { clearTimeout(first); clearInterval(loop); };
@@ -178,20 +177,14 @@ function FloatingSocialProof() {
   );
 }
 
-// ─── Earnings simulator ───────────────────────────────────────────────
-const CONTRACTOR_PLAN_OPTIONS = [
-  { label: "$9.99/mo",  value: 9.99 },
-  { label: "$29/mo",   value: 29 },
-  { label: "$79/mo",   value: 79 },
-];
-const COMMISSION_RATE = 0.2;
+// ─── Earnings simulator ($99/mo, single plan, 20% commission) ─────────
+const COMMISSION_RATE = 0.20;
+const CONTRACTOR_PLAN_PRICE = 99;
 
 function EarningsSimulator() {
   const [contractors, setContractors] = useState(25);
-  const [ctPlanIndex, setCtPlanIndex] = useState(1); // default $29/mo
 
-  const ctPlan = CONTRACTOR_PLAN_OPTIONS[ctPlanIndex];
-  const monthly = contractors * ctPlan.value * COMMISSION_RATE;
+  const monthly = contractors * CONTRACTOR_PLAN_PRICE * COMMISSION_RATE;
   const annual = monthly * 12;
 
   const animatedMonthly = useAnimatedNumber(Math.round(monthly), 500);
@@ -200,24 +193,23 @@ function EarningsSimulator() {
 
   return (
     <div className="mx-auto max-w-2xl rounded-3xl border border-border bg-card p-8 shadow-sm">
-      {/* Inputs */}
       <div className="grid gap-8 sm:grid-cols-2">
-        {/* Homeowners — free, no commission, shown as info */}
+        {/* Info panel — homeowners free */}
         <div className="flex flex-col justify-between">
           <div>
             <label className="text-sm font-semibold text-foreground">
               Homeowners referred
             </label>
             <p className="mt-1 text-xs text-muted-foreground">
-              Homeowners use HomeBids for free — no commission applies, but referring homeowners grows the marketplace and helps your contractor referrals convert.
+              HomeBids is completely free for homeowners. Referring homeowners grows the marketplace and helps your contractor referrals find more work — but homeowner activity does not generate affiliate commissions.
             </p>
           </div>
           <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1.5 text-xs font-semibold text-green-700 w-fit">
-            Free for homeowners
+            Always free for homeowners
           </span>
         </div>
 
-        {/* Contractors */}
+        {/* Contractor slider */}
         <div>
           <div className="flex items-center justify-between">
             <label className="text-sm font-semibold text-foreground">
@@ -230,28 +222,16 @@ function EarningsSimulator() {
           <input
             type="range"
             min={0}
-            max={1000}
+            max={500}
             step={1}
             value={contractors}
             onChange={(e) => setContractors(Number(e.target.value))}
             className="mt-3 h-2 w-full cursor-pointer accent-foreground"
           />
-          {/* Contractor plan selector */}
-          <div className="mt-3 flex gap-2">
-            {CONTRACTOR_PLAN_OPTIONS.map((opt, i) => (
-              <button
-                key={opt.label}
-                type="button"
-                onClick={() => setCtPlanIndex(i)}
-                className={`flex-1 rounded-xl border px-2 py-1.5 text-xs font-semibold transition-colors ${
-                  ctPlanIndex === i
-                    ? "border-foreground bg-foreground text-primary-foreground"
-                    : "border-border bg-background text-muted-foreground hover:border-foreground/40"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+          <div className="mt-3 rounded-xl border border-border bg-muted px-4 py-2.5 text-center">
+            <p className="text-xs font-semibold text-foreground">HomeBids Contractor Plan</p>
+            <p className="mt-0.5 text-sm font-bold text-foreground">$99/month</p>
+            <p className="mt-0.5 text-[10px] text-muted-foreground">Unlimited tools · No bid fees</p>
           </div>
         </div>
       </div>
@@ -259,11 +239,11 @@ function EarningsSimulator() {
       {/* Commission badge */}
       <div className="mt-6 flex items-center justify-center gap-2">
         <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
-          20% lifetime commission — locked in forever
+          20% lifetime commission on contractor subscriptions
         </span>
       </div>
 
-      {/* Output — fixed min-height prevents layout shift */}
+      {/* Output */}
       <div className="mt-6 grid grid-cols-2 gap-4">
         <div className="flex min-h-[96px] flex-col items-center justify-center rounded-2xl bg-muted px-6 py-5 text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -284,7 +264,7 @@ function EarningsSimulator() {
       </div>
 
       <p className="mt-5 text-center text-sm text-muted-foreground">
-        Because commissions are lifetime, every contractor referral can keep paying you{" "}
+        Every contractor subscription you refer keeps paying you{" "}
         <strong className="text-foreground">month after month.</strong>
       </p>
     </div>
@@ -317,7 +297,7 @@ function Section({
   );
 }
 
-// ─── Levels ───────────────────────────────────────────────────────────
+// ─── Affiliate Levels ─────────────────────────────────────────────────
 const LEVELS = [
   {
     level: 1,
@@ -353,6 +333,75 @@ const LEVELS = [
   },
 ];
 
+// ─── FAQ ──────────────────────────────────────────────────────────────
+const FAQS = [
+  {
+    q: "Do homeowners earn referral commissions for posting a project?",
+    a: "No. Posting a project does not generate affiliate revenue. Homeowners receive free assistance through HomeBids — HomeBids is always free for homeowners.",
+  },
+  {
+    q: "Can homeowners become affiliates?",
+    a: "Yes. Homeowners may participate if they have an approved HomeBids affiliate link. Affiliate commissions are earned when contractors subscribe to HomeBids through their referral network.",
+  },
+  {
+    q: "Who can earn affiliate commissions?",
+    a: "Approved referral partners such as contractors, Facebook group admins, realtors, property managers, homeowners with affiliate links, community leaders, and other qualified partners.",
+  },
+  {
+    q: "What is the HomeBids contractor plan?",
+    a: "The HomeBids Contractor Plan is $99/month. It includes unlimited AI Bid Builder usage, unlimited Bid Defender usage, unlimited contractor tools, no bid fees, and no hidden fees.",
+  },
+  {
+    q: "What is Bid Defender?",
+    a: "Bid Defender allows contractors to confidently offer homeowners additional bid options through HomeBids. If contractors discovered through that process later subscribe to HomeBids, the originating contractor may receive affiliate credit according to the affiliate program.",
+  },
+  {
+    q: "Why would a contractor use Bid Defender?",
+    a: "It helps protect trust with homeowners, provides competitive pricing transparency, creates goodwill during the sales process, and creates a potential long-term affiliate revenue opportunity — even if another contractor ultimately wins the project.",
+  },
+  {
+    q: "How are affiliate commissions calculated?",
+    a: "You earn 20% of the $99/month contractor subscription for every contractor who subscribes through your referral link. That's $19.80 per contractor per month, recurring for as long as they remain subscribed.",
+  },
+  {
+    q: "When do I get paid?",
+    a: "Affiliate commissions are paid monthly. As long as your referred contractors remain active HomeBids subscribers, you continue earning.",
+  },
+];
+
+function FAQItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-border last:border-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-start justify-between gap-4 py-5 text-left"
+      >
+        <span className="text-sm font-semibold text-foreground">{q}</span>
+        {open ? (
+          <ChevronUp className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+        )}
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <p className="pb-5 text-sm leading-relaxed text-muted-foreground">{a}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────
 export default function AffiliatesPage() {
   return (
@@ -376,15 +425,16 @@ export default function AffiliatesPage() {
               variants={fadeUp}
               className="mt-6 text-balance text-5xl font-bold tracking-tight text-foreground sm:text-6xl"
             >
-              Turn Every Home Project Into{" "}
+              Turn Referrals Into{" "}
               <em className="not-italic underline decoration-muted-foreground/30 underline-offset-4">
-                Recurring Income
+                Recurring Revenue
               </em>
             </motion.h1>
 
             <motion.p variants={fadeUp} className="mt-5 text-lg leading-relaxed text-muted-foreground">
-              Earn <strong className="text-foreground">20% lifetime commissions</strong> on every
-              contractor you refer. Homeowners join free — grow the marketplace and earn on the contractors who follow.
+              Earn <strong className="text-foreground">20% lifetime commissions</strong> every time
+              a contractor subscribes to HomeBids through your referral link.
+              HomeBids is always free for homeowners. Affiliate commissions come from contractor subscriptions only.
               Paid monthly. No cap. Forever.
             </motion.p>
 
@@ -432,7 +482,7 @@ export default function AffiliatesPage() {
               {[
                 "Paid monthly",
                 "No cap",
-                "Earn from both sides",
+                "Lifetime commissions",
                 "Founding advantages",
               ].map((item) => (
                 <span key={item} className="flex items-center gap-1.5">
@@ -463,19 +513,19 @@ export default function AffiliatesPage() {
                 icon: Link2,
                 step: "01",
                 title: "Share Your Link",
-                body: "Post in Facebook groups, text homeowners, or send to contractors. One link. Every platform.",
+                body: "Post in Facebook groups, text contractors, or share with realtors and property managers. One link. Every platform.",
               },
               {
-                icon: Users,
+                icon: Hammer,
                 step: "02",
-                title: "They Join HomeBids",
-                body: "Homeowners post jobs. Contractors bid on those jobs. The platform does the rest.",
+                title: "Contractors Subscribe",
+                body: "Contractors sign up for HomeBids at $99/month and get unlimited access to AI Bid Builder, Bid Defender, and all contractor tools.",
               },
               {
                 icon: Repeat2,
                 step: "03",
                 title: "You Get Paid for Life",
-                body: "Earn 20% from ALL revenue generated by your referrals — homeowners AND contractors — forever.",
+                body: "Earn 20% of every contractor's $99/month subscription — for as long as they remain active. That's $19.80 per contractor, every single month.",
               },
             ].map((item) => (
               <motion.div
@@ -497,38 +547,39 @@ export default function AffiliatesPage() {
         </div>
       </Section>
 
-      {/* ── The Flywheel ──────────────────────────────────────────────── */}
+      {/* ── Bid Defender Flywheel ──────────────────────────────────────── */}
       <Section className="bg-foreground px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
           <motion.div variants={fadeUp}>
-            <h2 className="text-3xl font-bold tracking-tight text-primary-foreground sm:text-4xl">
-              {"This Isn't a One-Time Referral."}
-              <br />
-              {"It's a Flywheel."}
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary-foreground/70">
+              <Shield className="h-3 w-3" /> Bid Defender
+            </div>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight text-primary-foreground sm:text-4xl">
+              Win Even When You{"'"}t Win The Job
             </h2>
             <p className="mt-4 text-primary-foreground/70">
-              Every referral compounds. Every project generates more referrals. You earn from all of it.
+              Bid Defender turns every lost bid into a potential revenue opportunity. This is the HomeBids flywheel — a win-win for every contractor.
             </p>
           </motion.div>
 
-          {/* Flywheel nodes */}
+          {/* Flywheel flow */}
           <motion.div
             variants={fadeUp}
             className="mt-12 flex flex-wrap items-center justify-center gap-3"
           >
             {[
-              { label: "You share", icon: Link2 },
-              { label: "Homeowner joins", icon: Home },
-              { label: "Contractors bid", icon: Hammer },
-              { label: "More homeowners", icon: Users },
-              { label: "You earn again", icon: DollarSign },
+              { label: "Contractor shares link", icon: Link2 },
+              { label: "Homeowner submits project", icon: Home },
+              { label: "HomeBids gathers bids", icon: Users },
+              { label: "New contractors join", icon: Hammer },
+              { label: "Affiliate revenue earned", icon: DollarSign },
             ].map((node, i, arr) => (
               <React.Fragment key={node.label}>
                 <div className="flex flex-col items-center gap-2">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-foreground/10 ring-1 ring-primary-foreground/20">
                     <node.icon className="h-5 w-5 text-primary-foreground" />
                   </div>
-                  <span className="max-w-[72px] text-center text-xs font-semibold leading-tight text-primary-foreground/80">
+                  <span className="max-w-[80px] text-center text-xs font-semibold leading-tight text-primary-foreground/80">
                     {node.label}
                   </span>
                 </div>
@@ -545,18 +596,33 @@ export default function AffiliatesPage() {
 
           <motion.div variants={stagger} className="mt-10 grid gap-4 text-left sm:grid-cols-2">
             {[
-              "You refer a homeowner → they post a job",
-              "Contractors join to bid → YOU earn from them too",
-              "Those contractors bring MORE homeowners → YOU earn again",
-              "This compounds over time with zero extra work",
+              {
+                text: "Contractor wins the job",
+                sub: "Great — they got the work.",
+              },
+              {
+                text: "Homeowner picks another contractor",
+                sub: "The originating contractor can still earn affiliate commissions if contractors from that opportunity subscribe to HomeBids.",
+              },
+              {
+                text: "HomeBids is always free for homeowners",
+                sub: "Homeowners receive free access to competitive bids. No fees. No subscriptions.",
+              },
+              {
+                text: "Affiliate revenue comes from contractor subscriptions",
+                sub: "Commissions are generated only when contractors subscribe at $99/month — not from homeowner activity.",
+              },
             ].map((point) => (
               <motion.div
-                key={point}
+                key={point.text}
                 variants={fadeUp}
                 className="flex items-start gap-3 rounded-2xl bg-primary-foreground/5 px-5 py-4"
               >
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
-                <p className="text-sm text-primary-foreground/80">{point}</p>
+                <div>
+                  <p className="text-sm font-semibold text-primary-foreground/90">{point.text}</p>
+                  <p className="mt-1 text-xs text-primary-foreground/60">{point.sub}</p>
+                </div>
               </motion.div>
             ))}
           </motion.div>
@@ -570,9 +636,45 @@ export default function AffiliatesPage() {
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
               Simple. Transparent. Powerful.
             </h2>
+            <p className="mt-3 text-muted-foreground">
+              One plan. One commission rate. Recurring forever.
+            </p>
           </motion.div>
 
           <motion.div variants={stagger} className="mt-12 grid gap-6 sm:grid-cols-2">
+            {/* Contractor card — commissions generated here */}
+            <motion.div
+              variants={fadeUp}
+              className="rounded-3xl border-2 border-foreground bg-card p-8 shadow-sm"
+            >
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-foreground">
+                <Hammer className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Contractor Subscription
+              </p>
+              <p className="mt-2 text-4xl font-bold text-foreground">20%</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">Lifetime Commission</p>
+              <p className="mt-1 text-xs font-semibold text-muted-foreground">$99/month plan = $19.80/mo per contractor</p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                Earn 20% of every contractor subscription you refer. Commissions are paid monthly for as long as they remain active.
+              </p>
+              <ul className="mt-5 flex flex-col gap-2">
+                {[
+                  "Unlimited AI Bid Builder",
+                  "Unlimited Bid Defender",
+                  "No bid fees",
+                  "No hidden fees",
+                ].map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+
+            {/* Homeowner card — free, no commissions */}
             <motion.div
               variants={fadeUp}
               className="rounded-3xl border border-border bg-card p-8 shadow-sm"
@@ -583,27 +685,10 @@ export default function AffiliatesPage() {
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Homeowner
               </p>
-              <p className="mt-2 text-4xl font-bold text-foreground">20%</p>
-              <p className="mt-1 text-sm font-semibold text-foreground">Lifetime Commission</p>
+              <p className="mt-2 text-4xl font-bold text-green-600">Free</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">Always Free</p>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                Homeowners use HomeBids for free. Refer them to grow the marketplace and help your contractor referrals find more work.
-              </p>
-            </motion.div>
-
-            <motion.div
-              variants={fadeUp}
-              className="rounded-3xl border border-border bg-card p-8 shadow-sm"
-            >
-              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-muted">
-                <Hammer className="h-5 w-5 text-foreground" />
-              </div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Contractor
-              </p>
-              <p className="mt-2 text-4xl font-bold text-foreground">20%</p>
-              <p className="mt-1 text-sm font-semibold text-foreground">Lifetime Commission</p>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                Earn 20% of every payment made by contractors you refer.
+                HomeBids is completely free for homeowners. Homeowners never pay HomeBids. Referring homeowners grows the marketplace and helps contractor referrals find more work, but homeowner activity does not generate affiliate commissions.
               </p>
             </motion.div>
           </motion.div>
@@ -615,10 +700,10 @@ export default function AffiliatesPage() {
             <Infinity className="mt-0.5 h-6 w-6 shrink-0 text-foreground" />
             <div>
               <p className="font-bold text-foreground">
-                This is LIFETIME. Not 30 days. Not 1 year. Forever.
+                Lifetime commissions from contractor subscriptions. Not 30 days. Not 1 year. Forever.
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                As long as your referrals remain active on HomeBids, you keep earning.
+                As long as your referred contractors remain active HomeBids subscribers, you keep earning $19.80/month per contractor.
               </p>
             </div>
           </motion.div>
@@ -630,13 +715,10 @@ export default function AffiliatesPage() {
         <div className="mx-auto max-w-2xl">
           <motion.div variants={fadeUp} className="text-center">
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              What Could 1,000 Referrals Become?
+              What Could 500 Contractor Referrals Become?
             </h2>
             <p className="mt-3 text-muted-foreground">
-              Your contractor referrals can scale up to higher monthly plans — and you earn 20% for life.
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              The more contractors you refer, the more powerful the upside becomes.
+              Every contractor who subscribes at $99/month pays you $19.80/month — forever.
             </p>
           </motion.div>
           <motion.div variants={fadeUp} className="mt-10">
@@ -653,7 +735,7 @@ export default function AffiliatesPage() {
               Your Affiliate Journey
             </h2>
             <p className="mt-3 text-muted-foreground">
-              Progress through levels and unlock exclusive rewards as you grow.
+              Progress through levels and unlock exclusive rewards as you grow your contractor network.
             </p>
           </motion.div>
 
@@ -719,39 +801,39 @@ export default function AffiliatesPage() {
         </div>
       </Section>
 
-      {/* ── Strategy ──────────────────────────────────────────────────── */}
+      {/* ── Who Can Be an Affiliate ────────────────────────────────────── */}
       <Section className="bg-muted/50 px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl">
           <motion.div variants={fadeUp} className="text-center">
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              How Our Top Affiliates Win
+              Who Can Earn Affiliate Commissions?
             </h2>
             <p className="mt-3 text-muted-foreground">
-              Simple tactics. Repeatable results. We handle everything else.
+              Any approved referral partner can earn commissions when contractors subscribe through their link.
             </p>
           </motion.div>
 
           <motion.div variants={stagger} className="mt-12 grid gap-5 sm:grid-cols-2">
             {[
               {
+                icon: Hammer,
+                title: "Contractors",
+                body: "Use Bid Defender to create upside even on jobs you don't win. Every new contractor you bring in earns you $19.80/month.",
+              },
+              {
                 icon: Users,
-                title: "Post in local Facebook groups",
-                body: "Homeowners ask for contractor recommendations daily. Drop your link and become the trusted source.",
+                title: "Facebook Group Admins",
+                body: "You have the audience. Contractors in your group need more jobs. Connect them to HomeBids and earn from every subscription.",
               },
               {
                 icon: Home,
-                title: "Respond to homeowners",
-                body: "When someone is looking for a roofer, plumber, or remodeler — you have the answer.",
-              },
-              {
-                icon: Hammer,
-                title: "Share with contractors",
-                body: "Contractors want more jobs. HomeBids delivers them. One text to a local pro = recurring income.",
+                title: "Realtors & Property Managers",
+                body: "Your clients need contractors. Connect them to HomeBids and earn recurring commissions on every contractor subscription.",
               },
               {
                 icon: Link2,
-                title: "Be the connector",
-                body: "You introduce people to the platform. We handle onboarding, payments, and everything else.",
+                title: "Community Leaders & Influencers",
+                body: "If you have reach — a blog, a newsletter, a following — your referral link can build a meaningful recurring revenue stream.",
               },
             ].map((item) => (
               <motion.div
@@ -780,7 +862,7 @@ export default function AffiliatesPage() {
               Your Dashboard, At a Glance
             </h2>
             <p className="mt-3 text-muted-foreground">
-              Track earnings, referrals, and growth — all in one clean view.
+              Track earnings, contractor referrals, and growth — all in one clean view.
             </p>
           </motion.div>
 
@@ -794,7 +876,7 @@ export default function AffiliatesPage() {
               <div className="h-3 w-3 rounded-full bg-muted" />
               <div className="h-3 w-3 rounded-full bg-muted" />
               <span className="ml-3 text-xs font-medium text-muted-foreground">
-                  affiliates.homebids.ai/dashboard
+                affiliates.homebids.ai/dashboard
               </span>
             </div>
 
@@ -802,7 +884,7 @@ export default function AffiliatesPage() {
               {[
                 { label: "Total Earnings", value: "$2,841", icon: DollarSign, trend: "+14%" },
                 { label: "Monthly Recurring", value: "$483", icon: Repeat2, trend: "+8%" },
-                { label: "Active Referrals", value: "31", icon: Users, trend: "+3" },
+                { label: "Active Contractors", value: "31", icon: Hammer, trend: "+3" },
                 { label: "Conversions", value: "68%", icon: MousePointerClick, trend: "+4%" },
               ].map((stat) => (
                 <div key={stat.label} className="rounded-2xl bg-muted px-4 py-5">
@@ -835,6 +917,22 @@ export default function AffiliatesPage() {
                 </div>
               </div>
             </div>
+          </motion.div>
+        </div>
+      </Section>
+
+      {/* ── FAQ ───────────────────────────────────────────────────────── */}
+      <Section className="bg-muted/50 px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl">
+          <motion.div variants={fadeUp} className="text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              Frequently Asked Questions
+            </h2>
+          </motion.div>
+          <motion.div variants={fadeUp} className="mt-10 rounded-3xl border border-border bg-card px-8">
+            {FAQS.map((faq) => (
+              <FAQItem key={faq.q} q={faq.q} a={faq.a} />
+            ))}
           </motion.div>
         </div>
       </Section>
@@ -884,10 +982,11 @@ export default function AffiliatesPage() {
               variants={fadeUp}
               className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl"
             >
-              Start Building Your Income Stream Today
+              Build a Network That Pays You Back
             </motion.h2>
             <motion.p variants={fadeUp} className="mt-4 text-lg text-muted-foreground">
-              No experience needed. No risk. Just share and earn.
+              Earn 20% lifetime commissions on every contractor who subscribes through your link.
+              HomeBids is free for homeowners. Your income comes from contractor growth.
             </motion.p>
 
             <motion.div
@@ -922,7 +1021,7 @@ export default function AffiliatesPage() {
       {/* Footer note */}
       <div className="border-t border-border px-4 py-6 text-center">
         <p className="text-xs text-muted-foreground">
-          Affiliate commissions are paid monthly. Terms apply.
+          Affiliate commissions are generated from contractor subscriptions only. HomeBids is free for homeowners. Commissions are paid monthly. Terms apply.
         </p>
       </div>
     </div>
