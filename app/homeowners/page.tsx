@@ -153,7 +153,10 @@ export default function HomeownersPage() {
               transition={{ duration: 0.65, delay: 0.2 }}
               className="flex shrink-0 justify-center"
             >
-              <div className="relative" style={{ width: 300, height: 580 }}>
+              <div
+                className="relative overflow-hidden"
+                style={{ width: 300, height: 640, flexShrink: 0 }}
+              >
                 <div
                   className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 h-40 w-72 rounded-full"
                   style={{
@@ -163,13 +166,9 @@ export default function HomeownersPage() {
                   }}
                   aria-hidden="true"
                 />
-                <motion.div
-                  animate={{ y: [0, -8, 0] }}
-                  transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
-                  style={{ position: "absolute", inset: 0 }}
-                >
+                <div style={{ position: "absolute", inset: 0 }}>
                   <SmsIphonePreview />
-                </motion.div>
+                </div>
               </div>
             </motion.div>
 
