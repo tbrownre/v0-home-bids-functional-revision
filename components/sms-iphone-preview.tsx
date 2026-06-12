@@ -281,13 +281,13 @@ export function SmsIphonePreview() {
                     width: 20,
                     height: 20,
                     borderRadius: "50%",
-                    background: "#1C1C1E",
+                    background: "rgba(28, 28, 30, 0.00)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", lineHeight: 1 }}>1</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "#000000", lineHeight: 1 }}>3</span>
                 </div>
               </div>
             </button>
