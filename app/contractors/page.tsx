@@ -73,7 +73,7 @@ function RotatingWord() {
 }
 
 /* ─── Animated counter ─── */
-function AnimatedNumber({ target, suffix = "" }: { target: number; suffix?: string }) {
+function AnimatedNumber({ target, suffix = "", prefix = "" }: { target: number; suffix?: string; prefix?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true });
   const mv = useMotionValue(0);
@@ -83,7 +83,7 @@ function AnimatedNumber({ target, suffix = "" }: { target: number; suffix?: stri
     if (inView) mv.set(target);
   }, [inView, target, mv]);
   useEffect(() => spring.on("change", (v) => setDisplay(Math.round(v))), [spring]);
-  return <span ref={ref}>{display.toLocaleString()}{suffix}</span>;
+  return <span ref={ref}>{prefix}{display.toLocaleString()}{suffix}</span>;
 }
 
 /* ─── Floating particle background ─── */
@@ -425,13 +425,13 @@ export default function ContractorsPage() {
             style={{ background: "rgba(255,255,255,0.6)", backdropFilter: "blur(16px)" }}
           >
             {[
-              { value: 3, suffix: "min", label: "Average bid time" },
-              { value: 10, suffix: "x", label: "Faster estimates" },
-              { value: 99, suffix: "", label: "Per month, all-in" },
+              { value: 3, prefix: "", suffix: "min", label: "Average bid time" },
+              { value: 10, prefix: "", suffix: "x", label: "Faster estimates" },
+              { value: 99, prefix: "$", suffix: "", label: "Per month, all-in" },
             ].map((s, i) => (
               <div key={i} className="px-4 text-center">
                 <p className="text-3xl font-extrabold text-primary">
-                  <AnimatedNumber target={s.value} suffix={s.suffix} />
+                  <AnimatedNumber target={s.value} prefix={s.prefix} suffix={s.suffix} />
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">{s.label}</p>
               </div>
