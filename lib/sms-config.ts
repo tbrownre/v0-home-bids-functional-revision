@@ -1,7 +1,7 @@
-// SMS configuration — placeholder number until Twilio is wired up
-export const SMS_PHONE_NUMBER = "+18135551234";
-export const SMS_PHONE_DISPLAY = "(813) 555-1234";
-export const SMS_BODY_PREFIX = "Hey HomeBids, I need help with ";
+// SMS configuration — Sendblue number
+export const SMS_PHONE_NUMBER = "+18722964991";
+export const SMS_PHONE_DISPLAY = "(872) 296-4991";
+export const SMS_BODY_PREFIX = "Hi HomeBids! I need help with";
 
 export function getSmsLink(body?: string): string {
   const encodedBody = encodeURIComponent(body || SMS_BODY_PREFIX);

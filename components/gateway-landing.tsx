@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useAnimationFrame, motion, AnimatePresence } from "framer-motion";
+import { getSmsLink } from "@/lib/sms-config";
 import Link from "next/link";
 import { Home, Wrench } from "lucide-react";
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
@@ -294,7 +295,7 @@ export function GatewayLanding() {
               className="h-12 gap-2.5 rounded-full px-8 text-base font-semibold bg-[#0A84FF] text-white hover:bg-[#0A84FF]/90"
               onClick={() => {
                 localStorage.setItem("homebids_audience", "homeowner");
-                window.location.href = "/homeowners";
+                window.location.href = getSmsLink();
               }}
             >
               <Home className="h-[18px] w-[18px] shrink-0" />

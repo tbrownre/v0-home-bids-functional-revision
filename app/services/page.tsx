@@ -4,6 +4,7 @@ import { HeaderWithEarlyAccess } from "@/components/header-with-early-access";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { getSmsLink } from "@/lib/sms-config";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Search } from "lucide-react";
@@ -363,7 +364,7 @@ export default function ServicesPage() {
               {filteredCategories.map((category, index) => (
                 <motion.div key={category.name} variants={fadeInUp}>
                   <Link 
-                    href="/new-job" 
+                    href={getSmsLink()}
                     className="block h-full"
                     onClick={() => {
                       setShowCelebration(true);
@@ -443,7 +444,7 @@ export default function ServicesPage() {
                   {category.services.map((service) => (
                     <li key={service}>
                       <Link
-                        href="/new-job"
+                        href={getSmsLink()}
                         className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                       >
                         {service}
@@ -535,7 +536,7 @@ export default function ServicesPage() {
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Button size="lg" variant="secondary" asChild>
-                <Link href="/new-job">
+                <Link href={getSmsLink()}>
                   Post Your Job
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
