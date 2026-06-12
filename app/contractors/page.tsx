@@ -153,7 +153,7 @@ const planFeatures = [
 
 /* ─── ROI Calculator ─── */
 function ROICalculator() {
-  const [jobValue, setJobValue] = useState(5000);
+  const [jobValue, setJobValue] = useState(100);
   const savedValue = jobValue;
   const monthlyPlan = 99;
   const roi = Math.round((savedValue / monthlyPlan) * 10) / 10;
@@ -178,7 +178,7 @@ function ROICalculator() {
             </div>
             <input
               type="range"
-              min={1000}
+              min={100}
               max={25000}
               step={500}
               value={jobValue}
