@@ -218,120 +218,115 @@ export default function HomeownersPage() {
 
       {/* ── WHY MULTIPLE BIDS ─────────────────────────────────────────── */}
       <section className="border-y border-border bg-muted/30 px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-5xl">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
-            <motion.div {...fadeInUp}>
-              <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Most Homeowners Overpay Without Knowing It
-              </h2>
-              <p className="mt-4 text-muted-foreground">
-                When you only get one quote, you have no way of knowing if the price is fair.
-                HomeBids changes that — multiple contractors compete for your project so you can
-                make a smarter, more confident decision.
+        <div className="mx-auto max-w-2xl text-center">
+          <motion.div {...fadeInUp}>
+            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              Most Homeowners Overpay Without Knowing It
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              When you only get one quote, you have no way of knowing if the price is fair.
+              HomeBids changes that — multiple contractors compete for your project so you can
+              make a smarter, more confident decision.
+            </p>
+            <div className="mt-6 rounded-xl border border-green-200 bg-green-50 p-5">
+              <p className="font-semibold text-green-800">
+                Homeowners commonly save 10–30% when comparing multiple contractor bids.
               </p>
-              <div className="mt-6 rounded-xl border border-green-200 bg-green-50 p-5">
-                <p className="font-semibold text-green-800">
-                  Homeowners commonly save 10–30% when comparing multiple contractor bids.
-                </p>
-              </div>
-            </motion.div>
+            </div>
+          </motion.div>
 
-            <motion.div
-              {...fadeInUp}
-              transition={{ duration: 0.5, delay: 0.15 }}
-              className="space-y-4"
-            >
-              <div className="rounded-xl border border-red-200 bg-red-50 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-red-600">
-                  1 Quote — No Comparison
-                </p>
-                <p className="mt-1 text-2xl font-bold text-red-800">$8,500</p>
-                <p className="mt-1 text-sm text-red-700">
-                  No leverage. No way to know if it&apos;s fair.
-                </p>
-              </div>
-              <div className="flex items-center justify-center">
-                <span className="text-sm font-medium text-muted-foreground">vs</span>
-              </div>
-              <div className="rounded-xl border border-green-200 bg-green-50 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-green-600">
-                  4 Quotes via HomeBids
-                </p>
-                <p className="mt-1 text-2xl font-bold text-green-800">$5,800 – $7,200</p>
-                <p className="mt-1 text-sm text-green-700">
-                  You choose the best value. Contractors compete.
-                </p>
-              </div>
-            </motion.div>
-          </div>
+          <motion.div
+            {...fadeInUp}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="mt-8 space-y-4"
+          >
+            <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-left">
+              <p className="text-xs font-semibold uppercase tracking-wide text-red-600">
+                1 Quote — No Comparison
+              </p>
+              <p className="mt-1 text-2xl font-bold text-red-800">$8,500</p>
+              <p className="mt-1 text-sm text-red-700">
+                No leverage. No way to know if it&apos;s fair.
+              </p>
+            </div>
+            <div className="flex items-center justify-center">
+              <span className="text-sm font-medium text-muted-foreground">vs</span>
+            </div>
+            <div className="rounded-xl border border-green-200 bg-green-50 p-5 text-left">
+              <p className="text-xs font-semibold uppercase tracking-wide text-green-600">
+                4 Quotes via HomeBids
+              </p>
+              <p className="mt-1 text-2xl font-bold text-green-800">$5,800 – $7,200</p>
+              <p className="mt-1 text-sm text-green-700">
+                You choose the best value. Contractors compete.
+              </p>
+            </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* ── PRIVACY + CONTROL ─────────────────────────────────────────── */}
       <section className="px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-5xl">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
+        <div className="mx-auto max-w-2xl text-center">
 
-            {/* Messaging card mockup */}
-            <motion.div {...fadeInUp} className="order-2 lg:order-1">
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                <div className="flex items-center gap-3 border-b border-border pb-4">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-                    <MessageSquare className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">Private Messages</p>
-                    <p className="text-xs text-muted-foreground">Your info is never shared publicly</p>
-                  </div>
-                  <Shield className="ml-auto h-4 w-4 text-green-600" />
+          {/* Copy */}
+          <motion.div {...fadeInUp}>
+            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              Your Information Stays Private
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              HomeBids is designed to protect homeowners from the chaos of traditional contractor
+              searches.
+            </p>
+            <ul className="mt-6 space-y-3 text-left">
+              {[
+                "Your contact info is not publicly shared",
+                "No unexpected contractor visits",
+                "No endless follow-up calls",
+                "Communication stays organized in one place",
+              ].map((item, i) => (
+                <li key={i} className="flex items-center gap-3 text-sm text-foreground">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+
+          {/* Messaging card mockup */}
+          <motion.div {...fadeInUp} transition={{ duration: 0.5, delay: 0.1 }} className="mt-10">
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <div className="flex items-center gap-3 border-b border-border pb-4">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                  <MessageSquare className="h-4 w-4 text-primary" />
                 </div>
-                <div className="mt-4 space-y-3">
-                  <div className="flex justify-end">
-                    <div className="max-w-[75%] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
-                      Can you start next week?
-                    </div>
-                  </div>
-                  <div className="flex justify-start">
-                    <div className="max-w-[75%] rounded-2xl rounded-bl-sm bg-muted px-4 py-2.5 text-sm text-foreground">
-                      Yes, available Monday morning.
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <div className="max-w-[75%] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
-                      Let&apos;s move forward!
-                    </div>
-                  </div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-foreground">Private Messages</p>
+                  <p className="text-xs text-muted-foreground">Your info is never shared publicly</p>
                 </div>
-                <p className="mt-4 text-center text-xs text-muted-foreground">
-                  All communication stays inside HomeBids
-                </p>
+                <Shield className="ml-auto h-4 w-4 text-green-600" />
               </div>
-            </motion.div>
-
-            {/* Copy */}
-            <motion.div {...fadeInUp} transition={{ duration: 0.5, delay: 0.1 }} className="order-1 lg:order-2">
-              <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Your Information Stays Private
-              </h2>
-              <p className="mt-4 text-muted-foreground">
-                HomeBids is designed to protect homeowners from the chaos of traditional contractor
-                searches.
+              <div className="mt-4 space-y-3">
+                <div className="flex justify-end">
+                  <div className="max-w-[75%] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
+                    Can you start next week?
+                  </div>
+                </div>
+                <div className="flex justify-start">
+                  <div className="max-w-[75%] rounded-2xl rounded-bl-sm bg-muted px-4 py-2.5 text-sm text-foreground">
+                    Yes, available Monday morning.
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <div className="max-w-[75%] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
+                    Let&apos;s move forward!
+                  </div>
+                </div>
+              </div>
+              <p className="mt-4 text-center text-xs text-muted-foreground">
+                All communication stays inside HomeBids
               </p>
-              <ul className="mt-6 space-y-3">
-                {[
-                  "Your contact info is not publicly shared",
-                  "No unexpected contractor visits",
-                  "No endless follow-up calls",
-                  "Communication stays organized in one place",
-                ].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3 text-sm text-foreground">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
