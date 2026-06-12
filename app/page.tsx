@@ -32,7 +32,6 @@ import { Info, Settings, Building2, Repeat, AlertTriangle, Shield, Sparkles, Map
 import Image from "next/image";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
-import { SubscriptionCheckout } from "@/components/subscription-checkout";
 import { getJobStatus, subscribe, isJobArchived, type JobStatusOwner, getJobStatusLabel } from "@/lib/job-store";
 import { signUpHomeowner, createJob, getHomeownerJobs } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
@@ -338,7 +337,6 @@ export default function HomePage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [password, setPassword] = useState("");
-  const [showTrialCheckout, setShowTrialCheckout] = useState(false); // kept for type safety, unused
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [timeline, setTimeline] = useState("");
@@ -448,7 +446,6 @@ export default function HomePage() {
     } else if (currentStep === "contact") {
       setCurrentStepSafe("photos");
     } else if (currentStep === "confirm") {
-      setShowTrialCheckout(false);
       setCurrentStepSafe("contact");
     }
   }, [currentStep, setCurrentStepSafe]);

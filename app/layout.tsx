@@ -1,5 +1,5 @@
 import React from "react"
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Red_Hat_Display } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ScrollRestoration } from '@/components/scroll-restoration'
@@ -9,6 +9,12 @@ import { SignInModalProvider } from '@/components/sign-in-modal-provider'
 import './globals.css'
 
 const redHatDisplay = Red_Hat_Display({ subsets: ["latin"], weight: ["300", "400", "500", "600", "700", "800", "900"] });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#ffffff',
+}
 
 export const metadata: Metadata = {
   title: 'HomeBids - Better bids. Better homes.',
@@ -61,8 +67,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-background overflow-x-hidden">
-        <body className={`${redHatDisplay.className} antialiased overflow-x-hidden`}>
+    <html lang="en" className="bg-background overflow-x-hidden" suppressHydrationWarning>
+      <body className={`${redHatDisplay.className} antialiased overflow-x-hidden`} suppressHydrationWarning>
         <ScrollRestoration />
         <SignInModalProvider>
           {children}

@@ -141,7 +141,7 @@ export function redirectAfterSignIn(role: MockRole) {
   if (role === "contractor") {
     window.location.replace("/contractors/dashboard");
   } else if (role === "admin") {
-    window.location.replace("/admin");
+    window.location.replace("/admin-demo");
   } else {
     window.location.replace("/?showJobs=true");
   }

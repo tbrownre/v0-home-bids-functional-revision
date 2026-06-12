@@ -70,8 +70,7 @@ export async function POST(request: NextRequest) {
 
 async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: SupabaseClient<any>,
+  supabase: SupabaseClient,
 ) {
   const userId = session.metadata?.userId
   const planId = session.metadata?.planId
@@ -99,8 +98,8 @@ async function handleCheckoutCompleted(
       expand: ['items'],
     })
     subStatus = sub.status
-    const firstItem = sub.items?.data?.[0] as any
-    const rawEnd = firstItem?.current_period_end ?? null
+    const firstItem = sub.items?.data?.[0]
+    const rawEnd = (firstItem as { current_period_end?: number })?.current_period_end ?? null
     periodEnd = rawEnd ? new Date(rawEnd * 1000).toISOString() : null
   }
 
@@ -137,21 +136,18 @@ async function handleCheckoutCompleted(
       // Non-fatal — log and continue.
     }
   }
-
-  console.log(`[stripe-webhook] checkout.session.completed processed for user ${userId}`)
 }
 
 async function handleSubscriptionUpdated(
   subscription: Stripe.Subscription,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: SupabaseClient<any>,
+  supabase: SupabaseClient,
 ) {
   const userId = subscription.metadata?.userId
   if (!userId) return
 
   // current_period_end moved to items level in the 2025-03-31.basil API.
-  const firstItem = (subscription.items?.data?.[0] as any)
-  const rawEnd = firstItem?.current_period_end ?? null
+  const firstItem = subscription.items?.data?.[0]
+  const rawEnd = (firstItem as { current_period_end?: number })?.current_period_end ?? null
   const periodEnd = rawEnd ? new Date(rawEnd * 1000).toISOString() : null
 
   const { error: updError } = await supabase
@@ -171,8 +167,7 @@ async function handleSubscriptionUpdated(
 
 async function handleSubscriptionDeleted(
   subscription: Stripe.Subscription,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: SupabaseClient<any>,
+  supabase: SupabaseClient,
 ) {
   const userId = subscription.metadata?.userId
   if (!userId) return
