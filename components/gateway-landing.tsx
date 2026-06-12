@@ -282,8 +282,8 @@ export function GatewayLanding() {
 
       {/* ── Main — z-10, centered column ────────────────────────────────── */}
       <main
-        className="relative mx-auto flex max-w-2xl flex-col items-center px-5 pb-16 pt-4 text-center"
-        style={{ zIndex: 10 }}
+        className="relative mx-auto flex max-w-2xl flex-col items-center px-5 pt-4 text-center"
+        style={{ zIndex: 10, lineHeight: "0em", paddingBottom: "90px" }}
       >
         {/* Hero copy */}
         <motion.div
