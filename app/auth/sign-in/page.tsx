@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AlertCircle, Loader2, ArrowLeft, Home, Hammer } from "lucide-react";
+import { HomeBidsLogo } from "@/components/homebids-logo";
 import {
   mockGoogleSignIn,
   mockAppleSignIn,
@@ -185,18 +185,10 @@ export default function SignInPage() {
         </Link>
         <Link
           href="/"
-          className="absolute left-1/2 -translate-x-1/2 flex items-center"
+          className="absolute left-1/2 -translate-x-1/2 flex items-center focus-visible:outline-none"
           style={{ pointerEvents: "auto" }}
         >
-          <Image
-            src="/images/homebids-wordmark.png"
-            alt="HomeBids"
-            width={240}
-            height={60}
-            className="h-[78px] w-auto object-contain"
-            style={{ mixBlendMode: "multiply" }}
-            priority
-          />
+          <HomeBidsLogo height="clamp(54px, 11vw, 78px)" linked={false} />
         </Link>
       </div>
 

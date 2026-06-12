@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import React, { useState, useEffect, useRef, useSyncExternalStore } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle, LayoutDashboard, Sparkles, Users, Wrench } from "lucide-react";
 import { homeownerNavItems, loggedOutNavItems, contractorNavItems } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
+import { HomeBidsLogo } from "@/components/homebids-logo";
 import {
   subscribeInbox,
   getHomeownerUnreadSnapshot,
@@ -60,18 +60,10 @@ export function Header({
   const panelRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const router = useRouter();
 
   const closeMenu = () => {
     setMenuOpen(false);
     (document.activeElement as HTMLElement)?.blur();
-  };
-
-  const handleLogoClick = (e: React.MouseEvent | React.KeyboardEvent) => {
-    if ("key" in e && e.key !== "Enter" && e.key !== " ") return;
-    e.preventDefault();
-    closeMenu();
-    router.push("/");
   };
 
   // Close on route change
@@ -355,30 +347,9 @@ export function Header({
         </div>
 
         {/* Center: Logo */}
-        <button
-          type="button"
-          aria-label="Go to HomeBids homepage"
-          onClick={handleLogoClick}
-          onKeyDown={handleLogoClick}
-          className="flex items-center justify-center"
-          style={{
-            background: "none",
-            border: "none",
-            padding: 0,
-            WebkitTapHighlightColor: "transparent",
-            cursor: "pointer",
-          }}
-        >
-          <Image
-            src="/images/homebids-wordmark.png"
-            alt="HomeBids"
-            width={480}
-            height={120}
-            className="object-contain pointer-events-none"
-            style={{ height: "clamp(66px, 13.5vw, 108px)", width: "auto", mixBlendMode: "multiply" }}
-            priority
-          />
-        </button>
+        <div className="flex items-center justify-center">
+          <HomeBidsLogo height="clamp(54px, 11vw, 88px)" />
+        </div>
 
         {/* Right: back link or spacer */}
         <div className="flex items-center justify-end">

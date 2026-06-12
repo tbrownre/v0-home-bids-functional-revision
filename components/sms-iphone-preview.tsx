@@ -254,7 +254,7 @@ export function SmsIphonePreview() {
           {/* ── iMessage header ───────────────────────────────────────── */}
           <div
             className="relative flex shrink-0 items-center bg-[#F2F2F7] px-[10px] pb-[10px] pt-[4px]"
-            style={{ borderBottom: "0.5px solid rgba(0,0,0,0.12)" }}
+            style={{ borderBottom: "0.5px solid rgba(0,0,0,0.12)", lineHeight: "3.1em" }}
           >
             {/* Back button: white rounded pill with chevron + badge — matches reference */}
             <button
@@ -281,13 +281,13 @@ export function SmsIphonePreview() {
                     width: 20,
                     height: 20,
                     borderRadius: "50%",
-                    background: "#1C1C1E",
+                    background: "rgba(28, 28, 30, 0.00)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", lineHeight: 1 }}>1</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "#000000", lineHeight: 1 }}>3</span>
                 </div>
               </div>
             </button>
