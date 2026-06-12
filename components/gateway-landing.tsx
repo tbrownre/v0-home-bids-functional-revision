@@ -112,8 +112,8 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
             <div className="flex flex-col items-center px-8 pt-8 pb-8">
 
               {/* Logo */}
-              <div className="mb-6 flex justify-center overflow-hidden">
-                <HomeBidsLogo height="48px" linked={false} />
+              <div className="mb-6 flex justify-center">
+                <HomeBidsLogo height="56px" linked={false} />
               </div>
 
               {/* Question */}
@@ -233,8 +233,8 @@ export function GatewayLanding() {
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
 
           {/* Logo — left-aligned, prominent */}
-          <div className="shrink-0 overflow-hidden">
-            <HomeBidsLogo height="clamp(28px, 5vw, 42px)" />
+          <div className="shrink-0">
+            <HomeBidsLogo height="clamp(36px, 5vw, 52px)" />
           </div>
 
           {/* Nav — right-aligned, noticeably smaller than the logo */}

@@ -3,45 +3,42 @@ import Link from "next/link";
 
 interface HomeBidsLogoProps {
   /**
-   * Height of the *visible artwork* (not the raw image canvas).
-   * The source PNG has ~30% transparent padding on every side; we use a
-   * clipping wrapper + negative margins so only the wordmark is visible.
+   * Height of the *visible wordmark artwork* in CSS units.
+   * The source PNG (966×499) has ~37% transparent padding top/bottom
+   * and ~27% left/right. We render the full canvas at the correct
+   * scale and clip it so only the artwork is visible.
+   *
+   * Measured ratios:
+   *   - Visible text height = 26% of canvas height  → scale = 1/0.26 = 3.846×
+   *   - Visible text width  = 46% of canvas width   → aspect = 3.42:1
+   *   - Canvas aspect ratio = 966/499 = 1.936
+   *   - Full rendered canvas width = height × 3.846 × 1.936 = height × 7.446
+   *   - top  offset = −(3.846 − 1) / 2 × height = −1.423 × height
+   *   - left offset = −(7.446 − 3.42) / 2 × height = −2.013 × height
    */
   height?: string;
-  /** If true, wraps in a <Link href="/">. Defaults to true. */
+  /** Wrap in a <Link href="/">. Defaults to true. */
   linked?: boolean;
   className?: string;
 }
 
 /**
- * Single shared HomeBids wordmark logo.
- *
- * The source PNG (966×499) has large transparent padding — the visible
- * wordmark occupies roughly the middle 45% of the canvas height and 55%
- * of the canvas width.
- *
- * Strategy: render the image at 2.4× the desired visual height, then
- * clip to just the artwork using overflow-hidden on the outer div.
- *
- * Used in Header, AdminDemoLayout, SignInPage, Footer, GatewayLanding —
- * one component, one source of truth.
+ * Single source-of-truth HomeBids wordmark component.
+ * Import this — and only this — wherever the logo appears.
  */
 export function HomeBidsLogo({
-  height = "clamp(22px, 4vw, 34px)",
+  height = "clamp(36px, 5vw, 52px)",
   linked = true,
   className = "",
 }: HomeBidsLogoProps) {
-  // The visible text occupies ~44% of the PNG's height and ~56% of its width.
-  // To show text at `height`, the full PNG must be rendered at height/0.44.
-  // We clip with overflow-hidden and center-crop using negative margins.
-  const img = (
+  const inner = (
     <span
-      className={`inline-block overflow-hidden pointer-events-none ${className}`}
+      className={`inline-block overflow-hidden pointer-events-none select-none ${className}`}
       style={{
         height,
-        // Width = height × (aspect of visible text ≈ 4.2)
-        width: `calc(${height} * 4.2)`,
+        width:    `calc(${height} * 3.42)`,
         position: "relative",
+        flexShrink: 0,
       }}
       aria-hidden="true"
     >
@@ -50,25 +47,28 @@ export function HomeBidsLogo({
         alt="HomeBids"
         width={966}
         height={499}
-        className="absolute object-contain"
+        className="absolute"
         style={{
-          // Render full canvas at 1/0.44 = ~2.27× desired height
-          height: `calc(${height} * 2.27)`,
-          width: "auto",
-          // Center vertically: offset = -(fullHeight - visibleHeight) / 2 = -(1.27/2 × height)
-          top: `calc(${height} * -0.635)`,
-          // Center horizontally: visible text starts ~22% from left
-          left: `calc(${height} * -1.0)`,
+          height:   `calc(${height} * 3.846)`,
+          width:    "auto",
+          top:      `calc(${height} * -1.423)`,
+          left:     `calc(${height} * -2.013)`,
+          maxWidth: "none",
         }}
         priority
+        draggable={false}
       />
     </span>
   );
 
   if (!linked) {
     return (
-      <span aria-label="HomeBids" role="img" style={{ display: "inline-flex", alignItems: "center" }}>
-        {img}
+      <span
+        aria-label="HomeBids"
+        role="img"
+        style={{ display: "inline-flex", alignItems: "center" }}
+      >
+        {inner}
       </span>
     );
   }
@@ -77,10 +77,11 @@ export function HomeBidsLogo({
     <Link
       href="/"
       aria-label="Go to HomeBids homepage"
-      className="inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md"
+      className="inline-flex items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
-      {img}
+      {inner}
     </Link>
   );
 }
+
