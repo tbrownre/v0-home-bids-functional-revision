@@ -9,10 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle, CheckCircle2, Mail, RefreshCw, Loader2 } from "lucide-react";
 import { resendConfirmation } from "@/lib/supabase/actions";
+import { useSignInModal } from "@/components/sign-in-modal-provider";
 
 type UIState = "pending" | "resent" | "expired" | "invalid" | "error";
 
 export default function VerifyEmailPage() {
+  const { openSignIn } = useSignInModal();
   const searchParams = useSearchParams();
   const initialStatus = (searchParams.get("status") as UIState | null) ?? "pending";
   const emailParam = searchParams.get("email") ?? "";
@@ -121,12 +123,13 @@ export default function VerifyEmailPage() {
           )}
 
           <div className="mt-6 flex flex-col items-center gap-2 text-sm text-muted-foreground">
-            <Link
-              href="/auth/sign-in"
-              className="font-medium text-primary hover:underline"
+            <button
+              type="button"
+              onClick={openSignIn}
+              className="font-medium text-primary hover:underline cursor-pointer"
             >
               Back to sign in
-            </Link>
+            </button>
             <span className="text-xs">
               Need help?{" "}
               <Link href="/about" className="hover:text-foreground underline">

@@ -9,9 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { signUpHomeowner } from "@/lib/supabase/actions";
+import { useSignInModal } from "@/components/sign-in-modal-provider";
 
 export default function HomeownerSignUpPage() {
   const router = useRouter();
+  const { openSignIn } = useSignInModal();
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -91,7 +93,13 @@ export default function HomeownerSignUpPage() {
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link href="/auth/sign-in" className="font-medium text-primary hover:underline">Sign in</Link>
+            <button
+              type="button"
+              onClick={openSignIn}
+              className="font-medium text-primary hover:underline cursor-pointer"
+            >
+              Sign in
+            </button>
           </p>
         </CardContent>
       </Card>

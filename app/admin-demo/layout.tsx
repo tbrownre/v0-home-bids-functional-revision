@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { ReactNode } from "react";
+import { HomeBidsLogo } from "@/components/homebids-logo";
 
 export const metadata = {
   title: "Admin Demo — HomeBids",
@@ -13,16 +13,7 @@ export default function AdminDemoLayout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-40 border-b border-black/8 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3">
           {/* Logo → home */}
-          <Link href="/" className="flex items-center gap-2">
-            <Image
-              src="/images/homebids-wordmark.png"
-              alt="HomeBids"
-              width={160}
-              height={40}
-              className="h-9 w-auto object-contain"
-              style={{ mixBlendMode: "multiply" }}
-            />
-          </Link>
+          <HomeBidsLogo height="clamp(40px, 8vw, 60px)" />
 
           <div className="flex items-center gap-3">
             {/* Demo badge */}
