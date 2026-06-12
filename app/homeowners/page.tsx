@@ -374,8 +374,7 @@ export default function HomeownersPage() {
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <Button
                 size="lg"
-                variant="secondary"
-                className="h-12 gap-2.5 rounded-full px-8 text-base font-semibold"
+                className="h-12 gap-2.5 rounded-full bg-white px-8 text-base font-semibold text-primary hover:bg-white/90"
                 onClick={() =>
                   window.open(
                     "sms:+1?body=Hi%2C%20I%27d%20like%20to%20start%20a%20home%20project",
@@ -386,14 +385,13 @@ export default function HomeownersPage() {
                 <Phone className="h-[18px] w-[18px] shrink-0" />
                 Text Us to Start Your Project
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-12 rounded-full border-primary-foreground/30 px-8 text-base font-semibold text-primary-foreground hover:bg-primary-foreground/10"
-                asChild
+              <Link
+                href="#how-it-works"
+                className="inline-flex h-12 items-center justify-center rounded-full px-8 text-base font-semibold text-white transition-colors hover:bg-white/10"
+                style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.4)" }}
               >
-                <Link href="#how-it-works">How It Works</Link>
-              </Button>
+                How It Works
+              </Link>
             </div>
             <p className="mt-6 text-sm text-primary-foreground/60">
               Free for homeowners &bull; No account required to start
