@@ -154,7 +154,7 @@ export default function HomeownersPage() {
               className="flex shrink-0 justify-center"
             >
               <div
-                className="relative overflow-hidden"
+                className="relative"
                 style={{ width: 300, height: 640, flexShrink: 0 }}
               >
                 <div
