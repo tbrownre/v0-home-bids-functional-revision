@@ -13,7 +13,7 @@ const redHatDisplay = Red_Hat_Display({ subsets: ["latin"], weight: ["300", "400
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#ffffff',
+  themeColor: '#f9f9f9',
 }
 
 export const metadata: Metadata = {
