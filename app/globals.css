@@ -187,16 +187,16 @@
   html {
     overflow-x: hidden;
     max-width: 100vw;
-    background-color: var(--background);
-    /* Ensures overscroll / rubber-band areas match the page background on
-       mobile Safari, Chrome Android, and desktop browsers. */
-    overscroll-behavior: none;
+    /* Hard-coded to #f9f9f9 so mobile Safari's rubber-band overscroll region
+       and Chrome Android's pull-to-refresh backdrop always match the page
+       background. Using the CSS variable alone is unreliable in these areas. */
+    background-color: #f9f9f9;
   }
   body {
     @apply bg-background text-foreground;
     overflow-x: hidden;
     max-width: 100vw;
-    background-color: var(--background);
+    background-color: #f9f9f9;
   }
   /* Ensure all clickable elements always show pointer cursor */
   button,
