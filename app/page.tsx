@@ -149,45 +149,56 @@ export default function HomePage() {
     let subscription: { unsubscribe: () => void } | null = null;
     try {
       const supabase = createClient();
-      supabase.auth.getUser().then(async ({ data: { user } }) => {
-        if (!user) {
-          window.location.replace("/gateway");
-          return;
-        }
-        const type = user.user_metadata?.user_type;
-        if (type === "contractor") {
-          const { data: profile } = await supabase
-            .from("contractor_profiles")
-            .select("approval_status")
-            .eq("id", user.id)
-            .maybeSingle();
-          const isApproved = profile?.approval_status === "approved";
-          const isDemoAccount = user.email === DEMO_CONTRACTOR_EMAIL;
-          if (isApproved || isDemoAccount) {
-            window.location.replace("/contractors/dashboard");
-          } else if (profile?.approval_status === "pending") {
-            window.location.replace("/contractors/signup/pending");
-          } else {
-            window.location.replace("/contractors/signup");
+
+      // Use async/await inside an IIFE so every await is inside try/catch.
+      // Previously used .then() which left await calls outside the catch,
+      // causing unhandled promise rejections that triggered the error boundary.
+      ;(async () => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) {
+            window.location.replace("/gateway");
+            return;
           }
-          return;
+          const type = user.user_metadata?.user_type;
+          if (type === "contractor") {
+            const { data: profile } = await supabase
+              .from("contractor_profiles")
+              .select("approval_status")
+              .eq("id", user.id)
+              .maybeSingle();
+            const isApproved = profile?.approval_status === "approved";
+            const isDemoAccount = user.email === DEMO_CONTRACTOR_EMAIL;
+            if (isApproved || isDemoAccount) {
+              window.location.replace("/contractors/dashboard");
+            } else if (profile?.approval_status === "pending") {
+              window.location.replace("/contractors/signup/pending");
+            } else {
+              window.location.replace("/contractors/signup");
+            }
+            return;
+          }
+          // Authenticated homeowner
+          setIsSignedIn(true);
+          setIsContractor(false);
+          setUserEmail(user.email ?? null);
+          if (
+            !creatingNewJobRef.current &&
+            !showJobsBoardRef.current &&
+            !jobsBoardRestoredForSession.current &&
+            currentStepRef.current === "describe"
+          ) {
+            jobsBoardRestoredForSession.current = true;
+            showJobsBoardRef.current = true;
+            setShowJobsBoard(true);
+          }
+          setAuthChecked(true);
+        } catch {
+          // Auth check failed (network, missing env vars, etc.) — redirect to gateway.
+          window.location.replace("/gateway");
         }
-        // Authenticated homeowner
-        setIsSignedIn(true);
-        setIsContractor(false);
-        setUserEmail(user.email ?? null);
-        if (
-          !creatingNewJobRef.current &&
-          !showJobsBoardRef.current &&
-          !jobsBoardRestoredForSession.current &&
-          currentStepRef.current === "describe"
-        ) {
-          jobsBoardRestoredForSession.current = true;
-          showJobsBoardRef.current = true;
-          setShowJobsBoard(true);
-        }
-        setAuthChecked(true);
-      });
+      })();
+
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === "INITIAL_SESSION") {
           if (!session?.user) {
@@ -195,50 +206,56 @@ export default function HomePage() {
           }
           return;
         }
-        if (session?.user) {
-          const type = session.user.user_metadata?.user_type;
-          if (type === "contractor") {
-            const { data: profile } = await supabase
-              .from("contractor_profiles")
-              .select("approval_status")
-              .eq("id", session.user.id)
-              .maybeSingle();
-            const isApproved = profile?.approval_status === "approved";
-            const isDemoAccount = session.user.email === DEMO_CONTRACTOR_EMAIL;
-            if (isApproved || isDemoAccount) {
-              window.location.replace("/contractors/dashboard");
-            } else if (profile?.approval_status === "pending") {
-              window.location.replace("/contractors/signup/pending");
+        try {
+          if (session?.user) {
+            const type = session.user.user_metadata?.user_type;
+            if (type === "contractor") {
+              const { data: profile } = await supabase
+                .from("contractor_profiles")
+                .select("approval_status")
+                .eq("id", session.user.id)
+                .maybeSingle();
+              const isApproved = profile?.approval_status === "approved";
+              const isDemoAccount = session.user.email === DEMO_CONTRACTOR_EMAIL;
+              if (isApproved || isDemoAccount) {
+                window.location.replace("/contractors/dashboard");
+              } else if (profile?.approval_status === "pending") {
+                window.location.replace("/contractors/signup/pending");
+              }
+              return;
+            } else {
+              setIsSignedIn(true);
+              setIsContractor(false);
+              setUserEmail(session.user.email ?? null);
+              if (
+                event === "SIGNED_IN" &&
+                !creatingNewJobRef.current &&
+                !showJobsBoardRef.current &&
+                !jobsBoardRestoredForSession.current &&
+                currentStepRef.current === "describe"
+              ) {
+                jobsBoardRestoredForSession.current = true;
+                showJobsBoardRef.current = true;
+                setShowJobsBoard(true);
+              }
+              setAuthChecked(true);
             }
-            return;
           } else {
-            setIsSignedIn(true);
+            setIsSignedIn(false);
             setIsContractor(false);
-            setUserEmail(session.user.email ?? null);
-            if (
-              event === "SIGNED_IN" &&
-              !creatingNewJobRef.current &&
-              !showJobsBoardRef.current &&
-              !jobsBoardRestoredForSession.current &&
-              currentStepRef.current === "describe"
-            ) {
-              jobsBoardRestoredForSession.current = true;
-              showJobsBoardRef.current = true;
-              setShowJobsBoard(true);
-            }
-            setAuthChecked(true);
+            showJobsBoardRef.current = false;
+            jobsBoardRestoredForSession.current = false;
+            setShowJobsBoard(false);
           }
-        } else {
-          setIsSignedIn(false);
-          setIsContractor(false);
-          showJobsBoardRef.current = false;
-          jobsBoardRestoredForSession.current = false;
-          setShowJobsBoard(false);
+        } catch {
+          // Auth state change handler failed — redirect to gateway.
+          window.location.replace("/gateway");
         }
       });
       subscription = data.subscription;
     } catch {
-      // Silently no-op if Supabase is unavailable
+      // createClient() itself threw (missing env vars, etc.) — go to gateway.
+      window.location.replace("/gateway");
     }
     return () => subscription?.unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
