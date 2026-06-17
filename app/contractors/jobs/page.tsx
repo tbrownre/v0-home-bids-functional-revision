@@ -6,7 +6,7 @@ import { getOpenJobs, submitBid } from "@/lib/supabase/actions";
 import { getOpenJobs as getDemoOpenJobs } from "@/lib/demo/services";
 import { DEMO_CONTRACTOR_EMAIL } from "@/lib/demo-guard";
 import { createClient } from "@/lib/supabase/client";
-import { USE_MOCK_DATA } from "@/lib/mock-auth";
+import { USE_MOCK_DATA, getMockUser } from "@/lib/mock-auth";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
@@ -269,6 +269,35 @@ export default function ContractorJobsMarketplace() {
   const [jobs, setJobs] = useState<AvailableJob[]>([]);
   const [jobsLoading, setJobsLoading] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
+
+  // Auth guard — must run before fetching jobs.
+  useEffect(() => {
+    if (USE_MOCK_DATA) {
+      const user = getMockUser();
+      if (!user) {
+        window.location.replace("/contractors");
+        return;
+      }
+      if (user.role !== "contractor" && user.role !== "admin") {
+        window.location.replace("/");
+        return;
+      }
+      return;
+    }
+    ;(async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        window.location.replace("/contractors");
+        return;
+      }
+      if (user.user_metadata?.user_type !== "contractor") {
+        window.location.replace("/");
+        return;
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Fetch open jobs — mock mode always uses demo data.
   useEffect(() => {

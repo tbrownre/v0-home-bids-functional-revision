@@ -112,12 +112,31 @@ export default function HomePage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // If the user clicked the logo (/?home=1), stay on the home page — never redirect.
-    const stayOnHome = new URLSearchParams(window.location.search).has("home");
-    if (stayOnHome) {
+    if (USE_MOCK_DATA) {
+      // Mock mode — read session synchronously, no network call.
+      const user = getMockUser();
+      if (!user) {
+        window.location.replace("/gateway");
+        return;
+      }
+      if (user.role === "contractor") {
+        window.location.replace("/contractors/dashboard");
+        return;
+      }
+      if (user.role === "admin") {
+        window.location.replace("/admin-demo");
+        return;
+      }
+      // Authenticated homeowner
       setIsSignedIn(true);
-      // Also restore the jobs board so logo-click lands on the dashboard, not the form.
-      if (!jobsBoardRestoredForSession.current) {
+      setIsContractor(false);
+      setUserEmail(user.email);
+      if (
+        !creatingNewJobRef.current &&
+        !showJobsBoardRef.current &&
+        !jobsBoardRestoredForSession.current &&
+        currentStepRef.current === "describe"
+      ) {
         jobsBoardRestoredForSession.current = true;
         showJobsBoardRef.current = true;
         setShowJobsBoard(true);
@@ -126,26 +145,37 @@ export default function HomePage() {
       return;
     }
 
-    if (USE_MOCK_DATA) {
-      // Mock mode — read session synchronously, no network call.
-      const user = getMockUser();
-      if (!user) {
-        window.location.replace("/gateway");
-        return;
-      }
-      if (user) {
-        if (user.role === "contractor") {
-          window.location.replace("/contractors/dashboard");
+    // Live mode — Supabase auth
+    let subscription: { unsubscribe: () => void } | null = null;
+    try {
+      const supabase = createClient();
+      supabase.auth.getUser().then(async ({ data: { user } }) => {
+        if (!user) {
+          window.location.replace("/gateway");
           return;
         }
-        if (user.role === "admin") {
-          // Admin route removed — treat as homeowner
-          setIsSignedIn(true);
+        const type = user.user_metadata?.user_type;
+        if (type === "contractor") {
+          const { data: profile } = await supabase
+            .from("contractor_profiles")
+            .select("approval_status")
+            .eq("id", user.id)
+            .maybeSingle();
+          const isApproved = profile?.approval_status === "approved";
+          const isDemoAccount = user.email === DEMO_CONTRACTOR_EMAIL;
+          if (isApproved || isDemoAccount) {
+            window.location.replace("/contractors/dashboard");
+          } else if (profile?.approval_status === "pending") {
+            window.location.replace("/contractors/signup/pending");
+          } else {
+            window.location.replace("/contractors/signup");
+          }
+          return;
         }
+        // Authenticated homeowner
         setIsSignedIn(true);
         setIsContractor(false);
-        setUserEmail(user.email);
-
+        setUserEmail(user.email ?? null);
         if (
           !creatingNewJobRef.current &&
           !showJobsBoardRef.current &&
@@ -156,53 +186,7 @@ export default function HomePage() {
           showJobsBoardRef.current = true;
           setShowJobsBoard(true);
         }
-      }
-      setAuthChecked(true);
-      return;
-    }
-
-    // Live mode — Supabase auth (kept for production)
-    let subscription: { unsubscribe: () => void } | null = null;
-    try {
-      const supabase = createClient();
-      supabase.auth.getUser().then(async ({ data: { user } }) => {
-        if (!user) {
-          window.location.replace("/gateway");
-          return;
-        }
-        if (user) {
-          const type = user.user_metadata?.user_type;
-          if (type === "contractor") {
-            const { data: profile } = await supabase
-              .from("contractor_profiles")
-              .select("approval_status")
-              .eq("id", user.id)
-              .maybeSingle();
-            const isApproved = profile?.approval_status === "approved";
-            const isDemoAccount = user.email === DEMO_CONTRACTOR_EMAIL;
-            if (isApproved || isDemoAccount) {
-              window.location.replace("/contractors/dashboard");
-            } else if (profile?.approval_status === "pending") {
-              window.location.replace("/contractors/signup/pending");
-            }
-            return;
-          } else {
-            setIsSignedIn(true);
-            setIsContractor(false);
-            setUserEmail(user.email ?? null);
-            if (
-              !creatingNewJobRef.current &&
-              !showJobsBoardRef.current &&
-              !jobsBoardRestoredForSession.current &&
-              currentStepRef.current === "describe"
-            ) {
-              jobsBoardRestoredForSession.current = true;
-              showJobsBoardRef.current = true;
-              setShowJobsBoard(true);
-            }
-            setAuthChecked(true);
-          }
-        }
+        setAuthChecked(true);
       });
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === "INITIAL_SESSION") {
