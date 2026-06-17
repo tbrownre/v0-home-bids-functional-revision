@@ -202,7 +202,7 @@ export function GatewayLanding() {
 
   return (
     // Normal document flow so root-layout <Footer /> renders below naturally
-    <div className="relative overflow-x-hidden font-sans" style={{ background: "#f1f0f0" }}>
+    <div className="relative overflow-x-hidden font-sans" style={{ background: "#f9f9f9" }}>
 
       {/* ── Snake ticker rows — z-0, absolute, behind ALL content ───────────
           Four rows spread across 15 / 38 / 63 / 83 % down the above-fold area.

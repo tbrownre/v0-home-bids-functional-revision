@@ -51,7 +51,7 @@ export function HomeBidsLogo({
 
   return (
     <Link
-      href="/"
+      href="/?home=1"
       aria-label="Go to HomeBids homepage"
       className="inline-flex items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       style={{ WebkitTapHighlightColor: "transparent" }}

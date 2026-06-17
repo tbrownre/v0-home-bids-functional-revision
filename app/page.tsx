@@ -93,6 +93,11 @@ export default function HomePage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const homeownerUnreadCount = 0; // inbox wired separately
 
+  // authChecked: stays false until the first auth resolution so we never render
+  // the wrong view (form flash → redirect). The page stays blank-background until
+  // we know whether to show the dashboard or redirect to /gateway.
+  const [authChecked, setAuthChecked] = useState(false);
+
   // Ref-based flags so the restore logic never creates a dep-loop.
   // Each ref mirrors its corresponding state value but is readable synchronously
   // inside async callbacks and event listeners without stale closure issues.
@@ -111,6 +116,13 @@ export default function HomePage() {
     const stayOnHome = new URLSearchParams(window.location.search).has("home");
     if (stayOnHome) {
       setIsSignedIn(true);
+      // Also restore the jobs board so logo-click lands on the dashboard, not the form.
+      if (!jobsBoardRestoredForSession.current) {
+        jobsBoardRestoredForSession.current = true;
+        showJobsBoardRef.current = true;
+        setShowJobsBoard(true);
+      }
+      setAuthChecked(true);
       return;
     }
 
@@ -145,6 +157,7 @@ export default function HomePage() {
           setShowJobsBoard(true);
         }
       }
+      setAuthChecked(true);
       return;
     }
 
@@ -187,6 +200,7 @@ export default function HomePage() {
               showJobsBoardRef.current = true;
               setShowJobsBoard(true);
             }
+            setAuthChecked(true);
           }
         }
       });
@@ -228,6 +242,7 @@ export default function HomePage() {
               showJobsBoardRef.current = true;
               setShowJobsBoard(true);
             }
+            setAuthChecked(true);
           }
         } else {
           setIsSignedIn(false);
@@ -696,6 +711,12 @@ export default function HomePage() {
     setJobDescription("");
     performSignOut();
   }, [setCurrentStepSafe]);
+
+  // Don't render anything until auth is resolved — prevents the form flashing
+  // briefly before a redirect fires (e.g. unauthenticated → /gateway).
+  if (!authChecked) {
+    return <div className="min-h-screen bg-background" />;
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
