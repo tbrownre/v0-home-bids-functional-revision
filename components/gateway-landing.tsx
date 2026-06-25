@@ -300,7 +300,7 @@ export function GatewayLanding() {
             <Button
               variant="outline"
               size="lg"
-              className="h-12 gap-2.5 rounded-full px-8 text-base font-semibold bg-white/80 hover:bg-white"
+              className="h-12 gap-2.5 rounded-full px-8 text-base font-semibold bg-white/80 text-foreground hover:bg-white hover:text-foreground"
               onClick={() => {
                 localStorage.setItem("homebids_audience", "contractor");
                 window.location.href = "/contractors";
