@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Home, Wrench } from "lucide-react";
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
 import { HomeBidsLogo } from "@/components/homebids-logo";
+import { Button } from "@/components/ui/button";
+import { getSmsLink } from "@/lib/sms-config";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
 import {
   Dialog,
@@ -290,18 +292,23 @@ export function GatewayLanding() {
           <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <a
               href="sms:+18722964991?&body=Hi%20Ava%2C%20I%20need%20help%20with%20a%20home%20project"
-              className="inline-flex h-12 items-center justify-center gap-2.5 rounded-full px-8 text-base font-semibold bg-[#0A84FF] text-white hover:bg-[#006EDB] transition-colors"
+              className="inline-flex h-12 items-center justify-center gap-2.5 rounded-full px-8 text-base font-semibold bg-[#0A84FF] text-white hover:bg-[#0A84FF]/90 transition-colors"
             >
               <Home className="h-[18px] w-[18px] shrink-0" />
               {"I'm a Homeowner"}
             </a>
-            <a
-              href="https://homebids-semi-app-ac7g.vercel.app/sign-in"
-              className="inline-flex h-12 items-center justify-center gap-2.5 rounded-full px-8 text-base font-semibold border border-border bg-white/80 text-foreground hover:bg-white transition-colors"
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-12 gap-2.5 rounded-full px-8 text-base font-semibold bg-white/80 hover:bg-white"
+              onClick={() => {
+                localStorage.setItem("homebids_audience", "contractor");
+                window.location.href = "/contractors";
+              }}
             >
               <Wrench className="h-[18px] w-[18px] shrink-0" />
-              {"I'm a Contractor"}
-            </a>
+              {"I'm a Home Service Pro"}
+            </Button>
           </div>
         </motion.div>
 
