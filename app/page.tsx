@@ -93,6 +93,11 @@ export default function HomePage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const homeownerUnreadCount = 0; // inbox wired separately
 
+  // authChecked: stays false until the first auth resolution so we never render
+  // the wrong view (form flash → redirect). The page stays blank-background until
+  // we know whether to show the dashboard or redirect to /gateway.
+  const [authChecked, setAuthChecked] = useState(false);
+
   // Ref-based flags so the restore logic never creates a dep-loop.
   // Each ref mirrors its corresponding state value but is readable synchronously
   // inside async callbacks and event listeners without stale closure issues.
@@ -107,13 +112,6 @@ export default function HomePage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // If the user clicked the logo (/?home=1), stay on the home page — never redirect.
-    const stayOnHome = new URLSearchParams(window.location.search).has("home");
-    if (stayOnHome) {
-      setIsSignedIn(true);
-      return;
-    }
-
     if (USE_MOCK_DATA) {
       // Mock mode — read session synchronously, no network call.
       const user = getMockUser();
@@ -121,43 +119,47 @@ export default function HomePage() {
         window.location.replace("/gateway");
         return;
       }
-      if (user) {
-        if (user.role === "contractor") {
-          window.location.replace("/contractors/dashboard");
-          return;
-        }
-        if (user.role === "admin") {
-          // Admin route removed — treat as homeowner
-          setIsSignedIn(true);
-        }
-        setIsSignedIn(true);
-        setIsContractor(false);
-        setUserEmail(user.email);
-
-        if (
-          !creatingNewJobRef.current &&
-          !showJobsBoardRef.current &&
-          !jobsBoardRestoredForSession.current &&
-          currentStepRef.current === "describe"
-        ) {
-          jobsBoardRestoredForSession.current = true;
-          showJobsBoardRef.current = true;
-          setShowJobsBoard(true);
-        }
+      if (user.role === "contractor") {
+        window.location.replace("/contractors/dashboard");
+        return;
       }
+      if (user.role === "admin") {
+        window.location.replace("/admin-demo");
+        return;
+      }
+      // Authenticated homeowner
+      setIsSignedIn(true);
+      setIsContractor(false);
+      setUserEmail(user.email);
+      if (
+        !creatingNewJobRef.current &&
+        !showJobsBoardRef.current &&
+        !jobsBoardRestoredForSession.current &&
+        currentStepRef.current === "describe"
+      ) {
+        jobsBoardRestoredForSession.current = true;
+        showJobsBoardRef.current = true;
+        setShowJobsBoard(true);
+      }
+      setAuthChecked(true);
       return;
     }
 
-    // Live mode — Supabase auth (kept for production)
+    // Live mode — Supabase auth
     let subscription: { unsubscribe: () => void } | null = null;
     try {
       const supabase = createClient();
-      supabase.auth.getUser().then(async ({ data: { user } }) => {
-        if (!user) {
-          window.location.replace("/gateway");
-          return;
-        }
-        if (user) {
+
+      // Use async/await inside an IIFE so every await is inside try/catch.
+      // Previously used .then() which left await calls outside the catch,
+      // causing unhandled promise rejections that triggered the error boundary.
+      ;(async () => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) {
+            window.location.replace("/gateway");
+            return;
+          }
           const type = user.user_metadata?.user_type;
           if (type === "contractor") {
             const { data: profile } = await supabase
@@ -171,25 +173,32 @@ export default function HomePage() {
               window.location.replace("/contractors/dashboard");
             } else if (profile?.approval_status === "pending") {
               window.location.replace("/contractors/signup/pending");
+            } else {
+              window.location.replace("/contractors/signup");
             }
             return;
-          } else {
-            setIsSignedIn(true);
-            setIsContractor(false);
-            setUserEmail(user.email ?? null);
-            if (
-              !creatingNewJobRef.current &&
-              !showJobsBoardRef.current &&
-              !jobsBoardRestoredForSession.current &&
-              currentStepRef.current === "describe"
-            ) {
-              jobsBoardRestoredForSession.current = true;
-              showJobsBoardRef.current = true;
-              setShowJobsBoard(true);
-            }
           }
+          // Authenticated homeowner
+          setIsSignedIn(true);
+          setIsContractor(false);
+          setUserEmail(user.email ?? null);
+          if (
+            !creatingNewJobRef.current &&
+            !showJobsBoardRef.current &&
+            !jobsBoardRestoredForSession.current &&
+            currentStepRef.current === "describe"
+          ) {
+            jobsBoardRestoredForSession.current = true;
+            showJobsBoardRef.current = true;
+            setShowJobsBoard(true);
+          }
+          setAuthChecked(true);
+        } catch {
+          // Auth check failed (network, missing env vars, etc.) — redirect to gateway.
+          window.location.replace("/gateway");
         }
-      });
+      })();
+
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === "INITIAL_SESSION") {
           if (!session?.user) {
@@ -197,49 +206,56 @@ export default function HomePage() {
           }
           return;
         }
-        if (session?.user) {
-          const type = session.user.user_metadata?.user_type;
-          if (type === "contractor") {
-            const { data: profile } = await supabase
-              .from("contractor_profiles")
-              .select("approval_status")
-              .eq("id", session.user.id)
-              .maybeSingle();
-            const isApproved = profile?.approval_status === "approved";
-            const isDemoAccount = session.user.email === DEMO_CONTRACTOR_EMAIL;
-            if (isApproved || isDemoAccount) {
-              window.location.replace("/contractors/dashboard");
-            } else if (profile?.approval_status === "pending") {
-              window.location.replace("/contractors/signup/pending");
+        try {
+          if (session?.user) {
+            const type = session.user.user_metadata?.user_type;
+            if (type === "contractor") {
+              const { data: profile } = await supabase
+                .from("contractor_profiles")
+                .select("approval_status")
+                .eq("id", session.user.id)
+                .maybeSingle();
+              const isApproved = profile?.approval_status === "approved";
+              const isDemoAccount = session.user.email === DEMO_CONTRACTOR_EMAIL;
+              if (isApproved || isDemoAccount) {
+                window.location.replace("/contractors/dashboard");
+              } else if (profile?.approval_status === "pending") {
+                window.location.replace("/contractors/signup/pending");
+              }
+              return;
+            } else {
+              setIsSignedIn(true);
+              setIsContractor(false);
+              setUserEmail(session.user.email ?? null);
+              if (
+                event === "SIGNED_IN" &&
+                !creatingNewJobRef.current &&
+                !showJobsBoardRef.current &&
+                !jobsBoardRestoredForSession.current &&
+                currentStepRef.current === "describe"
+              ) {
+                jobsBoardRestoredForSession.current = true;
+                showJobsBoardRef.current = true;
+                setShowJobsBoard(true);
+              }
+              setAuthChecked(true);
             }
-            return;
           } else {
-            setIsSignedIn(true);
+            setIsSignedIn(false);
             setIsContractor(false);
-            setUserEmail(session.user.email ?? null);
-            if (
-              event === "SIGNED_IN" &&
-              !creatingNewJobRef.current &&
-              !showJobsBoardRef.current &&
-              !jobsBoardRestoredForSession.current &&
-              currentStepRef.current === "describe"
-            ) {
-              jobsBoardRestoredForSession.current = true;
-              showJobsBoardRef.current = true;
-              setShowJobsBoard(true);
-            }
+            showJobsBoardRef.current = false;
+            jobsBoardRestoredForSession.current = false;
+            setShowJobsBoard(false);
           }
-        } else {
-          setIsSignedIn(false);
-          setIsContractor(false);
-          showJobsBoardRef.current = false;
-          jobsBoardRestoredForSession.current = false;
-          setShowJobsBoard(false);
+        } catch {
+          // Auth state change handler failed — redirect to gateway.
+          window.location.replace("/gateway");
         }
       });
       subscription = data.subscription;
     } catch {
-      // Silently no-op if Supabase is unavailable
+      // createClient() itself threw (missing env vars, etc.) — go to gateway.
+      window.location.replace("/gateway");
     }
     return () => subscription?.unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -696,6 +712,12 @@ export default function HomePage() {
     setJobDescription("");
     performSignOut();
   }, [setCurrentStepSafe]);
+
+  // Don't render anything until auth is resolved — prevents the form flashing
+  // briefly before a redirect fires (e.g. unauthenticated → /gateway).
+  if (!authChecked) {
+    return <div className="min-h-screen bg-background" />;
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

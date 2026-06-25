@@ -225,10 +225,35 @@ export default function ContractorDashboard() {
 
   const [contractorName, setContractorName] = useState("there");
   useEffect(() => {
+    // Auth guard — redirect unauthenticated users to the public contractor page.
     if (USE_MOCK_DATA) {
       const user = getMockUser();
+      if (!user) {
+        window.location.replace("/contractors");
+        return;
+      }
+      if (user.role !== "contractor" && user.role !== "admin") {
+        window.location.replace("/");
+        return;
+      }
       if (user?.firstName) setContractorName(user.firstName);
+      return;
     }
+    // Live mode auth guard
+    ;(async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        window.location.replace("/contractors");
+        return;
+      }
+      if (user.user_metadata?.user_type !== "contractor") {
+        window.location.replace("/");
+        return;
+      }
+      const firstName = user.user_metadata?.full_name?.split(" ")[0] ?? user.email?.split("@")[0] ?? "there";
+      setContractorName(firstName);
+    })();
   }, []);
 
   const [bidsCount, setBidsCount] = useState(0);
