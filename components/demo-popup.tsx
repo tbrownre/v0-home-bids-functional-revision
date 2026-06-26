@@ -158,14 +158,28 @@ export function DemoPopup() {
 
 interface DemoCalloutProps {
   text?: string;
+  variant?: "default" | "primary";
 }
 
-export function DemoCallout({ text = "Curious how it works? Text us for a live demo." }: DemoCalloutProps) {
+export function DemoCallout({ text = "Curious how it works? Text us for a live demo.", variant = "default" }: DemoCalloutProps) {
   const handleClick = () => {
     if (typeof window !== "undefined" && (window as any).gtag) {
       (window as any).gtag("event", "demo_callout_click", { label: text });
     }
   };
+
+  if (variant === "primary") {
+    return (
+      <a
+        href={SMS_HREF}
+        onClick={handleClick}
+        className="inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-primary px-10 text-base font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <MessageSquare className="h-5 w-5 shrink-0" />
+        {text}
+      </a>
+    );
+  }
 
   return (
     <a
