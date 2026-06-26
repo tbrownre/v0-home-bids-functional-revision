@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MessageSquare, CheckCircle2 } from "lucide-react";
 
-const SMS_HREF = "sms:+18722964991?&body=Let's%20create%20a%20new%20bid";
+const SMS_HREF = "sms:+18722964991?&body=Hey%20HomeBids%2C%20lets%20build%20a%20new%20bid!";
 const SESSION_KEY = "homebids_demo_popup_seen";
 const DELAY_MS = 7000;
 

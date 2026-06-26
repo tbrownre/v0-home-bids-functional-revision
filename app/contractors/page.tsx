@@ -407,6 +407,9 @@ export default function ContractorsPage() {
                 Contractor Login
               </Button>
             </motion.div>
+            <motion.div variants={fadeUp} className="mt-4 flex justify-center">
+              <DemoCallout text="Or text us to see a live demo first." />
+            </motion.div>
 
             <motion.div variants={fadeUp} className="mt-5 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-primary" /> $99/month</span>
@@ -573,6 +576,9 @@ export default function ContractorsPage() {
                 />
               </motion.div>
             </div>
+            <motion.div variants={fadeUp} className="mt-8 flex justify-center">
+              <DemoCallout text="Want to try it yourself? Text us and we'll build a real bid live." />
+            </motion.div>
           </motion.div>
         </div>
       </section>
