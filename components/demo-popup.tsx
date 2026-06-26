@@ -2,18 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, CheckCircle2, MessageSquare } from "lucide-react";
+import { X, MessageSquare } from "lucide-react";
 
 const SMS_HREF = "sms:+18722964991?&body=Let's%20create%20a%20new%20bid";
 const SESSION_KEY = "homebids_demo_popup_seen";
 const DELAY_MS = 7000;
 
-const bullets = [
-  "See it work in real time",
-  "Upload photos, screenshots, or voice notes",
-  "AI organizes everything for you",
-  "Professional invoice/PDF generated in under 2 minutes",
-];
 
 export function DemoPopup() {
   const [visible, setVisible] = useState(false);
@@ -86,12 +80,9 @@ export function DemoPopup() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 16 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-x-4 bottom-6 z-50 mx-auto max-w-md rounded-2xl border border-border bg-card shadow-2xl sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:bottom-8"
+            className="fixed inset-x-4 bottom-6 z-50 mx-auto max-w-sm rounded-2xl border border-border bg-card shadow-2xl sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:bottom-8"
           >
-            {/* Top accent bar */}
-            <div className="h-1 w-full rounded-t-2xl bg-primary" />
-
-            <div className="px-6 pb-6 pt-5">
+            <div className="px-6 pb-6 pt-6">
               {/* Close button */}
               <button
                 onClick={dismiss}
@@ -101,17 +92,12 @@ export function DemoPopup() {
                 <X className="h-4 w-4" />
               </button>
 
-              {/* Eyebrow */}
-              <p className="text-xs font-semibold uppercase tracking-widest text-primary">
-                Live Demo
-              </p>
-
               {/* Headline */}
               <h2
                 id="demo-popup-title"
-                className="mt-1.5 text-balance text-xl font-bold leading-snug text-foreground"
+                className="text-balance text-xl font-bold leading-snug text-foreground pr-6"
               >
-                The AI Advantage Every Contractor Wishes They Had
+                See a bid built live — in 2 minutes.
               </h2>
 
               {/* Subheadline */}
@@ -119,37 +105,22 @@ export function DemoPopup() {
                 id="demo-popup-desc"
                 className="mt-2 text-sm text-muted-foreground"
               >
-                Watch HomeBids build a professional proposal in real time.
+                Text us a job. Watch HomeBids handle the rest.
               </p>
-
-              {/* Benefit bullets */}
-              <ul className="mt-4 space-y-2">
-                {bullets.map((b) => (
-                  <li key={b} className="flex items-start gap-2 text-sm text-foreground">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    {b}
-                  </li>
-                ))}
-              </ul>
 
               {/* Primary CTA */}
               <a
                 href={SMS_HREF}
                 onClick={handleSmsClick}
-                className="mt-5 flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-6 text-base font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="mt-5 flex h-14 w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-6 text-base font-semibold text-primary-foreground transition-colors hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <MessageSquare className="h-5 w-5 shrink-0" />
-                Text Us to See a Live Demo
+                Text Us for a Live Demo
               </a>
 
               {/* Under-button microcopy */}
-              <p className="mt-2.5 text-center text-xs text-muted-foreground">
-                No signup required. Just send the text and watch HomeBids build a bid for you.
-              </p>
-
-              {/* Trust line */}
-              <p className="mt-4 border-t border-border pt-4 text-center text-xs leading-relaxed text-muted-foreground">
-                Experience exactly what your customers and team would see before starting your free trial.
+              <p className="mt-3 text-center text-xs text-muted-foreground">
+                No signup. Takes 30 seconds.
               </p>
             </div>
           </motion.div>
