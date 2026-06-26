@@ -672,26 +672,6 @@ export default function ContractorsPage() {
         </div>
       </section>
 
-      {/* ── ROI CALCULATOR ── */}
-      <section className="bg-card px-4 py-24 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl">
-          <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-            <motion.div variants={fadeUp} className="mb-12 text-center">
-              <span className="text-xs font-semibold uppercase tracking-widest text-primary">ROI</span>
-              <h2 className="mt-3 text-3xl font-bold text-foreground sm:text-4xl">
-                {"What Is One Lost Job Worth?"}
-              </h2>
-              <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
-                {"HomeBids doesn't cost you $99 a month. It saves you far more than that."}
-              </p>
-            </motion.div>
-            <motion.div variants={fadeUp}>
-              <ROICalculator />
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
       {/* ── MID-PAGE CTA ── */}
       <section className="relative overflow-hidden px-4 py-16 sm:px-6 lg:px-8">
         <div
@@ -798,6 +778,26 @@ export default function ContractorsPage() {
           <DemoCallout text="Text Us for a Live Demo" variant="primary" />
         </div>
       </div>
+
+      {/* ── ROI CALCULATOR ── */}
+      <section className="bg-card px-4 py-24 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl">
+          <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
+            <motion.div variants={fadeUp} className="mb-12 text-center">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">ROI</span>
+              <h2 className="mt-3 text-3xl font-bold text-foreground sm:text-4xl">
+                {"What Is One Lost Job Worth?"}
+              </h2>
+              <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
+                {"HomeBids doesn't cost you $99 a month. It saves you far more than that."}
+              </p>
+            </motion.div>
+            <motion.div variants={fadeUp}>
+              <ROICalculator />
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
 
       {/* ── FINAL CTA ── */}
       <section className="relative overflow-hidden px-4 py-28 sm:px-6 lg:px-8">
