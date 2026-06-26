@@ -672,35 +672,6 @@ export default function ContractorsPage() {
         </div>
       </section>
 
-      {/* ── MID-PAGE CTA ── */}
-      <section className="relative overflow-hidden px-4 py-16 sm:px-6 lg:px-8">
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{ background: "linear-gradient(135deg, rgba(43,127,232,0.08) 0%, transparent 60%)" }}
-          aria-hidden
-        />
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="relative mx-auto max-w-2xl text-center"
-        >
-          <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Give Yourself The AI Advantage</h2>
-          <p className="mt-3 text-muted-foreground">Your competitors are still building bids the old way.</p>
-          <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Button size="lg" className="rounded-full px-8 font-semibold" asChild>
-              <Link href="/subscribe?type=contractor">Start Free Trial</Link>
-            </Button>
-            <Button size="lg" variant="outline" className="rounded-full px-8" onClick={() => setShowLoginModal(true)}>
-              Contractor Login
-            </Button>
-          </div>
-          <div className="mt-5 flex justify-center">
-            <DemoCallout text="See an invoice generated in under 2 minutes." />
-          </div>
-        </motion.div>
-      </section>
-
       {/* ── PRICING ── */}
       <section className="bg-card px-4 py-24 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
