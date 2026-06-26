@@ -5,6 +5,7 @@ import { Header } from "@/components/header";
 import { signIn as supabaseSignIn } from "@/lib/supabase/actions";
 import { AlertCircle, Loader2 as Loader } from "lucide-react";
 import { ScrollToTop } from "@/components/scroll-to-top";
+import { DemoPopup, DemoCallout } from "@/components/demo-popup";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -708,6 +709,9 @@ export default function ContractorsPage() {
               Contractor Login
             </Button>
           </div>
+          <div className="mt-5 flex justify-center">
+            <DemoCallout text="See an invoice generated in under 2 minutes." />
+          </div>
         </motion.div>
       </section>
 
@@ -798,6 +802,9 @@ export default function ContractorsPage() {
                 <ArrowRight className="h-5 w-5" />
               </Link>
             </Button>
+          </div>
+          <div className="mt-5 flex justify-center">
+            <DemoCallout text="Watch HomeBids build a bid in real time." />
           </div>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-5 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5"><DollarSign className="h-4 w-4 text-primary" />$99/month</span>
@@ -897,6 +904,7 @@ export default function ContractorsPage() {
         </DialogContent>
       </Dialog>
 
+      <DemoPopup />
       <ScrollToTop />
     </div>
   );
