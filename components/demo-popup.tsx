@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MessageSquare, CheckCircle2 } from "lucide-react";
 
-const SMS_HREF = "sms:+18722964991?&body=Let's%20create%20a%20new%20bid";
+const SMS_HREF = "sms:+18722964991?&body=Hey%20HomeBids%2C%20lets%20build%20a%20new%20bid!";
 const SESSION_KEY = "homebids_demo_popup_seen";
 const DELAY_MS = 7000;
 
@@ -158,22 +158,36 @@ export function DemoPopup() {
 
 interface DemoCalloutProps {
   text?: string;
+  variant?: "default" | "primary";
 }
 
-export function DemoCallout({ text = "Curious how it works? Text us for a live demo." }: DemoCalloutProps) {
+export function DemoCallout({ text = "Curious how it works? Text us for a live demo.", variant = "default" }: DemoCalloutProps) {
   const handleClick = () => {
     if (typeof window !== "undefined" && (window as any).gtag) {
       (window as any).gtag("event", "demo_callout_click", { label: text });
     }
   };
 
+  if (variant === "primary") {
+    return (
+      <a
+        href={SMS_HREF}
+        onClick={handleClick}
+        className="inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-primary px-10 text-base font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <MessageSquare className="h-5 w-5 shrink-0" />
+        {text}
+      </a>
+    );
+  }
+
   return (
     <a
       href={SMS_HREF}
       onClick={handleClick}
-      className="group inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+      className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-border bg-background px-6 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <MessageSquare className="h-4 w-4 shrink-0 text-primary/60 transition-colors group-hover:text-primary" />
+      <MessageSquare className="h-4 w-4 shrink-0 text-primary" />
       {text}
     </a>
   );

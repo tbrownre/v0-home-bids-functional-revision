@@ -407,6 +407,9 @@ export default function ContractorsPage() {
                 Contractor Login
               </Button>
             </motion.div>
+            <motion.div variants={fadeUp} className="mt-4 flex justify-center">
+              <DemoCallout text="Or text us to see a live demo first." />
+            </motion.div>
 
             <motion.div variants={fadeUp} className="mt-5 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-primary" /> $99/month</span>
@@ -573,6 +576,9 @@ export default function ContractorsPage() {
                 />
               </motion.div>
             </div>
+            <motion.div variants={fadeUp} className="mt-8 flex justify-center">
+              <DemoCallout text="Want to try it yourself? Text us and we'll build a real bid live." />
+            </motion.div>
           </motion.div>
         </div>
       </section>
@@ -666,55 +672,6 @@ export default function ContractorsPage() {
         </div>
       </section>
 
-      {/* ── ROI CALCULATOR ── */}
-      <section className="bg-card px-4 py-24 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl">
-          <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-            <motion.div variants={fadeUp} className="mb-12 text-center">
-              <span className="text-xs font-semibold uppercase tracking-widest text-primary">ROI</span>
-              <h2 className="mt-3 text-3xl font-bold text-foreground sm:text-4xl">
-                {"What Is One Lost Job Worth?"}
-              </h2>
-              <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
-                {"HomeBids doesn't cost you $99 a month. It saves you far more than that."}
-              </p>
-            </motion.div>
-            <motion.div variants={fadeUp}>
-              <ROICalculator />
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ── MID-PAGE CTA ── */}
-      <section className="relative overflow-hidden px-4 py-16 sm:px-6 lg:px-8">
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{ background: "linear-gradient(135deg, rgba(43,127,232,0.08) 0%, transparent 60%)" }}
-          aria-hidden
-        />
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="relative mx-auto max-w-2xl text-center"
-        >
-          <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Give Yourself The AI Advantage</h2>
-          <p className="mt-3 text-muted-foreground">Your competitors are still building bids the old way.</p>
-          <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Button size="lg" className="rounded-full px-8 font-semibold" asChild>
-              <Link href="/subscribe?type=contractor">Start Free Trial</Link>
-            </Button>
-            <Button size="lg" variant="outline" className="rounded-full px-8" onClick={() => setShowLoginModal(true)}>
-              Contractor Login
-            </Button>
-          </div>
-          <div className="mt-5 flex justify-center">
-            <DemoCallout text="See an invoice generated in under 2 minutes." />
-          </div>
-        </motion.div>
-      </section>
-
       {/* ── PRICING ── */}
       <section className="bg-card px-4 py-24 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
@@ -769,6 +726,45 @@ export default function ContractorsPage() {
                   opportunities vary based on service area, category, and demand.
                 </p>
               </div>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── DEMO CALLOUT ── */}
+      <div className="relative overflow-hidden px-4 py-14 text-center sm:px-6 lg:px-8">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: "radial-gradient(ellipse 80% 60% at 50% 100%, rgba(43,127,232,0.1) 0%, transparent 70%)" }}
+          aria-hidden
+        />
+        <p className="text-sm font-semibold uppercase tracking-widest text-primary">Live Demo</p>
+        <h3 className="mt-2 text-balance text-2xl font-bold text-foreground sm:text-3xl">
+          Not ready to sign up? See it work first.
+        </h3>
+        <p className="mx-auto mt-2 max-w-sm text-base text-muted-foreground">
+          Text us a job and we&apos;ll build a real bid live — no account needed.
+        </p>
+        <div className="mt-6 flex justify-center">
+          <DemoCallout text="Text Us for a Live Demo" variant="primary" />
+        </div>
+      </div>
+
+      {/* ── ROI CALCULATOR ── */}
+      <section className="bg-card px-4 py-24 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl">
+          <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
+            <motion.div variants={fadeUp} className="mb-12 text-center">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">ROI</span>
+              <h2 className="mt-3 text-3xl font-bold text-foreground sm:text-4xl">
+                {"What Is One Lost Job Worth?"}
+              </h2>
+              <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
+                {"HomeBids doesn't cost you $99 a month. It saves you far more than that."}
+              </p>
+            </motion.div>
+            <motion.div variants={fadeUp}>
+              <ROICalculator />
             </motion.div>
           </motion.div>
         </div>
