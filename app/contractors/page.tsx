@@ -780,6 +780,11 @@ export default function ContractorsPage() {
         </div>
       </section>
 
+      {/* ── DEMO CALLOUT ── */}
+      <div className="flex justify-center py-6">
+        <DemoCallout text="Not ready to sign up? Text us to see a live demo first." />
+      </div>
+
       {/* ── FINAL CTA ── */}
       <section className="relative overflow-hidden px-4 py-28 sm:px-6 lg:px-8">
         <div

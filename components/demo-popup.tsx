@@ -171,9 +171,9 @@ export function DemoCallout({ text = "Curious how it works? Text us for a live d
     <a
       href={SMS_HREF}
       onClick={handleClick}
-      className="group inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+      className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-border bg-background px-6 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <MessageSquare className="h-4 w-4 shrink-0 text-primary/60 transition-colors group-hover:text-primary" />
+      <MessageSquare className="h-4 w-4 shrink-0 text-primary" />
       {text}
     </a>
   );
