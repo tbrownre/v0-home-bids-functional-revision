@@ -39,10 +39,7 @@ const fadeUp = {
 const stagger = {
   show: { transition: { staggerChildren: 0.1 } },
 };
-const fadeIn = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { duration: 0.5 } },
-};
+
 
 /* ─── Rotating words ─── */
 const rotatingWords = ["Win More Jobs", "Build Better Bids", "Send Bids Faster", "Save Hours Every Week"];
@@ -112,21 +109,6 @@ function ParticleField() {
   );
 }
 
-/* ─── Tool cards ─── */
-const tools = [
-  {
-    icon: FileText,
-    title: "AI Bid Builder",
-    description: "Turn rough notes, voice memos, and photos into a polished professional proposal — in minutes.",
-    glow: "#2B7FE8",
-  },
-  {
-    icon: Zap,
-    title: "Faster Win Rate",
-    description: "Studies show over 70% of homeowners hire the first contractor who sends a professional bid. HomeBids gets yours there first.",
-    glow: "#2B7FE8",
-  },
-];
 
 /* ─── Plan features ─── */
 const planFeatures = [
@@ -508,47 +490,49 @@ export default function ContractorsPage() {
         </div>
       </section>
 
-      {/* ── AI TOOL CARDS ── */}
+      {/* ── WHY IT WORKS ── */}
       <section className="px-4 py-24 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-5xl">
           <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
             <motion.div variants={fadeUp} className="mb-14 text-center">
-              <span className="text-xs font-semibold uppercase tracking-widest text-primary">Your Toolkit</span>
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">Why It Works</span>
               <h2 className="mt-3 text-3xl font-bold text-foreground sm:text-4xl">
-                AI-Powered Superpowers for Contractors
+                Built Around How Contractors Actually Win Jobs
               </h2>
             </motion.div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              {tools.map((tool, i) => (
+            <div className="grid gap-6 md:grid-cols-3">
+              {[
+                {
+                  icon: FileText,
+                  title: "Text, Don't Type",
+                  body: "Send rough notes, a photo, or a voice memo. The AI asks the right follow-up questions and organizes everything into a scope of work.",
+                },
+                {
+                  icon: Zap,
+                  title: "First Bid Wins",
+                  body: "Over 70% of homeowners hire the first contractor who sends a professional proposal. HomeBids gets yours there before the competition.",
+                },
+                {
+                  icon: ChevronRight,
+                  title: "You Stay in Control",
+                  body: "Review and edit before anything goes out. Approve with one tap, share a link, or download the PDF — your choice, every time.",
+                },
+              ].map((item, i) => (
                 <motion.div
                   key={i}
                   variants={fadeUp}
-                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                  className="group relative rounded-2xl border border-border p-7 transition-shadow hover:shadow-xl"
+                  className="rounded-2xl border border-border p-7"
                   style={{ background: "rgba(255,255,255,0.7)", backdropFilter: "blur(12px)" }}
                 >
-                  <motion.div
-                    className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                    style={{ background: "radial-gradient(circle at 50% 0%, rgba(43,127,232,0.08) 0%, transparent 70%)" }}
-                  />
-                  <div className="relative flex items-start gap-5">
-                    <motion.div
-                      whileHover={{ scale: 1.1, rotate: 5 }}
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/8"
-                      style={{ background: "rgba(43,127,232,0.08)" }}
-                    >
-                      <tool.icon className="h-5 w-5 text-primary" />
-                    </motion.div>
-                    <div>
-                      <h3 className="font-bold text-foreground">{tool.title}</h3>
-                      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{tool.description}</p>
-                    </div>
+                  <div
+                    className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl"
+                    style={{ background: "rgba(43,127,232,0.08)" }}
+                  >
+                    <item.icon className="h-5 w-5 text-primary" />
                   </div>
-                  <div className="relative mt-5 flex items-center gap-1 text-xs font-semibold text-primary opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                    <span>Included in your plan</span>
-                    <ChevronRight className="h-3 w-3" />
-                  </div>
+                  <h3 className="font-bold text-foreground">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
                 </motion.div>
               ))}
             </div>
