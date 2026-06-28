@@ -481,7 +481,7 @@ export async function getContractorBids() {
   return { bids: data ?? [] };
 }
 
-// ── Messages ─────────────────────────────────────────────────────────────���───
+// ── Messages ──────────────────────────���──────────────────────────────────���───
 
 export async function sendMessage(formData: {
   job_id: string;
@@ -544,4 +544,174 @@ export async function getMessages() {
   }));
 
   return { messages: enriched };
+}
+
+// ── Extended bid actions ──────────────────────────────────────────────────────
+
+export type BidStatus =
+  | "draft"
+  | "ready_to_send"
+  | "sent"
+  | "question_asked"
+  | "approved"
+  | "declined"
+  | "completed";
+
+/** Load a single bid with contractor profile and job details for the proposal page. */
+export async function getBidById(bidId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("bids")
+    .select("*, jobs(id, title, description, category, location, urgency, budget_min, budget_max, homeowner_id), profiles(id, full_name, avatar_url)")
+    .eq("id", bidId)
+    .single();
+  if (error) return { bid: null, error: error.message };
+  return { bid: data, error: null };
+}
+
+/** Update bid status. Used on the proposal page for approve/decline/question flows. */
+export async function updateBidStatus(bidId: string, status: BidStatus) {
+  // TODO: verify the caller is the homeowner linked to this bid's job before updating
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("bids")
+    .update({ status })
+    .eq("id", bidId);
+  if (error) return { error: error.message };
+  revalidatePath(`/proposal/${bidId}`);
+  return { success: true };
+}
+
+/** Persist a homeowner question on a bid and notify the contractor. */
+export async function saveHomeownerQuestion(bidId: string, question: string) {
+  // TODO: persist to a bid_questions or homeowner_notes column when table is ready
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+  await fireWebhook("bid.question_asked", { bid_id: bidId, homeowner_id: user.id, question });
+  return { success: true };
+}
+
+/** Load all bids for a job. */
+export async function getBidsByJobId(jobId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("bids")
+    .select("*, profiles(id, full_name)")
+    .eq("job_id", jobId)
+    .order("created_at", { ascending: false });
+  if (error) return { bids: [], error: error.message };
+  return { bids: data ?? [], error: null };
+}
+
+// ── Job status / outreach ─────────────────────────────────────────────────────
+
+/** Full job status for the homeowner status page including outreach + bid counts. */
+export async function getJobStatus(jobId: string) {
+  const supabase = await createClient();
+  const { data: job, error } = await supabase
+    .from("jobs")
+    .select("*")
+    .eq("id", jobId)
+    .single();
+  if (error || !job) return { jobStatus: null, error: error?.message ?? "Not found" };
+
+  const { count: bidCount } = await supabase
+    .from("bids")
+    .select("id", { count: "exact", head: true })
+    .eq("job_id", jobId);
+
+  return {
+    jobStatus: {
+      job,
+      contractorsContacted: 0,   // TODO: load from contractor_invites table
+      contractorsInterested: 0,  // TODO: load from contractor_replies table
+      bidsReceived: bidCount ?? 0,
+      outreachStatus: "pending" as const,  // TODO: load from outreach_runs table
+    },
+    error: null,
+  };
+}
+
+/** Load outreach run for a job (placeholder until outreach_runs table exists). */
+export async function getOutreachRunByJobId(_jobId: string) {
+  // TODO: query outreach_runs table
+  return { outreachRun: null, error: null };
+}
+
+/** Load contractor invites for a job (placeholder until contractor_invites table exists). */
+export async function getContractorInvitesByJobId(_jobId: string) {
+  // TODO: query contractor_invites table
+  return { invites: [], error: null };
+}
+
+/** Load contractor replies for a job (placeholder until contractor_replies table exists). */
+export async function getContractorRepliesByJobId(_jobId: string) {
+  // TODO: query contractor_replies table
+  return { replies: [], error: null };
+}
+
+// ── Contractor opportunity ────────────────────────────────────────────────────
+
+/** Load a job opportunity for the contractor bridge page — alias of getJobById. */
+export async function getJobOpportunity(jobId: string) {
+  return getJobById(jobId);
+}
+
+/** Record contractor interest in a job; fires webhook for n8n to pick up. */
+export async function createContractorInterest(jobId: string, contractorId?: string) {
+  // TODO: upsert into contractor_interests table once it exists
+  await fireWebhook("contractor.interested", {
+    job_id: jobId,
+    contractor_id: contractorId ?? "anonymous",
+  });
+  return { success: true };
+}
+
+/** Create a bid draft from a job for the Bid Builder preload flow. */
+export async function createBidFromJob(jobId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    // Unauthenticated — allow sample/demo bid, prompt signup before saving
+    return { bidId: null, requiresAuth: true };
+  }
+  // TODO: insert a bid row with status="draft" and return new bidId
+  return { bidId: null, requiresAuth: false };
+}
+
+// ── Contractor profile ────────────────────────────────────────────────────────
+
+/** Load the contractor profile for the currently authenticated user. */
+export async function getContractorProfile() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { profile: null, error: "Not authenticated" };
+  const { data, error } = await supabase
+    .from("contractor_profiles")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (error) return { profile: null, error: error.message };
+  return { profile: data, error: null };
+}
+
+// ── Admin outreach ────────────────────────────────────────────────────────────
+
+/** Load all recent jobs for the admin outreach view. */
+export async function getAdminJobs() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("*, bids(count)")
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) return { jobs: [], error: error.message };
+  return { jobs: data ?? [], error: null };
+}
+
+/** Load outreach runs for admin view (placeholder until outreach_runs table exists). */
+export async function getAdminOutreachRuns() {
+  // TODO: query outreach_runs joined with contractor_invites and contractor_replies
+  return { runs: [], error: null };
 }
