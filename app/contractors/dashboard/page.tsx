@@ -456,13 +456,38 @@ export default function ContractorDashboard() {
 
   // ── HOME tab ───────────────────────────────────────────────────────────────
 
+  // ── Bid status config (full set) ────────────────────────────────────────────
+  const BID_STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
+    draft:          { label: "Draft",           cls: "bg-muted text-muted-foreground"         },
+    ready_to_send:  { label: "Ready to Send",   cls: "bg-blue-50 text-blue-700"               },
+    sent:           { label: "Sent",            cls: "bg-amber-50 text-amber-700"             },
+    pending:        { label: "Awaiting Review", cls: "bg-amber-50 text-amber-700"             },
+    question_asked: { label: "Question Asked",  cls: "bg-purple-50 text-purple-700"           },
+    approved:       { label: "Approved",        cls: "bg-green-50 text-green-700"             },
+    accepted:       { label: "Approved",        cls: "bg-green-50 text-green-700"             },
+    declined:       { label: "Declined",        cls: "bg-red-50 text-red-700"                 },
+    rejected:       { label: "Not Selected",    cls: "bg-muted text-muted-foreground"         },
+    in_progress:    { label: "In Progress",     cls: "bg-blue-50 text-blue-700"               },
+    completed:      { label: "Completed",       cls: "bg-green-50 text-green-700"             },
+  };
+
   const homeContent = (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Good morning, {contractorName}.</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          You have <span className="font-semibold text-foreground">{DEMO_HOMEBIDS_LEADS.length + DEMO_MY_LEADS.length}</span> active leads.
-        </p>
+      {/* Greeting + primary CTA */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Good morning, {contractorName}.</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            You have <span className="font-semibold text-foreground">{DEMO_HOMEBIDS_LEADS.length + DEMO_MY_LEADS.length}</span> active leads.
+          </p>
+        </div>
+        <Button
+          className="shrink-0 gap-2 rounded-full font-semibold"
+          onClick={() => { setActiveTool("bid"); handleTabChange("ai"); }}
+        >
+          <Sparkles className="h-4 w-4" />
+          Build a New Bid
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -522,6 +547,82 @@ export default function ContractorDashboard() {
             <span className="flex items-center gap-2"><Zap className="h-4 w-4" />Open AI Tools</span>
             <ChevronRight className="h-4 w-4" />
           </button>
+        </div>
+      </div>
+
+      {/* My Bids section */}
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">My Bids</h2>
+          <Button size="sm" variant="ghost" className="h-7 gap-1 rounded-full px-3 text-xs" asChild>
+            <a href="/contractors/bids">View all <ChevronRight className="h-3 w-3" /></a>
+          </Button>
+        </div>
+        <div className="space-y-2">
+          {/* TODO: replace with live bids from getContractorBids() once Supabase is connected */}
+          {[
+            { id: "cbid-1", title: "HVAC System Replacement", location: "Austin, TX", amount: 7850, status: "in_progress",    updated: "2 days ago" },
+            { id: "cbid-2", title: "Water Heater Replacement", location: "Round Rock, TX", amount: 2400, status: "pending",      updated: "5 days ago" },
+            { id: "cbid-3", title: "Deck Replacement",         location: "Cedar Park, TX", amount: 12400, status: "question_asked", updated: "1 day ago" },
+          ].map((bid) => {
+            const sc = BID_STATUS_CONFIG[bid.status] ?? BID_STATUS_CONFIG.pending;
+            return (
+              <div key={bid.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">{bid.title}</p>
+                  <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3 shrink-0" />{bid.location}
+                    <span className="mx-1">·</span>{bid.updated}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="text-sm font-semibold text-foreground">
+                    ${bid.amount.toLocaleString()}
+                  </span>
+                  <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${sc.cls}`}>
+                    {sc.label}
+                  </span>
+                </div>
+                <Button size="sm" variant="ghost" className="h-7 w-7 shrink-0 rounded-full p-0" asChild>
+                  <a href={`/proposal/${bid.id}`}><ExternalLink className="h-3.5 w-3.5" /></a>
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Homeowner Opportunities (secondary) */}
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Homeowner Opportunities</h2>
+          <Button size="sm" variant="ghost" className="h-7 gap-1 rounded-full px-3 text-xs" asChild>
+            <a href="/contractors/jobs">Browse <ChevronRight className="h-3 w-3" /></a>
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground mb-3">
+          {/* TODO: load from getOpenJobs() when live */}
+          Jobs submitted by homeowners in your service area. Build a bid to respond.
+        </p>
+        <div className="space-y-2">
+          {DEMO_HOMEBIDS_LEADS.slice(0, 2).map((lead) => (
+            <div key={lead.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-foreground">{lead.title}</p>
+                <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                  <MapPin className="h-3 w-3 shrink-0" />{lead.location}
+                </p>
+              </div>
+              <span className="shrink-0 text-sm font-medium text-muted-foreground">{lead.estimatedValue}</span>
+              <Button
+                size="sm"
+                className="h-7 shrink-0 gap-1 rounded-full px-3 text-xs"
+                onClick={() => startBidFromHomeBidsLead(lead)}
+              >
+                <Sparkles className="h-3 w-3" /> Build Bid
+              </Button>
+            </div>
+          ))}
         </div>
       </div>
     </div>

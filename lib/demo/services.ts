@@ -204,7 +204,7 @@ export async function getOpenJobs() {
   };
 }
 
-// ── Contractor dashboard ─────────────────────────────────────────────────────
+// ── Contractor dashboard ────────────────────────────��────────────────────────
 
 /** Used by app/contractors/dashboard/page.tsx. */
 export async function getContractorBids() {
@@ -245,4 +245,148 @@ export async function getContractorProfile() {
 /** Used by the inbox (messages). */
 export async function getMessages() {
   return { messages: [], error: null };
+}
+
+// ── Extended bid/proposal functions ──────────────────────────────────────────
+
+/** Demo bid by ID — constructs a rich bid record from demoContractorBids. */
+export async function getBidById(bidId: string) {
+  const bid = demoContractorBids.find((b) => b.id === bidId);
+  if (!bid) {
+    // Fallback to first bid for demo purposes
+    const fallback = demoContractorBids[0];
+    if (!fallback) return { bid: null, error: "Bid not found" };
+    return { bid: buildDemoBid(fallback), error: null };
+  }
+  return { bid: buildDemoBid(bid), error: null };
+}
+
+function buildDemoBid(b: (typeof demoContractorBids)[0]) {
+  return {
+    id: b.id,
+    job_id: b.job_id,
+    contractor_id: "demo-contractor",
+    amount: b.bidAmount,
+    message: b.message,
+    timeline: b.timeline,
+    status: b.status === "in_progress" ? "sent" : b.status === "completed" ? "approved" : "sent",
+    created_at: b.submittedAt.toISOString(),
+    // Nested job
+    jobs: {
+      id: b.job_id,
+      title: b.jobTitle,
+      description: b.jobDescription,
+      category: "Home Improvement",
+      location: b.homeownerLocation,
+      urgency: b.jobTimeline,
+      budget_min: null,
+      budget_max: null,
+      homeowner_id: "demo-homeowner",
+    },
+    // Nested profile
+    profiles: {
+      id: "demo-contractor",
+      full_name: demoContractorProfile.business_name,
+      avatar_url: null,
+    },
+    // Rich bid builder fields (populated when bid came from AI builder)
+    scope_of_work: b.message,
+    line_items: null,   // TODO: parse from bid_builder output when available
+    assumptions: null,
+    exclusions: null,
+    payment_terms: "50% deposit, 50% on completion",
+    next_steps: "Please review and approve to schedule your project.",
+  };
+}
+
+/** Demo bid status update — no-op in demo mode. */
+export async function updateBidStatus(bidId: string, _status: string) {
+  return { success: true };
+}
+
+/** Demo save homeowner question — no-op in demo mode. */
+export async function saveHomeownerQuestion(_bidId: string, _question: string) {
+  return { success: true };
+}
+
+// ── Job status ────────────────────────────────────────────────────────────────
+
+/** Demo job status for the homeowner status page. */
+export async function getJobStatus(jobId: string) {
+  const job = demoJobs.find((j) => j.id === jobId) ?? demoJobs[0];
+  if (!job) return { jobStatus: null, error: "Job not found" };
+  return {
+    jobStatus: {
+      job: {
+        id: job.id,
+        title: job.title,
+        description: job.description,
+        category: job.category,
+        location: job.location,
+        status: job.status,
+        urgency: job.urgency ?? "medium",
+        budget_min: job.budget_min,
+        budget_max: job.budget_max,
+        created_at: job.created_at,
+      },
+      contractorsContacted: 12,
+      contractorsInterested: 4,
+      bidsReceived: job.bids[0]?.count ?? 2,
+      outreachStatus: "active" as const,
+    },
+    error: null,
+  };
+}
+
+// ── Contractor opportunity ────────────────────────────────────────────────────
+
+/** Demo contractor interest — no-op. */
+export async function createContractorInterest(_jobId: string, _contractorId?: string) {
+  return { success: true };
+}
+
+/** Demo createBidFromJob — returns a synthetic draft ID. */
+export async function createBidFromJob(jobId: string) {
+  return { bidId: `demo-draft-${jobId}`, requiresAuth: false };
+}
+
+// ── Admin outreach ────────────────────────────────────────────────────────────
+
+/** Demo admin jobs. */
+export async function getAdminJobs() {
+  return {
+    jobs: demoJobs.map((j) => ({
+      id: j.id,
+      title: j.title,
+      category: j.category,
+      location: j.location,
+      status: j.status,
+      created_at: j.created_at,
+      bids: [{ count: j.bids[0]?.count ?? 0 }],
+    })),
+    error: null,
+  };
+}
+
+/** Demo admin outreach runs — static mock data labeled as demo. */
+export async function getAdminOutreachRuns() {
+  // DEMO DATA — replace with real Supabase query when outreach_runs table exists
+  return {
+    runs: demoJobs.map((j, i) => ({
+      id: `run-${j.id}`,
+      job_id: j.id,
+      job_title: j.title,
+      status: i === 0 ? "active" : "completed",
+      contractors_selected: 8 + i * 3,
+      invites_queued: 8 + i * 3,
+      invites_sent: 6 + i * 2,
+      invites_failed: i,
+      replies_received: 3 + i,
+      interested_count: 2 + i,
+      bids_started: 1 + i,
+      bids_submitted: j.bids[0]?.count ?? 0,
+      created_at: j.created_at,
+    })),
+    error: null,
+  };
 }
