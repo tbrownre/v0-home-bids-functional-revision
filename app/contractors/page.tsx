@@ -299,9 +299,9 @@ export default function ContractorsPage() {
               variants={fadeUp}
               className="mt-6 text-balance text-4xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl"
             >
-              The AI Advantage Every
+              The Fastest Way for Contractors
               <br />
-              Contractor Wishes They Had
+              to Create Winning Bids
             </motion.h1>
 
             <motion.div variants={fadeUp} className="mt-4 text-3xl font-bold sm:text-4xl">
