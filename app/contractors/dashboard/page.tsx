@@ -43,7 +43,6 @@ import {
   ExternalLink,
   DollarSign,
   TrendingUp,
-  Shield,
 } from "lucide-react";
 import { BidBuilderChat, type BidLeadType, type BidChatLeadContext } from "@/components/bid-builder-chat";
 import { getMockUser, mockSignOut, USE_MOCK_DATA } from "@/lib/mock-auth";
@@ -178,7 +177,7 @@ const DEMO_MY_LEADS: MyLead[] = [
 
 // ── AI helper functions ────────────────────────────────────────────────────────
 
-function getBidDefenderResponse(projectType: string, bidAmount: string, objection: string) {
+function _getBidDefenderResponse(projectType: string, bidAmount: string, objection: string) {
   const refLink = `https://homebids.com/compare?ref=contractor-demo&project=${encodeURIComponent(projectType)}`;
   const objectionLower = objection.toLowerCase();
   const isPrice = objectionLower.includes("expens") || objectionLower.includes("price") || objectionLower.includes("cost") || objectionLower.includes("cheap");
@@ -203,7 +202,7 @@ function getBidDefenderResponse(projectType: string, bidAmount: string, objectio
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Tab = "home" | "leads" | "ai" | "account";
-type AiTool = "bid" | "defender" | null;
+type AiTool = "bid" | null;
 
 // ── AI assistant suggestions ───────────────────────────────────────────────────
 
@@ -350,23 +349,6 @@ export default function ContractorDashboard() {
     return lead.directMessagingUnlocked || unlockedLeadIds.has(lead.id);
   }
 
-  // ── Bid Defender state ─────────────────────────────────────────────────────
-
-  const [defProject, setDefProject] = useState("");
-  const [defBid, setDefBid] = useState("");
-  const [defObjection, setDefObjection] = useState("");
-  const [defResult, setDefResult] = useState<ReturnType<typeof getBidDefenderResponse> | null>(null);
-  const [defLoading, setDefLoading] = useState(false);
-  const [defCopied, setDefCopied] = useState(false);
-  const [defLinkCopied, setDefLinkCopied] = useState(false);
-
-  function handleBidDefender() {
-    if (!defProject.trim() || !defBid.trim()) return;
-    setDefLoading(true);
-    setDefResult(null);
-    setTimeout(() => { setDefResult(getBidDefenderResponse(defProject, defBid, defObjection)); setDefLoading(false); }, 1000);
-  }
-
   function openSms(phone: string | undefined, body?: string) {
     // phone is required for direct-contact leads; body-only SMS uses an empty recipient
     const target = phone ?? "";
@@ -389,7 +371,7 @@ export default function ContractorDashboard() {
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: "home",    label: "Home",     icon: LayoutDashboard },
     { id: "leads",   label: "Leads",    icon: Users },
-    { id: "ai",      label: "AI Tools", icon: Sparkles },
+    { id: "ai",      label: "Bid Builder", icon: Sparkles },
     { id: "account", label: "Account",  icon: Wrench },
   ];
 
@@ -519,7 +501,7 @@ export default function ContractorDashboard() {
               { icon: MessageCircle, label: "Build a professional bid", sub: "Kitchen Cabinet Repaint", action: () => startBidFromHomeBidsLead(DEMO_HOMEBIDS_LEADS[0]) },
               { icon: Eye, label: "Homeowner reviewing bid", sub: "Backyard Turf Install", action: () => handleTabChange("leads") },
               { icon: Unlock, label: "Approval unlocked", sub: "Bathroom Vanity Replacement", action: () => handleTabChange("leads") },
-              { icon: Shield, label: "Defend a lost bid", sub: "Use Bid Defender to recover leads", action: () => { handleTabChange("ai"); setActiveTool("defender"); } },
+              { icon: Sparkles, label: "Start a new bid by text", sub: "Text job details to the AI Bid Builder", action: () => { setActiveTool("bid"); handleTabChange("ai"); } },
             ].map(({ icon: Icon, label, sub, action }) => (
               <button
                 key={label}
@@ -544,7 +526,7 @@ export default function ContractorDashboard() {
             onClick={() => handleTabChange("ai")}
             className="mt-4 flex w-full items-center justify-between rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
           >
-            <span className="flex items-center gap-2"><Zap className="h-4 w-4" />Open AI Tools</span>
+            <span className="flex items-center gap-2"><Zap className="h-4 w-4" />Open Bid Builder</span>
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -766,98 +748,7 @@ export default function ContractorDashboard() {
   );
 
 
-  // Bid Defender pane
-  const bidDefenderPane = (
-    <div className="space-y-5 px-4 py-5 lg:px-6">
-      {/* Header */}
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100">
-          <Shield className="h-5 w-5 text-emerald-700" />
-        </div>
-        <div>
-          <h2 className="font-bold text-foreground">Bid Defender</h2>
-          <p className="text-xs text-muted-foreground">Turn lost bids into affiliate revenue. Even when you lose, you earn.</p>
-        </div>
-      </div>
-
-      {/* Affiliate stats */}
-      <div className="grid grid-cols-3 gap-2">
-        {[
-          { label: "Leads Referred", value: "7", icon: Users },
-          { label: "Potential Earn", value: "$70/ea", icon: DollarSign },
-          { label: "Revenue Earned", value: "$490", icon: TrendingUp },
-        ].map(({ label, value, icon: Icon }) => (
-          <div key={label} className="rounded-xl border border-border bg-card p-3 text-center">
-            <Icon className="mx-auto mb-1 h-4 w-4 text-muted-foreground" />
-            <p className="text-base font-bold text-foreground">{value}</p>
-            <p className="text-[10px] text-muted-foreground">{label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Explanation callout */}
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-        <p className="text-xs font-semibold text-emerald-800 mb-1">How it works</p>
-        <p className="text-sm text-emerald-900">
-          When a homeowner chooses another contractor, send them your HomeBids referral link.
-          If they hire someone through HomeBids, you earn <span className="font-semibold">$45–$120</span> in affiliate revenue — automatically, even though you lost the job.
-        </p>
-      </div>
-
-      {/* Form */}
-      <div className="space-y-3 rounded-xl border border-border bg-card p-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="def-project" className="text-xs font-medium">Project type</Label>
-          <Input id="def-project" placeholder="e.g. Kitchen cabinet repaint" value={defProject} onChange={(e) => setDefProject(e.target.value)} className="text-sm" />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="def-bid" className="text-xs font-medium">Your bid amount</Label>
-          <Input id="def-bid" placeholder="e.g. $1,450" value={defBid} onChange={(e) => setDefBid(e.target.value)} className="text-sm" />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="def-objection" className="text-xs font-medium">Homeowner&apos;s objection</Label>
-          <Input id="def-objection" placeholder={`e.g. "It's too expensive" or "I want more bids"`} value={defObjection} onChange={(e) => setDefObjection(e.target.value)} className="text-sm" />
-        </div>
-        <Button className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleBidDefender} disabled={!defProject.trim() || !defBid.trim() || defLoading}>
-          {defLoading
-            ? <span className="flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />Generating...</span>
-            : <><Shield className="h-4 w-4" /> Generate Defender Response</>}
-        </Button>
-      </div>
-
-      {defResult && (
-        <div className="space-y-3">
-          <div className="rounded-xl border border-border bg-muted/40 p-4">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Suggested Response</p>
-            <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{defResult.response}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { copyToClipboard(defResult.response); setDefCopied(true); setTimeout(() => setDefCopied(false), 2000); }}>
-                <Copy className="h-3 w-3" />{defCopied ? "Copied!" : "Copy"}
-              </Button>
-              <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => openSms(undefined, defResult.response)}>
-                <Send className="h-3 w-3" /> Send via SMS
-              </Button>
-            </div>
-          </div>
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Your Active Referral Link</p>
-            <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-2">
-              <p className="flex-1 truncate text-xs text-foreground font-mono">{defResult.refLink}</p>
-              <button type="button" onClick={() => { copyToClipboard(defResult.refLink); setDefLinkCopied(true); setTimeout(() => setDefLinkCopied(false), 2000); }} className="shrink-0 text-emerald-700 hover:text-emerald-900">
-                {defLinkCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              </button>
-              <a href={defResult.refLink} target="_blank" rel="noopener noreferrer" className="shrink-0 text-emerald-700 hover:text-emerald-900"><ExternalLink className="h-4 w-4" /></a>
-            </div>
-            <p className="text-xs text-emerald-800">
-              Share this link with the homeowner. If they hire through HomeBids, you automatically earn <span className="font-semibold">{defResult.earnings.potentialPerReferral}</span>.
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  // AI Tools content — picker or active tool
+  // Bid Builder content — picker or active tool
   const aiContent = (() => {
     // Bid Builder is full-screen when active — chat-first experience
     if (activeTool === "bid") {
@@ -870,35 +761,20 @@ export default function ContractorDashboard() {
             companyName={companyName}
             onClose={closeBidBuilder}
             onHomeownerApproved={handleHomeownerApproved}
-            onOpenDefender={() => setActiveTool("defender")}
           />
         </div>
       );
     }
 
-    // Bid Defender takes up the content area
-    if (activeTool === "defender") {
-      return (
-        <div className="-mx-4 lg:-mx-8">
-          <div className="border-b border-border px-4 py-3 lg:px-6">
-            <button type="button" onClick={() => setActiveTool(null)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="h-4 w-4" /> Back to AI Tools
-            </button>
-          </div>
-          {bidDefenderPane}
-        </div>
-      );
-    }
-
-    // Tool picker — two large featured cards
+    // Tool picker — Bid Builder is the only tool at launch
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-xl font-bold text-foreground">AI Tools</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Built to help you win more jobs and recover lost opportunities.</p>
+          <h1 className="text-xl font-bold text-foreground">Bid Builder</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Text job details, photos, or voice notes. The AI organizes the scope and generates a clean proposal.</p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4">
           {/* Bid Builder card */}
           <button
             type="button"
@@ -911,9 +787,9 @@ export default function ContractorDashboard() {
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
             </div>
-            <h3 className="mt-4 text-lg font-bold text-foreground">Bid Builder</h3>
+            <h3 className="mt-4 text-lg font-bold text-foreground">AI Bid Builder</h3>
             <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-              Text rough job notes and HomeBids AI writes the whole bid for you — scope, pricing, and wording. Approve it and we generate the PDF.
+              Text rough job notes and HomeBids AI asks follow-up questions, organizes the scope, and generates a clean proposal you can review, edit, and send.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {["Text-to-Bid", "AI Drafting", "Live PDF", "One-Tap Approve"].map((tag) => (
@@ -923,34 +799,6 @@ export default function ContractorDashboard() {
             <div className="mt-5">
               <span className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors group-hover:bg-primary/90">
                 <MessageCircle className="h-4 w-4" /> Start Bid by Text
-              </span>
-            </div>
-          </button>
-
-          {/* Bid Defender card */}
-          <button
-            type="button"
-            onClick={() => setActiveTool("defender")}
-            className="group flex flex-col rounded-2xl border-2 border-border bg-card p-6 text-left transition-all hover:border-emerald-400/60 hover:shadow-md hover:-translate-y-0.5"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 transition-colors group-hover:bg-emerald-200">
-                <Shield className="h-6 w-6 text-emerald-700" />
-              </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-            </div>
-            <h3 className="mt-4 text-lg font-bold text-foreground">Bid Defender</h3>
-            <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-              Turn lost bids into revenue. Handle objections, share your referral link, and earn even when the homeowner goes with someone else.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {["Objection Handling", "Referral Link", "Affiliate Revenue", "Loss Recovery"].map((tag) => (
-                <span key={tag} className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-medium text-emerald-700">{tag}</span>
-              ))}
-            </div>
-            <div className="mt-5">
-              <span className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors group-hover:bg-emerald-700">
-                <Shield className="h-4 w-4" /> Defend a Bid
               </span>
             </div>
           </button>
@@ -1019,7 +867,6 @@ export default function ContractorDashboard() {
               "HomeBids AI lead matching",
               "Direct homeowner contact after approval",
               "Bid Builder with live PDF preview",
-              "Bid Defender with affiliate revenue",
             ].map((item) => (
               <li key={item} className="flex items-start gap-2 text-sm text-foreground">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />

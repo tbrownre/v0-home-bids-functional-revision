@@ -24,7 +24,7 @@ import {
   MessageCircle,
   Lock,
   Unlock,
-  Shield,
+
   Home,
 } from "lucide-react";
 
@@ -74,8 +74,6 @@ interface Props {
   onClose: () => void;
   // Called for HomeBids leads when the homeowner approves the bid in the demo flow
   onHomeownerApproved?: (leadId: string) => void;
-  // Switch the dashboard to the Bid Defender tool (lead recovery)
-  onOpenDefender?: () => void;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -250,7 +248,6 @@ export function BidBuilderChat({
   companyName,
   onClose,
   onHomeownerApproved,
-  onOpenDefender,
 }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -512,7 +509,7 @@ export function BidBuilderChat({
       aiRespond(() => {
         setPhase("declined");
         pushAi(
-          "The homeowner declined this bid. Don't lose the value of this lead — use Bid Defender to send your HomeBids referral link and still earn from it.",
+          "The homeowner declined this bid. You can start a new bid anytime by texting job details.",
           "system",
         );
       }, 1000);
@@ -715,8 +712,8 @@ export function BidBuilderChat({
       )}
 
       {phase === "declined" && (
-        <Button size="sm" className="w-full gap-1.5 bg-emerald-600 text-xs text-white hover:bg-emerald-700" onClick={() => (onOpenDefender ?? onClose)()}>
-          <Shield className="h-3.5 w-3.5" /> Open Bid Defender
+        <Button size="sm" variant="outline" className="w-full gap-1.5 text-xs" onClick={onClose}>
+          Start a New Bid
         </Button>
       )}
     </div>

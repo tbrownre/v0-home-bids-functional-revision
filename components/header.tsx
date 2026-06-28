@@ -327,10 +327,10 @@ export function Header({
                         className={`${menuItemBase} ${isActive ? menuItemActive : ""}`}
                         onClick={closeMenu}
                       >
-                        {item.label === "Home"     && <LayoutDashboard className="h-4 w-4 shrink-0" />}
-                        {item.label === "Leads"    && <Users           className="h-4 w-4 shrink-0" />}
-                        {item.label === "AI Tools" && <Sparkles        className="h-4 w-4 shrink-0" />}
-                        {item.label === "Account"  && <Wrench          className="h-4 w-4 shrink-0" />}
+                        {item.label === "Home"        && <LayoutDashboard className="h-4 w-4 shrink-0" />}
+                        {item.label === "Leads"       && <Users           className="h-4 w-4 shrink-0" />}
+                        {item.label === "Bid Builder" && <Sparkles        className="h-4 w-4 shrink-0" />}
+                        {item.label === "Account"     && <Wrench          className="h-4 w-4 shrink-0" />}
                         {item.label}
                       </Link>
                     );

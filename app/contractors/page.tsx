@@ -23,7 +23,6 @@ import {
   ArrowRight,
   CheckCircle2,
   Zap,
-  Shield,
   FileText,
   Building2,
   LogIn,
@@ -47,7 +46,7 @@ const fadeIn = {
 };
 
 /* ─── Rotating words ─── */
-const rotatingWords = ["Win More Jobs", "Build Better Bids", "Protect More Deals", "Save Hours Every Week"];
+const rotatingWords = ["Win More Jobs", "Build Better Bids", "Send Bids Faster", "Save Hours Every Week"];
 
 function RotatingWord() {
   const [index, setIndex] = useState(0);
@@ -123,20 +122,14 @@ const tools = [
     glow: "#2B7FE8",
   },
   {
-    icon: Shield,
-    title: "Bid Defender",
-    description: "Keep your bid top of mind while homeowners compare options. You stay visible, credible, and competitive.",
-    glow: "#2B7FE8",
-  },
-  {
     icon: TrendingUp,
-    title: "Price Check Assistant",
-    description: "Help homeowners confidently understand your pricing so objections never cost you the job.",
+    title: "Same-Day Estimates",
+    description: "Stop losing jobs to slow follow-up. Send a professional bid the same day you see the project.",
     glow: "#2B7FE8",
   },
   {
     icon: Zap,
-    title: "AI Growth Tools",
+    title: "Faster Win Rate",
     description: "Respond faster, follow up smarter, and run your business like a team of five — even when you're alone.",
     glow: "#2B7FE8",
   },
@@ -145,12 +138,10 @@ const tools = [
 /* ─── Plan features ─── */
 const planFeatures = [
   "Unlimited AI Bid Builder",
-  "Bid Defender",
-  "Price Check Assistant",
-  "AI Growth Tools",
   "SMS / iMessage Workflow",
   "Homeowner Bid Opportunities",
   "Contractor Profile",
+  "No bid fees — ever",
   "3-day free trial",
 ];
 
@@ -222,66 +213,7 @@ function ROICalculator() {
   );
 }
 
-/* ─── Bid Defender orbit visual ─── */
-function BidDefenderOrbit() {
-  const competitors = [
-    { label: "Competitor A", angle: 0 },
-    { label: "Competitor B", angle: 72 },
-    { label: "Competitor C", angle: 144 },
-    { label: "Competitor D", angle: 216 },
-  ];
-  const r = 110;
-  return (
-    <div className="relative mx-auto flex h-72 w-72 items-center justify-center">
-      {/* Orbit ring */}
-      <div className="absolute inset-0 rounded-full border border-primary/10" />
-      <motion.div
-        className="absolute inset-0 rounded-full border border-dashed border-primary/20"
-        animate={{ rotate: 360 }}
-        transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-      />
 
-      {/* Center — Your Bid */}
-      <div
-        className="relative z-10 flex h-24 w-24 flex-col items-center justify-center rounded-full border-2 border-primary text-center shadow-lg"
-        style={{ background: "rgba(43,127,232,0.12)", backdropFilter: "blur(8px)", boxShadow: "0 0 32px rgba(43,127,232,0.3)" }}
-      >
-        <Shield className="h-5 w-5 text-primary" />
-        <span className="mt-1 text-[10px] font-bold leading-tight text-primary">YOUR<br />BID</span>
-      </div>
-
-      {/* Orbiting competitors */}
-      {competitors.map((c, i) => {
-        const rad = (c.angle * Math.PI) / 180;
-        const x = Math.cos(rad) * r;
-        const y = Math.sin(rad) * r;
-        return (
-          <motion.div
-            key={i}
-            className="absolute flex h-14 w-14 items-center justify-center rounded-full border border-border text-center"
-            style={{
-              left: `calc(50% + ${x}px - 28px)`,
-              top: `calc(50% + ${y}px - 28px)`,
-              background: "rgba(255,255,255,0.05)",
-              backdropFilter: "blur(6px)",
-            }}
-            animate={{ scale: [1, 1.06, 1] }}
-            transition={{ duration: 3 + i * 0.5, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <span className="text-[9px] font-medium leading-tight text-muted-foreground">{c.label}</span>
-          </motion.div>
-        );
-      })}
-
-      {/* AI overlay pulse */}
-      <motion.div
-        className="absolute inset-0 rounded-full border border-primary/30"
-        animate={{ scale: [1, 1.12, 1], opacity: [0.4, 0, 0.4] }}
-        transition={{ duration: 3, repeat: Infinity, ease: "easeOut" }}
-      />
-    </div>
-  );
-}
 
 /* ─── Before / After comparison ─── */
 const beforeItems = [
@@ -387,28 +319,28 @@ export default function ContractorsPage() {
               variants={fadeUp}
               className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground"
             >
-              HomeBids helps contractors create professional bids, defend pricing, and win more work
-              using AI-powered tools built specifically for home service businesses.
+              Text us job details, photos, or voice notes. The AI Bid Builder asks follow-up questions,
+              organizes the scope, and generates a clean proposal you can review, edit, and send.
             </motion.p>
 
             <motion.div variants={fadeUp} className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-              <Button size="lg" className="h-13 gap-2 rounded-full px-8 text-base font-semibold shadow-lg" asChild>
-                <Link href="/subscribe?type=contractor">
-                  Start Free Trial
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-13 rounded-full border-border px-8 text-base"
-                onClick={() => setShowLoginModal(true)}
+              <a
+                href="sms:+18722964991?&body=Let%27s%20create%20a%20new%20bid"
+                className="inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-primary px-10 text-base font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 active:scale-[0.98]"
               >
-                Contractor Login
-              </Button>
+                <ArrowRight className="h-4 w-4" />
+                Text Us To Build A Bid
+              </a>
             </motion.div>
             <motion.div variants={fadeUp} className="mt-4 flex justify-center">
-              <DemoCallout text="Or text us to see a live demo first." />
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-9 rounded-full px-5 text-sm text-muted-foreground hover:text-foreground"
+                onClick={() => setShowLoginModal(true)}
+              >
+                Already a contractor? Sign in
+              </Button>
             </motion.div>
 
             <motion.div variants={fadeUp} className="mt-5 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
@@ -631,47 +563,6 @@ export default function ContractorsPage() {
         </div>
       </section>
 
-      {/* ── BID DEFENDER ── */}
-      <section className="relative overflow-hidden px-4 py-24 sm:px-6 lg:px-8">
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{ background: "radial-gradient(ellipse 70% 70% at 50% 50%, rgba(43,127,232,0.06) 0%, transparent 70%)" }}
-          aria-hidden
-        />
-        <div className="relative mx-auto max-w-5xl">
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            className="grid items-center gap-12 md:grid-cols-2"
-          >
-            <motion.div variants={fadeUp}>
-              <span className="text-xs font-semibold uppercase tracking-widest text-primary">Bid Defender</span>
-              <h2 className="mt-3 text-3xl font-bold text-foreground sm:text-4xl">
-                {"Don't Lose the Job Just Because They Want More Bids"}
-              </h2>
-              <p className="mt-4 text-muted-foreground">
-                When homeowners compare bids, most contractors disappear. Bid Defender keeps you
-                visible, credible, and top of mind — so you win even when you're not in the room.
-              </p>
-              <ul className="mt-6 space-y-3">
-                {["Stay visible while they compare", "Help homeowners evaluate fairly", "Never lose to a follow-up gap again"].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3 text-sm text-foreground">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-
-            <motion.div variants={fadeUp} className="flex justify-center">
-              <BidDefenderOrbit />
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
       {/* ── PRICING ── */}
       <section className="bg-card px-4 py-24 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
@@ -714,12 +605,18 @@ export default function ContractorsPage() {
                   ))}
                 </ul>
 
-                <Button size="lg" className="relative mt-8 w-full rounded-xl font-semibold" asChild>
-                  <Link href="/subscribe?type=contractor">
-                    Start Free Trial
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                <a
+                  href="sms:+18722964991?&body=Let%27s%20create%20a%20new%20bid"
+                  className="relative mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 active:scale-[0.98]"
+                >
+                  <ArrowRight className="h-4 w-4" />
+                  Start A Bid By Text
+                </a>
+                <div className="relative mt-3 text-center">
+                  <Link href="/subscribe?type=contractor" className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
+                    Prefer to use a form?
                   </Link>
-                </Button>
+                </div>
 
                 <p className="relative mt-4 text-center text-xs leading-relaxed text-muted-foreground">
                   HomeBids does not guarantee a specific number of leads or jobs. Homeowner
@@ -791,16 +688,17 @@ export default function ContractorsPage() {
             Building Bids Manually.
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">You don&apos;t have to.</p>
-          <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Button size="lg" className="h-14 gap-2 rounded-full px-10 text-lg font-bold shadow-xl" asChild>
-              <Link href="/subscribe?type=contractor">
-                Start Using HomeBids
-                <ArrowRight className="h-5 w-5" />
-              </Link>
-            </Button>
-          </div>
-          <div className="mt-5 flex justify-center">
-            <DemoCallout text="Watch HomeBids build a bid in real time." />
+          <div className="mt-10 flex flex-col items-center gap-4">
+            <a
+              href="sms:+18722964991?&body=Let%27s%20create%20a%20new%20bid"
+              className="inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-primary px-10 text-lg font-bold text-primary-foreground shadow-xl transition-colors hover:bg-primary/90 active:scale-[0.98]"
+            >
+              <ArrowRight className="h-5 w-5" />
+              Text Us To Build A Bid
+            </a>
+            <Link href="/subscribe?type=contractor" className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
+              Use web form instead
+            </Link>
           </div>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-5 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5"><DollarSign className="h-4 w-4 text-primary" />$99/month</span>
