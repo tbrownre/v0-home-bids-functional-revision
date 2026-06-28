@@ -211,16 +211,16 @@ function ROICalculator() {
 /* ─── Before / After comparison ─── */
 const beforeItems = [
   "Messy handwritten notes",
-  "Delayed estimates (days)",
+  "Bids sent days later (or never)",
   "Awkward pricing conversations",
-  "Losing bids to follow-up gaps",
+  "Losing jobs to faster competitors",
   "Manual, inconsistent proposals",
 ];
 const afterItems = [
   "Professional bids in minutes",
-  "Same-day estimates",
+  "Shareable bid link sent same day",
   "Confident pricing conversations",
-  "Stay top of mind automatically",
+  "First bid out wins more jobs",
   "Polished, consistent proposals",
 ];
 
@@ -357,7 +357,7 @@ export default function ContractorsPage() {
           >
             {[
               { value: 3, prefix: "", suffix: "min", label: "Average bid time" },
-              { value: 10, prefix: "", suffix: "x", label: "Faster estimates" },
+              { value: 10, prefix: "", suffix: "x", label: "Faster than manual bids" },
               { value: 99, prefix: "$", suffix: "", label: "Per month, all-in" },
             ].map((s, i) => (
               <div key={i} className="px-4 text-center">

@@ -175,7 +175,7 @@ const DEMO_MY_LEADS: MyLead[] = [
   { id: "ml-3", customerName: "Janet B.", projectTitle: "Bathroom Remodel Follow-Up", category: "Remodel", estimatedValue: "$12,000", status: "open", lastActivity: "Follow-up draft ready", aiStatus: "followup_ready" },
 ];
 
-// ── AI helper functions ────────────────────────────────────────────────────────
+// ── AI helper functions ───────────────────────────────────────────��────────────
 
 function _getBidDefenderResponse(projectType: string, bidAmount: string, objection: string) {
   const refLink = `https://homebids.com/compare?ref=contractor-demo&project=${encodeURIComponent(projectType)}`;
@@ -792,7 +792,7 @@ export default function ContractorDashboard() {
               Text rough job notes and HomeBids AI asks follow-up questions, organizes the scope, and generates a clean proposal you can review, edit, and send.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              {["Text-to-Bid", "AI Drafting", "Live PDF", "One-Tap Approve"].map((tag) => (
+              {["Text-to-Bid", "AI Drafting", "Shareable Bid Link", "PDF Included"].map((tag) => (
                 <span key={tag} className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-medium text-primary">{tag}</span>
               ))}
             </div>
@@ -866,7 +866,7 @@ export default function ContractorDashboard() {
               "No bid fees — ever",
               "HomeBids AI lead matching",
               "Direct homeowner contact after approval",
-              "Bid Builder with live PDF preview",
+              "Bid Builder — shareable link + PDF included",
             ].map((item) => (
               <li key={item} className="flex items-start gap-2 text-sm text-foreground">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />

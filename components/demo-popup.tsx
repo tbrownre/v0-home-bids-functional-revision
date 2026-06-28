@@ -9,10 +9,10 @@ const SESSION_KEY = "homebids_demo_popup_seen";
 const DELAY_MS = 7000;
 
 const bullets = [
-  "Upload photos, screenshots, or voice notes",
-  "AI organizes everything into a professional bid",
-  "PDF generated and ready to send in under 2 minutes",
-  "No signup required to see it work",
+  "Text a job description, photo, voice note, or Facebook post screenshot",
+  "HomeBids turns it into a professional bid link assigned to your contractor profile",
+  "A PDF version is also included for convenience",
+  "No setup required — just send the job details and see how it works",
 ];
 
 
@@ -109,7 +109,7 @@ export function DemoPopup() {
                 id="demo-popup-title"
                 className="mt-1.5 text-balance text-xl font-bold leading-snug text-foreground pr-6"
               >
-                Build a bid in under 2 minutes.
+                See Your First Bid Built in Real Time
               </h2>
 
               {/* Subheadline */}
@@ -117,7 +117,7 @@ export function DemoPopup() {
                 id="demo-popup-desc"
                 className="mt-2 text-sm text-muted-foreground"
               >
-                Text us a job. Watch HomeBids handle the rest.
+                Text us a job description, photo, voice note, or Facebook post screenshot. HomeBids will turn it into a professional bid link assigned to your contractor profile, with a PDF version included.
               </p>
 
               {/* Bullets */}
@@ -137,12 +137,12 @@ export function DemoPopup() {
                 className="mt-6 flex h-14 w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-6 text-base font-semibold text-primary-foreground transition-colors hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <MessageSquare className="h-5 w-5 shrink-0" />
-                Text Us for a Live Demo
+                Text Us to See a Live Demo
               </a>
 
               {/* Microcopy */}
               <p className="mt-3 text-center text-xs text-muted-foreground">
-                No signup. Takes 30 seconds.
+                No setup required. Just send the job details and see how the Bid Builder works.
               </p>
             </div>
           </motion.div>

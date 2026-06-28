@@ -469,14 +469,14 @@ export function BidBuilderChat({
       if (leadType === "my") {
         setPhase("approved");
         pushAi(
-          "Approved. I've generated your professional PDF bid and sent it back to you. You control delivery — forward or text it to your customer whenever you're ready.",
+          "Approved. Your bid is ready — delivered as a dedicated shareable link assigned to your contractor profile. A PDF version is also included. You control delivery — share the link by text, email, Facebook, or anywhere else.",
           "system",
         );
       } else {
         setPhase("sent");
         const owner = bidRef.current.owner || "the homeowner";
         pushAi(
-          `Approved. I've generated the PDF and sent it to ${owner} for review. I'll relay messages until they approve — their contact stays private for now.`,
+          `Approved. Your bid link has been sent to ${owner} for review. I'll relay messages until they approve — their contact stays private for now. A PDF version is also available in the preview.`,
           "system",
         );
         const fromLine = contractorName && contractorName.toLowerCase() !== "there" ? `${contractorName} from ${companyName}` : companyName;
@@ -640,17 +640,17 @@ export function BidBuilderChat({
       {leadType === "my" && phase === "approved" && (
         <>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" className="h-8 gap-1.5 bg-transparent text-xs" onClick={() => setShowPdf(true)}>
-              <FileText className="h-3.5 w-3.5" /> Preview PDF
-            </Button>
-            <Button size="sm" variant="outline" className="h-8 gap-1.5 bg-transparent text-xs" onClick={() => window.print()}>
-              <Download className="h-3.5 w-3.5" /> Download PDF
-            </Button>
             <Button size="sm" variant="outline" className="h-8 gap-1.5 bg-transparent text-xs" onClick={() => doCopy("link", bidLink)}>
               <Link2 className="h-3.5 w-3.5" /> {copied === "link" ? "Copied!" : "Copy Bid Link"}
             </Button>
             <Button size="sm" variant="outline" className="h-8 gap-1.5 bg-transparent text-xs" onClick={() => doCopy("share", buildDraftText(bid))}>
-              <Share2 className="h-3.5 w-3.5" /> {copied === "share" ? "Copied!" : "Share PDF"}
+              <Share2 className="h-3.5 w-3.5" /> {copied === "share" ? "Copied!" : "Share Bid Link"}
+            </Button>
+            <Button size="sm" variant="outline" className="h-8 gap-1.5 bg-transparent text-xs" onClick={() => setShowPdf(true)}>
+              <FileText className="h-3.5 w-3.5" /> View PDF
+            </Button>
+            <Button size="sm" variant="outline" className="h-8 gap-1.5 bg-transparent text-xs" onClick={() => window.print()}>
+              <Download className="h-3.5 w-3.5" /> Download PDF
             </Button>
           </div>
           <Button
@@ -692,8 +692,11 @@ export function BidBuilderChat({
             <Unlock className="h-3.5 w-3.5" /> Direct messaging unlocked
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" className="h-8 gap-1.5 bg-transparent text-xs" onClick={() => doCopy("link", bidLink)}>
+              <Link2 className="h-3.5 w-3.5" /> {copied === "link" ? "Copied!" : "Copy Bid Link"}
+            </Button>
             <Button size="sm" variant="outline" className="h-8 gap-1.5 bg-transparent text-xs" onClick={() => setShowPdf(true)}>
-              <FileText className="h-3.5 w-3.5" /> Preview PDF
+              <FileText className="h-3.5 w-3.5" /> View PDF
             </Button>
             <Button size="sm" variant="outline" className="h-8 gap-1.5 bg-transparent text-xs" onClick={() => window.print()}>
               <Download className="h-3.5 w-3.5" /> Download PDF
@@ -850,7 +853,7 @@ export function BidBuilderChat({
       <div className="hidden shrink-0 flex-col border-l border-border lg:flex lg:w-80 xl:w-96">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {pdfReady ? "Finalized PDF" : "Live Bid Preview"}
+            {pdfReady ? "Bid Ready to Share" : "Live Bid Preview"}
           </p>
           <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-medium ${pdfReady ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>
             {pdfReady ? <CheckCircle2 className="h-3 w-3" /> : <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />}
@@ -878,7 +881,7 @@ export function BidBuilderChat({
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" /> Bid PDF Preview
+              <FileText className="h-4 w-4 text-primary" /> Bid Preview
             </DialogTitle>
           </DialogHeader>
           {pdfPreview}
