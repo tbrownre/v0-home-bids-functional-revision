@@ -124,60 +124,7 @@ function StepCard({
   );
 }
 
-// ─── Orbit animation (Bid Defender) ───────────────────────────────────────
-function BidDefenderOrbit() {
-  const orbitingBids = ["Contractor B", "Contractor C", "Contractor D"];
-  return (
-    <div className="relative mx-auto flex h-56 w-56 items-center justify-center">
-      {/* Center card */}
-      <motion.div
-        className="z-10 rounded-xl border-2 border-primary bg-card px-4 py-2.5 text-center shadow-lg"
-        animate={{ boxShadow: ["0 0 0 0 #2B7FE820", "0 0 0 12px #2B7FE800"] }}
-        transition={{ duration: 2, repeat: Infinity }}
-      >
-        <p className="text-xs font-bold text-primary">YOUR BID</p>
-        <p className="text-[10px] text-muted-foreground">Protected</p>
-      </motion.div>
-      {/* Orbiting competitors */}
-      {orbitingBids.map((label, i) => {
-        const angle = (i / orbitingBids.length) * 2 * Math.PI;
-        const r = 90;
-        return (
-          <motion.div
-            key={label}
-            className="absolute rounded-lg border border-border bg-card/80 px-2.5 py-1.5 text-center text-[10px] text-muted-foreground backdrop-blur-sm"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 14 + i * 3, repeat: Infinity, ease: "linear" }}
-            style={{
-              left: `calc(50% + ${Math.cos(angle) * r}px - 40px)`,
-              top: `calc(50% + ${Math.sin(angle) * r}px - 18px)`,
-            }}
-          >
-            {label}
-          </motion.div>
-        );
-      })}
-      {/* Connecting lines */}
-      <svg className="pointer-events-none absolute inset-0 h-full w-full" style={{ overflow: "visible" }}>
-        {orbitingBids.map((_, i) => {
-          const angle = (i / orbitingBids.length) * 2 * Math.PI;
-          const r = 90;
-          return (
-            <motion.line
-              key={i}
-              x1="50%" y1="50%"
-              x2={`calc(50% + ${Math.cos(angle) * r}px)`}
-              y2={`calc(50% + ${Math.sin(angle) * r}px)`}
-              stroke="#2B7FE840" strokeWidth="1" strokeDasharray="3 3"
-              animate={{ opacity: [0.3, 0.7, 0.3] }}
-              transition={{ duration: 2, delay: i * 0.4, repeat: Infinity }}
-            />
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
+
 
 // ─── Before / After comparison ─────────────────────────────────────────────
 function BeforeAfter({ audience }: { audience: Audience }) {
@@ -187,8 +134,8 @@ function BeforeAfter({ audience }: { audience: Audience }) {
         after: ["One simple conversation", "AI handles the outreach", "Multiple options delivered", "Your info stays private"],
       }
     : {
-        before: ["Manual estimates taking hours", "Lost evenings on paperwork", "Price objections you can't answer", "Looking less professional"],
-        after: ["AI proposals in minutes", "Win more with faster responses", "Defend pricing with confidence", "Professional bids every time"],
+        before: ["Manual estimates taking hours", "Lost evenings on paperwork", "Slow follow-up losing jobs", "Looking less professional"],
+        after: ["AI proposals in minutes", "Shareable bid link sent same day", "First bid out wins more jobs", "Professional bids every time"],
       };
 
   return (
@@ -297,7 +244,7 @@ export default function HowItWorksPage() {
             <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
               {audience === "homeowner"
                 ? "HomeBids acts like your personal home project assistant — helping you collect bids, compare options, and find the right contractor without endless phone calls."
-                : "HomeBids helps contractors build better proposals, defend pricing, and win more jobs using AI-powered tools built for how you actually work."}
+                : "HomeBids helps contractors build professional proposals, send them faster, and win more jobs using AI-powered tools built for how you actually work."}
             </p>
 
             {/* ── Premium toggle ── */}
@@ -587,29 +534,9 @@ export default function HowItWorksPage() {
                     desc="You stay in control of every proposal. Preview, edit, and approve before it reaches the homeowner." />
                   <StepCard number="4" icon={Send} title="Deliver a Professional Bid" delay={0.21}
                     desc="Look more professional without extra hours. Send via PDF, SMS, or mobile — your homeowner sees it instantly." />
-                  <StepCard number="5" icon={ShieldCheck} title="Protect Your Deal" delay={0.28}
-                    desc="Bid Defender keeps you connected to your original lead. Stay top of mind even while homeowners explore other options." />
+                  <StepCard number="5" icon={ShieldCheck} title="Win the Job" delay={0.28}
+                    desc="Send a professional bid link the same day. Homeowners who receive a fast, polished proposal are far more likely to hire you first." />
                 </div>
-              </div>
-            </section>
-
-            {/* ── CONTRACTOR: Bid Defender Visual ── */}
-            <section className="bg-card px-4 py-20 sm:px-6 lg:px-8">
-              <div className="mx-auto max-w-4xl">
-                <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-                  <motion.div variants={fadeUp} className="mb-12 text-center">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-primary">Bid Defender</span>
-                    <h2 className="mt-3 text-balance text-3xl font-bold text-foreground sm:text-4xl">
-                      Stay connected. Protect your deal.
-                    </h2>
-                    <p className="mt-3 text-muted-foreground">
-                      Your original bid stays highlighted while competitors orbit around it. HomeBids keeps you tied to your lead.
-                    </p>
-                  </motion.div>
-                  <motion.div variants={fadeUp} className="flex justify-center">
-                    <BidDefenderOrbit />
-                  </motion.div>
-                </motion.div>
               </div>
             </section>
 
@@ -643,7 +570,7 @@ export default function HowItWorksPage() {
                       { icon: Zap, title: "Respond faster, win more.", desc: "AI-generated responses mean you reply in minutes. Fast replies close more jobs." },
                       { icon: TrendingUp, title: "Defend your pricing.", desc: "Stop losing jobs to price objections. Back up every bid with confidence." },
                       { icon: FileText, title: "Cleaner estimates.", desc: "AI-structured proposals look professional and communicate value — even from the job site." },
-                      { icon: DollarSign, title: "$99/month. All-in.", desc: "Unlimited AI bids, Bid Defender, AI Growth Tools — one flat price, no surprises." },
+                      { icon: DollarSign, title: "$99/month. All-in.", desc: "Unlimited AI bids, shareable bid links, no bid fees — one flat price, no surprises." },
                     ].map((card, i) => (
                       <motion.div key={card.title} variants={fadeUp} transition={{ delay: i * 0.07 }}
                         whileHover={{ y: -3 }}
@@ -681,10 +608,10 @@ export default function HowItWorksPage() {
                       Ready To Give Yourself The AI Advantage?
                     </h2>
                     <p className="mt-3 text-white/70">
-                      Build professional bids faster, protect more deals, and save hours every week.
+                      Build professional bids faster, send them the same day, and win more jobs.
                     </p>
                     <ul className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-white/80">
-                      {["Unlimited AI Bids", "Bid Defender", "AI Growth Tools", "$99/month"].map((item) => (
+                      {["Unlimited AI Bids", "Shareable Bid Links", "No Bid Fees", "$99/month"].map((item) => (
                         <li key={item} className="flex items-center gap-1.5">
                           <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                           {item}

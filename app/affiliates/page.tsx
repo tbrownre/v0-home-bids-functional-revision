@@ -21,7 +21,6 @@ import {
   Award,
   CheckCircle2,
   Infinity,
-  Shield,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -349,15 +348,7 @@ const FAQS = [
   },
   {
     q: "What is the HomeBids contractor plan?",
-    a: "The HomeBids Contractor Plan is $99/month. It includes unlimited AI Bid Builder usage, unlimited Bid Defender usage, unlimited contractor tools, no bid fees, and no hidden fees.",
-  },
-  {
-    q: "What is Bid Defender?",
-    a: "Bid Defender allows contractors to confidently offer homeowners additional bid options through HomeBids. If contractors discovered through that process later subscribe to HomeBids, the originating contractor may receive affiliate credit according to the affiliate program.",
-  },
-  {
-    q: "Why would a contractor use Bid Defender?",
-    a: "It helps protect trust with homeowners, provides competitive pricing transparency, creates goodwill during the sales process, and creates a potential long-term affiliate revenue opportunity — even if another contractor ultimately wins the project.",
+    a: "The HomeBids Contractor Plan is $99/month. It includes unlimited AI Bid Builder usage, unlimited contractor tools, no bid fees, and no hidden fees.",
   },
   {
     q: "How are affiliate commissions calculated?",
@@ -411,7 +402,7 @@ export default function AffiliatesPage() {
       {/* Floating social proof notification */}
       <FloatingSocialProof />
 
-      {/* ── Hero ──────────────────────────────────────────────────────── */}
+      {/* ── Hero ──────────���───────────────────────────────────────────── */}
       <section className="px-4 pb-20 pt-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
           <motion.div variants={stagger} initial="hidden" animate="show">
@@ -519,7 +510,7 @@ export default function AffiliatesPage() {
                 icon: Hammer,
                 step: "02",
                 title: "Contractors Subscribe",
-                body: "Contractors sign up for HomeBids at $99/month and get unlimited access to AI Bid Builder, Bid Defender, and all contractor tools.",
+                body: "Contractors sign up for HomeBids at $99/month and get unlimited access to the AI Bid Builder, shareable bid links, and all contractor tools.",
               },
               {
                 icon: Repeat2,
@@ -547,18 +538,18 @@ export default function AffiliatesPage() {
         </div>
       </Section>
 
-      {/* ── Bid Defender Flywheel ──────────────────────────────────────── */}
+      {/* ── The Affiliate Flywheel ─────────────────────────────────────── */}
       <Section className="bg-foreground px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
           <motion.div variants={fadeUp}>
             <div className="inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary-foreground/70">
-              <Shield className="h-3 w-3" /> Bid Defender
+              <RefreshCw className="h-3 w-3" /> The Flywheel
             </div>
             <h2 className="mt-4 text-3xl font-bold tracking-tight text-primary-foreground sm:text-4xl">
-              Win Even When You{"'"}t Win The Job
+              Every Referral Compounds Over Time
             </h2>
             <p className="mt-4 text-primary-foreground/70">
-              Bid Defender turns every lost bid into a potential revenue opportunity. This is the HomeBids flywheel — a win-win for every contractor.
+              The more contractors you refer, the more your monthly income grows — automatically, without any extra effort.
             </p>
           </motion.div>
 
@@ -568,11 +559,10 @@ export default function AffiliatesPage() {
             className="mt-12 flex flex-wrap items-center justify-center gap-3"
           >
             {[
-              { label: "Contractor shares link", icon: Link2 },
-              { label: "Homeowner submits project", icon: Home },
-              { label: "HomeBids gathers bids", icon: Users },
-              { label: "New contractors join", icon: Hammer },
-              { label: "Affiliate revenue earned", icon: DollarSign },
+              { label: "You share your link", icon: Link2 },
+              { label: "Contractor signs up", icon: Hammer },
+              { label: "They use HomeBids", icon: Zap },
+              { label: "You earn $19.80/mo", icon: DollarSign },
             ].map((node, i, arr) => (
               <React.Fragment key={node.label}>
                 <div className="flex flex-col items-center gap-2">
@@ -590,27 +580,27 @@ export default function AffiliatesPage() {
             ))}
             <div className="ml-1 flex items-center gap-1 text-primary-foreground/40">
               <RefreshCw className="h-4 w-4" />
-              <span className="text-xs font-semibold">loops</span>
+              <span className="text-xs font-semibold">repeats</span>
             </div>
           </motion.div>
 
           <motion.div variants={stagger} className="mt-10 grid gap-4 text-left sm:grid-cols-2">
             {[
               {
-                text: "Contractor wins the job",
-                sub: "Great — they got the work.",
+                text: "Lifetime recurring commissions",
+                sub: "As long as your referred contractors stay subscribed, you keep earning — month after month.",
               },
               {
-                text: "Homeowner picks another contractor",
-                sub: "The originating contractor can still earn affiliate commissions if contractors from that opportunity subscribe to HomeBids.",
+                text: "No cap on earnings",
+                sub: "Refer 5 contractors or 500. Every active subscription pays you 20% every single month.",
               },
               {
                 text: "HomeBids is always free for homeowners",
                 sub: "Homeowners receive free access to competitive bids. No fees. No subscriptions.",
               },
               {
-                text: "Affiliate revenue comes from contractor subscriptions",
-                sub: "Commissions are generated only when contractors subscribe at $99/month — not from homeowner activity.",
+                text: "Commissions come from contractor subscriptions",
+                sub: "Affiliate earnings are generated when contractors subscribe at $99/month — not from homeowner activity.",
               },
             ].map((point) => (
               <motion.div
@@ -662,7 +652,7 @@ export default function AffiliatesPage() {
               <ul className="mt-5 flex flex-col gap-2">
                 {[
                   "Unlimited AI Bid Builder",
-                  "Unlimited Bid Defender",
+                  "Shareable bid links",
                   "No bid fees",
                   "No hidden fees",
                 ].map((f) => (
@@ -818,7 +808,7 @@ export default function AffiliatesPage() {
               {
                 icon: Hammer,
                 title: "Contractors",
-                body: "Use Bid Defender to create upside even on jobs you don't win. Every new contractor you bring in earns you $19.80/month.",
+                body: "Refer other contractors to HomeBids and build recurring income on top of your own work. Every active contractor earns you $19.80/month.",
               },
               {
                 icon: Users,
