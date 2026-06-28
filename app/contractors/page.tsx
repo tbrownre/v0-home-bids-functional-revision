@@ -26,7 +26,6 @@ import {
   FileText,
   Building2,
   LogIn,
-  TrendingUp,
   Clock,
   DollarSign,
   ChevronRight,
@@ -122,15 +121,9 @@ const tools = [
     glow: "#2B7FE8",
   },
   {
-    icon: TrendingUp,
-    title: "Same-Day Estimates",
-    description: "Stop losing jobs to slow follow-up. Send a professional bid the same day you see the project.",
-    glow: "#2B7FE8",
-  },
-  {
     icon: Zap,
     title: "Faster Win Rate",
-    description: "Respond faster, follow up smarter, and run your business like a team of five — even when you're alone.",
+    description: "Studies show over 70% of homeowners hire the first contractor who sends a professional bid. HomeBids gets yours there first.",
     glow: "#2B7FE8",
   },
 ];
