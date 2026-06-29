@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MessageSquare, CheckCircle2 } from "lucide-react";
+import { HOMEBIDS_SMS } from "@/lib/sms-config";
 
-const SMS_HREF = "sms:+18722964991?&body=Hey%20HomeBids%2C%20lets%20build%20a%20new%20bid!";
+// This popup appears on the contractor page — always use the contractor number.
+const SMS_HREF = HOMEBIDS_SMS.contractor.href;
 const SESSION_KEY = "homebids_demo_popup_seen";
 const DELAY_MS = 7000;
 
