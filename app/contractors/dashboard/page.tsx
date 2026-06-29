@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
@@ -38,13 +38,13 @@ import {
   Bell,
   Copy,
   ChevronRight,
-  Zap,
   ArrowLeft,
   ExternalLink,
-  DollarSign,
-  TrendingUp,
+  Flame,
+  FileText,
 } from "lucide-react";
 import { BidBuilderChat, type BidLeadType, type BidChatLeadContext } from "@/components/bid-builder-chat";
+import { BuildBidChoiceModal } from "@/components/build-bid-choice-modal";
 import { getMockUser, mockSignOut, USE_MOCK_DATA, syncMirrorFromSupabase } from "@/lib/mock-auth";
 import { getContractorBids } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
@@ -175,7 +175,7 @@ const DEMO_MY_LEADS: MyLead[] = [
   { id: "ml-3", customerName: "Janet B.", projectTitle: "Bathroom Remodel Follow-Up", category: "Remodel", estimatedValue: "$12,000", status: "open", lastActivity: "Follow-up draft ready", aiStatus: "followup_ready" },
 ];
 
-// ── AI helper functions ───────────────────────────────────────────��────────────
+// ── AI helper functions ───────────────────────────────────��───────��────────────
 
 function _getBidDefenderResponse(projectType: string, bidAmount: string, objection: string) {
   const refLink = `https://homebids.com/compare?ref=contractor-demo&project=${encodeURIComponent(projectType)}`;
@@ -203,6 +203,98 @@ function _getBidDefenderResponse(projectType: string, bidAmount: string, objecti
 
 type Tab = "home" | "leads" | "ai" | "account";
 type AiTool = "bid" | null;
+
+// ── Bid Momentum ────────────────────────────────────────────────────────────
+// A flexible, monthly pace system (not a punitive daily streak). Goal: 30 bids
+// per calendar month, with a daily nudge to build 1 bid today.
+
+const MONTH_GOAL = 30;
+
+interface BidMomentum {
+  state: "start" | "onpace" | "ahead" | "slightly" | "far" | "complete";
+  title: string;
+  statusLabel: string;
+  copy: string;
+  ctaLabel: string;
+  progressText: string;
+  percent: number;
+}
+
+function computeBidMomentum(count: number, goal: number, monthFraction: number | null): BidMomentum {
+  const percent = Math.max(0, Math.min(100, Math.round((count / goal) * 100)));
+  const progressText = `${count} / ${goal} bids this month`;
+
+  if (count >= goal) {
+    return {
+      state: "complete",
+      title: "Monthly Goal Complete",
+      statusLabel: "Goal Complete",
+      copy: "You hit your 30-bid goal this month. Every extra bid creates another chance to win work.",
+      ctaLabel: "Build Another Bid",
+      progressText,
+      percent,
+    };
+  }
+  if (count === 0) {
+    return {
+      state: "start",
+      title: "Start Your Bid Momentum",
+      statusLabel: "Ready to start",
+      copy: "Build your first professional bid this month and start moving your pipeline forward.",
+      ctaLabel: "Build Today's Bid",
+      progressText,
+      percent,
+    };
+  }
+
+  // Pace relative to expected progress for this point in the month.
+  // Fallback (pre-mount, fraction unknown): treat as on pace to avoid a flash.
+  const expected = monthFraction != null ? goal * monthFraction : count;
+  const ratio = expected > 0 ? count / expected : 1;
+
+  if (ratio >= 1.15) {
+    return {
+      state: "ahead",
+      title: "Bid Momentum: Ahead of Pace",
+      statusLabel: "Ahead of Pace",
+      copy: "You're ahead of your monthly goal. Keep building while the momentum is strong.",
+      ctaLabel: "Build Another Bid",
+      progressText,
+      percent,
+    };
+  }
+  if (ratio >= 0.9) {
+    return {
+      state: "onpace",
+      title: "Bid Momentum: On Pace",
+      statusLabel: "On Pace",
+      copy: `You're ${count} ${count === 1 ? "bid" : "bids"} into your 30-bid monthly goal. Build 1 bid today to keep your pipeline moving.`,
+      ctaLabel: "Build Today's Bid",
+      progressText,
+      percent,
+    };
+  }
+  if (ratio >= 0.6) {
+    return {
+      state: "slightly",
+      title: "Bid Momentum: Slightly Behind",
+      statusLabel: "Slightly Behind",
+      copy: "You're a few bids behind pace. Build 1 bid today to get back on track.",
+      ctaLabel: "Get Back on Track",
+      progressText,
+      percent,
+    };
+  }
+  return {
+    state: "far",
+    title: "Rebuild Your Momentum",
+    statusLabel: "Behind Pace",
+    copy: "You still have time to make progress this month. Start with 1 professional bid today.",
+    ctaLabel: "Build Today's Bid",
+    progressText,
+    percent,
+  };
+}
 
 // ── AI assistant suggestions ───────────────────────────────────────────────────
 
@@ -268,6 +360,23 @@ export default function ContractorDashboard() {
     }
     load();
   }, []);
+
+  // Time-of-day greeting + month progress (computed client-side post-mount to
+  // avoid hydration mismatches; both default to neutral values on first render).
+  const [greeting, setGreeting] = useState("Welcome");
+  const [monthFraction, setMonthFraction] = useState<number | null>(null);
+  useEffect(() => {
+    const d = new Date();
+    const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    setMonthFraction(d.getDate() / daysInMonth);
+    const h = d.getHours();
+    setGreeting(h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening");
+  }, []);
+
+  const momentum = useMemo(
+    () => computeBidMomentum(bidsCount, MONTH_GOAL, monthFraction),
+    [bidsCount, monthFraction],
+  );
 
   // Leads segment — "myleads" is the default
   const [leadsSegment, setLeadsSegment] = useState<"myleads" | "homebids">("myleads");
@@ -352,11 +461,25 @@ export default function ContractorDashboard() {
     window.location.href = href;
   }
 
-  const handleSignOut = () => mockSignOut();
+  // ── Build Bid choice modal ───────────────────────────────────────────────────
+  // Every contractor "build/finish/continue bid" CTA routes through this modal,
+  // which offers Continue by Text (SMS) or Continue on Site (existing builder).
+  const [showBuildChoice, setShowBuildChoice] = useState(false);
+  const pendingOnSiteRef = useRef<(() => void) | null>(null);
 
-  const newLeads = DEMO_HOMEBIDS_LEADS.filter((l) => l.status === "new").length;
-  const awaitingApproval = DEMO_HOMEBIDS_LEADS.filter((l) => l.status === "homeowner_reviewing").length;
-  const inProgress = DEMO_MY_LEADS.filter((l) => l.status === "in_progress").length;
+  function openBuildChoice(onSite: () => void) {
+    pendingOnSiteRef.current = onSite;
+    setShowBuildChoice(true);
+  }
+
+  function handleContinueOnSite() {
+    setShowBuildChoice(false);
+    const fn = pendingOnSiteRef.current;
+    pendingOnSiteRef.current = null;
+    fn?.();
+  }
+
+  const handleSignOut = () => mockSignOut();
 
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: "home",    label: "Home",     icon: LayoutDashboard },
@@ -413,7 +536,7 @@ export default function ContractorDashboard() {
               <MessageCircle className="h-3 w-3" /> Text Homeowner
             </Button>
           ) : lead.status === "new" ? (
-            <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => startBidFromHomeBidsLead(lead)}>
+            <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => openBuildChoice(() => startBidFromHomeBidsLead(lead))}>
               <MessageCircle className="h-3 w-3" /> Start Bid by Text
             </Button>
           ) : (
@@ -443,160 +566,184 @@ export default function ContractorDashboard() {
     completed:      { label: "Completed",       cls: "bg-green-50 text-green-700"             },
   };
 
+  // Recent bid activity (demo data — labeled via the dashboard demo banner).
+  const recentBids: { id: string; title: string; location: string; amount: number; status: string; updated: string }[] = [
+    { id: "cbid-1", title: "Kitchen Remodel Bid",   location: "Austin, TX",     amount: 0,     status: "draft",          updated: "yesterday"  },
+    { id: "cbid-2", title: "Bathroom Tile Proposal", location: "Round Rock, TX", amount: 4200,  status: "sent",           updated: "2 days ago" },
+    { id: "cbid-3", title: "Deck Replacement",       location: "Cedar Park, TX", amount: 12400, status: "question_asked", updated: "1 day ago"  },
+  ];
+
+  // Up to 3 action items. The third card adapts: when behind pace it nudges
+  // momentum; when on/ahead/complete it surfaces a fresh homeowner lead.
+  const newHomeBidsLead = DEMO_HOMEBIDS_LEADS.find((l) => l.status === "new");
+  const thirdCard =
+    (momentum.state === "ahead" || momentum.state === "complete" || momentum.state === "onpace") && newHomeBidsLead
+      ? {
+          id: "na-lead",
+          title: newHomeBidsLead.title,
+          sub: `New homeowner lead in ${newHomeBidsLead.location}.`,
+          cta: "Build Bid",
+          icon: Sparkles as React.ElementType,
+          onClick: () => openBuildChoice(() => startBidFromHomeBidsLead(newHomeBidsLead)),
+        }
+      : {
+          id: "na-momentum",
+          title: "Monthly Bid Momentum",
+          sub: momentum.copy,
+          cta: momentum.ctaLabel,
+          icon: Flame as React.ElementType,
+          onClick: () => openBuildChoice(() => startBidByText("my", null)),
+        };
+
+  const needsAction: { id: string; title: string; sub: string; cta: string; icon: React.ElementType; onClick: () => void }[] = [
+    {
+      id: "na-draft",
+      title: "Kitchen Remodel Bid",
+      sub: "Draft started — project details are ready.",
+      cta: "Finish Bid",
+      icon: FileText,
+      onClick: () => openBuildChoice(() => startBidByText("my", null)),
+    },
+    {
+      id: "na-follow",
+      title: "Bathroom Tile Proposal",
+      sub: "Sent 2 days ago — this bid may need a follow-up.",
+      cta: "Follow Up",
+      icon: Send,
+      onClick: () => handleTabChange("leads"),
+    },
+    thirdCard,
+  ].slice(0, 3);
+
   const homeContent = (
     <div className="space-y-6">
-      {/* Greeting + primary CTA */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Good morning, {contractorName}.</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            You have <span className="font-semibold text-foreground">{DEMO_HOMEBIDS_LEADS.length + DEMO_MY_LEADS.length}</span> active leads.
-          </p>
-        </div>
-        <Button
-          className="shrink-0 gap-2 rounded-full font-semibold"
-          onClick={() => { setActiveTool("bid"); handleTabChange("ai"); }}
-        >
-          <Sparkles className="h-4 w-4" />
-          Build a New Bid
-        </Button>
-      </div>
+      {/* Hero — greeting + Bid Momentum + daily nudge */}
+      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+        <h1 className="text-2xl font-bold text-foreground text-balance">{greeting}, {contractorName}.</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {momentum.state === "complete"
+            ? "You've hit your 30-bid goal this month."
+            : bidsCount > 0
+              ? `You're ${bidsCount} ${bidsCount === 1 ? "bid" : "bids"} into your 30-bid monthly goal.`
+              : "Let's start building your pipeline this month."}
+        </p>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: "New Leads",         value: newLeads,          color: "bg-blue-50 text-blue-700 border-blue-100" },
-          { label: "Awaiting Approval", value: awaitingApproval,  color: "bg-purple-50 text-purple-700 border-purple-100" },
-          { label: "In Progress",       value: inProgress,        color: "bg-amber-50 text-amber-700 border-amber-100" },
-          { label: "Bids Submitted",    value: bidsCount,         color: "bg-muted text-muted-foreground border-border" },
-        ].map(({ label, value, color }) => (
-          <div key={label} className={`rounded-xl border p-3 ${color}`}>
-            <p className="text-2xl font-bold">{value}</p>
-            <p className="mt-0.5 text-[11px] font-medium">{label}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-3">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Needs your attention</h2>
-          <div className="space-y-3">
-            {DEMO_HOMEBIDS_LEADS.map((lead) => renderHomeBidsLeadCard(lead))}
-          </div>
-        </div>
-
-        <div className="lg:col-span-2">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Suggested actions</h2>
-          <div className="space-y-2">
-            {[
-              { icon: MessageCircle, label: "Build a professional bid", sub: "Kitchen Cabinet Repaint", action: () => startBidFromHomeBidsLead(DEMO_HOMEBIDS_LEADS[0]) },
-              { icon: Eye, label: "Homeowner reviewing bid", sub: "Backyard Turf Install", action: () => handleTabChange("leads") },
-              { icon: Unlock, label: "Approval unlocked", sub: "Bathroom Vanity Replacement", action: () => handleTabChange("leads") },
-              { icon: Sparkles, label: "Start a new bid by text", sub: "Text job details to the AI Bid Builder", action: () => { setActiveTool("bid"); handleTabChange("ai"); } },
-            ].map(({ icon: Icon, label, sub, action }) => (
-              <button
-                key={label}
-                type="button"
-                onClick={action}
-                className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/30 hover:bg-primary/5"
-              >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground">{label}</p>
-                  <p className="truncate text-[11px] text-muted-foreground">{sub}</p>
-                </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-              </button>
-            ))}
+        <div className="mt-4 rounded-xl border border-border bg-background p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <Flame className="h-4 w-4 text-primary" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-foreground">{momentum.title}</p>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{momentum.statusLabel}</p>
+              </div>
+            </div>
+            <span className="shrink-0 text-sm font-semibold text-foreground">{momentum.progressText}</span>
           </div>
 
-          <button
-            type="button"
-            onClick={() => handleTabChange("ai")}
-            className="mt-4 flex w-full items-center justify-between rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={momentum.percent} aria-valuemin={0} aria-valuemax={100}>
+            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${momentum.percent}%` }} />
+          </div>
+
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{momentum.copy}</p>
+
+          <Button
+            className="mt-4 w-full gap-2 rounded-full font-semibold sm:w-auto"
+            onClick={() => openBuildChoice(() => startBidByText("my", null))}
           >
-            <span className="flex items-center gap-2"><Zap className="h-4 w-4" />Open Bid Builder</span>
-            <ChevronRight className="h-4 w-4" />
-          </button>
+            <Sparkles className="h-4 w-4" />
+            {momentum.ctaLabel}
+          </Button>
         </div>
-      </div>
+      </section>
 
-      {/* My Bids section */}
-      <div>
+      {/* Needs Action — max 3 priority cards */}
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Needs Action</h2>
+        {needsAction.length > 0 ? (
+          <div className="space-y-2">
+            {needsAction.map((card) => {
+              const Icon = card.icon;
+              return (
+                <div key={card.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Icon className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground">{card.title}</p>
+                    <p className="truncate text-xs text-muted-foreground">{card.sub}</p>
+                  </div>
+                  <Button size="sm" className="h-8 shrink-0 rounded-full px-3 text-xs font-semibold" onClick={card.onClick}>
+                    {card.cta}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+            You&apos;re all caught up. Build a bid to keep your momentum going.
+          </p>
+        )}
+      </section>
+
+      {/* Recent Bids — max 3 rows */}
+      <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">My Bids</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Recent Bids</h2>
           <Button size="sm" variant="ghost" className="h-7 gap-1 rounded-full px-3 text-xs" asChild>
             <a href="/contractors/bids">View all <ChevronRight className="h-3 w-3" /></a>
           </Button>
         </div>
-        <div className="space-y-2">
-          {/* TODO: replace with live bids from getContractorBids() once Supabase is connected */}
-          {[
-            { id: "cbid-1", title: "HVAC System Replacement", location: "Austin, TX", amount: 7850, status: "in_progress",    updated: "2 days ago" },
-            { id: "cbid-2", title: "Water Heater Replacement", location: "Round Rock, TX", amount: 2400, status: "pending",      updated: "5 days ago" },
-            { id: "cbid-3", title: "Deck Replacement",         location: "Cedar Park, TX", amount: 12400, status: "question_asked", updated: "1 day ago" },
-          ].map((bid) => {
-            const sc = BID_STATUS_CONFIG[bid.status] ?? BID_STATUS_CONFIG.pending;
-            return (
-              <div key={bid.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">{bid.title}</p>
-                  <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3 shrink-0" />{bid.location}
-                    <span className="mx-1">·</span>{bid.updated}
-                  </p>
+        {recentBids.length > 0 ? (
+          <div className="space-y-2">
+            {recentBids.slice(0, 3).map((bid) => {
+              const sc = BID_STATUS_CONFIG[bid.status] ?? BID_STATUS_CONFIG.pending;
+              const isContinue = ["draft", "ready_to_send", "question_asked", "in_progress"].includes(bid.status);
+              return (
+                <div key={bid.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">{bid.title}</p>
+                    <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                      <MapPin className="h-3 w-3 shrink-0" />{bid.location}
+                      <span className="mx-1">·</span>{bid.updated}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {bid.amount > 0 && (
+                      <span className="text-sm font-semibold text-foreground">${bid.amount.toLocaleString()}</span>
+                    )}
+                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${sc.cls}`}>{sc.label}</span>
+                  </div>
+                  {isContinue ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 shrink-0 rounded-full bg-transparent px-3 text-xs"
+                      onClick={() => openBuildChoice(() => startBidByText("my", null))}
+                    >
+                      Continue
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="ghost" className="h-7 w-7 shrink-0 rounded-full p-0" asChild>
+                      <a href={`/proposal/${bid.id}`} aria-label={`View ${bid.title}`}><ExternalLink className="h-3.5 w-3.5" /></a>
+                    </Button>
+                  )}
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="text-sm font-semibold text-foreground">
-                    ${bid.amount.toLocaleString()}
-                  </span>
-                  <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${sc.cls}`}>
-                    {sc.label}
-                  </span>
-                </div>
-                <Button size="sm" variant="ghost" className="h-7 w-7 shrink-0 rounded-full p-0" asChild>
-                  <a href={`/proposal/${bid.id}`}><ExternalLink className="h-3.5 w-3.5" /></a>
-                </Button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Homeowner Opportunities (secondary) */}
-      <div>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Homeowner Opportunities</h2>
-          <Button size="sm" variant="ghost" className="h-7 gap-1 rounded-full px-3 text-xs" asChild>
-            <a href="/contractors/jobs">Browse <ChevronRight className="h-3 w-3" /></a>
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground mb-3">
-          {/* TODO: load from getOpenJobs() when live */}
-          Jobs submitted by homeowners in your service area. Build a bid to respond.
-        </p>
-        <div className="space-y-2">
-          {DEMO_HOMEBIDS_LEADS.slice(0, 2).map((lead) => (
-            <div key={lead.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">{lead.title}</p>
-                <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="h-3 w-3 shrink-0" />{lead.location}
-                </p>
-              </div>
-              <span className="shrink-0 text-sm font-medium text-muted-foreground">{lead.estimatedValue}</span>
-              <Button
-                size="sm"
-                className="h-7 shrink-0 gap-1 rounded-full px-3 text-xs"
-                onClick={() => startBidFromHomeBidsLead(lead)}
-              >
-                <Sparkles className="h-3 w-3" /> Build Bid
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border bg-card px-4 py-6 text-center">
+            <p className="text-sm font-medium text-foreground">No recent bids yet.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Build your first professional bid today.</p>
+            <Button className="mt-3 gap-2 rounded-full font-semibold" onClick={() => openBuildChoice(() => startBidByText("my", null))}>
+              <Sparkles className="h-4 w-4" /> Build Today&apos;s Bid
+            </Button>
+          </div>
+        )}
+      </section>
     </div>
   );
 
@@ -666,7 +813,7 @@ export default function ContractorDashboard() {
                   <span className="text-[11px] text-muted-foreground">· {lead.lastActivity}</span>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => startBidFromMyLead(lead)}>
+                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => openBuildChoice(() => startBidFromMyLead(lead))}>
                     <MessageCircle className="h-3 w-3" /> Start Bid by Text
                   </Button>
                   <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => openSms(lead.phone)}>
@@ -716,7 +863,7 @@ export default function ContractorDashboard() {
                   <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
                     <Eye className="h-3 w-3" /> Details
                   </Button>
-                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => startBidFromHomeBidsLead(lead)}>
+                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => openBuildChoice(() => startBidFromHomeBidsLead(lead))}>
                     <MessageCircle className="h-3 w-3" /> Start Bid by Text
                   </Button>
                   {isMessagingUnlocked(lead) ? (
@@ -768,7 +915,7 @@ export default function ContractorDashboard() {
           {/* Bid Builder card */}
           <button
             type="button"
-            onClick={() => startBidByText("my", null)}
+            onClick={() => openBuildChoice(() => startBidByText("my", null))}
             className="group flex flex-col rounded-2xl border-2 border-border bg-card p-6 text-left transition-all hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5"
           >
             <div className="flex items-start justify-between">
@@ -803,7 +950,7 @@ export default function ContractorDashboard() {
                 <button
                   key={lead.id}
                   type="button"
-                  onClick={() => startBidFromHomeBidsLead(lead)}
+                  onClick={() => openBuildChoice(() => startBidFromHomeBidsLead(lead))}
                   className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
                 >
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -1006,7 +1153,7 @@ export default function ContractorDashboard() {
                 </ul>
               </div>
               <div className="flex flex-col gap-2 pt-1">
-              <Button className="w-full gap-2" onClick={() => { setShowLeadDetail(false); startBidFromHomeBidsLead(selectedLead); }}>
+              <Button className="w-full gap-2" onClick={() => { setShowLeadDetail(false); openBuildChoice(() => startBidFromHomeBidsLead(selectedLead)); }}>
                 <MessageCircle className="h-4 w-4" /> Start Bid by Text
               </Button>
                 {!isMessagingUnlocked(selectedLead) ? (
@@ -1023,6 +1170,13 @@ export default function ContractorDashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Build Bid choice — Continue by Text (SMS) or Continue on Site */}
+      <BuildBidChoiceModal
+        open={showBuildChoice}
+        onOpenChange={setShowBuildChoice}
+        onContinueOnSite={handleContinueOnSite}
+      />
     </div>
   );
 }
