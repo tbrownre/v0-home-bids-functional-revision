@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
@@ -38,18 +38,24 @@ import {
   Bell,
   Copy,
   ChevronRight,
-  Zap,
   ArrowLeft,
   ExternalLink,
-  DollarSign,
-  TrendingUp,
+  Flame,
+  FileText,
+  Plus,
+  Archive,
 } from "lucide-react";
 import { BidBuilderChat, type BidLeadType, type BidChatLeadContext } from "@/components/bid-builder-chat";
+import { BuildBidChoiceModal } from "@/components/build-bid-choice-modal";
+import { getContractorSmsLink } from "@/lib/sms-config";
+import { timeAgo } from "@/lib/proposal-format";
 import { getMockUser, mockSignOut, USE_MOCK_DATA, syncMirrorFromSupabase } from "@/lib/mock-auth";
 import { getContractorBids } from "@/lib/supabase/actions";
+import { getContractorProposals, type Proposal } from "@/lib/supabase/proposals";
+import { ContractorProposalCard } from "@/components/proposal/contractor-proposal-card";
 import { createClient } from "@/lib/supabase/client";
 import { getContractorBids as getDemoContractorBids } from "@/lib/demo/services";
-import { DEMO_CONTRACTOR_EMAIL } from "@/lib/demo-guard";
+import { DEMO_CONTRACTOR_EMAIL, isDemoEmail } from "@/lib/demo-guard";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -79,17 +85,6 @@ interface HomeBidsLead {
   aiConfidence?: string;
 }
 
-interface MyLead {
-  id: string;
-  customerName: string;
-  projectTitle: string;
-  category: string;
-  estimatedValue: string;
-  status: "open" | "in_progress";
-  lastActivity: string;
-  aiStatus: "estimate_ready" | "response_sent" | "followup_ready";
-  phone?: string;
-}
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 
@@ -169,13 +164,7 @@ const DEMO_HOMEBIDS_LEADS: HomeBidsLead[] = [
   },
 ];
 
-const DEMO_MY_LEADS: MyLead[] = [
-  { id: "ml-1", customerName: "Sarah M.", projectTitle: "Interior Paint Estimate", category: "Interior Painting", estimatedValue: "$2,400", status: "open", lastActivity: "Waiting on estimate", aiStatus: "estimate_ready" },
-  { id: "ml-2", customerName: "Mike R.", projectTitle: "Drywall Repair Response", category: "Drywall", estimatedValue: "$380", status: "in_progress", lastActivity: "Sent response — awaiting reply", aiStatus: "response_sent" },
-  { id: "ml-3", customerName: "Janet B.", projectTitle: "Bathroom Remodel Follow-Up", category: "Remodel", estimatedValue: "$12,000", status: "open", lastActivity: "Follow-up draft ready", aiStatus: "followup_ready" },
-];
-
-// ── AI helper functions ───────────────────────────────────────────��────────────
+// ── AI helper functions ───────────��───────────────────────��───────��────────────
 
 function _getBidDefenderResponse(projectType: string, bidAmount: string, objection: string) {
   const refLink = `https://homebids.com/compare?ref=contractor-demo&project=${encodeURIComponent(projectType)}`;
@@ -204,7 +193,178 @@ function _getBidDefenderResponse(projectType: string, bidAmount: string, objecti
 type Tab = "home" | "leads" | "ai" | "account";
 type AiTool = "bid" | null;
 
-// ── AI assistant suggestions ───────────────────────────────────────────────────
+// ── Bid Momentum ────────────────────────────────────────────────────────────
+// A flexible, monthly pace system (not a punitive daily streak). Goal: 30 bids
+// per calendar month, with a daily nudge to build 1 bid today.
+
+const MONTH_GOAL = 30;
+
+interface BidMomentum {
+  state: "start" | "onpace" | "ahead" | "slightly" | "far" | "complete";
+  title: string;
+  statusLabel: string;
+  copy: string;
+  ctaLabel: string;
+  progressText: string;
+  percent: number;
+}
+
+function computeBidMomentum(count: number, goal: number, monthFraction: number | null): BidMomentum {
+  const percent = Math.max(0, Math.min(100, Math.round((count / goal) * 100)));
+  const progressText = `${count} / ${goal} bids this month`;
+
+  if (count >= goal) {
+    return {
+      state: "complete",
+      title: "Monthly Goal Complete",
+      statusLabel: "Goal Complete",
+      copy: "You hit your 30-bid goal this month. Every extra bid creates another chance to win work.",
+      ctaLabel: "Build Another Bid",
+      progressText,
+      percent,
+    };
+  }
+  if (count === 0) {
+    return {
+      state: "start",
+      title: "Start Your Bid Momentum",
+      statusLabel: "Ready to start",
+      copy: "Build your first professional bid this month and start moving your pipeline forward.",
+      ctaLabel: "Build Today's Bid",
+      progressText,
+      percent,
+    };
+  }
+
+  // Pace relative to expected progress for this point in the month.
+  // Fallback (pre-mount, fraction unknown): treat as on pace to avoid a flash.
+  const expected = monthFraction != null ? goal * monthFraction : count;
+  const ratio = expected > 0 ? count / expected : 1;
+
+  if (ratio >= 1.15) {
+    return {
+      state: "ahead",
+      title: "Bid Momentum: Ahead of Pace",
+      statusLabel: "Ahead of Pace",
+      copy: "You're ahead of your monthly goal. Keep building while the momentum is strong.",
+      ctaLabel: "Build Another Bid",
+      progressText,
+      percent,
+    };
+  }
+  if (ratio >= 0.9) {
+    return {
+      state: "onpace",
+      title: "Bid Momentum: On Pace",
+      statusLabel: "On Pace",
+      copy: `You're ${count} ${count === 1 ? "bid" : "bids"} into your 30-bid monthly goal. Build 1 bid today to keep your pipeline moving.`,
+      ctaLabel: "Build Today's Bid",
+      progressText,
+      percent,
+    };
+  }
+  if (ratio >= 0.6) {
+    return {
+      state: "slightly",
+      title: "Bid Momentum: Slightly Behind",
+      statusLabel: "Slightly Behind",
+      copy: "You're a few bids behind pace. Build 1 bid today to get back on track.",
+      ctaLabel: "Get Back on Track",
+      progressText,
+      percent,
+    };
+  }
+  return {
+    state: "far",
+    title: "Rebuild Your Momentum",
+    statusLabel: "Behind Pace",
+    copy: "You still have time to make progress this month. Start with 1 professional bid today.",
+    ctaLabel: "Build Today's Bid",
+    progressText,
+    percent,
+  };
+}
+
+// ── Bid Inbox model ─────────────────────────────────────────────────────────
+// The contractor's own customers/bids/proposals — created through HomeBids.ai,
+// never a marketplace lead feed. Statuses drive the badge + primary CTA.
+type InboxStatusKey =
+  | "new_request" | "draft_ready" | "missing_details" | "proposal_sent"
+  | "waiting_customer" | "follow_up_ready" | "changes_requested" | "accepted" | "archived";
+
+type InboxFilter = "all" | "needs_action" | "drafts" | "sent" | "accepted" | "archived";
+
+interface BidInboxItem {
+  id: string;
+  customer: string;
+  project: string;
+  status: InboxStatusKey;
+  value: number | null;
+  lastActivity: string;
+  source: string;
+  phone: string;
+  secondary: "text" | "view";
+}
+
+const INBOX_STATUS: Record<InboxStatusKey, { label: string; cls: string; primary: string; action: "build" | "followup" | "view" }> = {
+  new_request:       { label: "New Request",        cls: "bg-blue-100 text-blue-700",     primary: "Start Bid",                action: "build" },
+  draft_ready:       { label: "Draft Ready",        cls: "bg-indigo-100 text-indigo-700", primary: "Review Proposal",          action: "build" },
+  missing_details:   { label: "Missing Details",    cls: "bg-amber-100 text-amber-700",   primary: "Continue Bid",             action: "build" },
+  proposal_sent:     { label: "Proposal Sent",      cls: "bg-sky-100 text-sky-700",       primary: "View Proposal",            action: "view"  },
+  waiting_customer:  { label: "Waiting on Customer", cls: "bg-amber-100 text-amber-700",  primary: "Send Follow-Up",           action: "followup" },
+  follow_up_ready:   { label: "Follow-Up Ready",    cls: "bg-purple-100 text-purple-700", primary: "Send Follow-Up",           action: "followup" },
+  changes_requested: { label: "Changes Requested",  cls: "bg-orange-100 text-orange-700", primary: "Edit Proposal",            action: "build" },
+  accepted:          { label: "Accepted",           cls: "bg-emerald-100 text-emerald-700", primary: "View Accepted Proposal", action: "view"  },
+  archived:          { label: "Archived",           cls: "bg-muted text-muted-foreground", primary: "View Details",            action: "view"  },
+};
+
+const INBOX_FILTERS: { id: InboxFilter; label: string }[] = [
+  { id: "all",          label: "All" },
+  { id: "needs_action", label: "Needs Action" },
+  { id: "drafts",       label: "Drafts" },
+  { id: "sent",         label: "Sent" },
+  { id: "accepted",     label: "Accepted" },
+  { id: "archived",     label: "Archived" },
+];
+
+const INBOX_FILTER_GROUPS: Record<Exclude<InboxFilter, "all" | "archived">, InboxStatusKey[]> = {
+  needs_action: ["new_request", "draft_ready", "missing_details", "changes_requested", "follow_up_ready"],
+  drafts:       ["draft_ready", "missing_details"],
+  sent:         ["proposal_sent", "waiting_customer"],
+  accepted:     ["accepted"],
+};
+
+const BID_INBOX_ITEMS: BidInboxItem[] = [
+  { id: "inbox-1", customer: "Sarah M.", project: "Interior Paint Estimate", status: "draft_ready",      value: 2400,  lastActivity: "Updated 12 min ago",     source: "Created from text",             phone: "+15125550142", secondary: "text" },
+  { id: "inbox-2", customer: "Mike R.",  project: "Drywall Repair",          status: "waiting_customer", value: 380,   lastActivity: "Proposal sent yesterday", source: "Added by you",                  phone: "+15125550178", secondary: "view" },
+  { id: "inbox-3", customer: "Janet B.", project: "Bathroom Remodel",        status: "follow_up_ready",  value: 12000, lastActivity: "Follow-up draft ready",   source: "Created from notes",            phone: "+15125550199", secondary: "text" },
+  { id: "inbox-4", customer: "David K.", project: "Fence Installation",      status: "new_request",      value: null,  lastActivity: "Request received 1 hour ago", source: "Imported from SMS",         phone: "+15125550123", secondary: "text" },
+  { id: "inbox-5", customer: "Lauren P.", project: "Kitchen Backsplash",     status: "accepted",         value: 3200,  lastActivity: "Accepted 3 days ago",     source: "Created from customer message", phone: "+15125550155", secondary: "view" },
+  { id: "inbox-6", customer: "Tom H.",   project: "Gutter Cleaning",         status: "archived",         value: 250,   lastActivity: "Archived last week",      source: "Added by you",                  phone: "+15125550167", secondary: "view" },
+];
+
+// ── Drafts (unfinished bids) ──────────────────────────────────────────────────
+// A draft is a bid started (by text or online) but not yet completed/approved
+// into a hosted proposal. Real accounts derive drafts from their own proposals
+// (status === "draft"); demo accounts show the sample set below.
+type DraftSource = "text" | "online";
+
+interface DraftItem {
+  id: string;
+  customer: string | null;
+  project: string;
+  status: string;
+  statusCls: string;
+  value: number | null;
+  lastUpdated: string;
+  source: DraftSource;
+}
+
+const DEMO_DRAFTS: DraftItem[] = [
+  { id: "draft-1", customer: "Sarah M.", project: "Interior Paint Estimate", status: "Ready for review",     statusCls: "bg-emerald-100 text-emerald-700", value: 2400,  lastUpdated: "12 min ago", source: "text"   },
+  { id: "draft-2", customer: "Mike R.",  project: "Drywall Repair",          status: "Needs pricing",        statusCls: "bg-amber-100 text-amber-700",     value: null,  lastUpdated: "1 hour ago", source: "text"   },
+  { id: "draft-3", customer: "Janet B.", project: "Bathroom Remodel",        status: "AI questions pending", statusCls: "bg-purple-100 text-purple-700",   value: 12000, lastUpdated: "Yesterday",  source: "online" },
+];
 
 // ── Main component ────────────────────────────────────────────────────────────
 
@@ -223,6 +383,13 @@ export default function ContractorDashboard() {
   }, [searchParams]);
 
   const [contractorName, setContractorName] = useState("there");
+  // Demo mode is the ONLY gate for sample data / demo banner. It is true when
+  // the whole app runs as a demo build (USE_MOCK_DATA) OR the signed-in account
+  // is a seeded/mock demo account. Real contractor accounts are NEVER demo —
+  // they show only their own real data and proper empty states.
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  // Locally-hidden (archived) drafts for this session.
+  const [dismissedDraftIds, setDismissedDraftIds] = useState<Set<string>>(new Set());
   useEffect(() => {
     // Auth guard. Middleware already protects this route server-side; here we
     // read the session mirror for instant paint and reconcile with the real
@@ -241,6 +408,8 @@ export default function ContractorDashboard() {
         return;
       }
       if (user.firstName) setContractorName(user.firstName);
+      const email = (user.email ?? "").toLowerCase();
+      setIsDemoMode(USE_MOCK_DATA || isDemoEmail(email) || email.endsWith("@homebids.demo"));
     })();
     return () => { cancelled = true; };
   }, []);
@@ -269,8 +438,44 @@ export default function ContractorDashboard() {
     load();
   }, []);
 
+  // Hosted proposals (written by the external Bid Builder workflow). Read-only
+  // here — the dashboard only displays and shares them.
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [proposalsLoaded, setProposalsLoaded] = useState(false);
+  useEffect(() => {
+    async function loadProposals() {
+      try {
+        if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) {
+          setProposalsLoaded(true);
+          return;
+        }
+        const { proposals: rows } = await getContractorProposals();
+        setProposals(rows);
+      } catch { /* non-fatal */ }
+      finally { setProposalsLoaded(true); }
+    }
+    loadProposals();
+  }, []);
+
+  // Time-of-day greeting + month progress (computed client-side post-mount to
+  // avoid hydration mismatches; both default to neutral values on first render).
+  const [greeting, setGreeting] = useState("Welcome");
+  const [monthFraction, setMonthFraction] = useState<number | null>(null);
+  useEffect(() => {
+    const d = new Date();
+    const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    setMonthFraction(d.getDate() / daysInMonth);
+    const h = d.getHours();
+    setGreeting(h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening");
+  }, []);
+
+  const momentum = useMemo(
+    () => computeBidMomentum(bidsCount, MONTH_GOAL, monthFraction),
+    [bidsCount, monthFraction],
+  );
+
   // Leads segment — "myleads" is the default
-  const [leadsSegment, setLeadsSegment] = useState<"myleads" | "homebids">("myleads");
+  const [inboxFilter, setInboxFilter] = useState<InboxFilter>("needs_action");
   const [showRelayModal, setShowRelayModal] = useState(false);
   const [relayLead, setRelayLead] = useState<HomeBidsLead | null>(null);
   const [relayMessage, setRelayMessage] = useState("");
@@ -314,17 +519,6 @@ export default function ContractorDashboard() {
     });
   }
 
-  // Start from one of the contractor's own leads
-  function startBidFromMyLead(lead: MyLead) {
-    startBidByText("my", {
-      id: lead.id,
-      projectTitle: lead.projectTitle,
-      category: lead.category,
-      ownerName: lead.customerName,
-      ownerPhone: lead.phone,
-    });
-  }
-
   function closeBidBuilder() {
     setBidChatLead(null);
     setActiveTool(null);
@@ -352,16 +546,30 @@ export default function ContractorDashboard() {
     window.location.href = href;
   }
 
-  const handleSignOut = () => mockSignOut();
+  // ── Build Bid choice modal ───────────────────────────────────────────────────
+  // Every contractor "build/finish/continue bid" CTA routes through this modal,
+  // which offers Continue by Text (SMS) or Continue on Site (existing builder).
+  const [showBuildChoice, setShowBuildChoice] = useState(false);
+  const pendingOnSiteRef = useRef<(() => void) | null>(null);
 
-  const newLeads = DEMO_HOMEBIDS_LEADS.filter((l) => l.status === "new").length;
-  const awaitingApproval = DEMO_HOMEBIDS_LEADS.filter((l) => l.status === "homeowner_reviewing").length;
-  const inProgress = DEMO_MY_LEADS.filter((l) => l.status === "in_progress").length;
+  function openBuildChoice(onSite: () => void) {
+    pendingOnSiteRef.current = onSite;
+    setShowBuildChoice(true);
+  }
+
+  function handleContinueOnSite() {
+    setShowBuildChoice(false);
+    const fn = pendingOnSiteRef.current;
+    pendingOnSiteRef.current = null;
+    fn?.();
+  }
+
+  const handleSignOut = () => mockSignOut();
 
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: "home",    label: "Home",     icon: LayoutDashboard },
-    { id: "leads",   label: "Leads",    icon: Users },
-    { id: "ai",      label: "Bid Builder", icon: Sparkles },
+    { id: "leads",   label: "Bid Inbox", icon: Users },
+    { id: "ai",      label: "Build a Bid", icon: Sparkles },
     { id: "account", label: "Account",  icon: Wrench },
   ];
 
@@ -413,7 +621,7 @@ export default function ContractorDashboard() {
               <MessageCircle className="h-3 w-3" /> Text Homeowner
             </Button>
           ) : lead.status === "new" ? (
-            <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => startBidFromHomeBidsLead(lead)}>
+            <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => openBuildChoice(() => startBidFromHomeBidsLead(lead))}>
               <MessageCircle className="h-3 w-3" /> Start Bid by Text
             </Button>
           ) : (
@@ -443,295 +651,288 @@ export default function ContractorDashboard() {
     completed:      { label: "Completed",       cls: "bg-green-50 text-green-700"             },
   };
 
+  // Up to 3 action items. The third card adapts: when behind pace it nudges
+  // momentum; when on/ahead/complete it surfaces a fresh homeowner lead.
+  // Sample homeowner leads are demo-only — never surface them in real accounts.
+  const newHomeBidsLead = isDemoMode ? DEMO_HOMEBIDS_LEADS.find((l) => l.status === "new") : undefined;
+  const thirdCard =
+    (momentum.state === "ahead" || momentum.state === "complete" || momentum.state === "onpace") && newHomeBidsLead
+      ? {
+          id: "na-lead",
+          title: newHomeBidsLead.title,
+          sub: `New homeowner lead in ${newHomeBidsLead.location}.`,
+          cta: "Build Bid",
+          icon: Sparkles as React.ElementType,
+          onClick: () => openBuildChoice(() => startBidFromHomeBidsLead(newHomeBidsLead)),
+        }
+      : {
+          id: "na-momentum",
+          title: "Monthly Bid Momentum",
+          sub: momentum.copy,
+          cta: momentum.ctaLabel,
+          icon: Flame as React.ElementType,
+          onClick: () => openBuildChoice(() => startBidByText("my", null)),
+        };
+
+  const needsAction: { id: string; title: string; sub: string; cta: string; icon: React.ElementType; onClick: () => void }[] = [
+    {
+      id: "na-draft",
+      title: "Kitchen Remodel Bid",
+      sub: "Draft started — project details are ready.",
+      cta: "Finish Bid",
+      icon: FileText,
+      onClick: () => openBuildChoice(() => startBidByText("my", null)),
+    },
+    {
+      id: "na-follow",
+      title: "Bathroom Tile Proposal",
+      sub: "Sent 2 days ago — this bid may need a follow-up.",
+      cta: "Follow Up",
+      icon: Send,
+      onClick: () => handleTabChange("leads"),
+    },
+    thirdCard,
+  ].slice(0, 3);
+
   const homeContent = (
     <div className="space-y-6">
-      {/* Greeting + primary CTA */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Good morning, {contractorName}.</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            You have <span className="font-semibold text-foreground">{DEMO_HOMEBIDS_LEADS.length + DEMO_MY_LEADS.length}</span> active leads.
-          </p>
-        </div>
-        <Button
-          className="shrink-0 gap-2 rounded-full font-semibold"
-          onClick={() => { setActiveTool("bid"); handleTabChange("ai"); }}
-        >
-          <Sparkles className="h-4 w-4" />
-          Build a New Bid
-        </Button>
-      </div>
+      {/* Hero — greeting + Bid Momentum + daily nudge */}
+      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+        <h1 className="text-2xl font-bold text-foreground text-balance">{greeting}, {contractorName}.</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {momentum.state === "complete"
+            ? "You've hit your 30-bid goal this month."
+            : bidsCount > 0
+              ? `You're ${bidsCount} ${bidsCount === 1 ? "bid" : "bids"} into your 30-bid monthly goal.`
+              : "Let's start building your pipeline this month."}
+        </p>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: "New Leads",         value: newLeads,          color: "bg-blue-50 text-blue-700 border-blue-100" },
-          { label: "Awaiting Approval", value: awaitingApproval,  color: "bg-purple-50 text-purple-700 border-purple-100" },
-          { label: "In Progress",       value: inProgress,        color: "bg-amber-50 text-amber-700 border-amber-100" },
-          { label: "Bids Submitted",    value: bidsCount,         color: "bg-muted text-muted-foreground border-border" },
-        ].map(({ label, value, color }) => (
-          <div key={label} className={`rounded-xl border p-3 ${color}`}>
-            <p className="text-2xl font-bold">{value}</p>
-            <p className="mt-0.5 text-[11px] font-medium">{label}</p>
+        <div className="mt-4 rounded-xl border border-border bg-background p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <Flame className="h-4 w-4 text-primary" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-foreground">{momentum.title}</p>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{momentum.statusLabel}</p>
+              </div>
+            </div>
+            <span className="shrink-0 text-sm font-semibold text-foreground">{momentum.progressText}</span>
           </div>
-        ))}
-      </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-3">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Needs your attention</h2>
-          <div className="space-y-3">
-            {DEMO_HOMEBIDS_LEADS.map((lead) => renderHomeBidsLeadCard(lead))}
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={momentum.percent} aria-valuemin={0} aria-valuemax={100}>
+            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${momentum.percent}%` }} />
           </div>
-        </div>
 
-        <div className="lg:col-span-2">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Suggested actions</h2>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{momentum.copy}</p>
+
+          <Button
+            className="mt-4 w-full gap-2 rounded-full font-semibold sm:w-auto"
+            onClick={() => openBuildChoice(() => startBidByText("my", null))}
+          >
+            <Sparkles className="h-4 w-4" />
+            {momentum.ctaLabel}
+          </Button>
+        </div>
+      </section>
+
+      {/* Needs Action — max 3 priority cards */}
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Needs Action</h2>
+        {needsAction.length > 0 ? (
           <div className="space-y-2">
-            {[
-              { icon: MessageCircle, label: "Build a professional bid", sub: "Kitchen Cabinet Repaint", action: () => startBidFromHomeBidsLead(DEMO_HOMEBIDS_LEADS[0]) },
-              { icon: Eye, label: "Homeowner reviewing bid", sub: "Backyard Turf Install", action: () => handleTabChange("leads") },
-              { icon: Unlock, label: "Approval unlocked", sub: "Bathroom Vanity Replacement", action: () => handleTabChange("leads") },
-              { icon: Sparkles, label: "Start a new bid by text", sub: "Text job details to the AI Bid Builder", action: () => { setActiveTool("bid"); handleTabChange("ai"); } },
-            ].map(({ icon: Icon, label, sub, action }) => (
-              <button
-                key={label}
-                type="button"
-                onClick={action}
-                className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/30 hover:bg-primary/5"
-              >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-                  <Icon className="h-4 w-4 text-muted-foreground" />
+            {needsAction.map((card) => {
+              const Icon = card.icon;
+              return (
+                <div key={card.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Icon className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground">{card.title}</p>
+                    <p className="truncate text-xs text-muted-foreground">{card.sub}</p>
+                  </div>
+                  <Button size="sm" className="h-8 shrink-0 rounded-full px-3 text-xs font-semibold" onClick={card.onClick}>
+                    {card.cta}
+                  </Button>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground">{label}</p>
-                  <p className="truncate text-[11px] text-muted-foreground">{sub}</p>
-                </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-              </button>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+            You&apos;re all caught up. Build a bid to keep your momentum going.
+          </p>
+        )}
+      </section>
+
+      {/* Your Proposals — hosted proposal links (max 3 on home) */}
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Your Proposals</h2>
+          {proposals.length > 3 && (
+            <Button size="sm" variant="ghost" className="h-7 gap-1 rounded-full px-3 text-xs" asChild>
+              <a href="/contractors/bids">View all <ChevronRight className="h-3 w-3" /></a>
+            </Button>
+          )}
+        </div>
+        {proposals.length > 0 ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {proposals.slice(0, 4).map((p) => (
+              <ContractorProposalCard key={p.id} proposal={p} />
             ))}
           </div>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange("ai")}
-            className="mt-4 flex w-full items-center justify-between rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
-          >
-            <span className="flex items-center gap-2"><Zap className="h-4 w-4" />Open Bid Builder</span>
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* My Bids section */}
-      <div>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">My Bids</h2>
-          <Button size="sm" variant="ghost" className="h-7 gap-1 rounded-full px-3 text-xs" asChild>
-            <a href="/contractors/bids">View all <ChevronRight className="h-3 w-3" /></a>
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {/* TODO: replace with live bids from getContractorBids() once Supabase is connected */}
-          {[
-            { id: "cbid-1", title: "HVAC System Replacement", location: "Austin, TX", amount: 7850, status: "in_progress",    updated: "2 days ago" },
-            { id: "cbid-2", title: "Water Heater Replacement", location: "Round Rock, TX", amount: 2400, status: "pending",      updated: "5 days ago" },
-            { id: "cbid-3", title: "Deck Replacement",         location: "Cedar Park, TX", amount: 12400, status: "question_asked", updated: "1 day ago" },
-          ].map((bid) => {
-            const sc = BID_STATUS_CONFIG[bid.status] ?? BID_STATUS_CONFIG.pending;
-            return (
-              <div key={bid.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">{bid.title}</p>
-                  <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3 shrink-0" />{bid.location}
-                    <span className="mx-1">·</span>{bid.updated}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="text-sm font-semibold text-foreground">
-                    ${bid.amount.toLocaleString()}
-                  </span>
-                  <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${sc.cls}`}>
-                    {sc.label}
-                  </span>
-                </div>
-                <Button size="sm" variant="ghost" className="h-7 w-7 shrink-0 rounded-full p-0" asChild>
-                  <a href={`/proposal/${bid.id}`}><ExternalLink className="h-3.5 w-3.5" /></a>
-                </Button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Homeowner Opportunities (secondary) */}
-      <div>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Homeowner Opportunities</h2>
-          <Button size="sm" variant="ghost" className="h-7 gap-1 rounded-full px-3 text-xs" asChild>
-            <a href="/contractors/jobs">Browse <ChevronRight className="h-3 w-3" /></a>
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground mb-3">
-          {/* TODO: load from getOpenJobs() when live */}
-          Jobs submitted by homeowners in your service area. Build a bid to respond.
-        </p>
-        <div className="space-y-2">
-          {DEMO_HOMEBIDS_LEADS.slice(0, 2).map((lead) => (
-            <div key={lead.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">{lead.title}</p>
-                <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="h-3 w-3 shrink-0" />{lead.location}
-                </p>
-              </div>
-              <span className="shrink-0 text-sm font-medium text-muted-foreground">{lead.estimatedValue}</span>
-              <Button
-                size="sm"
-                className="h-7 shrink-0 gap-1 rounded-full px-3 text-xs"
-                onClick={() => startBidFromHomeBidsLead(lead)}
-              >
-                <Sparkles className="h-3 w-3" /> Build Bid
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
+        ) : proposalsLoaded ? (
+          <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center">
+            <p className="text-sm font-medium text-foreground">No proposals yet.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Build a bid by text and your hosted proposal link will appear here.
+            </p>
+            <Button className="mt-3 gap-2 rounded-full font-semibold" onClick={() => openBuildChoice(() => startBidByText("my", null))}>
+              <Sparkles className="h-4 w-4" /> Build Today&apos;s Bid
+            </Button>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
+            Loading proposals…
+          </div>
+        )}
+      </section>
     </div>
   );
 
   // ── LEADS tab ──���───────────────────────────────────────────────────────────
 
+  // ── Bid Inbox ─────────────────────────────────────────────────────────────
+  // Contractor-owned customers, bid drafts, sent proposals, and follow-ups
+  // created through HomeBids.ai. This is NOT a marketplace/lead-source feed.
+  const visibleInbox = BID_INBOX_ITEMS.filter((item) => {
+    if (inboxFilter === "all") return item.status !== "archived";
+    if (inboxFilter === "archived") return item.status === "archived";
+    return INBOX_FILTER_GROUPS[inboxFilter].includes(item.status);
+  });
+
   const leadsContent = (
     <div className="space-y-5">
-      <h1 className="text-xl font-bold text-foreground">Leads</h1>
+      {/* Title + primary CTA (stacks on mobile) */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-foreground">Bid Inbox</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage customer requests, proposal drafts, sent bids, and follow-ups.
+          </p>
+        </div>
+        <Button
+          className="shrink-0 gap-2 rounded-full font-semibold"
+          onClick={() => openBuildChoice(() => startBidByText("my", null))}
+        >
+          <Plus className="h-4 w-4" /> Build New Bid
+        </Button>
+      </div>
 
-      {/* Segmented toggle */}
-      <div className="inline-flex rounded-lg border border-border bg-muted p-0.5">
-        {([
-          { id: "myleads",  label: "My Leads",        count: DEMO_MY_LEADS.length        },
-          { id: "homebids", label: "HomeBids Leads",   count: DEMO_HOMEBIDS_LEADS.length  },
-        ] as const).map((seg) => (
+      {/* Status filters — horizontally scrollable pills on mobile */}
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {INBOX_FILTERS.map((f) => (
           <button
-            key={seg.id}
+            key={f.id}
             type="button"
-            onClick={() => setLeadsSegment(seg.id)}
-            className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-sm font-medium transition-all duration-150 ${
-              leadsSegment === seg.id
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+            onClick={() => setInboxFilter(f.id)}
+            className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+              inboxFilter === f.id
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-card text-muted-foreground hover:text-foreground"
             }`}
           >
-            {seg.label}
-            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${
-              leadsSegment === seg.id
-                ? seg.id === "myleads"
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-primary/10 text-primary"
-                : "bg-muted-foreground/15 text-muted-foreground"
-            }`}>
-              {seg.count}
-            </span>
+            {f.label}
           </button>
         ))}
       </div>
 
-      {/* My Leads */}
-      {leadsSegment === "myleads" && (
+      {/* Cards */}
+      {visibleInbox.length > 0 ? (
         <div className="space-y-3">
-          {DEMO_MY_LEADS.map((lead) => {
-            const aiStatusBadge =
-              lead.aiStatus === "estimate_ready"  ? { label: "Estimate Ready",  cls: "bg-blue-100 text-blue-700"     }
-              : lead.aiStatus === "response_sent" ? { label: "Response Sent",   cls: "bg-amber-100 text-amber-700"   }
-              :                                    { label: "Follow-Up Ready",  cls: "bg-purple-100 text-purple-700" };
-            const statusDot =
-              lead.status === "in_progress" ? "bg-emerald-500" : "bg-muted-foreground/40";
-
+          {visibleInbox.map((item) => {
+            const cfg = INBOX_STATUS[item.status];
             return (
-              <div key={lead.id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/20">
+              <div key={item.id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/20">
                 <div className="flex items-center gap-3">
-                  <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-                    {lead.customerName.charAt(0)}
-                    <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background ${statusDot}`} />
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                    {item.customer.charAt(0)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-foreground">{lead.customerName}</p>
-                    <p className="truncate text-xs text-muted-foreground">{lead.projectTitle}</p>
+                    <p className="font-semibold text-foreground">{item.customer}</p>
+                    <p className="truncate text-xs text-muted-foreground">{item.project}</p>
                   </div>
-                  <span className="shrink-0 text-sm font-semibold text-foreground">{lead.estimatedValue}</span>
+                  {item.value != null && (
+                    <span className="shrink-0 text-sm font-semibold text-foreground">${item.value.toLocaleString()}</span>
+                  )}
                 </div>
+
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${aiStatusBadge.cls}`}>{aiStatusBadge.label}</span>
-                  <span className="text-[11px] text-muted-foreground">· {lead.lastActivity}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${cfg.cls}`}>{cfg.label}</span>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{item.source}</span>
+                  <span className="text-[11px] text-muted-foreground">· {item.lastActivity}</span>
                 </div>
+
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => startBidFromMyLead(lead)}>
-                    <MessageCircle className="h-3 w-3" /> Start Bid by Text
+                  <Button
+                    size="sm"
+                    className="h-7 gap-1 px-3 text-xs"
+                    onClick={() => {
+                      if (cfg.action === "build") {
+                        openBuildChoice(() => startBidByText("my", {
+                          id: item.id,
+                          projectTitle: item.project,
+                          category: item.project,
+                          ownerName: item.customer,
+                          ownerPhone: item.phone,
+                        }));
+                      } else if (cfg.action === "followup") {
+                        openSms(item.phone);
+                      } else {
+                        window.location.href = "/contractors/bids";
+                      }
+                    }}
+                  >
+                    {cfg.action === "build" ? <FileText className="h-3 w-3" />
+                      : cfg.action === "followup" ? <Send className="h-3 w-3" />
+                      : <Eye className="h-3 w-3" />}
+                    {cfg.primary}
                   </Button>
-                  <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => openSms(lead.phone)}>
-                    <MessageCircle className="h-3 w-3" /> Text Customer
-                  </Button>
+
+                  {item.secondary === "text" ? (
+                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => openSms(item.phone)}>
+                      <MessageCircle className="h-3 w-3" /> Text Customer
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { window.location.href = "/contractors/bids"; }}>
+                      <ExternalLink className="h-3 w-3" /> View Proposal
+                    </Button>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
-      )}
-
-      {/* HomeBids Leads */}
-      {leadsSegment === "homebids" && (
-        <div className="space-y-3">
-          {DEMO_HOMEBIDS_LEADS.map((lead) => {
-            const statusBadge =
-              lead.status === "new"             ? { label: "New",        cls: "bg-blue-100 text-blue-700"     }
-              : lead.status === "bid_submitted" ? { label: "Bid Sent",   cls: "bg-amber-100 text-amber-700"   }
-              :                                  { label: "Reviewing",   cls: "bg-purple-100 text-purple-700" };
-
-            return (
-              <div key={lead.id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/20">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadge.cls}`}>{statusBadge.label}</span>
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
-                  </div>
-                  <span className="shrink-0 text-sm font-semibold text-foreground">{lead.estimatedValue}</span>
-                </div>
-                <p className="mt-2 font-semibold text-foreground">{lead.title}</p>
-                <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3 shrink-0" />{lead.location}</span>
-                  <span className="flex items-center gap-1"><Clock className="h-3 w-3 shrink-0" />{lead.timeline}</span>
-                </div>
-                <p className="mt-1.5 text-[11px] italic text-primary/80 line-clamp-2">{lead.aiNotes}</p>
-                <div className="mt-1.5">
-                  {isMessagingUnlocked(lead) ? (
-                    <span className="flex w-fit items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">
-                      <Unlock className="h-3 w-3" /> Direct messaging unlocked
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground">Direct messaging unlocks after homeowner approval.</span>
-                  )}
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
-                    <Eye className="h-3 w-3" /> Details
-                  </Button>
-                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => startBidFromHomeBidsLead(lead)}>
-                    <MessageCircle className="h-3 w-3" /> Start Bid by Text
-                  </Button>
-                  {isMessagingUnlocked(lead) ? (
-                    <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => openSms(lead.homeownerPhone)}>
-                      <MessageCircle className="h-3 w-3" /> Text Homeowner
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); }}>
-                      <MessageCircle className="h-3 w-3" /> Send via HomeBids AI
-                    </Button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+      ) : (
+        // Empty state
+        <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <Archive className="h-6 w-6 text-primary" />
+          </div>
+          <p className="mt-3 text-base font-semibold text-foreground">No bids yet</p>
+          <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
+            Start by texting HomeBids.ai project details, photos, screenshots, or rough notes. We&apos;ll help turn them into a professional proposal.
+          </p>
+          <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
+            <Button className="w-full gap-2 rounded-full font-semibold sm:w-auto" onClick={() => openBuildChoice(() => startBidByText("my", null))}>
+              <Plus className="h-4 w-4" /> Build New Bid
+            </Button>
+            <Button variant="outline" className="w-full gap-2 rounded-full bg-transparent sm:w-auto" onClick={() => { window.location.href = getContractorSmsLink(); }}>
+              <MessageCircle className="h-4 w-4" /> Text HomeBids.ai
+            </Button>
+          </div>
         </div>
       )}
     </div>
@@ -756,69 +957,166 @@ export default function ContractorDashboard() {
       );
     }
 
-    // Tool picker — Bid Builder is the only tool at launch
+    // Start screen: choose how to build a bid + unfinished drafts.
+    // Demo accounts show sample drafts; real accounts show ONLY their own
+    // proposals still in "draft" status (filtered server-side by RLS).
+    const allDrafts: DraftItem[] = isDemoMode
+      ? DEMO_DRAFTS
+      : proposals
+          .filter((p) => p.status === "draft")
+          .map((p) => ({
+            id: p.id,
+            customer: p.homeowner_name,
+            project: p.project_title,
+            status: "Draft",
+            statusCls: "bg-muted text-muted-foreground",
+            value: p.total_price != null ? Number(p.total_price) : null,
+            lastUpdated: timeAgo(p.updated_at) ?? "recently",
+            source: "online" as DraftSource,
+          }));
+    const drafts = allDrafts.filter((d) => !dismissedDraftIds.has(d.id));
+
+    // Real <a> SMS link to the HomeBids contractor number, prefilled per spec.
+    const textBidHref = `sms:+13472370362?body=${encodeURIComponent("Let's create a new bid")}`;
+
+    const startByTextBtn = (full = false) => (
+      <a
+        href={textBidHref}
+        className={`inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 ${full ? "w-full" : ""}`}
+      >
+        <MessageCircle className="h-4 w-4" /> Start by Text
+      </a>
+    );
+
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
+        {/* Title */}
         <div>
-          <h1 className="text-xl font-bold text-foreground">Bid Builder</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Text job details, photos, or voice notes. The AI organizes the scope and generates a clean proposal.</p>
+          <h1 className="text-xl font-bold text-foreground">Build a Bid</h1>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground text-pretty">
+            Create a professional hosted proposal from texts, photos, screenshots, voice notes, or rough job notes.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4">
-          {/* Bid Builder card */}
-          <button
-            type="button"
-            onClick={() => startBidByText("my", null)}
-            className="group flex flex-col rounded-2xl border-2 border-border bg-card p-6 text-left transition-all hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5"
-          >
+        {/* Two start options — stack on mobile, side-by-side on desktop */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {/* Start by Text (primary) */}
+          <div className="flex flex-col rounded-2xl border-2 border-primary bg-card p-6 shadow-sm">
             <div className="flex items-start justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary/20">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
                 <MessageCircle className="h-6 w-6 text-primary" />
               </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+              <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary">Recommended</span>
             </div>
-            <h3 className="mt-4 text-lg font-bold text-foreground">AI Bid Builder</h3>
-            <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-              Text rough job notes and HomeBids AI asks follow-up questions, organizes the scope, and generates a clean proposal you can review, edit, and send.
+            <h3 className="mt-4 text-lg font-bold text-foreground">Start by Text</h3>
+            <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">
+              Text job details, photos, screenshots, or voice notes. HomeBids.ai will ask follow-up questions and draft a clean proposal you can review, edit, and send.
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {["Text-to-Bid", "AI Drafting", "Shareable Bid Link", "PDF Included"].map((tag) => (
-                <span key={tag} className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-medium text-primary">{tag}</span>
-              ))}
+            <div className="mt-5">{startByTextBtn(true)}</div>
+            <p className="mt-2 text-center text-xs text-muted-foreground">Best when you&apos;re in the field.</p>
+          </div>
+
+          {/* Build Online (secondary) */}
+          <div className="flex flex-col rounded-2xl border border-border bg-card p-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+              <Calculator className="h-6 w-6 text-foreground" />
             </div>
-            <div className="mt-5">
-              <span className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors group-hover:bg-primary/90">
-                <MessageCircle className="h-4 w-4" /> Start Bid by Text
-              </span>
-            </div>
-          </button>
+            <h3 className="mt-4 text-lg font-bold text-foreground">Build Online</h3>
+            <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">
+              Enter customer info, scope, pricing, exclusions, photos, and notes in a simple guided builder.
+            </p>
+            <Button
+              variant="outline"
+              className="mt-5 w-full justify-center gap-2 rounded-xl bg-transparent py-2.5 text-sm font-semibold"
+              onClick={() => startBidByText("my", null)}
+            >
+              <Calculator className="h-4 w-4" /> Build Online
+            </Button>
+            <p className="mt-2 text-center text-xs text-muted-foreground">Best when you want a more structured workflow.</p>
+          </div>
         </div>
 
-        {/* Quick-start from active leads */}
-        {DEMO_HOMEBIDS_LEADS.some((l) => l.status === "new") && (
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quick-start Bid Builder</p>
+        {/* Feature chips */}
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {["Text-to-Bid", "Photo & Screenshot Intake", "Voice Notes", "Hosted Proposal Link", "PDF Included"].map((tag) => (
+            <span key={tag} className="shrink-0 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{tag}</span>
+          ))}
+        </div>
+
+        {/* What happens next */}
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">What happens next</p>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { n: 1, label: "Send job details" },
+              { n: 2, label: "AI asks follow-ups" },
+              { n: 3, label: "Review proposal" },
+              { n: 4, label: "Send link or PDF" },
+            ].map((step) => (
+              <div key={step.n} className="flex items-center gap-2">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{step.n}</span>
+                <span className="text-sm font-medium text-foreground">{step.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Drafts — unfinished bids belonging to this contractor */}
+        <div>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Drafts</h2>
+          {drafts.length > 0 ? (
             <div className="space-y-2">
-              {DEMO_HOMEBIDS_LEADS.filter((l) => l.status === "new").map((lead) => (
-                <button
-                  key={lead.id}
-                  type="button"
-                  onClick={() => startBidFromHomeBidsLead(lead)}
-                  className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
-                >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                    <Calculator className="h-4 w-4 text-primary" />
+              {drafts.map((d) => (
+                <div key={d.id} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                      {(d.customer ?? d.project).charAt(0)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-foreground">{d.customer ?? d.project}</p>
+                      <p className="truncate text-xs text-muted-foreground">{d.customer ? d.project : "Unfinished bid"}</p>
+                    </div>
+                    {d.value != null && <span className="shrink-0 text-sm font-semibold text-foreground">${d.value.toLocaleString()}</span>}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-foreground truncate">{lead.title}</p>
-                    <p className="text-xs text-muted-foreground">{lead.estimatedValue} · {lead.location}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${d.statusCls}`}>{d.status}</span>
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{d.source === "text" ? "Started by text" : "Started online"}</span>
+                    <span className="text-[11px] text-muted-foreground">· Updated {d.lastUpdated}</span>
                   </div>
-                  <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">New</span>
-                </button>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => openBuildChoice(() => startBidByText("my", null))}>
+                      Continue
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 gap-1 px-2.5 text-xs text-muted-foreground"
+                      onClick={() => setDismissedDraftIds((prev) => new Set(prev).add(d.id))}
+                    >
+                      <Archive className="h-3 w-3" /> Archive
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <FileText className="h-6 w-6 text-primary" />
+              </div>
+              <p className="mt-3 text-base font-semibold text-foreground">No drafts yet</p>
+              <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
+                Start your first bid by text or online. HomeBids.ai will help organize the scope and create a proposal you can send.
+              </p>
+              <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
+                {startByTextBtn(false)}
+                <Button variant="outline" className="w-full gap-2 rounded-xl bg-transparent sm:w-auto" onClick={() => startBidByText("my", null)}>
+                  <Calculator className="h-4 w-4" /> Build Online
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   })();
@@ -902,12 +1200,12 @@ export default function ContractorDashboard() {
 
       <main className="flex-1 min-w-0">
         <div className="mx-auto w-full max-w-2xl px-4 pb-8 pt-6 lg:max-w-4xl lg:px-8 lg:pb-12 lg:pt-8">
-          {USE_MOCK_DATA && (
+          {isDemoMode && (
             <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
               <span className="inline-flex items-center rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-900">
                 Demo data
               </span>
-              <span>Leads, bids, and metrics below are sample data for demonstration.</span>
+              <span>The bids, customers, and metrics below are sample data for demonstration.</span>
             </div>
           )}
           {tabContent[activeTab]}
@@ -1006,7 +1304,7 @@ export default function ContractorDashboard() {
                 </ul>
               </div>
               <div className="flex flex-col gap-2 pt-1">
-              <Button className="w-full gap-2" onClick={() => { setShowLeadDetail(false); startBidFromHomeBidsLead(selectedLead); }}>
+              <Button className="w-full gap-2" onClick={() => { setShowLeadDetail(false); openBuildChoice(() => startBidFromHomeBidsLead(selectedLead)); }}>
                 <MessageCircle className="h-4 w-4" /> Start Bid by Text
               </Button>
                 {!isMessagingUnlocked(selectedLead) ? (
@@ -1023,6 +1321,13 @@ export default function ContractorDashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Build Bid choice — Continue by Text (SMS) or Continue on Site */}
+      <BuildBidChoiceModal
+        open={showBuildChoice}
+        onOpenChange={setShowBuildChoice}
+        onContinueOnSite={handleContinueOnSite}
+      />
     </div>
   );
 }
