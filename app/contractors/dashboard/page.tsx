@@ -42,9 +42,12 @@ import {
   ExternalLink,
   Flame,
   FileText,
+  Plus,
+  Archive,
 } from "lucide-react";
 import { BidBuilderChat, type BidLeadType, type BidChatLeadContext } from "@/components/bid-builder-chat";
 import { BuildBidChoiceModal } from "@/components/build-bid-choice-modal";
+import { getContractorSmsLink } from "@/lib/sms-config";
 import { getMockUser, mockSignOut, USE_MOCK_DATA, syncMirrorFromSupabase } from "@/lib/mock-auth";
 import { getContractorBids } from "@/lib/supabase/actions";
 import { getContractorProposals, type Proposal } from "@/lib/supabase/proposals";
@@ -81,17 +84,6 @@ interface HomeBidsLead {
   aiConfidence?: string;
 }
 
-interface MyLead {
-  id: string;
-  customerName: string;
-  projectTitle: string;
-  category: string;
-  estimatedValue: string;
-  status: "open" | "in_progress";
-  lastActivity: string;
-  aiStatus: "estimate_ready" | "response_sent" | "followup_ready";
-  phone?: string;
-}
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 
@@ -169,12 +161,6 @@ const DEMO_HOMEBIDS_LEADS: HomeBidsLead[] = [
     missingInfo: [],
     aiConfidence: "High",
   },
-];
-
-const DEMO_MY_LEADS: MyLead[] = [
-  { id: "ml-1", customerName: "Sarah M.", projectTitle: "Interior Paint Estimate", category: "Interior Painting", estimatedValue: "$2,400", status: "open", lastActivity: "Waiting on estimate", aiStatus: "estimate_ready" },
-  { id: "ml-2", customerName: "Mike R.", projectTitle: "Drywall Repair Response", category: "Drywall", estimatedValue: "$380", status: "in_progress", lastActivity: "Sent response — awaiting reply", aiStatus: "response_sent" },
-  { id: "ml-3", customerName: "Janet B.", projectTitle: "Bathroom Remodel Follow-Up", category: "Remodel", estimatedValue: "$12,000", status: "open", lastActivity: "Follow-up draft ready", aiStatus: "followup_ready" },
 ];
 
 // ── AI helper functions ───────────��───────────────────────��───────��────────────
@@ -298,7 +284,63 @@ function computeBidMomentum(count: number, goal: number, monthFraction: number |
   };
 }
 
-// ── AI assistant suggestions ───────────────────────────────────────────────────
+// ── Bid Inbox model ─────────────────────────────────────────────────────────
+// The contractor's own customers/bids/proposals — created through HomeBids.ai,
+// never a marketplace lead feed. Statuses drive the badge + primary CTA.
+type InboxStatusKey =
+  | "new_request" | "draft_ready" | "missing_details" | "proposal_sent"
+  | "waiting_customer" | "follow_up_ready" | "changes_requested" | "accepted" | "archived";
+
+type InboxFilter = "all" | "needs_action" | "drafts" | "sent" | "accepted" | "archived";
+
+interface BidInboxItem {
+  id: string;
+  customer: string;
+  project: string;
+  status: InboxStatusKey;
+  value: number | null;
+  lastActivity: string;
+  source: string;
+  phone: string;
+  secondary: "text" | "view";
+}
+
+const INBOX_STATUS: Record<InboxStatusKey, { label: string; cls: string; primary: string; action: "build" | "followup" | "view" }> = {
+  new_request:       { label: "New Request",        cls: "bg-blue-100 text-blue-700",     primary: "Start Bid",                action: "build" },
+  draft_ready:       { label: "Draft Ready",        cls: "bg-indigo-100 text-indigo-700", primary: "Review Proposal",          action: "build" },
+  missing_details:   { label: "Missing Details",    cls: "bg-amber-100 text-amber-700",   primary: "Continue Bid",             action: "build" },
+  proposal_sent:     { label: "Proposal Sent",      cls: "bg-sky-100 text-sky-700",       primary: "View Proposal",            action: "view"  },
+  waiting_customer:  { label: "Waiting on Customer", cls: "bg-amber-100 text-amber-700",  primary: "Send Follow-Up",           action: "followup" },
+  follow_up_ready:   { label: "Follow-Up Ready",    cls: "bg-purple-100 text-purple-700", primary: "Send Follow-Up",           action: "followup" },
+  changes_requested: { label: "Changes Requested",  cls: "bg-orange-100 text-orange-700", primary: "Edit Proposal",            action: "build" },
+  accepted:          { label: "Accepted",           cls: "bg-emerald-100 text-emerald-700", primary: "View Accepted Proposal", action: "view"  },
+  archived:          { label: "Archived",           cls: "bg-muted text-muted-foreground", primary: "View Details",            action: "view"  },
+};
+
+const INBOX_FILTERS: { id: InboxFilter; label: string }[] = [
+  { id: "all",          label: "All" },
+  { id: "needs_action", label: "Needs Action" },
+  { id: "drafts",       label: "Drafts" },
+  { id: "sent",         label: "Sent" },
+  { id: "accepted",     label: "Accepted" },
+  { id: "archived",     label: "Archived" },
+];
+
+const INBOX_FILTER_GROUPS: Record<Exclude<InboxFilter, "all" | "archived">, InboxStatusKey[]> = {
+  needs_action: ["new_request", "draft_ready", "missing_details", "changes_requested", "follow_up_ready"],
+  drafts:       ["draft_ready", "missing_details"],
+  sent:         ["proposal_sent", "waiting_customer"],
+  accepted:     ["accepted"],
+};
+
+const BID_INBOX_ITEMS: BidInboxItem[] = [
+  { id: "inbox-1", customer: "Sarah M.", project: "Interior Paint Estimate", status: "draft_ready",      value: 2400,  lastActivity: "Updated 12 min ago",     source: "Created from text",             phone: "+15125550142", secondary: "text" },
+  { id: "inbox-2", customer: "Mike R.",  project: "Drywall Repair",          status: "waiting_customer", value: 380,   lastActivity: "Proposal sent yesterday", source: "Added by you",                  phone: "+15125550178", secondary: "view" },
+  { id: "inbox-3", customer: "Janet B.", project: "Bathroom Remodel",        status: "follow_up_ready",  value: 12000, lastActivity: "Follow-up draft ready",   source: "Created from notes",            phone: "+15125550199", secondary: "text" },
+  { id: "inbox-4", customer: "David K.", project: "Fence Installation",      status: "new_request",      value: null,  lastActivity: "Request received 1 hour ago", source: "Imported from SMS",         phone: "+15125550123", secondary: "text" },
+  { id: "inbox-5", customer: "Lauren P.", project: "Kitchen Backsplash",     status: "accepted",         value: 3200,  lastActivity: "Accepted 3 days ago",     source: "Created from customer message", phone: "+15125550155", secondary: "view" },
+  { id: "inbox-6", customer: "Tom H.",   project: "Gutter Cleaning",         status: "archived",         value: 250,   lastActivity: "Archived last week",      source: "Added by you",                  phone: "+15125550167", secondary: "view" },
+];
 
 // ── Main component ────────────────────────────────────────────────────────────
 
@@ -400,7 +442,7 @@ export default function ContractorDashboard() {
   );
 
   // Leads segment — "myleads" is the default
-  const [leadsSegment, setLeadsSegment] = useState<"myleads" | "homebids">("myleads");
+  const [inboxFilter, setInboxFilter] = useState<InboxFilter>("needs_action");
   const [showRelayModal, setShowRelayModal] = useState(false);
   const [relayLead, setRelayLead] = useState<HomeBidsLead | null>(null);
   const [relayMessage, setRelayMessage] = useState("");
@@ -441,17 +483,6 @@ export default function ContractorDashboard() {
       address: lead.location,
       timeline: lead.timeline,
       scope: lead.scope,
-    });
-  }
-
-  // Start from one of the contractor's own leads
-  function startBidFromMyLead(lead: MyLead) {
-    startBidByText("my", {
-      id: lead.id,
-      projectTitle: lead.projectTitle,
-      category: lead.category,
-      ownerName: lead.customerName,
-      ownerPhone: lead.phone,
     });
   }
 
@@ -504,7 +535,7 @@ export default function ContractorDashboard() {
 
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: "home",    label: "Home",     icon: LayoutDashboard },
-    { id: "leads",   label: "Leads",    icon: Users },
+    { id: "leads",   label: "Bid Inbox", icon: Users },
     { id: "ai",      label: "Bid Builder", icon: Sparkles },
     { id: "account", label: "Account",  icon: Wrench },
   ];
@@ -739,136 +770,135 @@ export default function ContractorDashboard() {
 
   // ── LEADS tab ──���───────────────────────────────────────────────────────────
 
+  // ── Bid Inbox ─────────────────────────────────────────────────────────────
+  // Contractor-owned customers, bid drafts, sent proposals, and follow-ups
+  // created through HomeBids.ai. This is NOT a marketplace/lead-source feed.
+  const visibleInbox = BID_INBOX_ITEMS.filter((item) => {
+    if (inboxFilter === "all") return item.status !== "archived";
+    if (inboxFilter === "archived") return item.status === "archived";
+    return INBOX_FILTER_GROUPS[inboxFilter].includes(item.status);
+  });
+
   const leadsContent = (
     <div className="space-y-5">
-      <h1 className="text-xl font-bold text-foreground">Leads</h1>
+      {/* Title + primary CTA (stacks on mobile) */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-foreground">Bid Inbox</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage customer requests, proposal drafts, sent bids, and follow-ups.
+          </p>
+        </div>
+        <Button
+          className="shrink-0 gap-2 rounded-full font-semibold"
+          onClick={() => openBuildChoice(() => startBidByText("my", null))}
+        >
+          <Plus className="h-4 w-4" /> Build New Bid
+        </Button>
+      </div>
 
-      {/* Segmented toggle */}
-      <div className="inline-flex rounded-lg border border-border bg-muted p-0.5">
-        {([
-          { id: "myleads",  label: "My Leads",        count: DEMO_MY_LEADS.length        },
-          { id: "homebids", label: "HomeBids Leads",   count: DEMO_HOMEBIDS_LEADS.length  },
-        ] as const).map((seg) => (
+      {/* Status filters — horizontally scrollable pills on mobile */}
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {INBOX_FILTERS.map((f) => (
           <button
-            key={seg.id}
+            key={f.id}
             type="button"
-            onClick={() => setLeadsSegment(seg.id)}
-            className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-sm font-medium transition-all duration-150 ${
-              leadsSegment === seg.id
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+            onClick={() => setInboxFilter(f.id)}
+            className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+              inboxFilter === f.id
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-card text-muted-foreground hover:text-foreground"
             }`}
           >
-            {seg.label}
-            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${
-              leadsSegment === seg.id
-                ? seg.id === "myleads"
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-primary/10 text-primary"
-                : "bg-muted-foreground/15 text-muted-foreground"
-            }`}>
-              {seg.count}
-            </span>
+            {f.label}
           </button>
         ))}
       </div>
 
-      {/* My Leads */}
-      {leadsSegment === "myleads" && (
+      {/* Cards */}
+      {visibleInbox.length > 0 ? (
         <div className="space-y-3">
-          {DEMO_MY_LEADS.map((lead) => {
-            const aiStatusBadge =
-              lead.aiStatus === "estimate_ready"  ? { label: "Estimate Ready",  cls: "bg-blue-100 text-blue-700"     }
-              : lead.aiStatus === "response_sent" ? { label: "Response Sent",   cls: "bg-amber-100 text-amber-700"   }
-              :                                    { label: "Follow-Up Ready",  cls: "bg-purple-100 text-purple-700" };
-            const statusDot =
-              lead.status === "in_progress" ? "bg-emerald-500" : "bg-muted-foreground/40";
-
+          {visibleInbox.map((item) => {
+            const cfg = INBOX_STATUS[item.status];
             return (
-              <div key={lead.id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/20">
+              <div key={item.id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/20">
                 <div className="flex items-center gap-3">
-                  <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-                    {lead.customerName.charAt(0)}
-                    <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background ${statusDot}`} />
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                    {item.customer.charAt(0)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-foreground">{lead.customerName}</p>
-                    <p className="truncate text-xs text-muted-foreground">{lead.projectTitle}</p>
+                    <p className="font-semibold text-foreground">{item.customer}</p>
+                    <p className="truncate text-xs text-muted-foreground">{item.project}</p>
                   </div>
-                  <span className="shrink-0 text-sm font-semibold text-foreground">{lead.estimatedValue}</span>
+                  {item.value != null && (
+                    <span className="shrink-0 text-sm font-semibold text-foreground">${item.value.toLocaleString()}</span>
+                  )}
                 </div>
+
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${aiStatusBadge.cls}`}>{aiStatusBadge.label}</span>
-                  <span className="text-[11px] text-muted-foreground">· {lead.lastActivity}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${cfg.cls}`}>{cfg.label}</span>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{item.source}</span>
+                  <span className="text-[11px] text-muted-foreground">· {item.lastActivity}</span>
                 </div>
+
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => openBuildChoice(() => startBidFromMyLead(lead))}>
-                    <MessageCircle className="h-3 w-3" /> Start Bid by Text
+                  <Button
+                    size="sm"
+                    className="h-7 gap-1 px-3 text-xs"
+                    onClick={() => {
+                      if (cfg.action === "build") {
+                        openBuildChoice(() => startBidByText("my", {
+                          id: item.id,
+                          projectTitle: item.project,
+                          category: item.project,
+                          ownerName: item.customer,
+                          ownerPhone: item.phone,
+                        }));
+                      } else if (cfg.action === "followup") {
+                        openSms(item.phone);
+                      } else {
+                        window.location.href = "/contractors/bids";
+                      }
+                    }}
+                  >
+                    {cfg.action === "build" ? <FileText className="h-3 w-3" />
+                      : cfg.action === "followup" ? <Send className="h-3 w-3" />
+                      : <Eye className="h-3 w-3" />}
+                    {cfg.primary}
                   </Button>
-                  <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => openSms(lead.phone)}>
-                    <MessageCircle className="h-3 w-3" /> Text Customer
-                  </Button>
+
+                  {item.secondary === "text" ? (
+                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => openSms(item.phone)}>
+                      <MessageCircle className="h-3 w-3" /> Text Customer
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { window.location.href = "/contractors/bids"; }}>
+                      <ExternalLink className="h-3 w-3" /> View Proposal
+                    </Button>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
-      )}
-
-      {/* HomeBids Leads */}
-      {leadsSegment === "homebids" && (
-        <div className="space-y-3">
-          {DEMO_HOMEBIDS_LEADS.map((lead) => {
-            const statusBadge =
-              lead.status === "new"             ? { label: "New",        cls: "bg-blue-100 text-blue-700"     }
-              : lead.status === "bid_submitted" ? { label: "Bid Sent",   cls: "bg-amber-100 text-amber-700"   }
-              :                                  { label: "Reviewing",   cls: "bg-purple-100 text-purple-700" };
-
-            return (
-              <div key={lead.id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/20">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadge.cls}`}>{statusBadge.label}</span>
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
-                  </div>
-                  <span className="shrink-0 text-sm font-semibold text-foreground">{lead.estimatedValue}</span>
-                </div>
-                <p className="mt-2 font-semibold text-foreground">{lead.title}</p>
-                <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3 shrink-0" />{lead.location}</span>
-                  <span className="flex items-center gap-1"><Clock className="h-3 w-3 shrink-0" />{lead.timeline}</span>
-                </div>
-                <p className="mt-1.5 text-[11px] italic text-primary/80 line-clamp-2">{lead.aiNotes}</p>
-                <div className="mt-1.5">
-                  {isMessagingUnlocked(lead) ? (
-                    <span className="flex w-fit items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">
-                      <Unlock className="h-3 w-3" /> Direct messaging unlocked
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground">Direct messaging unlocks after homeowner approval.</span>
-                  )}
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
-                    <Eye className="h-3 w-3" /> Details
-                  </Button>
-                  <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => openBuildChoice(() => startBidFromHomeBidsLead(lead))}>
-                    <MessageCircle className="h-3 w-3" /> Start Bid by Text
-                  </Button>
-                  {isMessagingUnlocked(lead) ? (
-                    <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => openSms(lead.homeownerPhone)}>
-                      <MessageCircle className="h-3 w-3" /> Text Homeowner
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); }}>
-                      <MessageCircle className="h-3 w-3" /> Send via HomeBids AI
-                    </Button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+      ) : (
+        // Empty state
+        <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <Archive className="h-6 w-6 text-primary" />
+          </div>
+          <p className="mt-3 text-base font-semibold text-foreground">No bids yet</p>
+          <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
+            Start by texting HomeBids.ai project details, photos, screenshots, or rough notes. We&apos;ll help turn them into a professional proposal.
+          </p>
+          <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
+            <Button className="w-full gap-2 rounded-full font-semibold sm:w-auto" onClick={() => openBuildChoice(() => startBidByText("my", null))}>
+              <Plus className="h-4 w-4" /> Build New Bid
+            </Button>
+            <Button variant="outline" className="w-full gap-2 rounded-full bg-transparent sm:w-auto" onClick={() => { window.location.href = getContractorSmsLink(); }}>
+              <MessageCircle className="h-4 w-4" /> Text HomeBids.ai
+            </Button>
+          </div>
         </div>
       )}
     </div>
@@ -1044,7 +1074,7 @@ export default function ContractorDashboard() {
               <span className="inline-flex items-center rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-900">
                 Demo data
               </span>
-              <span>Leads, bids, and metrics below are sample data for demonstration.</span>
+              <span>The bids, customers, and metrics below are sample data for demonstration.</span>
             </div>
           )}
           {tabContent[activeTab]}
