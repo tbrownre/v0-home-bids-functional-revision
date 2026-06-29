@@ -804,7 +804,7 @@ export default function ContractorDashboard() {
 
   // ── LEADS tab ──���───────────────────────────────────────────────────────────
 
-  // ── Bid Inbox ─────────────────────────────────────────────────────────────
+  // ── Bid Inbox ───────────────────────────────────────────────────────────��─
   // Contractor-owned customers, bid drafts, sent proposals, and follow-ups
   // created through HomeBids.ai. This is NOT a marketplace/lead-source feed.
   const visibleInbox = BID_INBOX_ITEMS.filter((item) => {
@@ -976,8 +976,8 @@ export default function ContractorDashboard() {
           }));
     const drafts = allDrafts.filter((d) => !dismissedDraftIds.has(d.id));
 
-    // Real <a> SMS link to the HomeBids contractor number, prefilled per spec.
-    const textBidHref = `sms:+13472370362?body=${encodeURIComponent("Let's create a new bid")}`;
+    // Canonical contractor SMS link (number + prefilled body live in sms-config).
+    const textBidHref = getContractorSmsLink();
 
     const startByTextBtn = (full = false) => (
       <a
@@ -1030,7 +1030,7 @@ export default function ContractorDashboard() {
               className="mt-5 w-full justify-center gap-2 rounded-xl bg-transparent py-2.5 text-sm font-semibold"
               onClick={() => startBidByText("my", null)}
             >
-              <Calculator className="h-4 w-4" /> Build Online
+              <Calculator className="h-4 w-4" /> Start Online
             </Button>
             <p className="mt-2 text-center text-xs text-muted-foreground">Best when you want a more structured workflow.</p>
           </div>
@@ -1111,7 +1111,7 @@ export default function ContractorDashboard() {
               <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
                 {startByTextBtn(false)}
                 <Button variant="outline" className="w-full gap-2 rounded-xl bg-transparent sm:w-auto" onClick={() => startBidByText("my", null)}>
-                  <Calculator className="h-4 w-4" /> Build Online
+                  <Calculator className="h-4 w-4" /> Start Online
                 </Button>
               </div>
             </div>
