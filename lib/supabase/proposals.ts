@@ -157,11 +157,15 @@ export async function getContractorProposals(): Promise<{
   } = await supabase.auth.getUser();
   if (!user) return { proposals: [], error: "Not authenticated" };
 
+  // Cap the result set so a contractor with thousands of proposals never
+  // triggers an unbounded fetch. The dashboard shows recent activity; older
+  // proposals can be paginated in a dedicated view later if needed.
   const { data, error } = await supabase
     .from("proposals")
     .select("*")
     .eq("contractor_id", user.id)
-    .order("updated_at", { ascending: false });
+    .order("updated_at", { ascending: false })
+    .limit(100);
 
   if (error) return { proposals: [], error: error.message };
   return {

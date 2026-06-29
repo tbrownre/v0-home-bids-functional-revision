@@ -51,7 +51,7 @@ import { getContractorSmsLink } from "@/lib/sms-config";
 import { timeAgo } from "@/lib/proposal-format";
 import { getMockUser, mockSignOut, USE_MOCK_DATA, syncMirrorFromSupabase } from "@/lib/mock-auth";
 import { getContractorBids } from "@/lib/supabase/actions";
-import { getContractorProposals, type Proposal } from "@/lib/supabase/proposals";
+import { getContractorProposals, type Proposal, type ProposalStatus } from "@/lib/supabase/proposals";
 import { ContractorProposalCard } from "@/components/proposal/contractor-proposal-card";
 import { createClient } from "@/lib/supabase/client";
 import { getContractorBids as getDemoContractorBids } from "@/lib/demo/services";
@@ -332,6 +332,18 @@ const INBOX_FILTER_GROUPS: Record<Exclude<InboxFilter, "all" | "archived">, Inbo
   drafts:       ["draft_ready", "missing_details"],
   sent:         ["proposal_sent", "waiting_customer"],
   accepted:     ["accepted"],
+};
+
+// Maps a real proposal's lifecycle status onto an inbox status + the right
+// secondary action. Used only for real (non-demo) contractor accounts.
+const PROPOSAL_STATUS_TO_INBOX: Record<ProposalStatus, { status: InboxStatusKey; secondary: "text" | "view" }> = {
+  draft:             { status: "draft_ready",       secondary: "text" },
+  sent:              { status: "proposal_sent",     secondary: "view" },
+  viewed:            { status: "waiting_customer",  secondary: "text" },
+  question_asked:    { status: "follow_up_ready",   secondary: "text" },
+  approval_clicked:  { status: "waiting_customer",  secondary: "view" },
+  accepted:          { status: "accepted",          secondary: "view" },
+  changes_requested: { status: "changes_requested", secondary: "text" },
 };
 
 const BID_INBOX_ITEMS: BidInboxItem[] = [
@@ -804,10 +816,30 @@ export default function ContractorDashboard() {
 
   // ── LEADS tab ──���───────────────────────────────────────────────────────────
 
-  // ── Bid Inbox ─────────────────────────────────────────────────────────────
+  // ── Bid Inbox ───────────────────────────────────────────────────────────────
   // Contractor-owned customers, bid drafts, sent proposals, and follow-ups
   // created through HomeBids.ai. This is NOT a marketplace/lead-source feed.
-  const visibleInbox = BID_INBOX_ITEMS.filter((item) => {
+  //
+  // Demo accounts show the sample set; REAL accounts derive the inbox solely
+  // from their own proposals (RLS-scoped to contractor_id) so no contractor
+  // ever sees another account's customers or sample data.
+  const inboxSource: BidInboxItem[] = isDemoMode
+    ? BID_INBOX_ITEMS
+    : proposals.map((p) => {
+        const mapped = PROPOSAL_STATUS_TO_INBOX[p.status] ?? { status: "proposal_sent" as InboxStatusKey, secondary: "view" as const };
+        return {
+          id: p.id,
+          customer: p.homeowner_name ?? "Customer",
+          project: p.project_title,
+          status: mapped.status,
+          value: p.total_price != null ? Number(p.total_price) : null,
+          lastActivity: `Updated ${timeAgo(p.updated_at) ?? "recently"}`,
+          source: "From HomeBids.ai",
+          phone: p.homeowner_phone ?? "",
+          secondary: mapped.secondary,
+        };
+      });
+  const visibleInbox = inboxSource.filter((item) => {
     if (inboxFilter === "all") return item.status !== "archived";
     if (inboxFilter === "archived") return item.status === "archived";
     return INBOX_FILTER_GROUPS[inboxFilter].includes(item.status);
@@ -850,7 +882,21 @@ export default function ContractorDashboard() {
       </div>
 
       {/* Cards */}
-      {visibleInbox.length > 0 ? (
+      {!isDemoMode && !proposalsLoaded ? (
+        <div className="space-y-3" aria-busy="true" aria-label="Loading bids">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="animate-pulse rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 shrink-0 rounded-full bg-muted" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-1/3 rounded bg-muted" />
+                  <div className="h-2.5 w-1/2 rounded bg-muted" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : visibleInbox.length > 0 ? (
         <div className="space-y-3">
           {visibleInbox.map((item) => {
             const cfg = INBOX_STATUS[item.status];
@@ -976,8 +1022,8 @@ export default function ContractorDashboard() {
           }));
     const drafts = allDrafts.filter((d) => !dismissedDraftIds.has(d.id));
 
-    // Real <a> SMS link to the HomeBids contractor number, prefilled per spec.
-    const textBidHref = `sms:+13472370362?body=${encodeURIComponent("Let's create a new bid")}`;
+    // Canonical contractor SMS link (number + prefilled body live in sms-config).
+    const textBidHref = getContractorSmsLink();
 
     const startByTextBtn = (full = false) => (
       <a
@@ -1030,7 +1076,7 @@ export default function ContractorDashboard() {
               className="mt-5 w-full justify-center gap-2 rounded-xl bg-transparent py-2.5 text-sm font-semibold"
               onClick={() => startBidByText("my", null)}
             >
-              <Calculator className="h-4 w-4" /> Build Online
+              <Calculator className="h-4 w-4" /> Start Online
             </Button>
             <p className="mt-2 text-center text-xs text-muted-foreground">Best when you want a more structured workflow.</p>
           </div>
@@ -1064,7 +1110,21 @@ export default function ContractorDashboard() {
         {/* Drafts — unfinished bids belonging to this contractor */}
         <div>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Drafts</h2>
-          {drafts.length > 0 ? (
+          {!isDemoMode && !proposalsLoaded ? (
+            <div className="space-y-2" aria-busy="true" aria-label="Loading drafts">
+              {[0, 1].map((i) => (
+                <div key={i} className="animate-pulse rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 shrink-0 rounded-full bg-muted" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-1/3 rounded bg-muted" />
+                      <div className="h-2.5 w-1/2 rounded bg-muted" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : drafts.length > 0 ? (
             <div className="space-y-2">
               {drafts.map((d) => (
                 <div key={d.id} className="rounded-xl border border-border bg-card p-4">
@@ -1111,7 +1171,7 @@ export default function ContractorDashboard() {
               <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
                 {startByTextBtn(false)}
                 <Button variant="outline" className="w-full gap-2 rounded-xl bg-transparent sm:w-auto" onClick={() => startBidByText("my", null)}>
-                  <Calculator className="h-4 w-4" /> Build Online
+                  <Calculator className="h-4 w-4" /> Start Online
                 </Button>
               </div>
             </div>
