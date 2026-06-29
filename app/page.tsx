@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import React, { useState, useRef, useCallback, useEffect } from "react";
-import { useSearchParams, usePathname } from "next/navigation";
+import React, { useState, useRef, useCallback, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,9 +76,25 @@ interface Job {
   bidsCount: number;
 }
 
-export default function HomePage() {
+// Tiny component that reads search params inside a Suspense boundary so the
+// parent page never blocks SSR/hydration waiting for URL params.
+function SearchParamReader({
+  onParams,
+}: {
+  onParams: (newJob: boolean, showJobs: boolean) => void;
+}) {
   const searchParams = useSearchParams();
-  const pathname = usePathname();
+  useEffect(() => {
+    onParams(
+      searchParams.get("newJob") === "true",
+      searchParams.get("showJobs") === "true",
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+  return null;
+}
+
+export default function HomePage() {
   const [currentStep, setCurrentStep] = useState<Step>("describe");
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [showJobsBoard, setShowJobsBoard] = useState(false);
@@ -93,10 +109,9 @@ export default function HomePage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const homeownerUnreadCount = 0; // inbox wired separately
 
-  // authChecked: stays false until the first auth resolution so we never render
-  // the wrong view (form flash → redirect). The page stays blank-background until
-  // we know whether to show the dashboard or redirect to /gateway.
-  const [authChecked, setAuthChecked] = useState(false);
+  // Auth is resolved progressively — the public landing page renders immediately
+  // for logged-out users. If the user is signed in we update state (or redirect)
+  // after the initial auth check completes, without blocking the render.
 
   // Ref-based flags so the restore logic never creates a dep-loop.
   // Each ref mirrors its corresponding state value but is readable synchronously
@@ -116,7 +131,7 @@ export default function HomePage() {
       // Mock mode — read session synchronously, no network call.
       const user = getMockUser();
       if (!user) {
-        window.location.replace("/gateway");
+        // No mock session → render the public homepage, no redirect needed.
         return;
       }
       if (user.role === "contractor") {
@@ -127,7 +142,7 @@ export default function HomePage() {
         window.location.replace("/admin-demo");
         return;
       }
-      // Authenticated homeowner
+      // Authenticated homeowner — show their jobs board.
       setIsSignedIn(true);
       setIsContractor(false);
       setUserEmail(user.email);
@@ -141,23 +156,26 @@ export default function HomePage() {
         showJobsBoardRef.current = true;
         setShowJobsBoard(true);
       }
-      setAuthChecked(true);
       return;
     }
 
-    // Live mode — Supabase auth
+    // Live mode — Supabase auth (progressive: page already rendered, we update state after).
     let subscription: { unsubscribe: () => void } | null = null;
     try {
       const supabase = createClient();
 
-      // Use async/await inside an IIFE so every await is inside try/catch.
-      // Previously used .then() which left await calls outside the catch,
-      // causing unhandled promise rejections that triggered the error boundary.
+      // Safety timeout: if Supabase takes longer than 5 s we just leave the
+      // public landing page up — never hang indefinitely.
+      const authTimeout = setTimeout(() => {
+        // Auth timed out — the public page is already visible, nothing to do.
+      }, 5000);
+
       ;(async () => {
         try {
           const { data: { user } } = await supabase.auth.getUser();
+          clearTimeout(authTimeout);
           if (!user) {
-            window.location.replace("/gateway");
+            // No session — the public landing page is already rendered. Done.
             return;
           }
           const type = user.user_metadata?.user_type;
@@ -178,7 +196,7 @@ export default function HomePage() {
             }
             return;
           }
-          // Authenticated homeowner
+          // Authenticated homeowner — show their jobs board.
           setIsSignedIn(true);
           setIsContractor(false);
           setUserEmail(user.email ?? null);
@@ -192,19 +210,18 @@ export default function HomePage() {
             showJobsBoardRef.current = true;
             setShowJobsBoard(true);
           }
-          setAuthChecked(true);
         } catch {
-          // Auth check failed (network, missing env vars, etc.) — redirect to gateway.
-          window.location.replace("/gateway");
+          clearTimeout(authTimeout);
+          // Auth check failed — public landing page is already rendered; no redirect needed.
         }
       })();
 
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === "INITIAL_SESSION") {
-          if (!session?.user) {
-            window.location.replace("/gateway");
-          }
-          return;
+          // No need to redirect for no-session on INITIAL_SESSION —
+          // the public page is already rendered and correct for logged-out users.
+          if (!session?.user) return;
+          // Fall through to handle the authenticated initial session case below.
         }
         try {
           if (session?.user) {
@@ -238,9 +255,9 @@ export default function HomePage() {
                 showJobsBoardRef.current = true;
                 setShowJobsBoard(true);
               }
-              setAuthChecked(true);
             }
           } else {
+            // User signed out — reset to public landing page view.
             setIsSignedIn(false);
             setIsContractor(false);
             showJobsBoardRef.current = false;
@@ -248,39 +265,32 @@ export default function HomePage() {
             setShowJobsBoard(false);
           }
         } catch {
-          // Auth state change handler failed — redirect to gateway.
-          window.location.replace("/gateway");
+          // Auth state change handler failed — stay on the public page, no redirect.
         }
       });
       subscription = data.subscription;
     } catch {
-      // createClient() itself threw (missing env vars, etc.) — go to gateway.
-      window.location.replace("/gateway");
+      // createClient() itself threw (missing env vars, etc.) — public page is
+      // already rendered; no redirect needed.
     }
     return () => subscription?.unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle ?newJob and ?showJobs URL params only — no auto-restore logic here.
-  // Keeping router out of the deps array since Next.js router has an unstable
-  // reference that would cause this effect to re-run on every render.
-  useEffect(() => {
-    const newJob = searchParams.get("newJob");
-    const showJobs = searchParams.get("showJobs");
-    if (newJob === "true") {
+  // Handle ?newJob and ?showJobs URL params — called by <SearchParamReader>.
+  const handleSearchParams = useCallback((newJob: boolean, showJobs: boolean) => {
+    if (newJob) {
       showJobsBoardRef.current = false;
       creatingNewJobRef.current = true;
       setShowJobsBoard(false);
       setCreatingNewJob(true);
       window.history.replaceState(null, "", "/");
-    } else if (showJobs === "true") {
+    } else if (showJobs) {
       showJobsBoardRef.current = true;
       setShowJobsBoard(true);
       window.history.replaceState(null, "", "/");
     }
-  // searchParams is stable from Next.js — safe as the only dep here.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, []);
 
   // setCurrentStepSafe: always call this instead of setCurrentStep directly
   // so that currentStepRef stays in sync with the React state value.
@@ -713,14 +723,12 @@ export default function HomePage() {
     performSignOut();
   }, [setCurrentStepSafe]);
 
-  // Don't render anything until auth is resolved — prevents the form flashing
-  // briefly before a redirect fires (e.g. unauthenticated → /gateway).
-  if (!authChecked) {
-    return <div className="min-h-screen bg-background" />;
-  }
-
   return (
     <div className="flex min-h-screen flex-col bg-background">
+      {/* Read URL params without blocking SSR — must be inside Suspense */}
+      <Suspense fallback={null}>
+        <SearchParamReader onParams={handleSearchParams} />
+      </Suspense>
       <Header isSignedIn={isSignedIn} onSignIn={() => setShowSignInModal(true)} />
 
       {/* Main Content */}
