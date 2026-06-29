@@ -45,7 +45,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { BidBuilderChat, type BidLeadType, type BidChatLeadContext } from "@/components/bid-builder-chat";
-import { getMockUser, mockSignOut, USE_MOCK_DATA } from "@/lib/mock-auth";
+import { getMockUser, mockSignOut, USE_MOCK_DATA, syncMirrorFromSupabase } from "@/lib/mock-auth";
 import { getContractorBids } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
 import { getContractorBids as getDemoContractorBids } from "@/lib/demo/services";
@@ -224,35 +224,25 @@ export default function ContractorDashboard() {
 
   const [contractorName, setContractorName] = useState("there");
   useEffect(() => {
-    // Auth guard — redirect unauthenticated users to the public contractor page.
-    if (USE_MOCK_DATA) {
-      const user = getMockUser();
+    // Auth guard. Middleware already protects this route server-side; here we
+    // read the session mirror for instant paint and reconcile with the real
+    // Supabase session if the mirror is empty (e.g. direct navigation).
+    let cancelled = false;
+    (async () => {
+      let user = getMockUser();
+      if (!user) user = await syncMirrorFromSupabase();
+      if (cancelled) return;
       if (!user) {
-        window.location.replace("/contractors");
+        window.location.replace("/auth/sign-in");
         return;
       }
       if (user.role !== "contractor" && user.role !== "admin") {
         window.location.replace("/");
         return;
       }
-      if (user?.firstName) setContractorName(user.firstName);
-      return;
-    }
-    // Live mode auth guard
-    ;(async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        window.location.replace("/contractors");
-        return;
-      }
-      if (user.user_metadata?.user_type !== "contractor") {
-        window.location.replace("/");
-        return;
-      }
-      const firstName = user.user_metadata?.full_name?.split(" ")[0] ?? user.email?.split("@")[0] ?? "there";
-      setContractorName(firstName);
+      if (user.firstName) setContractorName(user.firstName);
     })();
+    return () => { cancelled = true; };
   }, []);
 
   const [bidsCount, setBidsCount] = useState(0);
@@ -912,6 +902,14 @@ export default function ContractorDashboard() {
 
       <main className="flex-1 min-w-0">
         <div className="mx-auto w-full max-w-2xl px-4 pb-8 pt-6 lg:max-w-4xl lg:px-8 lg:pb-12 lg:pt-8">
+          {USE_MOCK_DATA && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+              <span className="inline-flex items-center rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-900">
+                Demo data
+              </span>
+              <span>Leads, bids, and metrics below are sample data for demonstration.</span>
+            </div>
+          )}
           {tabContent[activeTab]}
         </div>
       </main>

@@ -1,14 +1,23 @@
 /**
  * mock-auth.ts
  *
- * Self-contained mock authentication system.
- * Replaces all Supabase auth calls so the site runs as a standalone demo
- * with no backend dependency.
+ * Auth bridge layer.
  *
- * Storage: localStorage (persists across refreshes for demo testing).
- * Falls back to an in-memory store on SSR.
+ * Authentication is REAL (Supabase) — see USE_MOCK_AUTH below. On a successful
+ * real sign-in we "mirror" the Supabase session into a localStorage record that
+ * has the same shape the rest of the app already consumes (getMockUser, etc.),
+ * so every synchronous consumer keeps working without a rewrite. The real
+ * Supabase cookie remains the source of truth for route protection (middleware).
+ *
+ * DEMO DATA (dashboard metrics, bids, jobs) is still mock — see USE_MOCK_DATA.
+ * The two concerns are intentionally decoupled.
  */
 
+import { createClient } from "@/lib/supabase/client";
+import { DEMO_HOMEOWNER_EMAIL, DEMO_CONTRACTOR_EMAIL, DEMO_PASSWORD } from "@/lib/demo-guard";
+
+// Authentication is real. Demo dashboard/bids/jobs data stays mock.
+export const USE_MOCK_AUTH = false;
 export const USE_MOCK_DATA = true;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -147,6 +156,95 @@ export function redirectAfterSignIn(role: MockRole) {
   }
 }
 
+// ── Real Supabase auth bridge ───────────────────────────────────────────────
+
+export const DEMO_CREDENTIALS = {
+  homeowner: { email: DEMO_HOMEOWNER_EMAIL, password: DEMO_PASSWORD },
+  contractor: { email: DEMO_CONTRACTOR_EMAIL, password: DEMO_PASSWORD },
+} as const;
+
+/** Build the app's MockUser shape from a real Supabase user object. */
+function mapSupabaseUser(user: {
+  id: string;
+  email?: string | null;
+  user_metadata?: Record<string, unknown> | null;
+}): MockUser {
+  const meta = (user.user_metadata ?? {}) as Record<string, string | undefined>;
+  const roleRaw = (meta.user_type as MockRole) ?? "homeowner";
+  const role: MockRole = roleRaw === "contractor" || roleRaw === "admin" ? roleRaw : "homeowner";
+  const firstName = meta.first_name ?? meta.full_name?.split(" ")[0] ?? "";
+  const lastName = meta.last_name ?? meta.full_name?.split(" ").slice(1).join(" ") ?? "";
+  const name = (meta.full_name ?? `${firstName} ${lastName}`.trim()) || (user.email ?? "Member");
+  return {
+    id: user.id,
+    email: user.email ?? "",
+    name,
+    firstName,
+    lastName,
+    phone: meta.phone,
+    role,
+    authProvider: "email",
+    isDemo: true,
+  };
+}
+
+/** Real email + password sign-in. Mirrors the session into the local cache. */
+export async function realSignIn(email: string, password: string): Promise<MockSignInResult> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    if (error || !data.user) {
+      return { user: null, error: error?.message ?? "Unable to sign in. Check your email and password." };
+    }
+    const mapped = mapSupabaseUser(data.user);
+    setMockSession(mapped);
+    return { user: mapped, error: null };
+  } catch {
+    return { user: null, error: "Something went wrong signing in. Please try again." };
+  }
+}
+
+/** Sign in to one of the seeded demo accounts (real Supabase session). */
+export function realDemoSignIn(role: "homeowner" | "contractor"): Promise<MockSignInResult> {
+  const creds = DEMO_CREDENTIALS[role];
+  return realSignIn(creds.email, creds.password);
+}
+
+/**
+ * Reconcile the local cache with the real Supabase session.
+ * Clears the mirror if the real session is gone (prevents ghost "signed-in" UI).
+ */
+export async function syncMirrorFromSupabase(): Promise<MockUser | null> {
+  try {
+    const supabase = createClient();
+    const { data } = await supabase.auth.getUser();
+    if (data.user) {
+      const mapped = mapSupabaseUser(data.user);
+      setMockSession(mapped);
+      return mapped;
+    }
+    clearMockSession();
+    return null;
+  } catch {
+    return getMockSession();
+  }
+}
+
+/** Real sign-out — ends the Supabase session and clears the local cache. */
+export async function realSignOut() {
+  try {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+  } catch {
+    // ignore network errors — still clear local state below
+  }
+  clearMockSession();
+  if (isClient()) window.location.replace("/");
+}
+
 // ── Auth actions ──────────────────────────────────────────────────────────────
 
 export interface MockSignInResult {
@@ -239,8 +337,13 @@ export function isMockSignedIn(): boolean {
   return getMockSession() !== null;
 }
 
-/** Sign out — clears localStorage session and navigates to homepage. */
+/** Sign out — ends the real session (when auth is real) and navigates home. */
 export function mockSignOut() {
+  if (!USE_MOCK_AUTH) {
+    // Fire the real sign-out; it clears the cache and redirects itself.
+    void realSignOut();
+    return;
+  }
   clearMockSession();
   if (isClient()) {
     window.location.replace("/");

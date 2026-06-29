@@ -15,7 +15,7 @@ import {
   type NotificationType,
 } from "@/lib/inbox-store";
 import { createClient } from "@/lib/supabase/client";
-import { getMockUser, mockSignOut, USE_MOCK_DATA } from "@/lib/mock-auth";
+import { getMockUser, mockSignOut, USE_MOCK_AUTH, syncMirrorFromSupabase } from "@/lib/mock-auth";
 
 export interface HeaderProps {
   isContractor?: boolean;
@@ -105,21 +105,22 @@ export function Header({
 
   useEffect(() => {
     setMounted(true);
-    if (USE_MOCK_DATA) {
-      const user = getMockUser();
-      if (user) {
-        setIsSignedIn(user.role !== "contractor");
-        setIsContractor(user.role === "contractor");
-      }
-      return;
+    // Instant paint from the local session mirror — prevents auth-state flash.
+    const cached = getMockUser();
+    if (cached) {
+      setIsSignedIn(cached.role !== "contractor");
+      setIsContractor(cached.role === "contractor");
     }
+    if (USE_MOCK_AUTH) return;
+    // Reconcile with the real Supabase session and keep it in sync.
     let subscription: { unsubscribe: () => void } | null = null;
     try {
       const supabase = createClient();
       const { data } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user) {
-          setIsSignedIn(true);
-          setIsContractor(session.user.user_metadata?.user_type === "contractor");
+          const isC = session.user.user_metadata?.user_type === "contractor";
+          setIsSignedIn(!isC);
+          setIsContractor(isC);
         } else {
           setIsSignedIn(false);
           setIsContractor(false);
@@ -129,6 +130,8 @@ export function Header({
     } catch {
       // no-op
     }
+    // Clear any stale mirror if the real session has expired/ended.
+    void syncMirrorFromSupabase();
     return () => subscription?.unsubscribe();
   }, []);
 
@@ -140,12 +143,10 @@ export function Header({
   );
   const unreadCount = mounted && isLoggedIn ? unreadSnapshot : 0;
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     closeMenu();
-    if (USE_MOCK_DATA) { mockSignOut(); return; }
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    window.location.href = "/";
+    // Ends the real Supabase session, clears the mirror, and redirects home.
+    mockSignOut();
   };
 
   // Audience preference — for switching between homeowner and contractor experiences
