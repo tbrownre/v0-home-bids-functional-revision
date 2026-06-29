@@ -136,7 +136,7 @@ export const demoBidsJob2: DemoBid[] = [
     depositRequired: "None",
     depositIsFree: true,
     depositAmount: "",
-    depositRefundable: null,
+    depositRefundable: undefined,
     depositNote: "No deposit required. You pay nothing until the job is complete.",
     scopeItems: [
       "Full tear-off of existing shingles and haul-off",
