@@ -47,6 +47,8 @@ import { BidBuilderChat, type BidLeadType, type BidChatLeadContext } from "@/com
 import { BuildBidChoiceModal } from "@/components/build-bid-choice-modal";
 import { getMockUser, mockSignOut, USE_MOCK_DATA, syncMirrorFromSupabase } from "@/lib/mock-auth";
 import { getContractorBids } from "@/lib/supabase/actions";
+import { getContractorProposals, type Proposal } from "@/lib/supabase/proposals";
+import { ContractorProposalCard } from "@/components/proposal/contractor-proposal-card";
 import { createClient } from "@/lib/supabase/client";
 import { getContractorBids as getDemoContractorBids } from "@/lib/demo/services";
 import { DEMO_CONTRACTOR_EMAIL } from "@/lib/demo-guard";
@@ -175,7 +177,7 @@ const DEMO_MY_LEADS: MyLead[] = [
   { id: "ml-3", customerName: "Janet B.", projectTitle: "Bathroom Remodel Follow-Up", category: "Remodel", estimatedValue: "$12,000", status: "open", lastActivity: "Follow-up draft ready", aiStatus: "followup_ready" },
 ];
 
-// ── AI helper functions ───────────────────────────────────��───────��────────────
+// ── AI helper functions ───────────��───────────────────────��───────��────────────
 
 function _getBidDefenderResponse(projectType: string, bidAmount: string, objection: string) {
   const refLink = `https://homebids.com/compare?ref=contractor-demo&project=${encodeURIComponent(projectType)}`;
@@ -359,6 +361,25 @@ export default function ContractorDashboard() {
       } catch { /* non-fatal */ }
     }
     load();
+  }, []);
+
+  // Hosted proposals (written by the external Bid Builder workflow). Read-only
+  // here — the dashboard only displays and shares them.
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [proposalsLoaded, setProposalsLoaded] = useState(false);
+  useEffect(() => {
+    async function loadProposals() {
+      try {
+        if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) {
+          setProposalsLoaded(true);
+          return;
+        }
+        const { proposals: rows } = await getContractorProposals();
+        setProposals(rows);
+      } catch { /* non-fatal */ }
+      finally { setProposalsLoaded(true); }
+    }
+    loadProposals();
   }, []);
 
   // Time-of-day greeting + month progress (computed client-side post-mount to
@@ -566,13 +587,6 @@ export default function ContractorDashboard() {
     completed:      { label: "Completed",       cls: "bg-green-50 text-green-700"             },
   };
 
-  // Recent bid activity (demo data — labeled via the dashboard demo banner).
-  const recentBids: { id: string; title: string; location: string; amount: number; status: string; updated: string }[] = [
-    { id: "cbid-1", title: "Kitchen Remodel Bid",   location: "Austin, TX",     amount: 0,     status: "draft",          updated: "yesterday"  },
-    { id: "cbid-2", title: "Bathroom Tile Proposal", location: "Round Rock, TX", amount: 4200,  status: "sent",           updated: "2 days ago" },
-    { id: "cbid-3", title: "Deck Replacement",       location: "Cedar Park, TX", amount: 12400, status: "question_asked", updated: "1 day ago"  },
-  ];
-
   // Up to 3 action items. The third card adapts: when behind pace it nudges
   // momentum; when on/ahead/complete it surfaces a fresh homeowner lead.
   const newHomeBidsLead = DEMO_HOMEBIDS_LEADS.find((l) => l.status === "new");
@@ -688,59 +702,35 @@ export default function ContractorDashboard() {
         )}
       </section>
 
-      {/* Recent Bids — max 3 rows */}
+      {/* Your Proposals — hosted proposal links (max 3 on home) */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Recent Bids</h2>
-          <Button size="sm" variant="ghost" className="h-7 gap-1 rounded-full px-3 text-xs" asChild>
-            <a href="/contractors/bids">View all <ChevronRight className="h-3 w-3" /></a>
-          </Button>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Your Proposals</h2>
+          {proposals.length > 3 && (
+            <Button size="sm" variant="ghost" className="h-7 gap-1 rounded-full px-3 text-xs" asChild>
+              <a href="/contractors/bids">View all <ChevronRight className="h-3 w-3" /></a>
+            </Button>
+          )}
         </div>
-        {recentBids.length > 0 ? (
-          <div className="space-y-2">
-            {recentBids.slice(0, 3).map((bid) => {
-              const sc = BID_STATUS_CONFIG[bid.status] ?? BID_STATUS_CONFIG.pending;
-              const isContinue = ["draft", "ready_to_send", "question_asked", "in_progress"].includes(bid.status);
-              return (
-                <div key={bid.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">{bid.title}</p>
-                    <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                      <MapPin className="h-3 w-3 shrink-0" />{bid.location}
-                      <span className="mx-1">·</span>{bid.updated}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {bid.amount > 0 && (
-                      <span className="text-sm font-semibold text-foreground">${bid.amount.toLocaleString()}</span>
-                    )}
-                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${sc.cls}`}>{sc.label}</span>
-                  </div>
-                  {isContinue ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 shrink-0 rounded-full bg-transparent px-3 text-xs"
-                      onClick={() => openBuildChoice(() => startBidByText("my", null))}
-                    >
-                      Continue
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="ghost" className="h-7 w-7 shrink-0 rounded-full p-0" asChild>
-                      <a href={`/proposal/${bid.id}`} aria-label={`View ${bid.title}`}><ExternalLink className="h-3.5 w-3.5" /></a>
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
+        {proposals.length > 0 ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {proposals.slice(0, 4).map((p) => (
+              <ContractorProposalCard key={p.id} proposal={p} />
+            ))}
           </div>
-        ) : (
-          <div className="rounded-xl border border-border bg-card px-4 py-6 text-center">
-            <p className="text-sm font-medium text-foreground">No recent bids yet.</p>
-            <p className="mt-1 text-xs text-muted-foreground">Build your first professional bid today.</p>
+        ) : proposalsLoaded ? (
+          <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center">
+            <p className="text-sm font-medium text-foreground">No proposals yet.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Build a bid by text and your hosted proposal link will appear here.
+            </p>
             <Button className="mt-3 gap-2 rounded-full font-semibold" onClick={() => openBuildChoice(() => startBidByText("my", null))}>
               <Sparkles className="h-4 w-4" /> Build Today&apos;s Bid
             </Button>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
+            Loading proposals…
           </div>
         )}
       </section>
