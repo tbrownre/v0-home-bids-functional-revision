@@ -48,13 +48,14 @@ import {
 import { BidBuilderChat, type BidLeadType, type BidChatLeadContext } from "@/components/bid-builder-chat";
 import { BuildBidChoiceModal } from "@/components/build-bid-choice-modal";
 import { getContractorSmsLink } from "@/lib/sms-config";
+import { timeAgo } from "@/lib/proposal-format";
 import { getMockUser, mockSignOut, USE_MOCK_DATA, syncMirrorFromSupabase } from "@/lib/mock-auth";
 import { getContractorBids } from "@/lib/supabase/actions";
 import { getContractorProposals, type Proposal } from "@/lib/supabase/proposals";
 import { ContractorProposalCard } from "@/components/proposal/contractor-proposal-card";
 import { createClient } from "@/lib/supabase/client";
 import { getContractorBids as getDemoContractorBids } from "@/lib/demo/services";
-import { DEMO_CONTRACTOR_EMAIL } from "@/lib/demo-guard";
+import { DEMO_CONTRACTOR_EMAIL, isDemoEmail } from "@/lib/demo-guard";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -342,6 +343,29 @@ const BID_INBOX_ITEMS: BidInboxItem[] = [
   { id: "inbox-6", customer: "Tom H.",   project: "Gutter Cleaning",         status: "archived",         value: 250,   lastActivity: "Archived last week",      source: "Added by you",                  phone: "+15125550167", secondary: "view" },
 ];
 
+// ── Drafts (unfinished bids) ──────────────────────────────────────────────────
+// A draft is a bid started (by text or online) but not yet completed/approved
+// into a hosted proposal. Real accounts derive drafts from their own proposals
+// (status === "draft"); demo accounts show the sample set below.
+type DraftSource = "text" | "online";
+
+interface DraftItem {
+  id: string;
+  customer: string | null;
+  project: string;
+  status: string;
+  statusCls: string;
+  value: number | null;
+  lastUpdated: string;
+  source: DraftSource;
+}
+
+const DEMO_DRAFTS: DraftItem[] = [
+  { id: "draft-1", customer: "Sarah M.", project: "Interior Paint Estimate", status: "Ready for review",     statusCls: "bg-emerald-100 text-emerald-700", value: 2400,  lastUpdated: "12 min ago", source: "text"   },
+  { id: "draft-2", customer: "Mike R.",  project: "Drywall Repair",          status: "Needs pricing",        statusCls: "bg-amber-100 text-amber-700",     value: null,  lastUpdated: "1 hour ago", source: "text"   },
+  { id: "draft-3", customer: "Janet B.", project: "Bathroom Remodel",        status: "AI questions pending", statusCls: "bg-purple-100 text-purple-700",   value: 12000, lastUpdated: "Yesterday",  source: "online" },
+];
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function ContractorDashboard() {
@@ -359,6 +383,13 @@ export default function ContractorDashboard() {
   }, [searchParams]);
 
   const [contractorName, setContractorName] = useState("there");
+  // Demo mode is the ONLY gate for sample data / demo banner. It is true when
+  // the whole app runs as a demo build (USE_MOCK_DATA) OR the signed-in account
+  // is a seeded/mock demo account. Real contractor accounts are NEVER demo —
+  // they show only their own real data and proper empty states.
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  // Locally-hidden (archived) drafts for this session.
+  const [dismissedDraftIds, setDismissedDraftIds] = useState<Set<string>>(new Set());
   useEffect(() => {
     // Auth guard. Middleware already protects this route server-side; here we
     // read the session mirror for instant paint and reconcile with the real
@@ -377,6 +408,8 @@ export default function ContractorDashboard() {
         return;
       }
       if (user.firstName) setContractorName(user.firstName);
+      const email = (user.email ?? "").toLowerCase();
+      setIsDemoMode(USE_MOCK_DATA || isDemoEmail(email) || email.endsWith("@homebids.demo"));
     })();
     return () => { cancelled = true; };
   }, []);
@@ -536,7 +569,7 @@ export default function ContractorDashboard() {
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: "home",    label: "Home",     icon: LayoutDashboard },
     { id: "leads",   label: "Bid Inbox", icon: Users },
-    { id: "ai",      label: "Bid Builder", icon: Sparkles },
+    { id: "ai",      label: "Build a Bid", icon: Sparkles },
     { id: "account", label: "Account",  icon: Wrench },
   ];
 
@@ -620,7 +653,8 @@ export default function ContractorDashboard() {
 
   // Up to 3 action items. The third card adapts: when behind pace it nudges
   // momentum; when on/ahead/complete it surfaces a fresh homeowner lead.
-  const newHomeBidsLead = DEMO_HOMEBIDS_LEADS.find((l) => l.status === "new");
+  // Sample homeowner leads are demo-only — never surface them in real accounts.
+  const newHomeBidsLead = isDemoMode ? DEMO_HOMEBIDS_LEADS.find((l) => l.status === "new") : undefined;
   const thirdCard =
     (momentum.state === "ahead" || momentum.state === "complete" || momentum.state === "onpace") && newHomeBidsLead
       ? {
@@ -923,69 +957,166 @@ export default function ContractorDashboard() {
       );
     }
 
-    // Tool picker — Bid Builder is the only tool at launch
+    // Start screen: choose how to build a bid + unfinished drafts.
+    // Demo accounts show sample drafts; real accounts show ONLY their own
+    // proposals still in "draft" status (filtered server-side by RLS).
+    const allDrafts: DraftItem[] = isDemoMode
+      ? DEMO_DRAFTS
+      : proposals
+          .filter((p) => p.status === "draft")
+          .map((p) => ({
+            id: p.id,
+            customer: p.homeowner_name,
+            project: p.project_title,
+            status: "Draft",
+            statusCls: "bg-muted text-muted-foreground",
+            value: p.total_price != null ? Number(p.total_price) : null,
+            lastUpdated: timeAgo(p.updated_at) ?? "recently",
+            source: "online" as DraftSource,
+          }));
+    const drafts = allDrafts.filter((d) => !dismissedDraftIds.has(d.id));
+
+    // Real <a> SMS link to the HomeBids contractor number, prefilled per spec.
+    const textBidHref = `sms:+13472370362?body=${encodeURIComponent("Let's create a new bid")}`;
+
+    const startByTextBtn = (full = false) => (
+      <a
+        href={textBidHref}
+        className={`inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 ${full ? "w-full" : ""}`}
+      >
+        <MessageCircle className="h-4 w-4" /> Start by Text
+      </a>
+    );
+
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
+        {/* Title */}
         <div>
-          <h1 className="text-xl font-bold text-foreground">Bid Builder</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Text job details, photos, or voice notes. The AI organizes the scope and generates a clean proposal.</p>
+          <h1 className="text-xl font-bold text-foreground">Build a Bid</h1>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground text-pretty">
+            Create a professional hosted proposal from texts, photos, screenshots, voice notes, or rough job notes.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4">
-          {/* Bid Builder card */}
-          <button
-            type="button"
-            onClick={() => openBuildChoice(() => startBidByText("my", null))}
-            className="group flex flex-col rounded-2xl border-2 border-border bg-card p-6 text-left transition-all hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5"
-          >
+        {/* Two start options — stack on mobile, side-by-side on desktop */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {/* Start by Text (primary) */}
+          <div className="flex flex-col rounded-2xl border-2 border-primary bg-card p-6 shadow-sm">
             <div className="flex items-start justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary/20">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
                 <MessageCircle className="h-6 w-6 text-primary" />
               </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+              <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary">Recommended</span>
             </div>
-            <h3 className="mt-4 text-lg font-bold text-foreground">AI Bid Builder</h3>
-            <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-              Text rough job notes and HomeBids AI asks follow-up questions, organizes the scope, and generates a clean proposal you can review, edit, and send.
+            <h3 className="mt-4 text-lg font-bold text-foreground">Start by Text</h3>
+            <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">
+              Text job details, photos, screenshots, or voice notes. HomeBids.ai will ask follow-up questions and draft a clean proposal you can review, edit, and send.
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {["Text-to-Bid", "AI Drafting", "Shareable Bid Link", "PDF Included"].map((tag) => (
-                <span key={tag} className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-medium text-primary">{tag}</span>
-              ))}
+            <div className="mt-5">{startByTextBtn(true)}</div>
+            <p className="mt-2 text-center text-xs text-muted-foreground">Best when you&apos;re in the field.</p>
+          </div>
+
+          {/* Build Online (secondary) */}
+          <div className="flex flex-col rounded-2xl border border-border bg-card p-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+              <Calculator className="h-6 w-6 text-foreground" />
             </div>
-            <div className="mt-5">
-              <span className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors group-hover:bg-primary/90">
-                <MessageCircle className="h-4 w-4" /> Start Bid by Text
-              </span>
-            </div>
-          </button>
+            <h3 className="mt-4 text-lg font-bold text-foreground">Build Online</h3>
+            <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">
+              Enter customer info, scope, pricing, exclusions, photos, and notes in a simple guided builder.
+            </p>
+            <Button
+              variant="outline"
+              className="mt-5 w-full justify-center gap-2 rounded-xl bg-transparent py-2.5 text-sm font-semibold"
+              onClick={() => startBidByText("my", null)}
+            >
+              <Calculator className="h-4 w-4" /> Build Online
+            </Button>
+            <p className="mt-2 text-center text-xs text-muted-foreground">Best when you want a more structured workflow.</p>
+          </div>
         </div>
 
-        {/* Quick-start from active leads */}
-        {DEMO_HOMEBIDS_LEADS.some((l) => l.status === "new") && (
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quick-start Bid Builder</p>
+        {/* Feature chips */}
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {["Text-to-Bid", "Photo & Screenshot Intake", "Voice Notes", "Hosted Proposal Link", "PDF Included"].map((tag) => (
+            <span key={tag} className="shrink-0 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{tag}</span>
+          ))}
+        </div>
+
+        {/* What happens next */}
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">What happens next</p>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { n: 1, label: "Send job details" },
+              { n: 2, label: "AI asks follow-ups" },
+              { n: 3, label: "Review proposal" },
+              { n: 4, label: "Send link or PDF" },
+            ].map((step) => (
+              <div key={step.n} className="flex items-center gap-2">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{step.n}</span>
+                <span className="text-sm font-medium text-foreground">{step.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Drafts — unfinished bids belonging to this contractor */}
+        <div>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Drafts</h2>
+          {drafts.length > 0 ? (
             <div className="space-y-2">
-              {DEMO_HOMEBIDS_LEADS.filter((l) => l.status === "new").map((lead) => (
-                <button
-                  key={lead.id}
-                  type="button"
-                  onClick={() => openBuildChoice(() => startBidFromHomeBidsLead(lead))}
-                  className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
-                >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                    <Calculator className="h-4 w-4 text-primary" />
+              {drafts.map((d) => (
+                <div key={d.id} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                      {(d.customer ?? d.project).charAt(0)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-foreground">{d.customer ?? d.project}</p>
+                      <p className="truncate text-xs text-muted-foreground">{d.customer ? d.project : "Unfinished bid"}</p>
+                    </div>
+                    {d.value != null && <span className="shrink-0 text-sm font-semibold text-foreground">${d.value.toLocaleString()}</span>}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-foreground truncate">{lead.title}</p>
-                    <p className="text-xs text-muted-foreground">{lead.estimatedValue} · {lead.location}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${d.statusCls}`}>{d.status}</span>
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{d.source === "text" ? "Started by text" : "Started online"}</span>
+                    <span className="text-[11px] text-muted-foreground">· Updated {d.lastUpdated}</span>
                   </div>
-                  <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">New</span>
-                </button>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => openBuildChoice(() => startBidByText("my", null))}>
+                      Continue
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 gap-1 px-2.5 text-xs text-muted-foreground"
+                      onClick={() => setDismissedDraftIds((prev) => new Set(prev).add(d.id))}
+                    >
+                      <Archive className="h-3 w-3" /> Archive
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <FileText className="h-6 w-6 text-primary" />
+              </div>
+              <p className="mt-3 text-base font-semibold text-foreground">No drafts yet</p>
+              <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
+                Start your first bid by text or online. HomeBids.ai will help organize the scope and create a proposal you can send.
+              </p>
+              <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
+                {startByTextBtn(false)}
+                <Button variant="outline" className="w-full gap-2 rounded-xl bg-transparent sm:w-auto" onClick={() => startBidByText("my", null)}>
+                  <Calculator className="h-4 w-4" /> Build Online
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   })();
@@ -1069,7 +1200,7 @@ export default function ContractorDashboard() {
 
       <main className="flex-1 min-w-0">
         <div className="mx-auto w-full max-w-2xl px-4 pb-8 pt-6 lg:max-w-4xl lg:px-8 lg:pb-12 lg:pt-8">
-          {USE_MOCK_DATA && (
+          {isDemoMode && (
             <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
               <span className="inline-flex items-center rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-900">
                 Demo data
