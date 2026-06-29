@@ -1,11 +1,37 @@
-// SMS configuration — Sendblue number
+// ── Homeowner SMS number ──────────────────────────────────────────────────────
 export const SMS_PHONE_NUMBER = "+18722964991";
 export const SMS_PHONE_DISPLAY = "(872) 296-4991";
 export const SMS_BODY_PREFIX = "Hi HomeBids! I need help with";
 
+// ── Contractor SMS number ─────────────────────────────────────────────────────
+export const CONTRACTOR_SMS_PHONE_NUMBER = "+13472370362";
+export const CONTRACTOR_SMS_PHONE_DISPLAY = "(347) 237-0362";
+export const CONTRACTOR_SMS_BODY_PREFIX = "Let's create a new bid";
+
+/**
+ * Canonical SMS href constants — import these instead of hardcoding numbers.
+ */
+export const HOMEBIDS_SMS = {
+  homeowner: {
+    phone: SMS_PHONE_NUMBER,
+    display: SMS_PHONE_DISPLAY,
+    href: `sms:${SMS_PHONE_NUMBER}?&body=${encodeURIComponent("Hi HomeBids, I need help with a home project")}`,
+  },
+  contractor: {
+    phone: CONTRACTOR_SMS_PHONE_NUMBER,
+    display: CONTRACTOR_SMS_PHONE_DISPLAY,
+    href: `sms:${CONTRACTOR_SMS_PHONE_NUMBER}?&body=${encodeURIComponent("Let's create a new bid")}`,
+  },
+} as const;
+
 export function getSmsLink(body?: string): string {
   const encodedBody = encodeURIComponent(body || SMS_BODY_PREFIX);
   return `sms:${SMS_PHONE_NUMBER}?&body=${encodedBody}`;
+}
+
+export function getContractorSmsLink(body?: string): string {
+  const encodedBody = encodeURIComponent(body || CONTRACTOR_SMS_BODY_PREFIX);
+  return `sms:${CONTRACTOR_SMS_PHONE_NUMBER}?&body=${encodedBody}`;
 }
 
 /**

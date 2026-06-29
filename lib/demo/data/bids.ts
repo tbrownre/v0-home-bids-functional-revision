@@ -23,9 +23,26 @@ export interface DemoBid {
   website: string;
   completedJobs: number;
   responseTime: string;
+  // Financing
   financingAvailable?: boolean;
-  inspectionFee?: string;
-  depositRequired?: string;
+  financingNote?: string;
+  // Inspection — structured
+  inspectionFee?: string; // legacy free-text kept for mapping
+  inspectionIsFree?: boolean;
+  inspectionFeeAmount?: string;
+  inspectionFeeDeductedIfAccepted?: boolean;
+  inspectionNote?: string;
+  // Deposit — structured
+  depositRequired?: string; // legacy free-text kept for mapping
+  depositIsFree?: boolean;
+  depositAmount?: string;
+  depositRefundable?: boolean;
+  depositNote?: string;
+  // Scope & extras
+  scopeItems?: string[];
+  warrantyNote?: string;
+  permitsIncluded?: boolean;
+  exclusionItems?: string[];
   status: "pending" | "accepted" | "rejected";
   created_at: string;
   business_name: string;
@@ -60,8 +77,26 @@ export const demoBidsJob1: DemoBid[] = [
     completedJobs: 218,
     responseTime: "Usually responds within 3 hours",
     financingAvailable: true,
+    financingNote: "12-month same-as-cash financing available through GreenSky.",
     inspectionFee: "Free",
+    inspectionIsFree: true,
+    inspectionNote: "We offer a free in-home consultation to review cabinet styles and hardware before any work begins.",
     depositRequired: "$1,500",
+    depositIsFree: false,
+    depositAmount: "$1,500",
+    depositRefundable: false,
+    depositNote: "Applied to total project cost. Covers materials ordered specifically for your job.",
+    scopeItems: [
+      "Remove and haul off all existing cabinet doors",
+      "Sand, clean, and prime all cabinet boxes and doors",
+      "Apply two coats of Benjamin Moore Advance white enamel",
+      "Install new soft-close hinges on all 28 doors",
+      "Reinstall doors and adjust hardware",
+      "Final cleanup and touch-ups",
+    ],
+    warrantyNote: "2-year workmanship warranty on all paint and hardware",
+    permitsIncluded: false,
+    exclusionItems: ["Cabinet box replacement", "Countertop work", "Drywall repairs"],
     status: "pending",
     created_at: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
     business_name: "Crafted Interiors Co.",
@@ -94,8 +129,27 @@ export const demoBidsJob2: DemoBid[] = [
     completedJobs: 891,
     responseTime: "Usually responds within 1 hour",
     financingAvailable: true,
+    financingNote: "0% financing for 18 months through Mosaic — no prepayment penalty.",
     inspectionFee: "Free",
+    inspectionIsFree: true,
+    inspectionNote: "Free full-roof inspection with photos and damage report included.",
     depositRequired: "None",
+    depositIsFree: true,
+    depositAmount: "",
+    depositRefundable: undefined,
+    depositNote: "No deposit required. You pay nothing until the job is complete.",
+    scopeItems: [
+      "Full tear-off of existing shingles and haul-off",
+      "Inspect and replace damaged decking boards",
+      "Install synthetic underlayment",
+      "Install GAF Timberline HDZ Class 3 impact-resistant shingles",
+      "Flash all valleys, penetrations, and ridge lines",
+      "Install ridge vent for proper attic ventilation",
+      "Final cleanup and magnetic nail sweep",
+    ],
+    warrantyNote: "10-year labor warranty + 30-year GAF Timberline material warranty",
+    permitsIncluded: true,
+    exclusionItems: ["Fascia/soffit replacement unless found damaged at inspection", "Gutter replacement"],
     status: "pending",
     created_at: new Date(now - 18 * 60 * 60 * 1000).toISOString(),
     business_name: "Summit Roofing Pros",
@@ -183,7 +237,26 @@ export const demoBidsJob2: DemoBid[] = [
     responseTime: "Usually responds within 6 hours",
     financingAvailable: false,
     inspectionFee: "$75",
+    inspectionIsFree: false,
+    inspectionFeeAmount: "$75",
+    inspectionFeeDeductedIfAccepted: true,
+    inspectionNote: "$75 inspection fee covers a detailed damage assessment and written report. Applied to your final bid if you move forward.",
     depositRequired: "$2,000",
+    depositIsFree: false,
+    depositAmount: "$2,000",
+    depositRefundable: false,
+    depositNote: "Non-refundable deposit covers material orders and scheduling. Applied to your total.",
+    scopeItems: [
+      "Remove existing shingles and dispose",
+      "Inspect decking and replace damaged sections",
+      "Install felt underlayment",
+      "Install GAF shingles in your color choice",
+      "Flash penetrations and valleys",
+      "Final cleanup",
+    ],
+    warrantyNote: "1-year labor warranty, 25-year GAF material warranty",
+    permitsIncluded: true,
+    exclusionItems: ["Structural framing repair", "Chimney tuck-pointing"],
     status: "pending",
     created_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
     business_name: "ABC Roofing & Construction",

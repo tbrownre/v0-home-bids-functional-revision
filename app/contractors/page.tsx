@@ -18,6 +18,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import Link from "next/link";
+import { HOMEBIDS_SMS } from "@/lib/sms-config";
 import { motion, useInView, useMotionValue, useSpring, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
@@ -300,7 +301,7 @@ export default function ContractorsPage() {
 
             <motion.div variants={fadeUp} className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <a
-                href="sms:+18722964991?&body=Let%27s%20create%20a%20new%20bid"
+                href={HOMEBIDS_SMS.contractor.href}
                 className="inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-primary px-10 text-base font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 active:scale-[0.98]"
               >
                 <ArrowRight className="h-4 w-4" />
@@ -583,7 +584,7 @@ export default function ContractorsPage() {
                 </ul>
 
                 <a
-                  href="sms:+18722964991?&body=Let%27s%20create%20a%20new%20bid"
+                  href={HOMEBIDS_SMS.contractor.href}
                   className="relative mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 active:scale-[0.98]"
                 >
                   <ArrowRight className="h-4 w-4" />
@@ -667,7 +668,7 @@ export default function ContractorsPage() {
           <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">You don&apos;t have to.</p>
           <div className="mt-10 flex flex-col items-center gap-4">
             <a
-              href="sms:+18722964991?&body=Let%27s%20create%20a%20new%20bid"
+              href={HOMEBIDS_SMS.contractor.href}
               className="inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-primary px-10 text-lg font-bold text-primary-foreground shadow-xl transition-colors hover:bg-primary/90 active:scale-[0.98]"
             >
               <ArrowRight className="h-5 w-5" />

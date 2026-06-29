@@ -54,9 +54,26 @@ interface Bid {
   website: string;
   completedJobs: number;
   responseTime: string;
+  // Financing
   financingAvailable?: boolean;
-  inspectionFee?: string;
-  depositRequired?: string;
+  financingNote?: string;
+  // Inspection — structured
+  inspectionFee?: string; // legacy
+  inspectionIsFree?: boolean;
+  inspectionFeeAmount?: string;
+  inspectionFeeDeductedIfAccepted?: boolean;
+  inspectionNote?: string;
+  // Deposit — structured
+  depositRequired?: string; // legacy
+  depositIsFree?: boolean;
+  depositAmount?: string;
+  depositRefundable?: boolean;
+  depositNote?: string;
+  // Scope & extras
+  scopeItems?: string[];
+  warrantyNote?: string;
+  permitsIncluded?: boolean;
+  exclusionItems?: string[];
   featured?: boolean;
   isFoundingContractor?: boolean;
 }
@@ -342,8 +359,21 @@ export default function BidsPage() {
           completedJobs: b.completedJobs ?? 0,
           responseTime: b.responseTime ?? "",
           financingAvailable: b.financingAvailable,
+          financingNote: b.financingNote,
           inspectionFee: b.inspectionFee,
+          inspectionIsFree: b.inspectionIsFree,
+          inspectionFeeAmount: b.inspectionFeeAmount,
+          inspectionFeeDeductedIfAccepted: b.inspectionFeeDeductedIfAccepted,
+          inspectionNote: b.inspectionNote,
           depositRequired: b.depositRequired,
+          depositIsFree: b.depositIsFree,
+          depositAmount: b.depositAmount,
+          depositRefundable: b.depositRefundable,
+          depositNote: b.depositNote,
+          scopeItems: b.scopeItems,
+          warrantyNote: b.warrantyNote,
+          permitsIncluded: b.permitsIncluded,
+          exclusionItems: b.exclusionItems,
           featured: b.featured ?? false,
         }));
         setBids(mapped);
@@ -887,45 +917,84 @@ export default function BidsPage() {
   <p className="mt-1 text-xl font-bold text-blue-700">{selectedBid.timeline}</p>
   </div>
   </div>
-  {selectedBid.inspectionFee && (
-    <div className={`mt-3 flex items-center gap-2 rounded-xl p-3 ${
-      selectedBid.inspectionFee === "Free"
-        ? "bg-emerald-50 border border-emerald-200"
-        : "bg-amber-50 border border-amber-200"
-    }`}>
-      <Shield className={`h-4 w-4 ${selectedBid.inspectionFee === "Free" ? "text-emerald-600" : "text-amber-600"}`} />
-      <div>
-        <p className={`text-sm font-medium ${selectedBid.inspectionFee === "Free" ? "text-emerald-700" : "text-amber-700"}`}>
-          {selectedBid.inspectionFee === "Free" ? "Free In-Person Inspection" : `${selectedBid.inspectionFee} Inspection Fee`}
-        </p>
-        <p className={`text-[10px] ${selectedBid.inspectionFee === "Free" ? "text-emerald-600" : "text-amber-600"}`}>
-          {selectedBid.inspectionFee === "Free"
-            ? "This contractor offers a free on-site inspection before starting work"
-            : "This fee covers the initial on-site inspection and is deducted from the final bid if accepted"}
-        </p>
-  </div>
-  </div>
-  )}
-  {selectedBid.depositRequired && (
-    <div className={`mt-3 flex items-center gap-2 rounded-xl p-3 ${
-      selectedBid.depositRequired === "None"
-        ? "bg-emerald-50 border border-emerald-200"
-        : "bg-violet-50 border border-violet-200"
-    }`}>
-      <CreditCard className={`h-4 w-4 ${selectedBid.depositRequired === "None" ? "text-emerald-600" : "text-violet-600"}`} />
-      <div>
-        <p className={`text-sm font-medium ${selectedBid.depositRequired === "None" ? "text-emerald-700" : "text-violet-700"}`}>
-          {selectedBid.depositRequired === "None" ? "No Deposit Required" : `${selectedBid.depositRequired} Upfront Deposit`}
-        </p>
-        <p className={`text-[10px] ${selectedBid.depositRequired === "None" ? "text-emerald-600" : "text-violet-600"}`}>
-          {selectedBid.depositRequired === "None"
-            ? "This contractor does not require any upfront payment"
-            : "Non-refundable deposit applied to total bid amount to cover material and labor costs"}
-        </p>
+  {/* Inspection — structured with legacy fallback */}
+  {(selectedBid.inspectionFee || selectedBid.inspectionIsFree !== undefined) && (() => {
+    const isFree = selectedBid.inspectionIsFree ?? selectedBid.inspectionFee === "Free";
+    const feeAmt = selectedBid.inspectionFeeAmount ?? (selectedBid.inspectionFee !== "Free" ? selectedBid.inspectionFee : null);
+    const deducted = selectedBid.inspectionFeeDeductedIfAccepted;
+    return (
+      <div className={`mt-3 rounded-xl p-3 ${isFree ? "bg-emerald-50 border border-emerald-200" : "bg-amber-50 border border-amber-200"}`}>
+        <div className="flex items-start gap-2">
+          <Shield className={`mt-0.5 h-4 w-4 shrink-0 ${isFree ? "text-emerald-600" : "text-amber-600"}`} />
+          <div>
+            <p className={`text-sm font-medium ${isFree ? "text-emerald-700" : "text-amber-700"}`}>
+              {isFree ? "Free In-Person Inspection" : `${feeAmt} Inspection Fee`}
+            </p>
+            <p className={`mt-0.5 text-[10px] ${isFree ? "text-emerald-600" : "text-amber-600"}`}>
+              {isFree
+                ? (selectedBid.inspectionNote ?? "This contractor offers a free on-site inspection before starting work.")
+                : (selectedBid.inspectionNote ?? `${feeAmt} covers the initial on-site inspection.`)
+              }
+              {!isFree && deducted !== undefined && (deducted ? " Applied to your final bid if you move forward." : " Not applied to final bid.")}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  })()}
+
+  {/* Deposit — structured with legacy fallback */}
+  {(selectedBid.depositRequired || selectedBid.depositIsFree !== undefined || selectedBid.depositAmount) && (() => {
+    const noDeposit = selectedBid.depositIsFree === true || selectedBid.depositRequired === "None" || (!selectedBid.depositAmount && selectedBid.depositRequired === "None");
+    const depositAmt = selectedBid.depositAmount ?? (selectedBid.depositRequired !== "None" ? selectedBid.depositRequired : null);
+    const refundable = selectedBid.depositRefundable;
+    return (
+      <div className={`mt-3 rounded-xl p-3 ${noDeposit ? "bg-emerald-50 border border-emerald-200" : "bg-violet-50 border border-violet-200"}`}>
+        <div className="flex items-start gap-2">
+          <CreditCard className={`mt-0.5 h-4 w-4 shrink-0 ${noDeposit ? "text-emerald-600" : "text-violet-600"}`} />
+          <div>
+            <p className={`text-sm font-medium ${noDeposit ? "text-emerald-700" : "text-violet-700"}`}>
+              {noDeposit
+                ? "No Deposit Required"
+                : `${depositAmt} Deposit${refundable === false ? " · Non-Refundable" : refundable === true ? " · Refundable" : ""}`}
+            </p>
+            <p className={`mt-0.5 text-[10px] ${noDeposit ? "text-emerald-600" : "text-violet-600"}`}>
+              {noDeposit
+                ? "This contractor does not require any upfront payment."
+                : (selectedBid.depositNote ?? "Deposit is applied to your total bid amount.")}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  })()}
+
+  {/* Financing note (detail) */}
+  {selectedBid.financingAvailable && selectedBid.financingNote && (
+    <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+      <div className="flex items-start gap-2">
+        <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+        <p className="text-[11px] text-emerald-700">{selectedBid.financingNote}</p>
       </div>
     </div>
   )}
-  
+
+  {/* Warranty & permits */}
+  {(selectedBid.warrantyNote || selectedBid.permitsIncluded !== undefined) && (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {selectedBid.warrantyNote && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-medium text-blue-700">
+          <Shield className="h-3 w-3" /> {selectedBid.warrantyNote}
+        </span>
+      )}
+      {selectedBid.permitsIncluded === true && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-medium text-slate-600">
+          <FileText className="h-3 w-3" /> Permits Included
+        </span>
+      )}
+    </div>
+  )}
+
                     {/* Badges */}
                       {(selectedBid.financingAvailable || selectedBid.rating === 5.0) && (
                         <div className="mt-3 flex flex-wrap gap-2">
@@ -959,6 +1028,34 @@ export default function BidsPage() {
                         </p>
                       </div>
                     </div>
+
+                    {/* Scope of Work */}
+                    {selectedBid.scopeItems && selectedBid.scopeItems.length > 0 && (
+                      <div className="border-b border-border p-6">
+                        <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3">
+                          <FileText className="h-4 w-4" />
+                          What&apos;s Included
+                        </h3>
+                        <ul className="space-y-1.5">
+                          {selectedBid.scopeItems.map((item, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                        {selectedBid.exclusionItems && selectedBid.exclusionItems.length > 0 && (
+                          <div className="mt-4">
+                            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Not included:</p>
+                            <ul className="space-y-1">
+                              {selectedBid.exclusionItems.map((item, i) => (
+                                <li key={i} className="text-xs text-muted-foreground/70">• {item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Contractor Message */}
                     <div className="border-b border-border p-6">

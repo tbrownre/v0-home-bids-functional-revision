@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import { getMockUser, USE_MOCK_DATA } from "@/lib/mock-auth";
 import { MessageCircle, Zap, Clock, CheckCircle2, Check, Copy } from "lucide-react";
 import { copyToClipboard } from "@/lib/utils";
+import { HOMEBIDS_SMS } from "@/lib/sms-config";
 
-const HOMEBIDS_PHONE = "555-867-5309";
-const SMS_BODY = "Hi, I'd like to start a project with HomeBids.";
-const SMS_HREF = `sms:${HOMEBIDS_PHONE.replace(/\D/g, "")}?body=${encodeURIComponent(SMS_BODY)}`;
+// Homeowner-facing page — always open the homeowner number
+const SMS_HREF = HOMEBIDS_SMS.homeowner.href;
 
 const TRUST_BULLETS = [
   { icon: Zap,          text: "Fastest way to get bids" },
@@ -337,7 +337,7 @@ export default function NewJobPage() {
     if (isMobile) {
       window.location.href = SMS_HREF;
     } else {
-      copyToClipboard(HOMEBIDS_PHONE).catch(() => {});
+      copyToClipboard(HOMEBIDS_SMS.homeowner.display).catch(() => {});
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
     }
@@ -413,7 +413,7 @@ export default function NewJobPage() {
               {copied && (
                 <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Copy className="h-3 w-3" />
-                  {HOMEBIDS_PHONE}
+                  {HOMEBIDS_SMS.homeowner.display}
                 </p>
               )}
 

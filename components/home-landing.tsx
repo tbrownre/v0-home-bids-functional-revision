@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { getSmsLink, isMobileDevice, isSmsCapableDevice, SMS_PHONE_DISPLAY, SMS_PHONE_NUMBER, SMS_BODY_PREFIX } from "@/lib/sms-config";
+import { getSmsLink, isMobileDevice, isSmsCapableDevice, SMS_PHONE_DISPLAY, SMS_PHONE_NUMBER, SMS_BODY_PREFIX, HOMEBIDS_SMS } from "@/lib/sms-config";
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
 import { TypewriterHeadline } from "@/components/typewriter-headline";
 import { copyToClipboard } from "@/lib/utils";

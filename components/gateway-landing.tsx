@@ -7,7 +7,7 @@ import { Home, Wrench } from "lucide-react";
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
 import { HomeBidsLogo } from "@/components/homebids-logo";
 import { Button } from "@/components/ui/button";
-import { getSmsLink } from "@/lib/sms-config";
+import { getSmsLink, HOMEBIDS_SMS } from "@/lib/sms-config";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
 import {
   Dialog,
@@ -78,23 +78,18 @@ function TickerRow({ items, speed, reverse = false }: { items: string[]; speed: 
   );
 }
 
-// ── SMS number — update this to the real HomeBids number ─────────────────────
-const HOMEBIDS_SMS_NUMBER = "18005551234";
-
 // ── Role picker modal (opened by "Try for free") ──────────────────────────────
 function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const handleHomeowner = () => {
     onClose();
     localStorage.setItem("homebids_audience", "homeowner");
-    const body = encodeURIComponent("Hey HomeBids, I need help with");
-    window.open(`sms:${HOMEBIDS_SMS_NUMBER}&body=${body}`, "_self");
+    window.location.href = HOMEBIDS_SMS.homeowner.href;
   };
 
   const handlePro = () => {
     onClose();
     localStorage.setItem("homebids_audience", "contractor");
-    const body = encodeURIComponent("Hey HomeBids, lets build a bid");
-    window.open(`sms:${HOMEBIDS_SMS_NUMBER}&body=${body}`, "_self");
+    window.location.href = HOMEBIDS_SMS.contractor.href;
   };
 
   return (
@@ -291,7 +286,7 @@ export function GatewayLanding() {
           {/* CTA buttons */}
           <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <a
-              href="sms:+18722964991?&body=Hi%20Ava%2C%20I%20need%20help%20with%20a%20home%20project"
+              href={HOMEBIDS_SMS.homeowner.href}
               className="inline-flex h-12 items-center justify-center gap-2.5 rounded-full px-8 text-base font-semibold bg-[#0A84FF] text-white hover:bg-[#0A84FF]/90 transition-colors"
             >
               <Home className="h-[18px] w-[18px] shrink-0" />
