@@ -18,14 +18,13 @@ import {
   CheckCircle2,
   FileText,
   Download,
-  Copy,
   Share2,
   Link2,
   MessageCircle,
   Lock,
   Unlock,
-
   Home,
+  AlertCircle,
 } from "lucide-react";
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -45,17 +44,69 @@ export interface BidChatLeadContext {
 }
 
 interface BidData {
+  // Customer info
   project: string;
   owner: string;
   phone: string;
   address: string;
+  // Scope
   scope: string[];
   optional: string[];
   exclusions: string[];
-  timeline: string;
+  warrantyNote: string;
+  permitsIncluded: boolean | null; // null = not asked yet
+  cleanupIncluded: boolean;
+  // Pricing
   price: string;
+  priceType: "fixed" | "estimated" | "inspection_dependent" | "";
+  priceIncludes: string;
+  // Timeline
+  timeline: string;
+  timelineDependsOn: string;
+  // Inspection
+  inspectionRequired: boolean | null;
+  inspectionIsFree: boolean | null;
+  inspectionFeeAmount: string;
+  inspectionFeeDeductedIfAccepted: boolean | null;
+  inspectionNote: string;
+  // Deposit
+  depositRequired: boolean | null;
+  depositAmount: string;
+  depositRefundable: boolean | null;
+  depositNote: string;
+  // Financing
+  financingAvailable: boolean | null;
+  financingNote: string;
+  // Contractor message
+  contractorMessage: string;
+  // Internal
   notes: string;
 }
+
+type CompletenessStatus =
+  | "complete"
+  | "needs_price"
+  | "needs_timeline"
+  | "needs_scope"
+  | "needs_inspection_deposit"
+  | "needs_contact"
+  | "incomplete";
+
+type GatherField =
+  | "owner"
+  | "phone"
+  | "address"
+  | "warranty"
+  | "permits"
+  | "inspection"
+  | "inspection_fee"
+  | "inspection_deduct"
+  | "deposit"
+  | "deposit_amount"
+  | "deposit_refundable"
+  | "financing"
+  | "contractor_message"
+  | null;
 
 type Phase = "intake" | "gathering" | "review" | "sent" | "approved" | "declined";
 
@@ -72,7 +123,6 @@ interface Props {
   contractorName: string;
   companyName: string;
   onClose: () => void;
-  // Called for HomeBids leads when the homeowner approves the bid in the demo flow
   onHomeownerApproved?: (leadId: string) => void;
 }
 
@@ -92,8 +142,26 @@ const DEFAULT_BID: BidData = {
   scope: [],
   optional: [],
   exclusions: [],
-  timeline: "",
+  warrantyNote: "",
+  permitsIncluded: null,
+  cleanupIncluded: true,
   price: "",
+  priceType: "",
+  priceIncludes: "",
+  timeline: "",
+  timelineDependsOn: "",
+  inspectionRequired: null,
+  inspectionIsFree: null,
+  inspectionFeeAmount: "",
+  inspectionFeeDeductedIfAccepted: null,
+  inspectionNote: "",
+  depositRequired: null,
+  depositAmount: "",
+  depositRefundable: null,
+  depositNote: "",
+  financingAvailable: null,
+  financingNote: "",
+  contractorMessage: "",
   notes: "",
 };
 
@@ -101,11 +169,10 @@ function titleCase(s: string) {
   return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-// Pull a dollar amount from free text → returns formatted "$5,200"
-// Prefers $-prefixed or budget/price-context numbers and skips phone-number fragments.
 function extractPrice(text: string): string | null {
-  // Strip phone-number-like sequences so they aren't mistaken for pricing
-  const cleaned = text.replace(/\b\d{3}[-.\s]\d{3}[-.\s]\d{4}\b/g, " ").replace(/\b\d{3}[-.\s]\d{4}\b/g, " ");
+  const cleaned = text
+    .replace(/\b\d{3}[-.\s]\d{3}[-.\s]\d{4}\b/g, " ")
+    .replace(/\b\d{3}[-.\s]\d{4}\b/g, " ");
 
   const toPrice = (raw: string): string | null => {
     const num = parseInt(raw.replace(/[,\s]/g, ""), 10);
@@ -113,21 +180,20 @@ function extractPrice(text: string): string | null {
     return `$${num.toLocaleString()}`;
   };
 
-  // 1) Explicit $ amount
   const dollar = cleaned.match(/\$\s?(\d{1,3}(?:[,\s]\d{3})+|\d{3,7})(?:\.\d{2})?/);
   if (dollar) {
     const p = toPrice(dollar[1]);
     if (p) return p;
   }
 
-  // 2) Amount following a pricing keyword (budget, price, around, about, ~, cost)
-  const ctx = cleaned.match(/(?:budget|price|around|about|approx(?:imately)?|cost|total|roughly|~)\D{0,12}(\d{1,3}(?:[,\s]\d{3})+|\d{3,7})/i);
+  const ctx = cleaned.match(
+    /(?:budget|price|around|about|approx(?:imately)?|cost|total|roughly|~)\D{0,12}(\d{1,3}(?:[,\s]\d{3})+|\d{3,7})/i,
+  );
   if (ctx) {
     const p = toPrice(ctx[1]);
     if (p) return p;
   }
 
-  // 3) Fallback: first standalone number that looks like money
   const any = cleaned.match(/\b(\d{1,3}(?:[,\s]\d{3})+|\d{3,7})\b/);
   if (any) return toPrice(any[1]);
   return null;
@@ -140,97 +206,174 @@ function extractTimeline(text: string): string | null {
   return m ? m[1] : null;
 }
 
-// Build a reasonable scope list from rough notes for the demo
 function buildScopeFromNotes(notes: string): string[] {
   const n = notes.toLowerCase();
-  const scope: string[] = [];
   if (n.includes("cabinet") || n.includes("repaint") || n.includes("paint")) {
-    scope.push(
+    return [
       "Remove cabinet doors and hardware",
       "Clean and prep surfaces",
       "Prime cabinets",
       "Apply professional finish coat",
       "Reinstall hardware",
       "Clean up work area",
-    );
+    ];
   } else if (n.includes("turf") || n.includes("landscap") || n.includes("grass")) {
-    scope.push(
+    return [
       "Remove existing sod and debris",
       "Grade and prep base layer",
       "Install weed barrier",
       "Lay and secure turf",
       "Add edging and infill",
       "Final cleanup",
-    );
+    ];
   } else if (n.includes("vanity") || n.includes("plumb") || n.includes("bath")) {
-    scope.push(
+    return [
       "Remove existing fixture",
       "Prep and protect work area",
       "Install new unit",
       "Reconnect plumbing",
       "Seal and finish",
       "Final cleanup",
-    );
+    ];
+  } else if (n.includes("roof")) {
+    return [
+      "Remove existing roofing material and haul-off",
+      "Inspect and replace damaged decking",
+      "Install synthetic underlayment",
+      "Install new shingles",
+      "Flash all penetrations and valleys",
+      "Final cleanup and inspection",
+    ];
   } else {
-    scope.push(
+    return [
       "Prep and protect work area",
       "Complete primary scope of work",
       "Quality check and adjustments",
       "Final cleanup",
-    );
+    ];
   }
-  return scope;
 }
 
 function suggestOptional(notes: string): string[] {
   const n = notes.toLowerCase();
-  if (n.includes("cabinet") || n.includes("paint")) {
-    return ["Soft-close hinges", "Premium enamel finish"];
-  }
+  if (n.includes("cabinet") || n.includes("paint")) return ["Soft-close hinges", "Premium enamel finish"];
   if (n.includes("turf")) return ["Pet-friendly infill upgrade", "Decorative border stone"];
+  if (n.includes("roof")) return ["Class 4 impact-resistant shingles upgrade", "Ridge vent installation"];
   return ["Premium materials upgrade"];
 }
 
 function suggestExclusions(notes: string): string[] {
   const n = notes.toLowerCase();
-  if (n.includes("cabinet") || n.includes("paint")) {
-    return ["Cabinet box replacement", "Drywall repair"];
-  }
+  if (n.includes("cabinet") || n.includes("paint")) return ["Cabinet box replacement", "Drywall repair"];
   if (n.includes("turf")) return ["Irrigation system repair", "Tree or root removal"];
+  if (n.includes("roof")) return ["Fascia/soffit replacement unless damaged", "Gutter replacement"];
   return ["Structural repairs", "Permits (if required)"];
 }
 
-// Render the SMS-friendly draft text
+/** Generate a professional contractor message from the bid data */
+function generateContractorMessage(bid: BidData, companyName: string): string {
+  const parts: string[] = [];
+  const projectLabel = bid.project || "your project";
+
+  parts.push(`Hi! ${companyName} would love to help with ${projectLabel}.`);
+
+  if (bid.scope.length > 0) {
+    parts.push(`Our bid covers ${bid.scope.slice(0, 3).join(", ").toLowerCase()}${bid.scope.length > 3 ? ", and more" : ""}.`);
+  }
+
+  if (bid.warrantyNote) {
+    parts.push(`We back our work with ${bid.warrantyNote.toLowerCase()}.`);
+  }
+
+  if (bid.permitsIncluded === true) {
+    parts.push("Permits are included in our price.");
+  }
+
+  if (bid.inspectionRequired === false || bid.inspectionIsFree === true) {
+    parts.push("We offer a free on-site inspection — no obligation.");
+  }
+
+  if (bid.depositRequired === false) {
+    parts.push("No upfront deposit required.");
+  } else if (bid.depositAmount) {
+    parts.push(`We require a ${bid.depositAmount} deposit to schedule.`);
+  }
+
+  if (bid.financingAvailable === true) {
+    parts.push(bid.financingNote ? bid.financingNote : "Financing options are available.");
+  }
+
+  parts.push("We look forward to earning your business!");
+  return parts.join(" ");
+}
+
+/** Check what required info is still missing */
+function checkCompleteness(b: BidData): CompletenessStatus {
+  if (!b.price) return "needs_price";
+  if (!b.timeline) return "needs_timeline";
+  if (b.scope.length === 0) return "needs_scope";
+  if (b.inspectionRequired === null || b.depositRequired === null) return "needs_inspection_deposit";
+  if (!b.owner || !b.phone) return "needs_contact";
+  return "complete";
+}
+
 function buildDraftText(bid: BidData): string {
   const lines: string[] = [];
   lines.push("Here's your draft bid for review:");
   lines.push("");
-  lines.push("Project:");
-  lines.push(bid.project || "Project");
-  if (bid.address) lines.push(bid.address);
+  lines.push(`Project: ${bid.project || "Project"}`);
+  if (bid.address) lines.push(`Address: ${bid.address}`);
   lines.push("");
-  lines.push("Scope:");
-  bid.scope.forEach((s) => lines.push(`• ${s}`));
+  lines.push("Scope of Work:");
+  bid.scope.forEach((s) => lines.push(`  • ${s}`));
   if (bid.optional.length) {
     lines.push("");
     lines.push("Optional Upgrades:");
-    bid.optional.forEach((s) => lines.push(`• ${s}`));
+    bid.optional.forEach((s) => lines.push(`  • ${s}`));
   }
   if (bid.exclusions.length) {
     lines.push("");
-    lines.push("Exclusions:");
-    bid.exclusions.forEach((s) => lines.push(`• ${s}`));
+    lines.push("Not Included:");
+    bid.exclusions.forEach((s) => lines.push(`  • ${s}`));
+  }
+  if (bid.warrantyNote) {
+    lines.push("");
+    lines.push(`Warranty: ${bid.warrantyNote}`);
+  }
+  if (bid.permitsIncluded !== null) {
+    lines.push(`Permits: ${bid.permitsIncluded ? "Included" : "Not included"}`);
   }
   lines.push("");
-  lines.push("Timeline:");
-  lines.push(bid.timeline || "To be confirmed");
+  lines.push(`Timeline: ${bid.timeline || "To be confirmed"}`);
+  if (bid.timelineDependsOn) lines.push(`  (depends on: ${bid.timelineDependsOn})`);
   lines.push("");
-  lines.push("Price:");
-  lines.push(bid.price || "TBD");
-  if (bid.notes) {
+  lines.push(`Price: ${bid.price || "TBD"}${bid.priceType === "estimated" ? " (estimated)" : bid.priceType === "inspection_dependent" ? " (pending inspection)" : ""}`);
+  if (bid.priceIncludes) lines.push(`  Includes: ${bid.priceIncludes}`);
+  lines.push("");
+  if (bid.inspectionRequired === false) {
+    lines.push("Inspection: No inspection required");
+  } else if (bid.inspectionIsFree === true) {
+    lines.push("Inspection: Free in-person inspection included");
+    if (bid.inspectionFeeDeductedIfAccepted) lines.push("  Fee deducted from final bid if accepted");
+  } else if (bid.inspectionFeeAmount) {
+    lines.push(`Inspection Fee: ${bid.inspectionFeeAmount}`);
+    if (bid.inspectionFeeDeductedIfAccepted) lines.push("  Deducted from final bid if accepted");
+  }
+  if (bid.inspectionNote) lines.push(`  ${bid.inspectionNote}`);
+  lines.push("");
+  if (bid.depositRequired === false) {
+    lines.push("Deposit: No deposit required");
+  } else if (bid.depositAmount) {
+    lines.push(`Deposit: ${bid.depositAmount}${bid.depositRefundable === false ? " (non-refundable)" : bid.depositRefundable === true ? " (refundable)" : ""}`);
+    if (bid.depositNote) lines.push(`  ${bid.depositNote}`);
+  }
+  if (bid.financingAvailable === true) {
+    lines.push(`Financing: Available${bid.financingNote ? ` — ${bid.financingNote}` : ""}`);
+  }
+  if (bid.contractorMessage) {
     lines.push("");
-    lines.push("Notes:");
-    lines.push(bid.notes);
+    lines.push("Contractor Message:");
+    lines.push(bid.contractorMessage);
   }
   lines.push("");
   lines.push("Reply with:");
@@ -254,16 +397,16 @@ export function BidBuilderChat({
   const [phase, setPhase] = useState<Phase>("intake");
   const [bid, setBid] = useState<BidData>(DEFAULT_BID);
   const [aiTyping, setAiTyping] = useState(false);
-  const [gatherField, setGatherField] = useState<"owner" | "phone" | "address" | null>(null);
+  const [gatherField, setGatherField] = useState<GatherField>(null);
   const [showPdf, setShowPdf] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
+  const [completenessError, setCompletenessError] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const bidRef = useRef<BidData>(DEFAULT_BID);
   bidRef.current = bid;
 
-  // Seed greeting + any known lead context
   useEffect(() => {
     const seeded: BidData = {
       ...DEFAULT_BID,
@@ -279,16 +422,15 @@ export function BidBuilderChat({
       {
         id: nextId(),
         role: "ai",
-        text:
-          "Hi! I'm your HomeBids bid assistant. Send rough project details by text or voice note — include project type, pricing, scope, timeline, customer info, and anything the homeowner mentioned. I'll turn it into a professional bid.",
+        text: "Hi! I'm your HomeBids bid assistant. Send rough project details — project type, scope, pricing, timeline, and the customer info. I'll organize everything into a complete professional bid, then ask a few quick follow-up questions about inspection, deposit, and warranty so the homeowner gets a full picture.",
       },
     ]);
     setPhase("intake");
     setGatherField(null);
+    setCompletenessError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lead?.id, leadType]);
 
-  // Auto-scroll on new messages
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, aiTyping]);
@@ -308,23 +450,52 @@ export function BidBuilderChat({
     }, delay);
   }
 
-  // Determine what required owner info is still missing
-  function missingField(b: BidData): "owner" | "phone" | "address" | null {
-    if (!b.owner.trim()) return "owner";
-    if (!b.phone.trim()) return "phone";
-    if (!b.address.trim()) return "address";
-    return null;
-  }
+  // ── Gather field prompts ───────────────────────────────────────────────────
 
-  function askForField(field: "owner" | "phone" | "address") {
+  function askForField(field: GatherField, b?: BidData) {
+    const current = b ?? bidRef.current;
     setGatherField(field);
     setPhase("gathering");
-    const prompts = {
+    const prompts: Record<NonNullable<GatherField>, string> = {
       owner: "Got it. Who should we send this bid to? (property owner's name)",
       phone: "Thanks. What's the best phone number to reach them?",
       address: "Almost there — what's the project address or property location?",
+      warranty:
+        "Does your work come with any warranty? For example: \"1-year labor warranty\", \"5-year workmanship guarantee\", or \"no warranty\". This builds trust with homeowners.",
+      permits:
+        "Are permits required for this job, and are they included in your price? (e.g. \"permits included\", \"permit not required\", \"homeowner obtains permit\")",
+      inspection:
+        "Does this job require an in-person inspection before work begins? Reply with: \"free inspection\", \"inspection fee\", or \"no inspection needed\".",
+      inspection_fee:
+        "What's the inspection fee amount? And is it deducted from the final bid price if the homeowner accepts? (e.g. \"$75, deducted from bid\" or \"$100, not deducted\")",
+      inspection_deduct:
+        "Is the inspection fee deducted from the final bid if the homeowner accepts? (yes / no)",
+      deposit:
+        "Do you require a deposit before starting work? Reply: \"no deposit\", or give the amount and whether it's refundable (e.g. \"$1,500 non-refundable\", \"30% refundable deposit\").",
+      deposit_amount:
+        "How much is the deposit, and is it refundable if the homeowner changes their mind?",
+      deposit_refundable:
+        "Is the deposit refundable? (yes / no)",
+      financing:
+        "Do you offer financing options for homeowners? (yes / no — if yes, any details?)",
+      contractor_message:
+        "Write a short message to the homeowner explaining why they should choose you. Mention materials, timeline, warranty, or what makes your bid stand out. Or reply \"generate\" and I'll write one from the bid details.",
     };
-    pushAi(prompts[field]);
+    pushAi(prompts[field!]);
+  }
+
+  // Determine the next gather field in the post-intake flow
+  function nextGatherField(b: BidData): GatherField {
+    if (!b.owner.trim()) return "owner";
+    if (!b.phone.trim()) return "phone";
+    if (!b.address.trim()) return "address";
+    if (b.inspectionRequired === null) return "inspection";
+    if (b.inspectionRequired === true && b.inspectionIsFree === null) return "inspection_fee";
+    if (b.depositRequired === null) return "deposit";
+    if (b.financingAvailable === null) return "financing";
+    if (!b.warrantyNote.trim()) return "warranty";
+    if (!b.contractorMessage.trim()) return "contractor_message";
+    return null;
   }
 
   function presentDraft(b: BidData) {
@@ -333,11 +504,58 @@ export function BidBuilderChat({
     pushAi(buildDraftText(b), "draft");
   }
 
-  // First substantial message → organize into a structured bid
+  // ── Intake handler ────────────────────────────────────────────────────────
+
   function handleIntake(text: string) {
     aiRespond(() => {
       const price = extractPrice(text);
       const timeline = extractTimeline(text);
+      const lower = text.toLowerCase();
+
+      // Auto-detect inspection signals
+      let inspectionRequired: boolean | null = null;
+      let inspectionIsFree: boolean | null = null;
+      if (lower.includes("free inspection") || lower.includes("no charge inspection")) {
+        inspectionRequired = true;
+        inspectionIsFree = true;
+      } else if (lower.includes("no inspection") || lower.includes("inspection not required")) {
+        inspectionRequired = false;
+      }
+
+      // Auto-detect deposit signals
+      let depositRequired: boolean | null = null;
+      let depositAmount = "";
+      if (lower.includes("no deposit") || lower.includes("deposit not required")) {
+        depositRequired = false;
+      } else {
+        const depositMatch = text.match(/\$(\d[\d,]*)\s*deposit/i);
+        if (depositMatch) {
+          depositRequired = true;
+          depositAmount = `$${depositMatch[1]}`;
+        }
+      }
+
+      // Auto-detect warranty
+      let warrantyNote = "";
+      const warrantyMatch = text.match(/(\d+[\s-]year[s]?\s+(?:labor|workmanship|material|parts)?\s*warranty)/i);
+      if (warrantyMatch) warrantyNote = warrantyMatch[1];
+
+      // Auto-detect permits
+      let permitsIncluded: boolean | null = null;
+      if (lower.includes("permit included") || lower.includes("permits included") || lower.includes("pull permits")) {
+        permitsIncluded = true;
+      } else if (lower.includes("no permit") || lower.includes("permit not required")) {
+        permitsIncluded = false;
+      }
+
+      // Auto-detect financing
+      let financingAvailable: boolean | null = null;
+      if (lower.includes("financing available") || lower.includes("offer financing")) {
+        financingAvailable = true;
+      } else if (lower.includes("no financing")) {
+        financingAvailable = false;
+      }
+
       const next: BidData = {
         ...bidRef.current,
         project: bidRef.current.project || titleCase(text.split(",")[0].slice(0, 48).trim()),
@@ -346,41 +564,149 @@ export function BidBuilderChat({
         exclusions: bidRef.current.exclusions.length ? bidRef.current.exclusions : suggestExclusions(text),
         price: bidRef.current.price || (price ?? ""),
         timeline: bidRef.current.timeline || (timeline ?? ""),
+        inspectionRequired: inspectionRequired,
+        inspectionIsFree: inspectionIsFree,
+        depositRequired: depositRequired,
+        depositAmount: depositAmount,
+        warrantyNote: warrantyNote,
+        permitsIncluded: permitsIncluded,
+        financingAvailable: financingAvailable,
       };
       setBid(next);
       pushAi(
-        "Got it — I've organized that into a clean scope and suggested a few optional upgrades and exclusions. Before I draft the bid, I need a couple of details.",
+        "Got it — I've organized that into a clean scope. Before I draft the bid, I need a few quick details to make it complete for the homeowner.",
       );
-      const miss = missingField(next);
-      if (miss) {
-        setTimeout(() => askForField(miss), 700);
+      const nextField = nextGatherField(next);
+      if (nextField) {
+        setTimeout(() => askForField(nextField, next), 700);
       } else {
         setTimeout(() => presentDraft(next), 700);
       }
     }, 1300);
   }
 
-  // Handle answers while gathering owner details
+  // ── Gathering handler ─────────────────────────────────────────────────────
+
   function handleGathering(text: string) {
     const field = gatherField;
     if (!field) return;
+    const lower = text.trim().toLowerCase();
+
     aiRespond(() => {
       const next = { ...bidRef.current };
-      if (field === "owner") next.owner = titleCase(text.trim());
-      if (field === "phone") next.phone = text.trim();
-      if (field === "address") next.address = text.trim();
+
+      switch (field) {
+        case "owner":
+          next.owner = titleCase(text.trim());
+          break;
+        case "phone":
+          next.phone = text.trim();
+          break;
+        case "address":
+          next.address = text.trim();
+          break;
+        case "warranty":
+          if (lower === "no" || lower === "none" || lower === "no warranty") {
+            next.warrantyNote = "No warranty";
+          } else {
+            next.warrantyNote = text.trim();
+          }
+          break;
+        case "permits":
+          if (lower.includes("included") || lower.includes("yes") || lower.includes("pull")) {
+            next.permitsIncluded = true;
+          } else if (lower.includes("not required") || lower.includes("no permit") || lower.includes("homeowner")) {
+            next.permitsIncluded = false;
+          } else {
+            next.permitsIncluded = false;
+          }
+          break;
+        case "inspection":
+          if (lower.includes("free") || lower === "yes") {
+            next.inspectionRequired = true;
+            next.inspectionIsFree = true;
+          } else if (lower.includes("fee") || lower.includes("paid") || lower.includes("charge")) {
+            next.inspectionRequired = true;
+            next.inspectionIsFree = false;
+          } else {
+            next.inspectionRequired = false;
+            next.inspectionIsFree = null;
+          }
+          break;
+        case "inspection_fee": {
+          const feeAmt = extractPrice(text);
+          if (feeAmt) next.inspectionFeeAmount = feeAmt;
+          if (lower.includes("deduct") || lower.includes("applied") || lower.includes("credited") || lower.includes("yes")) {
+            next.inspectionFeeDeductedIfAccepted = true;
+          } else {
+            next.inspectionFeeDeductedIfAccepted = false;
+          }
+          break;
+        }
+        case "inspection_deduct":
+          next.inspectionFeeDeductedIfAccepted = lower.startsWith("y");
+          break;
+        case "deposit":
+          if (lower.includes("no deposit") || lower === "no" || lower === "none") {
+            next.depositRequired = false;
+          } else {
+            next.depositRequired = true;
+            const amt = extractPrice(text);
+            if (amt) next.depositAmount = amt;
+            // Check for percentage
+            const pctMatch = text.match(/(\d+)\s*%/);
+            if (pctMatch) next.depositAmount = `${pctMatch[1]}%`;
+            if (lower.includes("non-refund") || lower.includes("nonrefund") || lower.includes("no refund")) {
+              next.depositRefundable = false;
+            } else if (lower.includes("refund")) {
+              next.depositRefundable = true;
+            }
+          }
+          break;
+        case "deposit_amount": {
+          const amt = extractPrice(text);
+          if (amt) next.depositAmount = amt;
+          const pct = text.match(/(\d+)\s*%/);
+          if (pct) next.depositAmount = `${pct[1]}%`;
+          break;
+        }
+        case "deposit_refundable":
+          next.depositRefundable = lower.startsWith("y");
+          break;
+        case "financing":
+          if (lower.startsWith("y") || lower.includes("yes") || lower.includes("offer") || lower.includes("available")) {
+            next.financingAvailable = true;
+            // capture note if they gave details
+            if (text.trim().length > 5 && !lower.match(/^(yes|y|yeah)$/)) {
+              next.financingNote = text.trim();
+            }
+          } else {
+            next.financingAvailable = false;
+          }
+          break;
+        case "contractor_message":
+          if (lower === "generate" || lower === "gen" || lower === "auto") {
+            next.contractorMessage = generateContractorMessage(next, companyName);
+            pushAi(`Generated: "${next.contractorMessage}"`);
+          } else {
+            next.contractorMessage = text.trim();
+          }
+          break;
+      }
+
       setBid(next);
-      const miss = missingField(next);
-      if (miss) {
-        askForField(miss);
+      const nextField = nextGatherField(next);
+      if (nextField) {
+        askForField(nextField, next);
       } else {
-        pushAi("Perfect — I have everything I need. Here's your draft.");
+        pushAi("I have everything I need. Here's your complete draft:");
         setTimeout(() => presentDraft(next), 700);
       }
     }, 700);
   }
 
-  // Apply natural-language edits during review
+  // ── Edit handler ──────────────────────────────────────────────────────────
+
   function handleEdit(text: string) {
     const lower = text.trim().toLowerCase();
 
@@ -400,8 +726,13 @@ export function BidBuilderChat({
       let summary = "";
 
       // Price change
-      const priceMatch = lower.match(/(?:price|cost|total|change.*to|make it|set.*to)\D*(\$?\s?\d[\d,\s]*)/);
-      if ((lower.includes("price") || lower.includes("change") || lower.includes("make it")) && priceMatch) {
+      const priceMatch = lower.match(
+        /(?:price|cost|total|change.*to|make it|set.*to)\D*(\$?\s?\d[\d,\s]*)/,
+      );
+      if (
+        (lower.includes("price") || lower.includes("change") || lower.includes("make it")) &&
+        priceMatch
+      ) {
         const p = extractPrice(priceMatch[1]);
         if (p) {
           next.price = p;
@@ -411,7 +742,10 @@ export function BidBuilderChat({
       }
 
       // Timeline change
-      if (!changed && (lower.includes("timeline") || lower.includes("weeks") || lower.includes("days"))) {
+      if (
+        !changed &&
+        (lower.includes("timeline") || lower.includes("weeks") || lower.includes("days"))
+      ) {
         const t = extractTimeline(lower);
         if (t) {
           next.timeline = t;
@@ -424,27 +758,22 @@ export function BidBuilderChat({
       const removeMatch = text.match(/remove\s+(.+)/i);
       if (!changed && removeMatch) {
         const term = removeMatch[1].toLowerCase().replace(/[.!]$/, "").trim();
-        const filterOut = (arr: string[]) => arr.filter((s) => !s.toLowerCase().includes(term.split(" ")[0]));
-        const before = next.scope.length + next.optional.length + next.exclusions.length;
+        const filterOut = (arr: string[]) =>
+          arr.filter((s) => !s.toLowerCase().includes(term.split(" ")[0]));
+        const before =
+          next.scope.length + next.optional.length + next.exclusions.length;
         next.scope = filterOut(next.scope);
         next.optional = filterOut(next.optional);
         next.exclusions = filterOut(next.exclusions);
-        const after = next.scope.length + next.optional.length + next.exclusions.length;
+        const after =
+          next.scope.length + next.optional.length + next.exclusions.length;
         if (after < before) {
           changed = true;
           summary = `Removed "${term}" from the bid.`;
         }
       }
 
-      // Add a note
-      const noteMatch = text.match(/add (?:a )?note(?:\s+about)?\s+(.+)/i);
-      if (!changed && noteMatch) {
-        next.notes = next.notes ? `${next.notes} ${noteMatch[1].trim()}` : titleCase(noteMatch[1].trim().charAt(0)) + noteMatch[1].trim().slice(1);
-        changed = true;
-        summary = "Added that note to the bid.";
-      }
-
-      // Add a scope item
+      // Add scope item
       const addMatch = text.match(/add\s+(.+)/i);
       if (!changed && addMatch && !lower.startsWith("add note")) {
         next.scope.push(titleCase(addMatch[1].replace(/[.!]$/, "").trim()));
@@ -458,13 +787,38 @@ export function BidBuilderChat({
         setTimeout(() => pushAi(buildDraftText(next), "draft"), 600);
       } else {
         pushAi(
-          "I can adjust pricing, scope, timeline, exclusions, or notes. Try things like \"change price to 5600\", \"remove soft-close hinges\", or \"timeline should be 2 weeks\". Reply APPROVE when it looks good.",
+          "I can adjust pricing, scope, timeline, warranty, deposit, or inspection details. Try \"change price to 5600\", \"remove soft-close hinges\", or \"timeline should be 2 weeks\". Reply APPROVE when it looks good.",
         );
       }
     }, 1000);
   }
 
+  // ── Approve handler ───────────────────────────────────────────────────────
+
   function handleApprove() {
+    // Completeness check before finalizing
+    const status = checkCompleteness(bidRef.current);
+    if (status !== "complete") {
+      const missing: Record<CompletenessStatus, string> = {
+        needs_price: "This bid is missing a price. What should the total be?",
+        needs_timeline: "We still need a timeline. How long will this job take?",
+        needs_scope: "The scope of work is empty. What work is included in this bid?",
+        needs_inspection_deposit:
+          "We still need to cover inspection and deposit details before submitting. Let me ask quickly.",
+        needs_contact: "We need the homeowner's name and phone before sending.",
+        complete: "",
+        incomplete: "A few required fields are still missing.",
+      };
+      setCompletenessError(missing[status]);
+      pushAi(missing[status]);
+      const nextField = nextGatherField(bidRef.current);
+      if (nextField) {
+        setTimeout(() => askForField(nextField), 600);
+      }
+      return;
+    }
+
+    setCompletenessError(null);
     aiRespond(() => {
       if (leadType === "my") {
         setPhase("approved");
@@ -479,7 +833,10 @@ export function BidBuilderChat({
           `Approved. Your bid link has been sent to ${owner} for review. I'll relay messages until they approve — their contact stays private for now. A PDF version is also available in the preview.`,
           "system",
         );
-        const fromLine = contractorName && contractorName.toLowerCase() !== "there" ? `${contractorName} from ${companyName}` : companyName;
+        const fromLine =
+          contractorName && contractorName.toLowerCase() !== "there"
+            ? `${contractorName} from ${companyName}`
+            : companyName;
         pushAi(
           `Sent to ${owner}: "Hi ${owner.split(" ")[0]}, ${fromLine} sent you a bid for your project${bidRef.current.address ? ` at ${bidRef.current.address}` : ""}. Review your bid here: [Bid Link]"`,
         );
@@ -487,7 +844,6 @@ export function BidBuilderChat({
     }, 1300);
   }
 
-  // Demo: simulate homeowner decision (HomeBids leads only)
   function homeownerDecision(decision: "approve" | "changes" | "decline") {
     if (decision === "approve") {
       aiRespond(() => {
@@ -519,6 +875,7 @@ export function BidBuilderChat({
   function send(raw?: string, kind: ChatMessage["kind"] = "text") {
     const text = (raw ?? input).trim();
     if (!text) return;
+    setCompletenessError(null);
     pushUser(text, kind);
     setInput("");
 
@@ -539,7 +896,6 @@ export function BidBuilderChat({
     } else if (phase === "review") {
       handleEdit(text);
     } else if (phase === "approved" && leadType === "homebids") {
-      // direct messaging unlocked - just acknowledge
       aiRespond(() => pushAi("Message delivered to the homeowner."), 600);
     }
   }
@@ -549,7 +905,6 @@ export function BidBuilderChat({
     setTimeout(() => {
       setRecording(false);
       pushUser("Voice note (0:08)", "voice");
-      // simulate transcription
       setTimeout(() => {
         pushAi("Transcribing your voice note...");
         setTimeout(() => {
@@ -609,24 +964,61 @@ export function BidBuilderChat({
       )}
       {bid.exclusions.length > 0 && (
         <div className="border-b border-border px-4 py-3">
-          <p className="mb-1.5 font-semibold uppercase tracking-wider text-muted-foreground" style={{ fontSize: "9px" }}>Exclusions</p>
+          <p className="mb-1.5 font-semibold uppercase tracking-wider text-muted-foreground" style={{ fontSize: "9px" }}>Not Included</p>
           {bid.exclusions.map((s, i) => <p key={i} className="text-muted-foreground">• {s}</p>)}
+        </div>
+      )}
+      {(bid.warrantyNote || bid.permitsIncluded !== null) && (
+        <div className="border-b border-border px-4 py-3 space-y-1">
+          {bid.warrantyNote && (
+            <div className="flex justify-between">
+              <span className="font-medium">Warranty</span>
+              <span className="text-muted-foreground">{bid.warrantyNote}</span>
+            </div>
+          )}
+          {bid.permitsIncluded !== null && (
+            <div className="flex justify-between">
+              <span className="font-medium">Permits</span>
+              <span className="text-muted-foreground">{bid.permitsIncluded ? "Included" : "Not included"}</span>
+            </div>
+          )}
         </div>
       )}
       <div className="border-b border-border px-4 py-3">
         <p className="mb-1 font-semibold uppercase tracking-wider text-muted-foreground" style={{ fontSize: "9px" }}>Pricing</p>
         <div className="flex justify-between font-bold"><span>Total Bid</span><span>{bid.price || "TBD"}</span></div>
+        {bid.priceIncludes && <p className="mt-0.5 text-muted-foreground">Includes: {bid.priceIncludes}</p>}
       </div>
-      {bid.notes && (
+      {(bid.inspectionRequired !== null || bid.depositRequired !== null || bid.financingAvailable !== null) && (
+        <div className="border-b border-border px-4 py-3 space-y-1">
+          <p className="mb-1 font-semibold uppercase tracking-wider text-muted-foreground" style={{ fontSize: "9px" }}>Inspection & Payment</p>
+          {bid.inspectionRequired === false && <p className="text-muted-foreground">Inspection: Not required</p>}
+          {bid.inspectionRequired === true && bid.inspectionIsFree === true && (
+            <p className="text-muted-foreground">Inspection: Free in-person{bid.inspectionFeeDeductedIfAccepted ? " (deducted if accepted)" : ""}</p>
+          )}
+          {bid.inspectionRequired === true && bid.inspectionIsFree === false && bid.inspectionFeeAmount && (
+            <p className="text-muted-foreground">Inspection Fee: {bid.inspectionFeeAmount}{bid.inspectionFeeDeductedIfAccepted ? " (deducted if accepted)" : ""}</p>
+          )}
+          {bid.depositRequired === false && <p className="text-muted-foreground">Deposit: Not required</p>}
+          {bid.depositRequired === true && bid.depositAmount && (
+            <p className="text-muted-foreground">Deposit: {bid.depositAmount}{bid.depositRefundable === false ? " (non-refundable)" : bid.depositRefundable === true ? " (refundable)" : ""}</p>
+          )}
+          {bid.financingAvailable === true && <p className="text-muted-foreground">Financing: Available{bid.financingNote ? ` — ${bid.financingNote}` : ""}</p>}
+        </div>
+      )}
+      {bid.contractorMessage && (
         <div className="border-b border-border px-4 py-3">
-          <p className="mb-1 font-semibold uppercase tracking-wider text-muted-foreground" style={{ fontSize: "9px" }}>Notes</p>
-          <p className="text-muted-foreground">{bid.notes}</p>
+          <p className="mb-1 font-semibold uppercase tracking-wider text-muted-foreground" style={{ fontSize: "9px" }}>Contractor Message</p>
+          <p className="text-muted-foreground">{bid.contractorMessage}</p>
         </div>
       )}
       <div className="px-4 py-3">
         <p className="mb-2 font-semibold uppercase tracking-wider text-muted-foreground" style={{ fontSize: "9px" }}>Acceptance</p>
         <p className="text-muted-foreground">Owner Signature: _____________________  Date: __________</p>
-        <p className="mt-2 text-muted-foreground" style={{ fontSize: "9px" }}>50% deposit on acceptance · 50% on completion · 1-year workmanship guarantee</p>
+        <p className="mt-2 text-muted-foreground" style={{ fontSize: "9px" }}>
+          {bid.depositAmount ? `${bid.depositAmount} deposit on acceptance · balance due on completion · ` : ""}
+          {bid.warrantyNote || "1-year workmanship guarantee"}
+        </p>
       </div>
     </div>
   );
@@ -634,7 +1026,6 @@ export function BidBuilderChat({
   const pdfReady = phase === "approved" || phase === "sent" || phase === "declined";
   const messagingUnlocked = phase === "approved" && leadType === "homebids";
 
-  // Delivery action bar (changes by lead type + phase)
   const deliveryActions = (
     <div className="space-y-2">
       {leadType === "my" && phase === "approved" && (
@@ -722,7 +1113,6 @@ export function BidBuilderChat({
     </div>
   );
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col lg:flex-row lg:min-h-[640px]">
       {/* LEFT: chat */}
@@ -782,7 +1172,15 @@ export function BidBuilderChat({
             </div>
           )}
 
-          {/* Inline APPROVE shortcut + delivery actions */}
+          {completenessError && !aiTyping && (
+            <div className="flex justify-start">
+              <div className="flex items-center gap-2 rounded-2xl rounded-bl-md border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-700">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                {completenessError}
+              </div>
+            </div>
+          )}
+
           {canApproveInline && !aiTyping && (
             <div className="flex justify-start">
               <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => send("APPROVE")}>
@@ -837,7 +1235,13 @@ export function BidBuilderChat({
               disabled={recording || phase === "declined"}
               className="max-h-32 min-h-10 resize-none py-2.5 text-sm"
             />
-            <Button size="sm" className="h-10 w-10 shrink-0 p-0" onClick={() => send()} disabled={!input.trim() || aiTyping || recording} aria-label="Send message">
+            <Button
+              size="sm"
+              className="h-10 w-10 shrink-0 p-0"
+              onClick={() => send()}
+              disabled={!input.trim() || aiTyping || recording}
+              aria-label="Send message"
+            >
               <Send className="h-4 w-4" />
             </Button>
           </div>
@@ -861,7 +1265,7 @@ export function BidBuilderChat({
           </span>
         </div>
         <div className="flex-1 overflow-y-auto p-4">
-          {pdfReady || phase === "review" ? (
+          {pdfReady || phase === "review" || phase === "gathering" ? (
             pdfPreview
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
