@@ -329,7 +329,7 @@ export function Header({
                         onClick={closeMenu}
                       >
                         {item.label === "Home"        && <LayoutDashboard className="h-4 w-4 shrink-0" />}
-                        {item.label === "Leads"       && <Users           className="h-4 w-4 shrink-0" />}
+                        {item.label === "Bid Inbox"   && <Users           className="h-4 w-4 shrink-0" />}
                         {item.label === "Bid Builder" && <Sparkles        className="h-4 w-4 shrink-0" />}
                         {item.label === "Account"     && <Wrench          className="h-4 w-4 shrink-0" />}
                         {item.label}

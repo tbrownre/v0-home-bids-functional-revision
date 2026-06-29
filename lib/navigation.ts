@@ -30,7 +30,7 @@ export const homeownerNavItems: NavItem[] = [
 // Sign Out is intentionally excluded — it must be appended as an action, not a link.
 export const contractorNavItems: NavItem[] = [
   { label: "Home",      href: "/contractors/dashboard",             match: ["/contractors/dashboard"] },
-  { label: "Leads",     href: "/contractors/dashboard?tab=leads",   match: [] },
+  { label: "Bid Inbox", href: "/contractors/dashboard?tab=leads",   match: [] },
   { label: "Bid Builder",  href: "/contractors/dashboard?tab=ai",    match: [] },
   { label: "Account",   href: "/contractors/dashboard?tab=account", match: [] },
 ];
