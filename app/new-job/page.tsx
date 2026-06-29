@@ -337,7 +337,7 @@ export default function NewJobPage() {
     if (isMobile) {
       window.location.href = SMS_HREF;
     } else {
-      copyToClipboard(HOMEBIDS_PHONE).catch(() => {});
+      copyToClipboard(HOMEBIDS_SMS.homeowner.display).catch(() => {});
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
     }
@@ -413,7 +413,7 @@ export default function NewJobPage() {
               {copied && (
                 <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Copy className="h-3 w-3" />
-                  {HOMEBIDS_PHONE}
+                  {HOMEBIDS_SMS.homeowner.display}
                 </p>
               )}
 
