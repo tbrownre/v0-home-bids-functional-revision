@@ -152,9 +152,8 @@ export function redirectAfterSignIn(role: MockRole) {
   } else if (role === "admin") {
     window.location.replace("/admin-demo");
   } else {
-    // The root page is now a static public landing — the homeowner demo
-    // experience lives at /new-job.
-    window.location.replace("/new-job");
+    // The homeowner demo experience is the jobs dashboard.
+    window.location.replace("/homeowners/dashboard");
   }
 }
 

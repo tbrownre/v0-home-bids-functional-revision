@@ -20,7 +20,7 @@ export const homeownerNavItems: NavItem[] = [
   { label: "Home",         href: "/" },
   { label: "Services",     href: "/services" },
   { label: "How It Works", href: "/how-it-works" },
-  { label: "Your Jobs",    href: "/?showJobs=true", match: ["/dashboard", "/jobs", "/projects", "/homeowners"] },
+  { label: "Your Jobs",    href: "/homeowners/dashboard", match: ["/homeowners/dashboard", "/jobs", "/projects"] },
   { label: "Inbox",        href: "/inbox",          match: ["/messages", "/inbox"] },
   { label: "Profile",      href: "/profile",        match: ["/profile", "/settings"] },
   { label: "New Job",      href: "/new-job" },
