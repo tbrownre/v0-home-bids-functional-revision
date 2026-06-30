@@ -15,11 +15,20 @@ function startsWithAny(pathname: string, prefixes: string[]) {
 }
 
 export async function updateSession(request: NextRequest) {
+  // If Supabase env vars are not configured (e.g. preview deploys without
+  // secrets), skip all auth logic and let the request pass through. This
+  // prevents a 502 ROUTER_EXTERNAL_TARGET_ERROR on the Edge runtime.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {

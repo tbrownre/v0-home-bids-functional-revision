@@ -7,7 +7,7 @@ import { Home, Wrench } from "lucide-react";
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
 import { HomeBidsLogo } from "@/components/homebids-logo";
 import { Button } from "@/components/ui/button";
-import { getSmsLink, HOMEBIDS_SMS } from "@/lib/sms-config";
+import { getSmsLink, HOMEBIDS_SMS, isSmsCapableDevice } from "@/lib/sms-config";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
 import {
   Dialog,
@@ -83,7 +83,15 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
   const handleHomeowner = () => {
     onClose();
     localStorage.setItem("homebids_audience", "homeowner");
-    window.location.href = HOMEBIDS_SMS.homeowner.href;
+    // On SMS-capable devices (phones, Mac with Messages) open the native SMS
+    // thread. On other desktop environments navigate to the homeowner demo page
+    // so the user actually enters the homeowner experience rather than staying
+    // on the homepage.
+    if (isSmsCapableDevice()) {
+      window.location.href = HOMEBIDS_SMS.homeowner.href;
+    } else {
+      window.location.href = "/new-job";
+    }
   };
 
   const handlePro = () => {
@@ -287,6 +295,13 @@ export function GatewayLanding() {
           <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <a
               href={HOMEBIDS_SMS.homeowner.href}
+              onClick={(e) => {
+                if (!isSmsCapableDevice()) {
+                  e.preventDefault();
+                  localStorage.setItem("homebids_audience", "homeowner");
+                  window.location.href = "/new-job";
+                }
+              }}
               className="inline-flex h-12 items-center justify-center gap-2.5 rounded-full px-8 text-base font-semibold bg-[#0A84FF] text-white hover:bg-[#0A84FF]/90 transition-colors"
             >
               <Home className="h-[18px] w-[18px] shrink-0" />

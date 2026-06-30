@@ -322,13 +322,15 @@ export default function NewJobPage() {
   const [authReady, setAuthReady] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // auth guard
+  // /new-job is a public homeowner intake page — no login required.
+  // Redirect contractors and admins to their own dashboards if they
+  // somehow land here (e.g. navigating manually in mock mode).
   useEffect(() => {
-    if (!USE_MOCK_DATA) { setAuthReady(true); return; }
-    const user = getMockUser();
-    if (!user) { router.replace("/?signIn=true"); return; }
-    if (user.role === "contractor") { router.replace("/contractors/dashboard"); return; }
-    if (user.role === "admin") { setAuthReady(true); return; }
+    if (USE_MOCK_DATA) {
+      const user = getMockUser();
+      if (user?.role === "contractor") { router.replace("/contractors/dashboard"); return; }
+      if (user?.role === "admin") { router.replace("/admin-demo"); return; }
+    }
     setAuthReady(true);
   }, [router]);
 

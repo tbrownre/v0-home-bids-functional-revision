@@ -152,7 +152,8 @@ export function redirectAfterSignIn(role: MockRole) {
   } else if (role === "admin") {
     window.location.replace("/admin-demo");
   } else {
-    window.location.replace("/?showJobs=true");
+    // The homeowner demo experience is the jobs dashboard.
+    window.location.replace("/homeowners/dashboard");
   }
 }
 

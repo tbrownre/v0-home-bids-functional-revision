@@ -61,5 +61,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/contractors/dashboard`);
   }
 
-  return NextResponse.redirect(`${origin}/?showJobs=true`);
+  // Homeowners land on their "Your Jobs" board.
+  return NextResponse.redirect(`${origin}/jobs`);
 }
