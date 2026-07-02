@@ -347,10 +347,16 @@ export function Header({
           )}
         </div>
 
-        {/* Center: Logo */}
-        <div className="flex items-center justify-center">
-          <HomeBidsLogo size="clamp(20px, 2.5vw, 26px)" />
+        {/* Center: Logo — absolutely centered against the header so it stays
+            perfectly centered regardless of the differing left/right widths
+            (hamburger vs. back link / Log In + Try for Free CTAs). */}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="pointer-events-auto">
+            <HomeBidsLogo size="clamp(20px, 2.5vw, 26px)" />
+          </div>
         </div>
+        {/* Grid placeholder keeps the 3-column structure intact */}
+        <div aria-hidden="true" />
 
         {/* Right: back link | signed-out CTAs | spacer */}
         <div className="flex items-center justify-end gap-1.5">
