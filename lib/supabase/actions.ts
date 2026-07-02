@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isDemoEmail } from "@/lib/demo-guard";
@@ -125,7 +126,13 @@ export async function signUpContractor(formData: {
   // The handle_new_user trigger already inserts into profiles.
   // Insert only the minimum into contractor_profiles. The account is active
   // immediately — no approval gate — so the contractor can build bids right away.
-  const { error: contractorError } = await supabase.from("contractor_profiles").insert({
+  //
+  // Use the service-role client here: when email confirmation is enabled,
+  // auth.signUp does NOT return a session, so `supabase` (anon) would be
+  // blocked by the contractor_profiles RLS insert policy. The admin client
+  // bypasses RLS for this trusted, server-only write.
+  const admin = createAdminClient();
+  const { error: contractorError } = await admin.from("contractor_profiles").insert({
     id: userId,
     business_name: companyName,
     specialties: [trade],
