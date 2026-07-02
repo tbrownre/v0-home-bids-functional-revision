@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isDemoEmail } from "@/lib/demo-guard";
@@ -69,59 +70,79 @@ export async function signUpHomeowner(formData: {
   return { success: true };
 }
 
+// Low-friction contractor signup. Only the minimum fields needed to create an
+// account and start building bids are required: name, phone, company name,
+// trade, and service area (plus email/password for auth). Everything else —
+// license, insurance, website, logo, etc. — is completed later from the
+// contractor's Account area, and never blocks activation.
 export async function signUpContractor(formData: {
   email: string;
   password: string;
-  firstName: string;
-  lastName: string;
+  fullName: string;
   phone: string;
-  businessName: string;
-  businessType: string;
-  yearsInBusiness: string;
-  licenseNumber: string;
-  licenseState: string;
-  insuranceProvider: string;
-  bondedAmount: string;
-  selectedServices: string[];
-  serviceAreas: string;
-  minimumJobSize: string;
-  bio: string;
+  companyName: string;
+  trade: string;
+  serviceArea: string;
 }) {
   const supabase = await createClient();
 
-  // 1. Create the auth user
-  const { data, error } = await supabase.auth.signUp({
+  const fullName = formData.fullName.trim();
+  const companyName = formData.companyName.trim();
+  const trade = formData.trade.trim();
+  const serviceArea = formData.serviceArea.trim();
+
+  // Minimal server-side validation mirroring the client requirements.
+  if (!fullName || !formData.phone.trim() || !companyName || !trade || !serviceArea) {
+    return { error: "Please fill in your name, phone, company, trade, and service area." };
+  }
+
+  // 1. Create the auth user with the admin API and auto-confirm the email.
+  //
+  // We intentionally do NOT use auth.signUp here: signUp always tries to send a
+  // confirmation email, and Supabase's built-in email service is heavily
+  // rate-limited ("email rate limit exceeded"). Contractor accounts are active
+  // immediately (no approval gate and no email verification required), so we
+  // create the user pre-confirmed via the service-role admin client — no email
+  // is ever sent — and then sign them in below to establish a session.
+  const admin = createAdminClient();
+  const { data, error } = await admin.auth.admin.createUser({
     email: formData.email,
     password: formData.password,
-    options: {
-      data: {
-        full_name: `${formData.firstName} ${formData.lastName}`.trim(),
-        user_type: "contractor",
-        business_name: formData.businessName,
-        phone: formData.phone,
-      },
-      emailRedirectTo: getConfirmUrl(),
+    email_confirm: true,
+    user_metadata: {
+      full_name: fullName,
+      user_type: "contractor",
+      business_name: companyName,
+      phone: formData.phone,
     },
   });
-  if (error) return { error: error.message };
+  if (error) {
+    const msg = error.message.toLowerCase();
+    if (
+      msg.includes("already registered") ||
+      msg.includes("already exists") ||
+      msg.includes("already been registered")
+    ) {
+      return { error: "already_registered", email: formData.email };
+    }
+    return { error: error.message };
+  }
 
   const userId = data.user?.id;
   if (!userId) return { error: "Failed to create user account." };
 
   // The handle_new_user trigger already inserts into profiles.
-  // We just need to insert into contractor_profiles.
-  const yearsExp = formData.yearsInBusiness ? parseInt(formData.yearsInBusiness, 10) : null;
-  const { error: contractorError } = await supabase.from("contractor_profiles").insert({
+  // Insert only the minimum into contractor_profiles. The account is active
+  // immediately — no approval gate — so the contractor can build bids right away.
+  // The admin client bypasses RLS for this trusted, server-only write.
+  const { error: contractorError } = await admin.from("contractor_profiles").insert({
     id: userId,
-    business_name: formData.businessName,
-    specialties: formData.selectedServices,
-    service_area: formData.serviceAreas,
-    bio: formData.bio || null,
-    license_number: formData.licenseNumber || null,
-    years_experience: isNaN(yearsExp as number) ? null : yearsExp,
-    approval_status: "pending",
+    business_name: companyName,
+    specialties: [trade],
+    service_area: serviceArea,
+    approval_status: "approved",
     is_verified: false,
-    is_approved: false,
+    is_approved: true,
   });
   if (contractorError) {
     // Friendly error — don't expose raw DB messages to the UI
@@ -132,13 +153,26 @@ export async function signUpContractor(formData: {
   await fireWebhook("user.signup", {
     user_type: "contractor",
     email: formData.email,
-    full_name: `${formData.firstName} ${formData.lastName}`.trim(),
-    business_name: formData.businessName,
-    services: formData.selectedServices,
+    full_name: fullName,
+    business_name: companyName,
+    trade,
+    service_area: serviceArea,
     phone: formData.phone,
   });
 
-  return { success: true, userId };
+  // Establish a session on the cookie-based server client so the contractor is
+  // signed in and can go straight to the dashboard. If this fails for any
+  // reason, the account still exists — they can sign in manually.
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: formData.email,
+    password: formData.password,
+  });
+  if (signInError) {
+    console.error("[signUpContractor] auto sign-in error:", signInError.message);
+    return { success: true, userId, signedIn: false };
+  }
+
+  return { success: true, userId, signedIn: true };
 }
 
 export async function signIn(email: string, password: string) {
@@ -481,7 +515,7 @@ export async function getContractorBids() {
   return { bids: data ?? [] };
 }
 
-// ── Messages ──────────────────────────���──────────────────────────────────���───
+// ── Messages ──────────────────────────�����─────────────────��────────────────���───
 
 export async function sendMessage(formData: {
   job_id: string;
