@@ -350,7 +350,7 @@ export function GatewayLanding() {
           </div>
 
           {/* Below-CTA reassurance line */}
-          <p className="mt-4 text-sm text-muted-foreground/70 tracking-wide">
+          <p className="mt-4 text-muted-foreground/70 tracking-wide" style={{ fontSize: "11px" }}>
             No app to download.&nbsp; No software to learn.&nbsp; Start by text.
           </p>
         </motion.div>
