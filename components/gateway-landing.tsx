@@ -15,25 +15,37 @@ import {
 } from "@/components/ui/dialog";
 
 // ── Ticker items ──────────────────────────────────────────────────────────────
-const TICKER_ITEMS = [
-  "Roof Leak → Fixed",
-  "Kitchen Remodel → Scheduled",
-  "Water Heater → Installed",
-  "HVAC Repair → Complete",
-  "Bathroom Tile → Finished",
-  "Fence Replacement → Done",
-  "Interior Paint → Complete",
-  "Deck Refinish → Scheduled",
-  "Window Replace → Installed",
-  "Flooring → Complete",
-  "AC Tune-Up → Done",
-  "Plumbing Leak → Fixed",
-  "Landscape Design → Started",
-  "Pool Service → Weekly",
-  "Pest Control → Treated",
-  "Drywall Patch → Finished",
-  "Gutter Clean → Done",
-  "Sprinkler Repair → Fixed",
+// status color keys: "sent" | "approved" | "created" | "contacted" | "done" | "started"
+const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
+  sent:      { bg: "rgba(10,132,255,0.10)",  text: "#0A84FF" }, // blue  — proposal/bid sent
+  approved:  { bg: "rgba(48,209,88,0.12)",   text: "#1A8F3C" }, // green — bid approved / job won
+  created:   { bg: "rgba(100,100,220,0.10)", text: "#5856D6" }, // indigo — scope/estimate created
+  contacted: { bg: "rgba(255,159,10,0.12)",  text: "#B56F00" }, // amber — contractor contacted
+  done:      { bg: "rgba(48,209,88,0.10)",   text: "#1A8F3C" }, // green — finished
+  started:   { bg: "rgba(255,159,10,0.10)",  text: "#B56F00" }, // amber — work started
+};
+
+interface TickerItem { job: string; status: string; colorKey: keyof typeof STATUS_COLORS }
+
+const TICKER_ITEMS: TickerItem[] = [
+  { job: "Roof Leak",         status: "Proposal sent",        colorKey: "sent"      },
+  { job: "HVAC Repair",       status: "Bid approved",         colorKey: "approved"  },
+  { job: "Kitchen Remodel",   status: "Scope created",        colorKey: "created"   },
+  { job: "Plumbing Leak",     status: "Contractor contacted", colorKey: "contacted" },
+  { job: "Water Heater",      status: "Bid approved",         colorKey: "approved"  },
+  { job: "Bathroom Tile",     status: "Scope created",        colorKey: "created"   },
+  { job: "Fence Replacement", status: "Proposal sent",        colorKey: "sent"      },
+  { job: "Interior Paint",    status: "Work started",         colorKey: "started"   },
+  { job: "Deck Refinish",     status: "Bid approved",         colorKey: "approved"  },
+  { job: "Window Replace",    status: "Contractor contacted", colorKey: "contacted" },
+  { job: "Hardwood Floors",   status: "Scope created",        colorKey: "created"   },
+  { job: "AC Tune-Up",        status: "Proposal sent",        colorKey: "sent"      },
+  { job: "Drywall Repair",    status: "Work started",         colorKey: "started"   },
+  { job: "Gutter Clean",      status: "Bid approved",         colorKey: "approved"  },
+  { job: "Sprinkler Repair",  status: "Contractor contacted", colorKey: "contacted" },
+  { job: "Landscape Design",  status: "Scope created",        colorKey: "created"   },
+  { job: "Garage Door",       status: "Proposal sent",        colorKey: "sent"      },
+  { job: "Pool Resurfacing",  status: "Bid approved",         colorKey: "approved"  },
 ];
 
 // Four rows offset for snake weave effect — alternating LTR / RTL
@@ -50,7 +62,7 @@ const ROWS = [
 ] as const;
 
 // ── Single ticker row ─────────────────────────────────────────────────────────
-function TickerRow({ items, speed, reverse = false }: { items: string[]; speed: number; reverse?: boolean }) {
+function TickerRow({ items, speed, reverse = false }: { items: TickerItem[]; speed: number; reverse?: boolean }) {
   const x = useRef(0);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -66,14 +78,30 @@ function TickerRow({ items, speed, reverse = false }: { items: string[]; speed: 
 
   return (
     <div className="flex w-max will-change-transform" ref={ref}>
-      {items.map((item, i) => (
-        <span
-          key={i}
-          className="mr-6 inline-flex shrink-0 items-center gap-2 rounded-full border border-border bg-white/60 px-3.5 py-1 text-[11px] font-medium tracking-wide text-muted-foreground select-none"
-        >
-          {item}
-        </span>
-      ))}
+      {items.map((item, i) => {
+        const colors = STATUS_COLORS[item.colorKey];
+        return (
+          <span
+            key={i}
+            className="mr-5 inline-flex shrink-0 items-center gap-0 rounded-full border border-border bg-white/70 select-none overflow-hidden"
+            style={{ fontSize: 11, fontWeight: 500 }}
+          >
+            {/* Job label */}
+            <span className="px-3 py-[5px] text-muted-foreground/80 tracking-wide">
+              {item.job}
+            </span>
+            {/* Divider */}
+            <span className="text-border/60 pr-1">·</span>
+            {/* Status badge */}
+            <span
+              className="px-2.5 py-[5px] rounded-full mr-[3px] tracking-wide font-semibold"
+              style={{ background: colors.bg, color: colors.text }}
+            >
+              {item.status}
+            </span>
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -278,10 +306,10 @@ export function GatewayLanding() {
         >
           <h1
             className="text-balance font-extrabold leading-[1.06] tracking-tight text-foreground"
-            style={{ fontSize: "clamp(2.6rem, 7vw, 5rem)" }}
+            style={{ fontSize: "clamp(2.6rem, 7vw, 4.0625rem)" }}
           >
-            Hi, we&apos;re{" "}
-            <span style={{ color: "#0A84FF" }}>HomeBids.</span>
+            Home service help,{" "}
+            <span style={{ color: "#0A84FF" }}>handled by text.</span>
           </h1>
 
           <p
