@@ -308,8 +308,8 @@ export function GatewayLanding() {
             className="text-balance font-extrabold leading-[1.06] tracking-tight text-foreground"
             style={{ fontSize: "clamp(2.6rem, 7vw, 5rem)" }}
           >
-            Hi, we&apos;re{" "}
-            <span style={{ color: "#0A84FF" }}>HomeBids.</span>
+            Home service help,{" "}
+            <span style={{ color: "#0A84FF" }}>handled by text.</span>
           </h1>
 
           <p
