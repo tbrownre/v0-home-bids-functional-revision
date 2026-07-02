@@ -53,6 +53,8 @@ import { getMockUser, mockSignOut, USE_MOCK_DATA, syncMirrorFromSupabase } from 
 import { getContractorBids } from "@/lib/supabase/actions";
 import { getContractorProposals, type Proposal, type ProposalStatus } from "@/lib/supabase/proposals";
 import { ContractorProposalCard } from "@/components/proposal/contractor-proposal-card";
+import { ProfileCompletionSection } from "@/components/contractor/profile-completion-section";
+import { loadContractorProfile, getProfileCompletion } from "@/lib/contractor-profile";
 import { createClient } from "@/lib/supabase/client";
 import { getContractorBids as getDemoContractorBids } from "@/lib/demo/services";
 import { DEMO_CONTRACTOR_EMAIL, isDemoEmail } from "@/lib/demo-guard";
@@ -486,6 +488,13 @@ export default function ContractorDashboard() {
     [bidsCount, monthFraction],
   );
 
+  // Optional profile completion (from localStorage). Refreshes whenever the
+  // active tab changes so edits made in the Account tab reflect on Home.
+  const [profileCompletion, setProfileCompletion] = useState<{ completed: number; total: number; percent: number; isComplete: boolean } | null>(null);
+  useEffect(() => {
+    setProfileCompletion(getProfileCompletion(loadContractorProfile()));
+  }, [activeTab]);
+
   // Leads segment — "myleads" is the default
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("needs_action");
   const [showRelayModal, setShowRelayModal] = useState(false);
@@ -748,6 +757,39 @@ export default function ContractorDashboard() {
           </Button>
         </div>
       </section>
+
+      {/* Profile completion — secondary nudge, only when incomplete */}
+      {profileCompletion && !profileCompletion.isComplete && (
+        <section className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <User className="h-4 w-4 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-semibold text-foreground">Complete your contractor profile</p>
+                <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-[11px] font-medium text-yellow-800">
+                  {profileCompletion.completed} of {profileCompletion.total} complete
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Add your logo, license, services, and business details when you&apos;re ready. Your account is already active.
+              </p>
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${profileCompletion.percent}%` }} />
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 shrink-0 rounded-full px-3 text-xs font-semibold bg-transparent"
+              onClick={() => handleTabChange("account")}
+            >
+              Finish Profile
+            </Button>
+          </div>
+        </section>
+      )}
 
       {/* Needs Action — max 3 priority cards */}
       <section>
@@ -1236,6 +1278,9 @@ export default function ContractorDashboard() {
           </label>
         </div>
       </div>
+
+      {/* Optional profile completion — never blocks bid building */}
+      <ProfileCompletionSection />
 
       <Button variant="outline" className="gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-600 bg-transparent" onClick={handleSignOut}>
         <LogOut className="h-4 w-4" />

@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
@@ -18,20 +16,20 @@ import {
   ArrowRight,
   ArrowLeft,
   CheckCircle2,
-  Building2,
   User,
-  Shield,
   Wrench,
-  MapPin,
   Loader2,
   AlertCircle,
   Eye,
   EyeOff,
+  Clock,
+  Shield,
+  Zap,
 } from "lucide-react";
 
-type Step = "business" | "contact" | "credentials" | "services" | "review";
+type Step = "info" | "trial";
 
-const serviceCategories = [
+const trades = [
   "Roofing",
   "Electrical",
   "Plumbing",
@@ -52,115 +50,52 @@ const serviceCategories = [
   "Handyman",
   "Insulation",
   "Solar",
+  "General Contractor",
+  "Other",
 ];
 
 export default function ContractorSignupPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [currentStep, setCurrentStep] = useState<Step>("business");
-  
-  const planFromParams = searchParams.get("plan");
-  
+  const [currentStep, setCurrentStep] = useState<Step>("info");
+
   const [formData, setFormData] = useState({
-    // Business Info
-    businessName: "",
-    businessType: "",
-    yearsInBusiness: "",
-    numberOfEmployees: "",
-    website: "",
-    // Contact Info
-    firstName: "",
-    lastName: "",
-    email: "",
+    fullName: "",
     phone: "",
-    businessAddress: "",
-    city: "",
-    state: "",
-    zip: "",
-    // Credentials
-    licenseNumber: "",
-    licenseState: "",
-    insuranceProvider: "",
-    insurancePolicyNumber: "",
-    bondedAmount: "",
-    // Services
-    selectedServices: [] as string[],
-    serviceAreas: "",
-    minimumJobSize: "",
-    maximumTravelDistance: "",
-    bio: "",
-    // Account
+    companyName: "",
+    trade: "",
+    serviceArea: "",
+    email: "",
     password: "",
     confirmPassword: "",
     agreeToTerms: false,
   });
-
-  const steps: { key: Step; label: string; icon: React.ElementType }[] = [
-    { key: "business", label: "Business", icon: Building2 },
-    { key: "contact", label: "Contact", icon: User },
-    { key: "credentials", label: "Credentials", icon: Shield },
-    { key: "services", label: "Services", icon: Wrench },
-    { key: "review", label: "Review", icon: CheckCircle2 },
-  ];
-
-  const currentStepIndex = steps.findIndex((s) => s.key === currentStep);
-
-  const updateFormData = (field: string, value: string | boolean | string[]) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const toggleService = (service: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      selectedServices: prev.selectedServices.includes(service)
-        ? prev.selectedServices.filter((s) => s !== service)
-        : [...prev.selectedServices, service],
-    }));
-  };
-
-  const scrollToTop = () => {
-    // Scroll both window and any scrollable parent to the top
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    // Also try scrolling the nearest scrollable container
-    const scrollable = document.querySelector("main") || document.documentElement;
-    if (scrollable && scrollable.scrollTop > 0) {
-      scrollable.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  };
-
-  const nextStep = () => {
-    const stepOrder: Step[] = ["business", "contact", "credentials", "services", "review"];
-    const currentIndex = stepOrder.indexOf(currentStep);
-    if (currentIndex < stepOrder.length - 1) {
-      setCurrentStep(stepOrder[currentIndex + 1]);
-      scrollToTop();
-    }
-  };
-
-  const prevStep = () => {
-    const stepOrder: Step[] = ["business", "contact", "credentials", "services", "review"];
-    const currentIndex = stepOrder.indexOf(currentStep);
-    if (currentIndex > 0) {
-      setCurrentStep(stepOrder[currentIndex - 1]);
-      scrollToTop();
-    }
-  };
 
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const update = (field: keyof typeof formData, value: string | boolean) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+
+  // Step 1 is valid when the required account + business basics are present.
+  const infoValid =
+    formData.fullName.trim() !== "" &&
+    formData.phone.trim() !== "" &&
+    formData.companyName.trim() !== "" &&
+    formData.trade !== "" &&
+    formData.serviceArea.trim() !== "" &&
+    /\S+@\S+\.\S+/.test(formData.email) &&
+    formData.password.length >= 8 &&
+    formData.password === formData.confirmPassword;
+
   const handleSubmit = async () => {
     setSubmitError("");
-
-    // Validate passwords match
-    if (formData.password !== formData.confirmPassword) {
-      setSubmitError("Passwords do not match.");
-      return;
-    }
-    if (formData.password.length < 8) {
-      setSubmitError("Password must be at least 8 characters.");
+    if (!infoValid) {
+      setSubmitError("Please complete all required fields before continuing.");
       return;
     }
 
@@ -168,27 +103,23 @@ export default function ContractorSignupPage() {
     const result = await signUpContractor({
       email: formData.email,
       password: formData.password,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
+      fullName: formData.fullName,
       phone: formData.phone,
-      businessName: formData.businessName,
-      businessType: formData.businessType,
-      yearsInBusiness: formData.yearsInBusiness,
-      licenseNumber: formData.licenseNumber,
-      licenseState: formData.licenseState,
-      insuranceProvider: formData.insuranceProvider,
-      bondedAmount: formData.bondedAmount,
-      selectedServices: formData.selectedServices,
-      serviceAreas: formData.serviceAreas,
-      minimumJobSize: formData.minimumJobSize,
-      bio: formData.bio,
+      companyName: formData.companyName,
+      trade: formData.trade,
+      serviceArea: formData.serviceArea,
     });
     setSubmitting(false);
+
     if (result.error) {
+      if (result.error === "already_registered") {
+        setSubmitError("An account with this email already exists. Try signing in instead.");
+        return;
+      }
       setSubmitError(result.error);
       return;
     }
-    
+
     router.push("/contractors/signup/pending");
   };
 
@@ -197,200 +128,85 @@ export default function ContractorSignupPage() {
       <Header />
 
       <main className="px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl">
-          {/* Header */}
+        <div className="mx-auto max-w-xl">
+          {/* Heading */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="mb-8 text-center"
           >
-            <h1 className="text-3xl font-bold text-foreground sm:text-4xl">
-              Build Your Profile
+            <h1 className="text-3xl font-bold text-foreground sm:text-4xl text-balance">
+              Start Your Free Trial
             </h1>
-            <p className="mt-3 text-muted-foreground">
-              Complete your profile to start bidding on verified homeowner projects
+            <p className="mt-3 text-muted-foreground text-pretty">
+              Create your account in under a minute. You can build your first bid right after —
+              no license, insurance, or portfolio required to get started.
             </p>
           </motion.div>
 
-          {/* Progress Steps */}
-          <div className="mb-10">
-            <div className="flex items-center justify-between">
-              {steps.map((step, index) => (
-                <div key={step.key} className="flex flex-1 items-center">
-                  <div className="flex flex-col items-center">
+          {/* Progress */}
+          <div className="mb-8 flex items-center justify-center gap-3">
+            {(
+              [
+                { key: "info", label: "Your Info", icon: User },
+                { key: "trial", label: "Start Trial", icon: Zap },
+              ] as { key: Step; label: string; icon: React.ElementType }[]
+            ).map((s, i) => {
+              const active = currentStep === s.key;
+              const done = currentStep === "trial" && s.key === "info";
+              return (
+                <div key={s.key} className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors ${
-                        index <= currentStepIndex
+                      className={`flex h-9 w-9 items-center justify-center rounded-full border-2 transition-colors ${
+                        active || done
                           ? "border-primary bg-primary text-primary-foreground"
                           : "border-border bg-background text-muted-foreground"
                       }`}
                     >
-                      <step.icon className="h-5 w-5" />
+                      {done ? <CheckCircle2 className="h-5 w-5" /> : <s.icon className="h-4 w-4" />}
                     </div>
                     <span
-                      className={`mt-2 text-xs font-medium ${
-                        index <= currentStepIndex ? "text-foreground" : "text-muted-foreground"
+                      className={`text-sm font-medium ${
+                        active || done ? "text-foreground" : "text-muted-foreground"
                       }`}
                     >
-                      {step.label}
+                      {s.label}
                     </span>
                   </div>
-                  {index < steps.length - 1 && (
-                    <div
-                      className={`mx-2 h-0.5 flex-1 transition-colors ${
-                        index < currentStepIndex ? "bg-primary" : "bg-border"
-                      }`}
-                    />
-                  )}
+                  {i === 0 && <div className="h-0.5 w-8 bg-border" />}
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
 
-          {/* Form Card */}
           <Card className="border-border">
             <CardContent className="p-6 sm:p-8">
-              {/* Step 1: Business Information */}
-              {currentStep === "business" && (
+              {/* Step 1: Your Info */}
+              {currentStep === "info" && (
                 <motion.div
-                  key="business"
+                  key="info"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-6"
+                  className="space-y-5"
                 >
                   <div>
-                    <h2 className="text-xl font-semibold text-foreground">Business Information</h2>
+                    <h2 className="text-xl font-semibold text-foreground">Your Info</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Tell us about your company
+                      Just the essentials to create your account.
                     </p>
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="sm:col-span-2">
-                      <Label htmlFor="businessName">Business Name *</Label>
+                      <Label htmlFor="fullName">Full Name *</Label>
                       <Input
-                        id="businessName"
-                        value={formData.businessName}
-                        onChange={(e) => updateFormData("businessName", e.target.value)}
-                        placeholder="ABC Plumbing & Sons"
+                        id="fullName"
+                        value={formData.fullName}
+                        onChange={(e) => update("fullName", e.target.value)}
+                        placeholder="John Smith"
                         className="mt-1.5"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="businessType">Business Type *</Label>
-                      <select
-                        id="businessType"
-                        value={formData.businessType}
-                        onChange={(e) => updateFormData("businessType", e.target.value)}
-                        className="mt-1.5 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <option value="">Select type...</option>
-                        <option value="sole-proprietor">Sole Proprietor</option>
-                        <option value="llc">LLC</option>
-                        <option value="corporation">Corporation</option>
-                        <option value="partnership">Partnership</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="yearsInBusiness">Years in Business *</Label>
-                      <select
-                        id="yearsInBusiness"
-                        value={formData.yearsInBusiness}
-                        onChange={(e) => updateFormData("yearsInBusiness", e.target.value)}
-                        className="mt-1.5 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <option value="">Select...</option>
-                        <option value="0-1">Less than 1 year</option>
-                        <option value="1-3">1-3 years</option>
-                        <option value="3-5">3-5 years</option>
-                        <option value="5-10">5-10 years</option>
-                        <option value="10+">10+ years</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="numberOfEmployees">Number of Employees</Label>
-                      <select
-                        id="numberOfEmployees"
-                        value={formData.numberOfEmployees}
-                        onChange={(e) => updateFormData("numberOfEmployees", e.target.value)}
-                        className="mt-1.5 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <option value="">Select...</option>
-                        <option value="1">Just me</option>
-                        <option value="2-5">2-5</option>
-                        <option value="6-10">6-10</option>
-                        <option value="11-25">11-25</option>
-                        <option value="25+">25+</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="website">Website (optional)</Label>
-                      <Input
-                        id="website"
-                        type="url"
-                        value={formData.website}
-                        onChange={(e) => updateFormData("website", e.target.value)}
-                        placeholder="https://www.yourcompany.com"
-                        className="mt-1.5"
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Step 2: Contact Information */}
-              {currentStep === "contact" && (
-                <motion.div
-                  key="contact"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-6"
-                >
-                  <div>
-                    <h2 className="text-xl font-semibold text-foreground">Contact Information</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      How can homeowners reach you?
-                    </p>
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <Label htmlFor="firstName">First Name *</Label>
-                      <Input
-                        id="firstName"
-                        value={formData.firstName}
-                        onChange={(e) => updateFormData("firstName", e.target.value)}
-                        placeholder="John"
-                        className="mt-1.5"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="lastName">Last Name *</Label>
-                      <Input
-                        id="lastName"
-                        value={formData.lastName}
-                        onChange={(e) => updateFormData("lastName", e.target.value)}
-                        placeholder="Smith"
-                        className="mt-1.5"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="email">Email Address *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => updateFormData("email", e.target.value)}
-                        placeholder="john@abcplumbing.com"
-                        className="mt-1.5"
+                        autoComplete="name"
                       />
                     </div>
 
@@ -400,334 +216,70 @@ export default function ContractorSignupPage() {
                         id="phone"
                         type="tel"
                         value={formData.phone}
-                        onChange={(e) => updateFormData("phone", e.target.value)}
+                        onChange={(e) => update("phone", e.target.value)}
                         placeholder="(512) 555-0123"
                         className="mt-1.5"
-                      />
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <Label htmlFor="businessAddress">Business Address *</Label>
-                      <Input
-                        id="businessAddress"
-                        value={formData.businessAddress}
-                        onChange={(e) => updateFormData("businessAddress", e.target.value)}
-                        placeholder="123 Main Street"
-                        className="mt-1.5"
+                        autoComplete="tel"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="city">City *</Label>
+                      <Label htmlFor="companyName">Company Name *</Label>
                       <Input
-                        id="city"
-                        value={formData.city}
-                        onChange={(e) => updateFormData("city", e.target.value)}
-                        placeholder="Austin"
+                        id="companyName"
+                        value={formData.companyName}
+                        onChange={(e) => update("companyName", e.target.value)}
+                        placeholder="ABC Plumbing"
                         className="mt-1.5"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="state">State *</Label>
-                        <Input
-                          id="state"
-                          value={formData.state}
-                          onChange={(e) => updateFormData("state", e.target.value)}
-                          placeholder="TX"
-                          className="mt-1.5"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="zip">ZIP Code *</Label>
-                        <Input
-                          id="zip"
-                          value={formData.zip}
-                          onChange={(e) => updateFormData("zip", e.target.value)}
-                          placeholder="78701"
-                          className="mt-1.5"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Step 3: Credentials */}
-              {currentStep === "credentials" && (
-                <motion.div
-                  key="credentials"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-6"
-                >
-                  <div>
-                    <h2 className="text-xl font-semibold text-foreground">
-                      Licenses & Insurance
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Help homeowners trust your business
-                    </p>
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <Label htmlFor="licenseNumber">Contractor License Number</Label>
-                      <Input
-                        id="licenseNumber"
-                        value={formData.licenseNumber}
-                        onChange={(e) => updateFormData("licenseNumber", e.target.value)}
-                        placeholder="ABC-123456"
-                        className="mt-1.5"
+                        autoComplete="organization"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="licenseState">License State</Label>
-                      <Input
-                        id="licenseState"
-                        value={formData.licenseState}
-                        onChange={(e) => updateFormData("licenseState", e.target.value)}
-                        placeholder="TX"
-                        className="mt-1.5"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="insuranceProvider">Insurance Provider *</Label>
-                      <Input
-                        id="insuranceProvider"
-                        value={formData.insuranceProvider}
-                        onChange={(e) => updateFormData("insuranceProvider", e.target.value)}
-                        placeholder="State Farm"
-                        className="mt-1.5"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="insurancePolicyNumber">Policy Number *</Label>
-                      <Input
-                        id="insurancePolicyNumber"
-                        value={formData.insurancePolicyNumber}
-                        onChange={(e) => updateFormData("insurancePolicyNumber", e.target.value)}
-                        placeholder="POL-789012"
-                        className="mt-1.5"
-                      />
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <Label htmlFor="bondedAmount">Bonded Amount (if applicable)</Label>
-                      <Input
-                        id="bondedAmount"
-                        value={formData.bondedAmount}
-                        onChange={(e) => updateFormData("bondedAmount", e.target.value)}
-                        placeholder="$50,000"
-                        className="mt-1.5"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg bg-secondary/50 p-4">
-                    <p className="text-sm text-muted-foreground">
-                      <strong className="text-foreground">Why we ask:</strong> Verified credentials
-                      help you stand out to homeowners and build trust. Contractors with verified
-                      licenses and insurance win 40% more jobs.
-                    </p>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Step 4: Services */}
-              {currentStep === "services" && (
-                <motion.div
-                  key="services"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-6"
-                >
-                  <div>
-                    <h2 className="text-xl font-semibold text-foreground">Services & Coverage</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      What services do you offer and where?
-                    </p>
-                  </div>
-
-                  <div>
-                    <Label>Services Offered *</Label>
-                    <p className="mb-3 text-sm text-muted-foreground">
-                      Select all that apply
-                    </p>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {serviceCategories.map((service) => (
-                        <label
-                          key={service}
-                          className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 transition-colors ${
-                            formData.selectedServices.includes(service)
-                              ? "border-primary bg-primary/5"
-                              : "border-border hover:bg-secondary/50"
-                          }`}
-                        >
-                          <Checkbox
-                            checked={formData.selectedServices.includes(service)}
-                            onCheckedChange={() => toggleService(service)}
-                          />
-                          <span className="text-sm">{service}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="sm:col-span-2">
-                      <Label htmlFor="serviceAreas">Service Area ZIP Codes *</Label>
-                      <Input
-                        id="serviceAreas"
-                        value={formData.serviceAreas}
-                        onChange={(e) => updateFormData("serviceAreas", e.target.value)}
-                        placeholder="78701, 78702, 78703, 78704"
-                        className="mt-1.5"
-                      />
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Separate multiple ZIP codes with commas
-                      </p>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="minimumJobSize">Minimum Job Size</Label>
+                      <Label htmlFor="trade">Primary Trade *</Label>
                       <select
-                        id="minimumJobSize"
-                        value={formData.minimumJobSize}
-                        onChange={(e) => updateFormData("minimumJobSize", e.target.value)}
+                        id="trade"
+                        value={formData.trade}
+                        onChange={(e) => update("trade", e.target.value)}
                         className="mt-1.5 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
-                        <option value="">No minimum</option>
-                        <option value="100">$100+</option>
-                        <option value="500">$500+</option>
-                        <option value="1000">$1,000+</option>
-                        <option value="5000">$5,000+</option>
-                        <option value="10000">$10,000+</option>
+                        <option value="">Select your trade...</option>
+                        {trades.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
                     <div>
-                      <Label htmlFor="maximumTravelDistance">Maximum Travel Distance</Label>
-                      <select
-                        id="maximumTravelDistance"
-                        value={formData.maximumTravelDistance}
-                        onChange={(e) => updateFormData("maximumTravelDistance", e.target.value)}
-                        className="mt-1.5 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <option value="">Select...</option>
-                        <option value="10">10 miles</option>
-                        <option value="25">25 miles</option>
-                        <option value="50">50 miles</option>
-                        <option value="100">100 miles</option>
-                        <option value="unlimited">No limit</option>
-                      </select>
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <Label htmlFor="bio">About Your Business</Label>
-                      <Textarea
-                        id="bio"
-                        value={formData.bio}
-                        onChange={(e) => updateFormData("bio", e.target.value)}
-                        placeholder="Tell homeowners about your experience, specialties, and what makes your business unique..."
-                        className="mt-1.5 min-h-[100px]"
+                      <Label htmlFor="serviceArea">Service Area *</Label>
+                      <Input
+                        id="serviceArea"
+                        value={formData.serviceArea}
+                        onChange={(e) => update("serviceArea", e.target.value)}
+                        placeholder="Austin, TX or 78701"
+                        className="mt-1.5"
                       />
                     </div>
                   </div>
-                </motion.div>
-              )}
 
-              {/* Step 5: Review */}
-              {currentStep === "review" && (
-                <motion.div
-                  key="review"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-6"
-                >
-                  <div>
-                    <h2 className="text-xl font-semibold text-foreground">Review & Submit</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Please review your information and create your account
-                    </p>
-                  </div>
-
-                  {/* Summary */}
-                  <div className="space-y-4">
-                    <div className="rounded-lg border border-border p-4">
-                      <h3 className="font-semibold text-foreground">Business Information</h3>
-                      <div className="mt-2 grid gap-1 text-sm">
-                        <p>
-                          <span className="text-muted-foreground">Name:</span>{" "}
-                          {formData.businessName || "Not provided"}
-                        </p>
-                        <p>
-                          <span className="text-muted-foreground">Type:</span>{" "}
-                          {formData.businessType || "Not provided"}
-                        </p>
-                        <p>
-                          <span className="text-muted-foreground">Years in Business:</span>{" "}
-                          {formData.yearsInBusiness || "Not provided"}
-                        </p>
-                      </div>
+                  {/* Account credentials */}
+                  <div className="space-y-4 border-t border-border pt-5">
+                    <div>
+                      <Label htmlFor="email">Email Address *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => update("email", e.target.value)}
+                        placeholder="john@abcplumbing.com"
+                        className="mt-1.5"
+                        autoComplete="email"
+                      />
                     </div>
 
-                    <div className="rounded-lg border border-border p-4">
-                      <h3 className="font-semibold text-foreground">Contact Information</h3>
-                      <div className="mt-2 grid gap-1 text-sm">
-                        <p>
-                          <span className="text-muted-foreground">Name:</span>{" "}
-                          {formData.firstName} {formData.lastName}
-                        </p>
-                        <p>
-                          <span className="text-muted-foreground">Email:</span> {formData.email}
-                        </p>
-                        <p>
-                          <span className="text-muted-foreground">Phone:</span> {formData.phone}
-                        </p>
-                        <p>
-                          <span className="text-muted-foreground">Address:</span>{" "}
-                          {formData.businessAddress}, {formData.city}, {formData.state}{" "}
-                          {formData.zip}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="rounded-lg border border-border p-4">
-                      <h3 className="font-semibold text-foreground">Services</h3>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {formData.selectedServices.length > 0 ? (
-                          formData.selectedServices.map((service) => (
-                            <span
-                              key={service}
-                              className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
-                            >
-                              {service}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-sm text-muted-foreground">No services selected</span>
-                        )}
-                      </div>
-                      <p className="mt-2 text-sm">
-                        <span className="text-muted-foreground">Service Areas:</span>{" "}
-                        {formData.serviceAreas || "Not provided"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Account Creation */}
-                  <div className="space-y-4 border-t border-border pt-6">
-                    <h3 className="font-semibold text-foreground">Create Your Account</h3>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      {/* Password field */}
                       <div>
                         <Label htmlFor="password">Password *</Label>
                         <div className="relative mt-1.5">
@@ -735,7 +287,7 @@ export default function ContractorSignupPage() {
                             id="password"
                             type={showPassword ? "text" : "password"}
                             value={formData.password}
-                            onChange={(e) => updateFormData("password", e.target.value)}
+                            onChange={(e) => update("password", e.target.value)}
                             placeholder="Min. 8 characters"
                             className="pr-10"
                             autoComplete="new-password"
@@ -746,38 +298,48 @@ export default function ContractorSignupPage() {
                             className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
                             aria-label={showPassword ? "Hide password" : "Show password"}
                           >
-                            {showPassword ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                           </button>
                         </div>
-                        {/* Password strength bar */}
-                        {formData.password.length > 0 && (() => {
-                          const len = formData.password.length;
-                          const hasUpper = /[A-Z]/.test(formData.password);
-                          const hasNumber = /\d/.test(formData.password);
-                          const hasSpecial = /[^A-Za-z0-9]/.test(formData.password);
-                          const score = (len >= 8 ? 1 : 0) + (len >= 12 ? 1 : 0) + (hasUpper ? 1 : 0) + (hasNumber ? 1 : 0) + (hasSpecial ? 1 : 0);
-                          const label = score <= 1 ? "Weak" : score <= 3 ? "Fair" : score <= 4 ? "Good" : "Strong";
-                          const color = score <= 1 ? "bg-destructive" : score <= 3 ? "bg-yellow-500" : score <= 4 ? "bg-blue-500" : "bg-green-500";
-                          const width = `${Math.min(score * 20, 100)}%`;
-                          return (
-                            <div className="mt-2 space-y-1">
-                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-                                <div className={`h-full rounded-full transition-all ${color}`} style={{ width }} />
+                        {formData.password.length > 0 &&
+                          (() => {
+                            const len = formData.password.length;
+                            const hasUpper = /[A-Z]/.test(formData.password);
+                            const hasNumber = /\d/.test(formData.password);
+                            const hasSpecial = /[^A-Za-z0-9]/.test(formData.password);
+                            const score =
+                              (len >= 8 ? 1 : 0) +
+                              (len >= 12 ? 1 : 0) +
+                              (hasUpper ? 1 : 0) +
+                              (hasNumber ? 1 : 0) +
+                              (hasSpecial ? 1 : 0);
+                            const label =
+                              score <= 1 ? "Weak" : score <= 3 ? "Fair" : score <= 4 ? "Good" : "Strong";
+                            const color =
+                              score <= 1
+                                ? "bg-destructive"
+                                : score <= 3
+                                  ? "bg-yellow-500"
+                                  : score <= 4
+                                    ? "bg-blue-500"
+                                    : "bg-green-500";
+                            return (
+                              <div className="mt-2 space-y-1">
+                                <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                                  <div
+                                    className={`h-full rounded-full transition-all ${color}`}
+                                    style={{ width: `${Math.min(score * 20, 100)}%` }}
+                                  />
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  Strength: <span className="font-medium text-foreground">{label}</span>
+                                  {len < 8 && " — must be at least 8 characters"}
+                                </p>
                               </div>
-                              <p className="text-xs text-muted-foreground">
-                                Strength: <span className="font-medium text-foreground">{label}</span>
-                                {len < 8 && " — must be at least 8 characters"}
-                              </p>
-                            </div>
-                          );
-                        })()}
+                            );
+                          })()}
                       </div>
 
-                      {/* Confirm password field */}
                       <div>
                         <Label htmlFor="confirmPassword">Confirm Password *</Label>
                         <div className="relative mt-1.5">
@@ -785,7 +347,7 @@ export default function ContractorSignupPage() {
                             id="confirmPassword"
                             type={showConfirmPassword ? "text" : "password"}
                             value={formData.confirmPassword}
-                            onChange={(e) => updateFormData("confirmPassword", e.target.value)}
+                            onChange={(e) => update("confirmPassword", e.target.value)}
                             placeholder="Re-enter your password"
                             className="pr-10"
                             autoComplete="new-password"
@@ -803,57 +365,123 @@ export default function ContractorSignupPage() {
                             )}
                           </button>
                         </div>
-                        {/* Real-time match indicator */}
                         {formData.confirmPassword.length > 0 && (
-                          <p className={`mt-2 flex items-center gap-1.5 text-xs font-medium ${
-                            formData.password === formData.confirmPassword
-                              ? "text-green-600"
-                              : "text-destructive"
-                          }`}>
+                          <p
+                            className={`mt-2 flex items-center gap-1.5 text-xs font-medium ${
+                              formData.password === formData.confirmPassword
+                                ? "text-green-600"
+                                : "text-destructive"
+                            }`}
+                          >
                             {formData.password === formData.confirmPassword ? (
-                              <><CheckCircle2 className="h-3.5 w-3.5" /> Passwords match</>
+                              <>
+                                <CheckCircle2 className="h-3.5 w-3.5" /> Passwords match
+                              </>
                             ) : (
-                              <><AlertCircle className="h-3.5 w-3.5" /> Passwords do not match</>
+                              <>
+                                <AlertCircle className="h-3.5 w-3.5" /> Passwords do not match
+                              </>
                             )}
                           </p>
                         )}
                       </div>
                     </div>
-
-                    <label className="flex items-start gap-3">
-                      <Checkbox
-                        checked={formData.agreeToTerms}
-                        onCheckedChange={(checked) =>
-                          updateFormData("agreeToTerms", checked as boolean)
-                        }
-                        className="mt-0.5"
-                      />
-                      <span className="text-sm text-muted-foreground">
-                        I agree to the{" "}
-                        <Link href="/terms" className="text-primary hover:underline">
-                          Terms of Service
-                        </Link>{" "}
-                        and{" "}
-                        <Link href="/privacy" className="text-primary hover:underline">
-                          Privacy Policy
-                        </Link>
-                        . I understand that HomeBids will verify my business information.
-                      </span>
-                    </label>
                   </div>
                 </motion.div>
               )}
 
-              {/* Navigation Buttons */}
+              {/* Step 2: Start Trial */}
+              {currentStep === "trial" && (
+                <motion.div
+                  key="trial"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="space-y-6"
+                >
+                  <div>
+                    <h2 className="text-xl font-semibold text-foreground">Start Your Free Trial</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Try HomeBids free for 3 days. Cancel anytime before it ends and you won&apos;t be charged.
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
+                    <div className="flex items-baseline justify-between">
+                      <p className="text-2xl font-bold text-foreground">$99 / month</p>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                        <Clock className="h-3 w-3" /> 3-day free trial
+                      </span>
+                    </div>
+                    <ul className="mt-4 space-y-2">
+                      {[
+                        "Unlimited AI-generated bids",
+                        "Build professional proposals by text",
+                        "Shareable proposal link + PDF included",
+                        "No bid fees — ever",
+                      ].map((item) => (
+                        <li key={item} className="flex items-start gap-2 text-sm text-foreground">
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Account summary */}
+                  <div className="rounded-lg border border-border p-4">
+                    <h3 className="text-sm font-semibold text-foreground">Account Summary</h3>
+                    <div className="mt-2 grid gap-1 text-sm">
+                      <p>
+                        <span className="text-muted-foreground">Name:</span> {formData.fullName}
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">Company:</span> {formData.companyName}
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">Trade:</span> {formData.trade}
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">Service Area:</span>{" "}
+                        {formData.serviceArea}
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">Email:</span> {formData.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  <label className="flex items-start gap-3">
+                    <Checkbox
+                      checked={formData.agreeToTerms}
+                      onCheckedChange={(checked) => update("agreeToTerms", checked as boolean)}
+                      className="mt-0.5"
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      I agree to the{" "}
+                      <Link href="/terms" className="text-primary hover:underline">
+                        Terms of Service
+                      </Link>{" "}
+                      and{" "}
+                      <Link href="/privacy" className="text-primary hover:underline">
+                        Privacy Policy
+                      </Link>
+                      .
+                    </span>
+                  </label>
+                </motion.div>
+              )}
+
+              {/* Navigation */}
               <div className="mt-8 space-y-4 border-t border-border pt-6">
                 {submitError && (
-                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                    {submitError}
+                  <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{submitError}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between">
-                  {currentStepIndex > 0 ? (
-                    <Button variant="outline" onClick={prevStep} disabled={submitting}>
+                  {currentStep === "trial" ? (
+                    <Button variant="outline" onClick={() => setCurrentStep("info")} disabled={submitting}>
                       <ArrowLeft className="mr-2 h-4 w-4" />
                       Back
                     </Button>
@@ -866,16 +494,23 @@ export default function ContractorSignupPage() {
                     </Button>
                   )}
 
-                  {currentStep === "review" ? (
+                  {currentStep === "info" ? (
                     <Button
-                      onClick={handleSubmit}
-                      disabled={
-                        !formData.agreeToTerms ||
-                        formData.password.length < 8 ||
-                        formData.password !== formData.confirmPassword ||
-                        submitting
-                      }
+                      onClick={() => {
+                        setSubmitError("");
+                        if (!infoValid) {
+                          setSubmitError("Please complete all required fields before continuing.");
+                          return;
+                        }
+                        setCurrentStep("trial");
+                        scrollToTop();
+                      }}
                     >
+                      Continue
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button onClick={handleSubmit} disabled={!formData.agreeToTerms || submitting}>
                       {submitting ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -883,15 +518,10 @@ export default function ContractorSignupPage() {
                         </>
                       ) : (
                         <>
-                          Complete Signup
-                          <CheckCircle2 className="ml-2 h-4 w-4" />
+                          Start Free Trial
+                          <ArrowRight className="ml-2 h-4 w-4" />
                         </>
                       )}
-                    </Button>
-                  ) : (
-                    <Button onClick={nextStep}>
-                      Continue
-                      <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   )}
                 </div>
@@ -899,7 +529,7 @@ export default function ContractorSignupPage() {
             </CardContent>
           </Card>
 
-          {/* Trust Badges */}
+          {/* Trust badges */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -911,12 +541,12 @@ export default function ContractorSignupPage() {
               <span>SSL Encrypted</span>
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4" />
-              <span>Verified Business</span>
+              <Clock className="h-4 w-4" />
+              <span>Cancel Anytime</span>
             </div>
             <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              <span>Local Jobs Only</span>
+              <Wrench className="h-4 w-4" />
+              <span>Build Bids Instantly</span>
             </div>
           </motion.div>
         </div>

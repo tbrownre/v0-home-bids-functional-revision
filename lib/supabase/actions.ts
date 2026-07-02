@@ -69,25 +69,31 @@ export async function signUpHomeowner(formData: {
   return { success: true };
 }
 
+// Low-friction contractor signup. Only the minimum fields needed to create an
+// account and start building bids are required: name, phone, company name,
+// trade, and service area (plus email/password for auth). Everything else —
+// license, insurance, website, logo, etc. — is completed later from the
+// contractor's Account area, and never blocks activation.
 export async function signUpContractor(formData: {
   email: string;
   password: string;
-  firstName: string;
-  lastName: string;
+  fullName: string;
   phone: string;
-  businessName: string;
-  businessType: string;
-  yearsInBusiness: string;
-  licenseNumber: string;
-  licenseState: string;
-  insuranceProvider: string;
-  bondedAmount: string;
-  selectedServices: string[];
-  serviceAreas: string;
-  minimumJobSize: string;
-  bio: string;
+  companyName: string;
+  trade: string;
+  serviceArea: string;
 }) {
   const supabase = await createClient();
+
+  const fullName = formData.fullName.trim();
+  const companyName = formData.companyName.trim();
+  const trade = formData.trade.trim();
+  const serviceArea = formData.serviceArea.trim();
+
+  // Minimal server-side validation mirroring the client requirements.
+  if (!fullName || !formData.phone.trim() || !companyName || !trade || !serviceArea) {
+    return { error: "Please fill in your name, phone, company, trade, and service area." };
+  }
 
   // 1. Create the auth user
   const { data, error } = await supabase.auth.signUp({
@@ -95,33 +101,38 @@ export async function signUpContractor(formData: {
     password: formData.password,
     options: {
       data: {
-        full_name: `${formData.firstName} ${formData.lastName}`.trim(),
+        full_name: fullName,
         user_type: "contractor",
-        business_name: formData.businessName,
+        business_name: companyName,
         phone: formData.phone,
       },
       emailRedirectTo: getConfirmUrl(),
     },
   });
-  if (error) return { error: error.message };
+  if (error) {
+    if (
+      error.message.toLowerCase().includes("already registered") ||
+      error.message.toLowerCase().includes("user already exists")
+    ) {
+      return { error: "already_registered", email: formData.email };
+    }
+    return { error: error.message };
+  }
 
   const userId = data.user?.id;
   if (!userId) return { error: "Failed to create user account." };
 
   // The handle_new_user trigger already inserts into profiles.
-  // We just need to insert into contractor_profiles.
-  const yearsExp = formData.yearsInBusiness ? parseInt(formData.yearsInBusiness, 10) : null;
+  // Insert only the minimum into contractor_profiles. The account is active
+  // immediately — no approval gate — so the contractor can build bids right away.
   const { error: contractorError } = await supabase.from("contractor_profiles").insert({
     id: userId,
-    business_name: formData.businessName,
-    specialties: formData.selectedServices,
-    service_area: formData.serviceAreas,
-    bio: formData.bio || null,
-    license_number: formData.licenseNumber || null,
-    years_experience: isNaN(yearsExp as number) ? null : yearsExp,
-    approval_status: "pending",
+    business_name: companyName,
+    specialties: [trade],
+    service_area: serviceArea,
+    approval_status: "approved",
     is_verified: false,
-    is_approved: false,
+    is_approved: true,
   });
   if (contractorError) {
     // Friendly error — don't expose raw DB messages to the UI
@@ -132,9 +143,10 @@ export async function signUpContractor(formData: {
   await fireWebhook("user.signup", {
     user_type: "contractor",
     email: formData.email,
-    full_name: `${formData.firstName} ${formData.lastName}`.trim(),
-    business_name: formData.businessName,
-    services: formData.selectedServices,
+    full_name: fullName,
+    business_name: companyName,
+    trade,
+    service_area: serviceArea,
     phone: formData.phone,
   });
 
@@ -481,7 +493,7 @@ export async function getContractorBids() {
   return { bids: data ?? [] };
 }
 
-// ── Messages ──────────────────────────���──────────────────────────────────���───
+// ── Messages ──────────────────────────�����──────────────────────────────────���───
 
 export async function sendMessage(formData: {
   job_id: string;
