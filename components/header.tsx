@@ -352,8 +352,8 @@ export function Header({
           <HomeBidsLogo size="clamp(20px, 2.5vw, 26px)" />
         </div>
 
-        {/* Right: back link or spacer */}
-        <div className="flex items-center justify-end">
+        {/* Right: back link | signed-out CTAs | spacer */}
+        <div className="flex items-center justify-end gap-1.5">
           {backHref ? (
             <Link
               href={backHref}
@@ -362,8 +362,25 @@ export function Header({
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">{backLabel || "Back"}</span>
             </Link>
+          ) : !isLoggedIn ? (
+            // Unauthenticated — show Log In + Try for Free on every public page
+            <>
+              <button
+                type="button"
+                onClick={() => openSignIn()}
+                className="hidden sm:inline-flex h-8 items-center rounded-full px-3 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
+              >
+                Log In
+              </button>
+              <Link
+                href="/contractors/signup"
+                className="inline-flex h-8 items-center rounded-full bg-primary px-3.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                Try for Free
+              </Link>
+            </>
           ) : (
-            // Spacer to keep logo centered
+            // Spacer keeps logo centered when signed in and no back link
             <div className="w-9" />
           )}
         </div>
