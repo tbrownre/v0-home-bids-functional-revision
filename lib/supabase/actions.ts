@@ -96,24 +96,32 @@ export async function signUpContractor(formData: {
     return { error: "Please fill in your name, phone, company, trade, and service area." };
   }
 
-  // 1. Create the auth user
-  const { data, error } = await supabase.auth.signUp({
+  // 1. Create the auth user with the admin API and auto-confirm the email.
+  //
+  // We intentionally do NOT use auth.signUp here: signUp always tries to send a
+  // confirmation email, and Supabase's built-in email service is heavily
+  // rate-limited ("email rate limit exceeded"). Contractor accounts are active
+  // immediately (no approval gate and no email verification required), so we
+  // create the user pre-confirmed via the service-role admin client — no email
+  // is ever sent — and then sign them in below to establish a session.
+  const admin = createAdminClient();
+  const { data, error } = await admin.auth.admin.createUser({
     email: formData.email,
     password: formData.password,
-    options: {
-      data: {
-        full_name: fullName,
-        user_type: "contractor",
-        business_name: companyName,
-        phone: formData.phone,
-      },
-      emailRedirectTo: getConfirmUrl(),
+    email_confirm: true,
+    user_metadata: {
+      full_name: fullName,
+      user_type: "contractor",
+      business_name: companyName,
+      phone: formData.phone,
     },
   });
   if (error) {
+    const msg = error.message.toLowerCase();
     if (
-      error.message.toLowerCase().includes("already registered") ||
-      error.message.toLowerCase().includes("user already exists")
+      msg.includes("already registered") ||
+      msg.includes("already exists") ||
+      msg.includes("already been registered")
     ) {
       return { error: "already_registered", email: formData.email };
     }
@@ -126,12 +134,7 @@ export async function signUpContractor(formData: {
   // The handle_new_user trigger already inserts into profiles.
   // Insert only the minimum into contractor_profiles. The account is active
   // immediately — no approval gate — so the contractor can build bids right away.
-  //
-  // Use the service-role client here: when email confirmation is enabled,
-  // auth.signUp does NOT return a session, so `supabase` (anon) would be
-  // blocked by the contractor_profiles RLS insert policy. The admin client
-  // bypasses RLS for this trusted, server-only write.
-  const admin = createAdminClient();
+  // The admin client bypasses RLS for this trusted, server-only write.
   const { error: contractorError } = await admin.from("contractor_profiles").insert({
     id: userId,
     business_name: companyName,
@@ -157,7 +160,19 @@ export async function signUpContractor(formData: {
     phone: formData.phone,
   });
 
-  return { success: true, userId };
+  // Establish a session on the cookie-based server client so the contractor is
+  // signed in and can go straight to the dashboard. If this fails for any
+  // reason, the account still exists — they can sign in manually.
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: formData.email,
+    password: formData.password,
+  });
+  if (signInError) {
+    console.error("[signUpContractor] auto sign-in error:", signInError.message);
+    return { success: true, userId, signedIn: false };
+  }
+
+  return { success: true, userId, signedIn: true };
 }
 
 export async function signIn(email: string, password: string) {
@@ -500,7 +515,7 @@ export async function getContractorBids() {
   return { bids: data ?? [] };
 }
 
-// ── Messages ──────────────────────────�����──────────────────────────────────���───
+// ── Messages ──────────────────────────�����─────────────────��────────────────���───
 
 export async function sendMessage(formData: {
   job_id: string;
