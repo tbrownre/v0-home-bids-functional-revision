@@ -302,11 +302,18 @@ export default function ContractorsPage() {
             <motion.div variants={fadeUp} className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <a
                 href={HOMEBIDS_SMS.contractor.href}
-                className="inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-primary px-10 text-base font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 active:scale-[0.98]"
+                className="inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-full bg-primary px-10 text-base font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 active:scale-[0.98] sm:w-auto"
               >
                 <ArrowRight className="h-4 w-4" />
                 Text Us To Build A Bid
               </a>
+              <Link
+                href="/contractors/signup"
+                className="inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-full border border-primary bg-background px-10 text-base font-semibold text-primary shadow-sm transition-colors hover:bg-primary/5 active:scale-[0.98] sm:w-auto"
+              >
+                <ChevronRight className="h-4 w-4" />
+                Start Free Right Now
+              </Link>
             </motion.div>
             <motion.div variants={fadeUp} className="mt-4 flex justify-center">
               <Button

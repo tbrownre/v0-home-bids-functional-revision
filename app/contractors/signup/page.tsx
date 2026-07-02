@@ -25,6 +25,8 @@ import {
   MapPin,
   Loader2,
   AlertCircle,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 type Step = "business" | "contact" | "credentials" | "services" | "review";
@@ -146,6 +148,8 @@ export default function ContractorSignupPage() {
 
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = async () => {
     setSubmitError("");
@@ -723,27 +727,96 @@ export default function ContractorSignupPage() {
                   <div className="space-y-4 border-t border-border pt-6">
                     <h3 className="font-semibold text-foreground">Create Your Account</h3>
                     <div className="grid gap-4 sm:grid-cols-2">
+                      {/* Password field */}
                       <div>
                         <Label htmlFor="password">Password *</Label>
-                        <Input
-                          id="password"
-                          type="password"
-                          value={formData.password}
-                          onChange={(e) => updateFormData("password", e.target.value)}
-                          placeholder="Create a password"
-                          className="mt-1.5"
-                        />
+                        <div className="relative mt-1.5">
+                          <Input
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            value={formData.password}
+                            onChange={(e) => updateFormData("password", e.target.value)}
+                            placeholder="Min. 8 characters"
+                            className="pr-10"
+                            autoComplete="new-password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword((v) => !v)}
+                            className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                        {/* Password strength bar */}
+                        {formData.password.length > 0 && (() => {
+                          const len = formData.password.length;
+                          const hasUpper = /[A-Z]/.test(formData.password);
+                          const hasNumber = /\d/.test(formData.password);
+                          const hasSpecial = /[^A-Za-z0-9]/.test(formData.password);
+                          const score = (len >= 8 ? 1 : 0) + (len >= 12 ? 1 : 0) + (hasUpper ? 1 : 0) + (hasNumber ? 1 : 0) + (hasSpecial ? 1 : 0);
+                          const label = score <= 1 ? "Weak" : score <= 3 ? "Fair" : score <= 4 ? "Good" : "Strong";
+                          const color = score <= 1 ? "bg-destructive" : score <= 3 ? "bg-yellow-500" : score <= 4 ? "bg-blue-500" : "bg-green-500";
+                          const width = `${Math.min(score * 20, 100)}%`;
+                          return (
+                            <div className="mt-2 space-y-1">
+                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                                <div className={`h-full rounded-full transition-all ${color}`} style={{ width }} />
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Strength: <span className="font-medium text-foreground">{label}</span>
+                                {len < 8 && " — must be at least 8 characters"}
+                              </p>
+                            </div>
+                          );
+                        })()}
                       </div>
+
+                      {/* Confirm password field */}
                       <div>
                         <Label htmlFor="confirmPassword">Confirm Password *</Label>
-                        <Input
-                          id="confirmPassword"
-                          type="password"
-                          value={formData.confirmPassword}
-                          onChange={(e) => updateFormData("confirmPassword", e.target.value)}
-                          placeholder="Confirm your password"
-                          className="mt-1.5"
-                        />
+                        <div className="relative mt-1.5">
+                          <Input
+                            id="confirmPassword"
+                            type={showConfirmPassword ? "text" : "password"}
+                            value={formData.confirmPassword}
+                            onChange={(e) => updateFormData("confirmPassword", e.target.value)}
+                            placeholder="Re-enter your password"
+                            className="pr-10"
+                            autoComplete="new-password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword((v) => !v)}
+                            className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                            aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                        {/* Real-time match indicator */}
+                        {formData.confirmPassword.length > 0 && (
+                          <p className={`mt-2 flex items-center gap-1.5 text-xs font-medium ${
+                            formData.password === formData.confirmPassword
+                              ? "text-green-600"
+                              : "text-destructive"
+                          }`}>
+                            {formData.password === formData.confirmPassword ? (
+                              <><CheckCircle2 className="h-3.5 w-3.5" /> Passwords match</>
+                            ) : (
+                              <><AlertCircle className="h-3.5 w-3.5" /> Passwords do not match</>
+                            )}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -796,7 +869,12 @@ export default function ContractorSignupPage() {
                   {currentStep === "review" ? (
                     <Button
                       onClick={handleSubmit}
-                      disabled={!formData.agreeToTerms || !formData.password || submitting}
+                      disabled={
+                        !formData.agreeToTerms ||
+                        formData.password.length < 8 ||
+                        formData.password !== formData.confirmPassword ||
+                        submitting
+                      }
                     >
                       {submitting ? (
                         <>
