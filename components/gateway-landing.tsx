@@ -348,6 +348,11 @@ export function GatewayLanding() {
               {"I'm a Home Service Pro"}
             </Button>
           </div>
+
+          {/* Below-CTA reassurance line */}
+          <p className="mt-4 text-sm text-muted-foreground/70 tracking-wide">
+            No app to download.&nbsp; No software to learn.&nbsp; Start by text.
+          </p>
         </motion.div>
 
         {/* iPhone mockup — fixed container to prevent layout shifts when
