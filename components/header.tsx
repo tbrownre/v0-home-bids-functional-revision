@@ -352,7 +352,7 @@ export function Header({
             (hamburger vs. back link / Log In + Try for Free CTAs). */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="pointer-events-auto">
-            <HomeBidsLogo size="clamp(20px, 2.5vw, 26px)" />
+            <HomeBidsLogo size="clamp(17px, 2.5vw, 26px)" />
           </div>
         </div>
         {/* Grid placeholder keeps the 3-column structure intact */}
@@ -380,7 +380,7 @@ export function Header({
               </button>
               <Link
                 href="/contractors/signup"
-                className="inline-flex h-8 items-center rounded-full bg-primary px-3.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                className="inline-flex h-8 items-center rounded-full bg-primary px-2.5 sm:px-3.5 text-xs sm:text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 Try for Free
               </Link>
