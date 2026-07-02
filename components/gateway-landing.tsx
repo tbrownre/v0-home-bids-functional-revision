@@ -316,7 +316,7 @@ export function GatewayLanding() {
             className="mt-3 max-w-[400px] text-pretty leading-relaxed text-muted-foreground"
             style={{ fontSize: "clamp(1rem, 2vw, 1.15rem)" }}
           >
-            Are you a homeowner or a home service professional?
+            HomeBids helps homeowners start projects faster and helps contractors create professional bids in minutes.
           </p>
 
           {/* CTA buttons */}
