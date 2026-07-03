@@ -308,7 +308,7 @@ export function GatewayLanding() {
             className="text-balance font-extrabold leading-[1.06] tracking-tight text-foreground"
             style={{ fontSize: "clamp(2.6rem, 7vw, 4.0625rem)" }}
           >
-            Home service help,{" "}
+            Home Service help,{" "}
             <span style={{ color: "#0A84FF" }}>handled by text.</span>
           </h1>
 

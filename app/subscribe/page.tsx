@@ -13,7 +13,7 @@ import {
   Activity, Users, FileText,
   Thermometer, Droplets,
   Lightbulb, PaintBucket, Trees, Hammer, Bath, ChefHat,
-  ArrowRight, BadgeCheck, MessageSquare,
+  ArrowRight, BadgeCheck, Link2,
   Shield, Star,
   Smartphone, Bot,
 } from "lucide-react";
@@ -316,8 +316,8 @@ export default function SubscribePage() {
                   <p className="mx-auto mt-3 max-w-xl text-lg text-muted-foreground">
                     Estimate faster. Respond better. Win more jobs.
                   </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Everything you need — one simple plan.
+                  <p className="mt-2 text-sm font-semibold uppercase tracking-widest text-primary">
+                    One Plan For All
                   </p>
                 </div>
 
@@ -333,7 +333,7 @@ export default function SubscribePage() {
                 {/* WHAT'S INCLUDED */}
                 <div className="mt-16">
                   <h2 className="mb-8 text-center text-2xl font-bold text-foreground">What&apos;s Included</h2>
-                  <div className="grid gap-6 sm:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                     {[
                       {
                         icon: FileText,
@@ -341,24 +341,14 @@ export default function SubscribePage() {
                         desc: "Generate clean, professional estimates in seconds. Describe the job and AI builds a formatted proposal you can send immediately.",
                       },
                       {
-                        icon: TrendingUp,
-                        title: "AI Price Check Tool",
-                        desc: "Validate your numbers before you send. Get AI-backed pricing insight to defend your bids with confidence.",
-                      },
-                      {
-                        icon: MessageSquare,
-                        title: "AI Response Assistant",
-                        desc: "Get suggested replies for common objections and follow-ups. Respond faster without thinking from scratch every time.",
+                        icon: Link2,
+                        title: "Shareable Bid Link Previews",
+                        desc: "Turn every bid into a polished, shareable link. Homeowners see a rich preview with your bid details the moment you send it.",
                       },
                       {
                         icon: Smartphone,
                         title: "SMS-First Workflow",
                         desc: "Send estimates and responses via SMS directly from your phone. No desktop required.",
-                      },
-                      {
-                        icon: BarChart2,
-                        title: "Pipeline Tracking",
-                        desc: "Keep your open, in-progress, and completed jobs organized in a lightweight mobile-first dashboard.",
                       },
                       {
                         icon: Bot,
@@ -385,9 +375,9 @@ export default function SubscribePage() {
                   </p>
                   <ul className="mt-6 grid gap-3 sm:grid-cols-2">
                     {[
-                      "Respond to homeowners in minutes, not hours",
+                      "Send bids to homeowners in minutes, not hours",
                       "Create professional estimates on the job site",
-                      "Defend your pricing when customers push back",
+                      "Share every bid as a polished link preview",
                       "Stay organized without adding office staff",
                       "Send everything via text message",
                       "Works on any device — no app required",
