@@ -316,8 +316,8 @@ export default function SubscribePage() {
                   <p className="mx-auto mt-3 max-w-xl text-lg text-muted-foreground">
                     Estimate faster. Respond better. Win more jobs.
                   </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Everything you need — one simple plan.
+                  <p className="mt-2 text-sm font-semibold uppercase tracking-widest text-primary">
+                    One Plan For All
                   </p>
                 </div>
 
