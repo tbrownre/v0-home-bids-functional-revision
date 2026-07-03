@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import { BidBuilderChat, type BidLeadType, type BidChatLeadContext } from "@/components/bid-builder-chat";
 import { BuildBidChoiceModal } from "@/components/build-bid-choice-modal";
+import { resumeDraftBid, type NeedsActionContext } from "@/lib/bid-resume";
 import { getContractorSmsLink } from "@/lib/sms-config";
 import { timeAgo } from "@/lib/proposal-format";
 import { getMockUser, mockSignOut, USE_MOCK_DATA, syncMirrorFromSupabase } from "@/lib/mock-auth";
@@ -571,10 +572,13 @@ export default function ContractorDashboard() {
   // Every contractor "build/finish/continue bid" CTA routes through this modal,
   // which offers Continue by Text (SMS) or Continue on Site (existing builder).
   const [showBuildChoice, setShowBuildChoice] = useState(false);
+  // When set, the choice modal switches into "resume this saved draft" mode.
+  const [buildChoiceContext, setBuildChoiceContext] = useState<NeedsActionContext | null>(null);
   const pendingOnSiteRef = useRef<(() => void) | null>(null);
 
-  function openBuildChoice(onSite: () => void) {
+  function openBuildChoice(onSite: () => void, context: NeedsActionContext | null = null) {
     pendingOnSiteRef.current = onSite;
+    setBuildChoiceContext(context);
     setShowBuildChoice(true);
   }
 
@@ -655,7 +659,7 @@ export default function ContractorDashboard() {
     );
   }
 
-  // ── HOME tab ───────────────────────────────────────────────────────────────
+  // ── HOME tab ──────────────────────────────────────���────────────────────────
 
   // ── Bid status config (full set) ────────────────────────────────────────────
   const BID_STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
@@ -695,14 +699,36 @@ export default function ContractorDashboard() {
           onClick: () => openBuildChoice(() => startBidByText("my", null)),
         };
 
-  const needsAction: { id: string; title: string; sub: string; cta: string; icon: React.ElementType; onClick: () => void }[] = [
+  // Real (mock/demo) context for the in-progress draft. Structured so it can be
+  // swapped for a Supabase row later without touching the card UI.
+  const kitchenRemodelDraft: NeedsActionContext = {
+    needsActionId: "na-draft",
+    actionType: "finish_draft",
+    contractorId: "contractor-demo",
+    jobId: "job-kitchen-remodel",
+    draftBidId: "draft-kitchen-remodel",
+    bidId: null,
+    title: "Kitchen Remodel Bid",
+    status: "draft",
+    sourceType: "needs_action",
+  };
+
+  // Resume the saved draft in the on-site bid builder — seeds the builder with
+  // the draft's context so it continues an existing bid instead of starting new.
+  function finishDraftOnSite(ctx: NeedsActionContext) {
+    resumeDraftBid(ctx);
+    startBidByText("my", { id: ctx.draftBidId, projectTitle: ctx.title });
+  }
+
+  const needsAction: { id: string; title: string; sub: string; cta: string; icon: React.ElementType; onClick: () => void; context?: NeedsActionContext }[] = [
     {
       id: "na-draft",
-      title: "Kitchen Remodel Bid",
+      title: kitchenRemodelDraft.title,
       sub: "Draft started — project details are ready.",
       cta: "Finish Bid",
       icon: FileText,
-      onClick: () => openBuildChoice(() => startBidByText("my", null)),
+      context: kitchenRemodelDraft,
+      onClick: () => openBuildChoice(() => finishDraftOnSite(kitchenRemodelDraft), kitchenRemodelDraft),
     },
     {
       id: "na-follow",
@@ -1432,6 +1458,7 @@ export default function ContractorDashboard() {
         open={showBuildChoice}
         onOpenChange={setShowBuildChoice}
         onContinueOnSite={handleContinueOnSite}
+        context={buildChoiceContext}
       />
     </div>
   );
