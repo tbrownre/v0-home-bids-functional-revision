@@ -333,7 +333,7 @@ export default function SubscribePage() {
                 {/* WHAT'S INCLUDED */}
                 <div className="mt-16">
                   <h2 className="mb-8 text-center text-2xl font-bold text-foreground">What&apos;s Included</h2>
-                  <div className="grid gap-6 sm:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                     {[
                       {
                         icon: FileText,
