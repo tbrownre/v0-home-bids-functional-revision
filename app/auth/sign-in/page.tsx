@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AlertCircle, Loader2, ArrowLeft, Home, Hammer, Eye, EyeOff } from "lucide-react";
+import { AlertCircle, Loader2, ArrowLeft, Home, Hammer, Eye, EyeOff, MailCheck } from "lucide-react";
 import { HomeBidsLogo } from "@/components/homebids-logo";
+import { createClient } from "@/lib/supabase/client";
 import {
   realSignIn,
   realDemoSignIn,
@@ -13,7 +14,12 @@ import {
   redirectAfterSignIn,
 } from "@/lib/mock-auth";
 
+type View = "signin" | "forgot" | "forgot-sent";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function SignInPage() {
+  const [view, setView] = useState<View>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -21,8 +27,22 @@ export default function SignInPage() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Forgot-password sub-form state
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetError, setResetError] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+
   // Redirect if already signed in (avoids showing the form to a logged-in user).
   useEffect(() => {
+    // Deep-link support: /auth/sign-in?forgot=1 opens the reset form directly
+    // (used by the "Request New Link" CTA on an expired reset link).
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("forgot") === "1") {
+        setView("forgot");
+      }
+    }
+
     const user = getMockUser();
     if (user) {
       redirectAfterSignIn(user.role);
@@ -30,6 +50,49 @@ export default function SignInPage() {
     }
     setCheckingSession(false);
   }, []);
+
+  async function handleForgotSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = resetEmail.trim();
+    if (!trimmed) {
+      setResetError("Please enter your email address.");
+      return;
+    }
+    if (!EMAIL_REGEX.test(trimmed)) {
+      setResetError("Please enter a valid email address.");
+      return;
+    }
+    setResetLoading(true);
+    setResetError("");
+    try {
+      const supabase = createClient();
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(trimmed, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      // Always show the generic success state — never reveal whether the email
+      // is registered. Only surface a message for genuine transport failures.
+      if (resetErr) {
+        console.error("[v0] resetPasswordForEmail error:", resetErr.message);
+      }
+      setView("forgot-sent");
+    } catch {
+      setResetError("Something went wrong. Please try again.");
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
+  function openForgot() {
+    setResetEmail(email.trim());
+    setResetError("");
+    setView("forgot");
+  }
+
+  function backToLogin() {
+    setResetError("");
+    setError("");
+    setView("signin");
+  }
 
   async function handlePasswordSignIn(e: React.FormEvent) {
     e.preventDefault();
@@ -90,6 +153,8 @@ export default function SignInPage() {
       {/* Content */}
       <div className="flex flex-1 items-start justify-center px-4 pt-8 pb-16">
         <div className="w-full max-w-sm space-y-5">
+          {view === "signin" && (
+          <>
           <div className="text-center">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome back to HomeBids</h1>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -121,9 +186,18 @@ export default function SignInPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <label htmlFor="password" className="text-sm font-medium text-foreground">
-                Password
-              </label>
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="text-sm font-medium text-foreground">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={openForgot}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Forgot Password?
+                </button>
+              </div>
               <div className="relative">
                 <Input
                   id="password"
@@ -184,6 +258,71 @@ export default function SignInPage() {
               </button>
             </div>
           </div>
+          </>
+          )}
+
+          {view === "forgot" && (
+            <>
+              <div className="text-center">
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">Reset your password</h1>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Enter the email connected to your HomeBids account and we&apos;ll send you a reset link.
+                </p>
+              </div>
+
+              {resetError && (
+                <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  {resetError}
+                </div>
+              )}
+
+              <form onSubmit={handleForgotSubmit} className="space-y-3">
+                <div className="space-y-1.5">
+                  <label htmlFor="reset-email" className="text-sm font-medium text-foreground">
+                    Email
+                  </label>
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="Email address"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    className="h-11"
+                    disabled={resetLoading}
+                  />
+                </div>
+                <Button type="submit" className="w-full h-11 cursor-pointer" disabled={resetLoading}>
+                  {resetLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Send Reset Link
+                </Button>
+              </form>
+
+              <p className="text-center text-sm text-muted-foreground">
+                <button type="button" onClick={backToLogin} className="font-medium text-primary hover:underline">
+                  Back to Login
+                </button>
+              </p>
+            </>
+          )}
+
+          {view === "forgot-sent" && (
+            <div className="space-y-5 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <MailCheck className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">Check your email</h1>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  If an account exists for that email, we&apos;ll send a password reset link.
+                </p>
+              </div>
+              <Button onClick={backToLogin} className="w-full h-11 cursor-pointer">
+                Back to Login
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
