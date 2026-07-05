@@ -326,9 +326,9 @@ export function GatewayLanding() {
           </p>
 
           {/* CTA buttons */}
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
-            <div className="flex flex-col items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0A84FF]/10 px-2.5 py-0.5 text-[11px] font-semibold text-[#0A84FF]">
+          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
+            <div className="relative">
+              <span className="pointer-events-none absolute -top-3 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-[#0A84FF]/25 bg-white/95 px-3 py-1 text-xs font-medium text-[#0A84FF] shadow-sm">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#0A84FF]" aria-hidden="true" />
                 Beta testing
               </span>
