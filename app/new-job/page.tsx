@@ -383,6 +383,14 @@ export default function NewJobPage() {
                 Text us your project and our AI instantly finds the best contractors — you&apos;ll start receiving bids fast.
               </p>
 
+              <div className="mt-4 flex max-w-md items-start gap-2 rounded-xl bg-primary/5 px-3.5 py-2.5">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  <span className="font-semibold text-primary">Homeowner beta.</span>{" "}
+                  Homeowner access is currently in beta while we refine the project request experience.
+                </p>
+              </div>
+
               {/* Trust bullets */}
               <ul className="mt-6 space-y-2.5">
                 {TRUST_BULLETS.map(({ icon: Icon, text }) => (

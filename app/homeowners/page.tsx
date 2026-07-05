@@ -93,9 +93,15 @@ export default function HomeownersPage() {
               transition={{ duration: 0.55 }}
               className="flex-1 text-center lg:text-left"
             >
-              <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
-                For Homeowners
-              </span>
+              <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
+                <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
+                  For Homeowners
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+                  Beta testing
+                </span>
+              </div>
 
               <h1 className="mt-5 text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
                 Get Better Bids for Your{" "}
@@ -105,6 +111,11 @@ export default function HomeownersPage() {
               <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground lg:mx-0">
                 Text HomeBids and our AI will help define your project, organize the details, and
                 connect you with qualified contractors.
+              </p>
+
+              <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground lg:mx-0">
+                Homeowner access is currently in beta as we refine the best way to collect project
+                details and connect you with trusted local pros.
               </p>
 
               <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">

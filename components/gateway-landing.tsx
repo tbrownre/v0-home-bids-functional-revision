@@ -162,6 +162,12 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
                   onClick={handleHomeowner}
                   className="group relative flex w-full flex-col items-center gap-3 overflow-hidden rounded-2xl border border-[#0A84FF]/20 bg-white px-5 py-5 text-center shadow-sm transition-all duration-200 hover:border-[#0A84FF]/60 hover:shadow-[0_4px_20px_rgba(10,132,255,0.18)] active:scale-[0.98]"
                 >
+                  {/* Beta badge */}
+                  <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-[#0A84FF]/10 px-2 py-0.5 text-[10px] font-semibold text-[#0A84FF]">
+                    <span className="h-1 w-1 rounded-full bg-[#0A84FF]" aria-hidden="true" />
+                    Beta testing
+                  </span>
+
                   {/* Icon */}
                   <span
                     className="flex h-11 w-11 items-center justify-center rounded-xl text-white transition-transform duration-200 group-hover:scale-110"
@@ -320,21 +326,27 @@ export function GatewayLanding() {
           </p>
 
           {/* CTA buttons */}
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <a
-              href={HOMEBIDS_SMS.homeowner.href}
-              onClick={(e) => {
-                if (!isSmsCapableDevice()) {
-                  e.preventDefault();
-                  localStorage.setItem("homebids_audience", "homeowner");
-                  window.location.href = "/new-job";
-                }
-              }}
-              className="inline-flex h-12 items-center justify-center gap-2.5 rounded-full px-8 text-base font-semibold bg-[#0A84FF] text-white hover:bg-[#0A84FF]/90 transition-colors"
-            >
-              <Home className="h-[18px] w-[18px] shrink-0" />
-              {"I'm a Homeowner"}
-            </a>
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
+            <div className="flex flex-col items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0A84FF]/10 px-2.5 py-0.5 text-[11px] font-semibold text-[#0A84FF]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#0A84FF]" aria-hidden="true" />
+                Beta testing
+              </span>
+              <a
+                href={HOMEBIDS_SMS.homeowner.href}
+                onClick={(e) => {
+                  if (!isSmsCapableDevice()) {
+                    e.preventDefault();
+                    localStorage.setItem("homebids_audience", "homeowner");
+                    window.location.href = "/new-job";
+                  }
+                }}
+                className="inline-flex h-12 items-center justify-center gap-2.5 rounded-full px-8 text-base font-semibold bg-[#0A84FF] text-white hover:bg-[#0A84FF]/90 transition-colors"
+              >
+                <Home className="h-[18px] w-[18px] shrink-0" />
+                {"I'm a Homeowner"}
+              </a>
+            </div>
             <Button
               variant="outline"
               size="lg"
