@@ -17,8 +17,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { getJobStatus, getJobStatusLabel, isJobArchived, type JobStatusOwner } from "@/lib/job-store";
-import { getMockUser, USE_MOCK_DATA } from "@/lib/mock-auth";
-import { getHomeownerJobs as getDemoHomeownerJobs } from "@/lib/demo/services";
+import { getMockUser } from "@/lib/mock-auth";
 import { getHomeownerJobs } from "@/lib/supabase/actions";
 
 interface Job {

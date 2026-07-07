@@ -3,10 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { getOpenJobs, submitBid } from "@/lib/supabase/actions";
-import { getOpenJobs as getDemoOpenJobs } from "@/lib/demo/services";
-import { DEMO_CONTRACTOR_EMAIL } from "@/lib/demo-guard";
 import { createClient } from "@/lib/supabase/client";
-import { USE_MOCK_DATA, getMockUser } from "@/lib/mock-auth";
+import { getMockUser } from "@/lib/mock-auth";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
@@ -272,18 +270,6 @@ export default function ContractorJobsMarketplace() {
 
   // Auth guard — must run before fetching jobs.
   useEffect(() => {
-    if (USE_MOCK_DATA) {
-      const user = getMockUser();
-      if (!user) {
-        window.location.replace("/contractors");
-        return;
-      }
-      if (user.role !== "contractor" && user.role !== "admin") {
-        window.location.replace("/");
-        return;
-      }
-      return;
-    }
     ;(async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
@@ -299,32 +285,18 @@ export default function ContractorJobsMarketplace() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch open jobs — mock mode always uses demo data.
+  // Fetch open jobs from Supabase.
   useEffect(() => {
-    if (USE_MOCK_DATA) {
-      getDemoOpenJobs().then(({ jobs: demoJobs }) => {
-        setJobs(demoJobs as AvailableJob[]);
-        setJobsLoading(false);
-      });
-      return;
-    }
-
     if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) {
       setJobs(allAvailableJobs);
       setJobsLoading(false);
       return;
     }
 
-    // Check if logged in as demo contractor, then serve demo data.
+    // Load real jobs from Supabase.
     ;(async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email === DEMO_CONTRACTOR_EMAIL) {
-        const { jobs: demoJobs } = await getDemoOpenJobs();
-        setJobs(demoJobs as AvailableJob[]);
-        setJobsLoading(false);
-        return;
-      }
       // Real contractor — load from Supabase.
       const { jobs: dbJobs, error } = await getOpenJobs();
       if (error) {

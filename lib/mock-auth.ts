@@ -1,29 +1,21 @@
 /**
  * mock-auth.ts
  *
- * Auth bridge layer.
+ * Auth bridge layer — real Supabase auth.
  *
- * Authentication is REAL (Supabase) — see USE_MOCK_AUTH below. On a successful
- * real sign-in we "mirror" the Supabase session into a localStorage record that
- * has the same shape the rest of the app already consumes (getMockUser, etc.),
- * so every synchronous consumer keeps working without a rewrite. The real
- * Supabase cookie remains the source of truth for route protection (middleware).
- *
- * DEMO DATA (dashboard metrics, bids, jobs) is still mock — see USE_MOCK_DATA.
- * The two concerns are intentionally decoupled.
+ * On a successful real sign-in, we "mirror" the Supabase session into a
+ * localStorage record that has the same shape the rest of the app already
+ * consumes (getMockUser, etc.), so every synchronous consumer keeps working
+ * without a rewrite. The real Supabase cookie remains the source of truth
+ * for route protection (middleware).
  */
 
 import { createClient } from "@/lib/supabase/client";
-import { DEMO_HOMEOWNER_EMAIL, DEMO_CONTRACTOR_EMAIL, DEMO_PASSWORD } from "@/lib/demo-guard";
-
-// Authentication is real. Demo dashboard/bids/jobs data stays mock.
-export const USE_MOCK_AUTH = false;
-export const USE_MOCK_DATA = true;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type MockRole = "homeowner" | "contractor" | "admin";
-export type MockAuthProvider = "google" | "apple" | "phone" | "email" | "demo";
+export type MockAuthProvider = "google" | "apple" | "phone" | "email";
 
 export interface MockUser {
   id: string;
@@ -34,56 +26,9 @@ export interface MockUser {
   phone?: string;
   role: MockRole;
   authProvider: MockAuthProvider;
-  isDemo: true;
 }
 
-// ── Mock users ────────────────────────────────────────────────────────────────
-
-export const MOCK_USERS: Record<string, MockUser> = {
-  "homeowner@homebids.demo": {
-    id: "mock-homeowner-001",
-    email: "homeowner@homebids.demo",
-    name: "Sarah Johnson",
-    firstName: "Sarah",
-    lastName: "Johnson",
-    role: "homeowner",
-    authProvider: "demo",
-    isDemo: true,
-  },
-  "contractor@homebids.demo": {
-    id: "mock-contractor-001",
-    email: "contractor@homebids.demo",
-    name: "Mike Rodriguez",
-    firstName: "Mike",
-    lastName: "Rodriguez",
-    role: "contractor",
-    authProvider: "demo",
-    isDemo: true,
-  },
-  "admin@homebids.demo": {
-    id: "mock-admin-001",
-    email: "admin@homebids.demo",
-    name: "Tim Brown",
-    firstName: "Tim",
-    lastName: "Brown",
-    role: "admin",
-    authProvider: "demo",
-    isDemo: true,
-  },
-};
-
-// Legacy email aliases so existing bookmarks keep working
-const EMAIL_ALIASES: Record<string, string> = {
-  "demo.homeowner@homebids.ai": "homeowner@homebids.demo",
-  "demo.contractor@homebids.ai": "contractor@homebids.demo",
-};
-
-// Common demo password — any password is accepted in mock mode
-export const MOCK_PASSWORD = "demo";
-// Demo OTP code for phone sign-in
-export const MOCK_OTP_CODE = "123456";
-
-const SESSION_KEY = "hb_mock_session";
+const SESSION_KEY = "hb_session";
 
 // In-memory fallback for SSR
 let _memorySession: MockUser | null = null;
@@ -125,44 +70,20 @@ export function clearMockSession() {
   }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
-function buildMockUser(
-  base: { id: string; name: string; firstName: string; lastName: string; email?: string; phone?: string },
-  role: MockRole,
-  provider: MockAuthProvider,
-): MockUser {
-  return {
-    id: base.id,
-    email: base.email ?? `${provider}-${role}@homebids.demo`,
-    name: base.name,
-    firstName: base.firstName,
-    lastName: base.lastName,
-    phone: base.phone,
-    role,
-    authProvider: provider,
-    isDemo: true,
-  };
-}
 
 export function redirectAfterSignIn(role: MockRole) {
   if (!isClient()) return;
   if (role === "contractor") {
     window.location.replace("/contractors/dashboard");
   } else if (role === "admin") {
-    window.location.replace("/admin-demo");
+    window.location.replace("/admin");
   } else {
-    // The homeowner demo experience is the jobs dashboard.
     window.location.replace("/homeowners/dashboard");
   }
 }
 
-// ── Real Supabase auth bridge ───────────────────────────────────────────────
-
-export const DEMO_CREDENTIALS = {
-  homeowner: { email: DEMO_HOMEOWNER_EMAIL, password: DEMO_PASSWORD },
-  contractor: { email: DEMO_CONTRACTOR_EMAIL, password: DEMO_PASSWORD },
-} as const;
+// ── Real Supabase auth bridge ───────────────────────────────────────────
 
 /** Build the app's MockUser shape from a real Supabase user object. */
 function mapSupabaseUser(user: {
@@ -185,7 +106,6 @@ function mapSupabaseUser(user: {
     phone: meta.phone,
     role,
     authProvider: "email",
-    isDemo: true,
   };
 }
 
@@ -253,81 +173,6 @@ export interface MockSignInResult {
   error: string | null;
 }
 
-/** Sign in with any mock email + any password. */
-export function mockSignIn(email: string, _password: string): MockSignInResult {
-  const normalized = email.toLowerCase().trim();
-  const canonical = EMAIL_ALIASES[normalized] ?? normalized;
-  const base = MOCK_USERS[canonical] ?? null;
-  if (!base) {
-    return {
-      user: null,
-      error:
-        "No demo account found for that email. Try homeowner@homebids.demo, contractor@homebids.demo, or admin@homebids.demo.",
-    };
-  }
-  setMockSession(base);
-  return { user: base, error: null };
-}
-
-/** Sign in via Google (shows role selection if role not provided). */
-export function mockGoogleSignIn(role?: MockRole): MockSignInResult {
-  if (!role) return { user: null, error: "role_selection_required" };
-  const user = buildMockUser(
-    { id: `mock-google-${role}-001`, name: "Demo User", firstName: "Demo", lastName: "User", email: `google-${role}@homebids.demo` },
-    role,
-    "google",
-  );
-  setMockSession(user);
-  return { user, error: null };
-}
-
-/** Sign in via Apple (shows role selection if role not provided). */
-export function mockAppleSignIn(role?: MockRole): MockSignInResult {
-  if (!role) return { user: null, error: "role_selection_required" };
-  const user = buildMockUser(
-    { id: `mock-apple-${role}-001`, name: "Demo User", firstName: "Demo", lastName: "User", email: `apple-${role}@homebids.demo` },
-    role,
-    "apple",
-  );
-  setMockSession(user);
-  return { user, error: null };
-}
-
-/** Verify phone OTP. Returns error if code doesn't match MOCK_OTP_CODE. */
-export function mockPhoneOtpSignIn(phone: string, code: string, role?: MockRole): MockSignInResult {
-  if (code !== MOCK_OTP_CODE) {
-    return { user: null, error: "Incorrect code. Demo code is 123456." };
-  }
-  if (!role) return { user: null, error: "role_selection_required" };
-  const user = buildMockUser(
-    { id: `mock-phone-${role}-001`, name: "Demo User", firstName: "Demo", lastName: "User", phone },
-    role,
-    "phone",
-  );
-  setMockSession(user);
-  return { user, error: null };
-}
-
-/** Email magic link — always succeeds in demo mode. */
-export function mockEmailMagicLinkSignIn(email: string, role?: MockRole): MockSignInResult {
-  if (!role) return { user: null, error: "role_selection_required" };
-  const user = buildMockUser(
-    { id: `mock-email-${role}-001`, name: "Demo User", firstName: "Demo", lastName: "User", email },
-    role,
-    "email",
-  );
-  setMockSession(user);
-  return { user, error: null };
-}
-
-/** Set role on the current mock session (used after role selection). */
-export function setMockUserRole(role: MockRole) {
-  const session = getMockSession();
-  if (!session) return;
-  const updated = { ...session, role };
-  setMockSession(updated);
-}
-
 /** Returns the current mock user or null. */
 export function getMockUser(): MockUser | null {
   return getMockSession();
@@ -338,15 +183,7 @@ export function isMockSignedIn(): boolean {
   return getMockSession() !== null;
 }
 
-/** Sign out — ends the real session (when auth is real) and navigates home. */
+/** Sign out — ends the real Supabase session and navigates home. */
 export function mockSignOut() {
-  if (!USE_MOCK_AUTH) {
-    // Fire the real sign-out; it clears the cache and redirects itself.
-    void realSignOut();
-    return;
-  }
-  clearMockSession();
-  if (isClient()) {
-    window.location.replace("/");
-  }
+  void realSignOut();
 }

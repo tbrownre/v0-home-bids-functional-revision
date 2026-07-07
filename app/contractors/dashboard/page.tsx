@@ -50,15 +50,13 @@ import { BuildBidChoiceModal } from "@/components/build-bid-choice-modal";
 import { resumeDraftBid, type NeedsActionContext } from "@/lib/bid-resume";
 import { getContractorSmsLink } from "@/lib/sms-config";
 import { timeAgo } from "@/lib/proposal-format";
-import { getMockUser, mockSignOut, USE_MOCK_DATA, syncMirrorFromSupabase } from "@/lib/mock-auth";
+import { getMockUser, mockSignOut, syncMirrorFromSupabase } from "@/lib/mock-auth";
 import { getContractorBids } from "@/lib/supabase/actions";
 import { getContractorProposals, type Proposal, type ProposalStatus } from "@/lib/supabase/proposals";
 import { ContractorProposalCard } from "@/components/proposal/contractor-proposal-card";
 import { ProfileCompletionSection } from "@/components/contractor/profile-completion-section";
 import { loadContractorProfile, getProfileCompletion } from "@/lib/contractor-profile";
 import { createClient } from "@/lib/supabase/client";
-import { getContractorBids as getDemoContractorBids } from "@/lib/demo/services";
-import { DEMO_CONTRACTOR_EMAIL, isDemoEmail } from "@/lib/demo-guard";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -433,19 +431,7 @@ export default function ContractorDashboard() {
   useEffect(() => {
     async function load() {
       try {
-        if (USE_MOCK_DATA) {
-          const { bids } = await getDemoContractorBids();
-          setBidsCount((bids ?? []).length);
-          return;
-        }
         if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.email === DEMO_CONTRACTOR_EMAIL) {
-          const { bids } = await getDemoContractorBids();
-          setBidsCount((bids ?? []).length);
-          return;
-        }
         const { bids } = await getContractorBids();
         setBidsCount((bids ?? []).length);
       } catch { /* non-fatal */ }
