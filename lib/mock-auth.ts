@@ -128,12 +128,6 @@ export async function realSignIn(email: string, password: string): Promise<MockS
   }
 }
 
-/** Sign in to one of the seeded demo accounts (real Supabase session). */
-export function realDemoSignIn(role: "homeowner" | "contractor"): Promise<MockSignInResult> {
-  const creds = DEMO_CREDENTIALS[role];
-  return realSignIn(creds.email, creds.password);
-}
-
 /**
  * Reconcile the local cache with the real Supabase session.
  * Clears the mirror if the real session is gone (prevents ghost "signed-in" UI).

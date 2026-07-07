@@ -153,9 +153,7 @@ export default function JobDetailsPage() {
   const isContractor = currentUser?.role === "contractor";
 
   // Contractor's own bid for this job (if any)
-  const ownBid = isContractor
-    ? demoContractorBids.find((b) => b.job_id === id) ?? null
-    : null;
+  const ownBid: { amount?: number; status?: string; timeline?: string; message?: string } | null = null;
 
   const handleSendChat = () => {
     if (!chatInput.trim()) return;

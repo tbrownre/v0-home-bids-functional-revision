@@ -9,7 +9,6 @@ import { HomeBidsLogo } from "@/components/homebids-logo";
 import { createClient } from "@/lib/supabase/client";
 import {
   realSignIn,
-  realDemoSignIn,
   getMockUser,
   redirectAfterSignIn,
 } from "@/lib/mock-auth";
@@ -107,18 +106,6 @@ export default function SignInPage() {
       redirectAfterSignIn(result.user.role);
     } else {
       setError(result.error ?? "Unable to sign in.");
-      setLoading(false);
-    }
-  }
-
-  async function handleDemoSignIn(role: "homeowner" | "contractor") {
-    setLoading(true);
-    setError("");
-    const result = await realDemoSignIn(role);
-    if (result.user) {
-      redirectAfterSignIn(result.user.role);
-    } else {
-      setError(result.error ?? "Demo sign-in failed.");
       setLoading(false);
     }
   }
@@ -231,33 +218,6 @@ export default function SignInPage() {
               Create an account
             </Link>
           </p>
-
-          {/* Demo accounts — real seeded Supabase sessions */}
-          <div className="rounded-xl border border-dashed border-border bg-muted/40 p-4">
-            <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Or explore a demo account
-            </p>
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleDemoSignIn("homeowner")}
-                className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50 cursor-pointer"
-              >
-                <Home className="h-4 w-4 text-muted-foreground" />
-                Homeowner demo
-              </button>
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleDemoSignIn("contractor")}
-                className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50 cursor-pointer"
-              >
-                <Hammer className="h-4 w-4 text-muted-foreground" />
-                Contractor demo
-              </button>
-            </div>
-          </div>
           </>
           )}
 

@@ -15,7 +15,6 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import {
   realSignIn,
-  realDemoSignIn,
   redirectAfterSignIn,
   type MockRole,
 } from "@/lib/mock-auth";
@@ -122,18 +121,6 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
     }
   }
 
-  async function handleDemoSignIn(role: "homeowner" | "contractor") {
-    setLoading(true);
-    setError("");
-    const result = await realDemoSignIn(role);
-    if (result.user) {
-      finishSignIn(result.user.role);
-    } else {
-      setError(result.error ?? "Demo sign-in failed.");
-      setLoading(false);
-    }
-  }
-
   return (
     <Dialog open={open} onOpenChange={(val) => { if (!val) handleClose(); }}>
       <DialogContent className="sm:max-w-sm gap-0 p-6">
@@ -211,31 +198,6 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
               Create an account
             </Link>
           </p>
-
-          {/* Demo accounts — real seeded Supabase sessions */}
-          <div className="rounded-lg border border-dashed border-border bg-muted/40 p-3">
-            <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Or explore a demo account
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleDemoSignIn("homeowner")}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border bg-background px-2 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50 cursor-pointer"
-              >
-                <Home className="h-3.5 w-3.5" /> Homeowner
-              </button>
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleDemoSignIn("contractor")}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border bg-background px-2 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50 cursor-pointer"
-              >
-                <Hammer className="h-3.5 w-3.5" /> Contractor
-              </button>
-            </div>
-          </div>
           </>
           )}
 
