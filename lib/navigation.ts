@@ -33,6 +33,7 @@ export const contractorNavItems: NavItem[] = [
   { label: "Build a Bid", href: "/contractors/dashboard?tab=ai",      match: [] },
   { label: "Bid Inbox",   href: "/contractors/dashboard?tab=leads",   match: [] },
   { label: "Account",     href: "/contractors/dashboard?tab=account", match: [] },
+  { label: "Browse Jobs", href: "/contractors/jobs",                  match: ["/contractors/jobs"] },
 ];
 
 // Helper to determine whether a nav item should be highlighted.

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import React, { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle, LayoutDashboard, Sparkles, Users, Wrench } from "lucide-react";
+import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle, LayoutDashboard, Sparkles, Users, Wrench, Search } from "lucide-react";
 import { homeownerNavItems, loggedOutNavItems, contractorNavItems } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
@@ -318,8 +318,8 @@ export function Header({
               {isLoggedIn && isContractor && (
                 <>
                   {contractorNavItems.map((item) => {
-                    const tabParam = item.href.split("tab=")[1] ?? "home";
-                    const isActive = activeContractorTab === tabParam;
+                    const tabParam = item.href.split("tab=")[1];
+                    const isActive = tabParam ? activeContractorTab === tabParam : pathname.startsWith(item.href.split("?")[0]);
                     return (
                       <Link
                         key={item.label}
@@ -332,6 +332,7 @@ export function Header({
                         {item.label === "Bid Inbox"   && <Users           className="h-4 w-4 shrink-0" />}
                         {item.label === "Build a Bid" && <Sparkles        className="h-4 w-4 shrink-0" />}
                         {item.label === "Account"     && <Wrench          className="h-4 w-4 shrink-0" />}
+                        {item.label === "Browse Jobs" && <Search          className="h-4 w-4 shrink-0" />}
                         {item.label}
                       </Link>
                     );

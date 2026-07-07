@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/header";
@@ -44,6 +45,7 @@ import {
   FileText,
   Plus,
   Archive,
+  Search,
 } from "lucide-react";
 import { BidBuilderChat, type BidLeadType, type BidChatLeadContext } from "@/components/bid-builder-chat";
 import { BuildBidChoiceModal } from "@/components/build-bid-choice-modal";
@@ -579,6 +581,9 @@ export default function ContractorDashboard() {
     { id: "ai",      label: "Build a Bid", icon: Sparkles },
     { id: "account", label: "Account",  icon: Wrench },
   ];
+
+  // Browse Jobs link (separate page, not a tab)
+  const browseJobsLink = { label: "Browse Jobs", href: "/contractors/jobs", icon: "Search" };
 
   function handleTabChange(id: Tab) {
     setActiveTab(id);
