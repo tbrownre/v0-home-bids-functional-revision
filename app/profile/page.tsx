@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { getSmsLink } from "@/lib/sms-config";
 import { Header } from "@/components/header";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
-import { getMockUser, mockSignOut, USE_MOCK_DATA, type MockUser } from "@/lib/mock-auth";
+import { getMockUser, mockSignOut, type MockUser } from "@/lib/mock-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -156,7 +156,7 @@ export default function ProfilePage() {
 
   // Load user + profile from localStorage
   useEffect(() => {
-    const u = USE_MOCK_DATA ? getMockUser() : null;
+    const u = null;
     setUser(u);
     if (u) setProfile(loadProfile(u));
   }, []);

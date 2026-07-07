@@ -22,9 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Header } from "@/components/header";
-import { USE_MOCK_DATA } from "@/lib/mock-auth";
 import { getBidById, updateBidStatus, saveHomeownerQuestion, type BidStatus } from "@/lib/supabase/actions";
-import { getBidById as getDemoBidById, updateBidStatus as demoUpdateBidStatus, saveHomeownerQuestion as demoSaveQuestion } from "@/lib/demo/services";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -100,31 +98,27 @@ export default function ProposalPage() {
   const [declineReason, setDeclineReason] = useState("");
   const [showDeclineForm, setShowDeclineForm] = useState(false);
 
-  const isDemo = USE_MOCK_DATA || (bidId?.startsWith("cbid-") ?? false) || (bidId?.startsWith("demo-") ?? false);
-
   useEffect(() => {
     if (!bidId) return;
-    const fetcher = isDemo ? getDemoBidById(bidId) : getBidById(bidId);
+    const fetcher = getBidById(bidId);
     fetcher.then(({ bid: b, error: err }) => {
       if (err || !b) setError(err ?? "Bid not found");
       else setBid(b as BidRecord);
       setLoading(false);
     });
-  }, [bidId, isDemo]);
+  }, [bidId]);
 
   const handleApprove = async () => {
     if (!bid) return;
     // TODO: verify caller is the homeowner linked to this bid's job
-    const fn = isDemo ? demoUpdateBidStatus : updateBidStatus;
-    await fn(bid.id, "approved" as BidStatus);
+    await updateBidStatus(bid.id, "approved" as BidStatus);
     setViewState("approved");
     // TODO: notify contractor via SMS/email webhook
   };
 
   const handleDecline = async () => {
     if (!bid) return;
-    const fn = isDemo ? demoUpdateBidStatus : updateBidStatus;
-    await fn(bid.id, "declined" as BidStatus);
+    await updateBidStatus(bid.id, "declined" as BidStatus);
     setViewState("declined");
     // TODO: send optional declineReason to contractor
   };
@@ -132,10 +126,8 @@ export default function ProposalPage() {
   const handleQuestion = async () => {
     if (!bid || !question.trim()) return;
     setQuestionLoading(true);
-    const fn = isDemo ? demoSaveQuestion : saveHomeownerQuestion;
-    await fn(bid.id, question.trim());
-    const updateFn = isDemo ? demoUpdateBidStatus : updateBidStatus;
-    await updateFn(bid.id, "question_asked" as BidStatus);
+    await saveHomeownerQuestion(bid.id, question.trim());
+    await updateBidStatus(bid.id, "question_asked" as BidStatus);
     setQuestionLoading(false);
     setViewState("question_sent");
     // TODO: notify contractor via SMS/email webhook

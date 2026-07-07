@@ -396,10 +396,7 @@ export default function ContractorDashboard() {
   }, [searchParams]);
 
   const [contractorName, setContractorName] = useState("there");
-  // Demo mode is the ONLY gate for sample data / demo banner. It is true when
-  // the whole app runs as a demo build (USE_MOCK_DATA) OR the signed-in account
-  // is a seeded/mock demo account. Real contractor accounts are NEVER demo —
-  // they show only their own real data and proper empty states.
+  // Demo mode — always false for production. Shows only real contractor data.
   const [isDemoMode, setIsDemoMode] = useState(false);
   // Locally-hidden (archived) drafts for this session.
   const [dismissedDraftIds, setDismissedDraftIds] = useState<Set<string>>(new Set());
@@ -421,8 +418,7 @@ export default function ContractorDashboard() {
         return;
       }
       if (user.firstName) setContractorName(user.firstName);
-      const email = (user.email ?? "").toLowerCase();
-      setIsDemoMode(USE_MOCK_DATA || isDemoEmail(email) || email.endsWith("@homebids.demo"));
+      setIsDemoMode(false);
     })();
     return () => { cancelled = true; };
   }, []);
@@ -664,19 +660,7 @@ export default function ContractorDashboard() {
 
   // Up to 3 action items. The third card adapts: when behind pace it nudges
   // momentum; when on/ahead/complete it surfaces a fresh homeowner lead.
-  // Sample homeowner leads are demo-only — never surface them in real accounts.
-  const newHomeBidsLead = isDemoMode ? DEMO_HOMEBIDS_LEADS.find((l) => l.status === "new") : undefined;
-  const thirdCard =
-    (momentum.state === "ahead" || momentum.state === "complete" || momentum.state === "onpace") && newHomeBidsLead
-      ? {
-          id: "na-lead",
-          title: newHomeBidsLead.title,
-          sub: `New homeowner lead in ${newHomeBidsLead.location}.`,
-          cta: "Build Bid",
-          icon: Sparkles as React.ElementType,
-          onClick: () => openBuildChoice(() => startBidFromHomeBidsLead(newHomeBidsLead)),
-        }
-      : {
+  const thirdCard = {
           id: "na-momentum",
           title: "Monthly Bid Momentum",
           sub: momentum.copy,
@@ -873,13 +857,7 @@ export default function ContractorDashboard() {
   // ── Bid Inbox ───────────────────────────────────────────────────────────────
   // Contractor-owned customers, bid drafts, sent proposals, and follow-ups
   // created through HomeBids.ai. This is NOT a marketplace/lead-source feed.
-  //
-  // Demo accounts show the sample set; REAL accounts derive the inbox solely
-  // from their own proposals (RLS-scoped to contractor_id) so no contractor
-  // ever sees another account's customers or sample data.
-  const inboxSource: BidInboxItem[] = isDemoMode
-    ? BID_INBOX_ITEMS
-    : proposals.map((p) => {
+  const inboxSource: BidInboxItem[] = proposals.map((p) => {
         const mapped = PROPOSAL_STATUS_TO_INBOX[p.status] ?? { status: "proposal_sent" as InboxStatusKey, secondary: "view" as const };
         return {
           id: p.id,
@@ -1058,11 +1036,8 @@ export default function ContractorDashboard() {
     }
 
     // Start screen: choose how to build a bid + unfinished drafts.
-    // Demo accounts show sample drafts; real accounts show ONLY their own
-    // proposals still in "draft" status (filtered server-side by RLS).
-    const allDrafts: DraftItem[] = isDemoMode
-      ? DEMO_DRAFTS
-      : proposals
+    // Real accounts show ONLY their own proposals still in "draft" status (filtered server-side by RLS).
+    const allDrafts: DraftItem[] = proposals
           .filter((p) => p.status === "draft")
           .map((p) => ({
             id: p.id,

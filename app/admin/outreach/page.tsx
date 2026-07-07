@@ -21,8 +21,6 @@ import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getAdminJobs, getAdminOutreachRuns } from "@/lib/supabase/actions";
-import { getAdminJobs as getDemoAdminJobs, getAdminOutreachRuns as getDemoOutreachRuns } from "@/lib/demo/services";
-import { USE_MOCK_DATA } from "@/lib/mock-auth";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -87,12 +85,10 @@ export default function AdminOutreachPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const isDemo = USE_MOCK_DATA;
-
   const loadData = async () => {
     const [runsResult, jobsResult] = await Promise.all([
-      isDemo ? getDemoOutreachRuns() : getAdminOutreachRuns(),
-      isDemo ? getDemoAdminJobs() : getAdminJobs(),
+      getAdminOutreachRuns(),
+      getAdminJobs(),
     ]);
     setRuns((runsResult.runs ?? []) as OutreachRun[]);
     setJobs((jobsResult.jobs ?? []) as AdminJob[]);
@@ -158,17 +154,6 @@ export default function AdminOutreachPage() {
         </div>
 
         {/* TODO: Add admin auth guard — this page should only be accessible to admin users */}
-        {isDemo && (
-          <div className="mb-6 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>
-              <strong>Demo mode:</strong> Showing mock outreach data. Connect Supabase and implement{" "}
-              <code className="rounded bg-amber-100 px-1 py-0.5 text-xs">outreach_runs</code>,{" "}
-              <code className="rounded bg-amber-100 px-1 py-0.5 text-xs">contractor_invites</code>, and{" "}
-              <code className="rounded bg-amber-100 px-1 py-0.5 text-xs">contractor_replies</code> tables to see live data.
-            </span>
-          </div>
-        )}
 
         {/* Global totals */}
         <div className="mb-8 grid grid-cols-4 gap-3 sm:grid-cols-7">

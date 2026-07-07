@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { getMockUser, USE_MOCK_DATA } from "@/lib/mock-auth";
+import { getMockUser } from "@/lib/mock-auth";
 import { MessageCircle, Zap, Clock, CheckCircle2, Check, Copy } from "lucide-react";
 import { copyToClipboard } from "@/lib/utils";
 import { HOMEBIDS_SMS } from "@/lib/sms-config";
@@ -326,11 +326,7 @@ export default function NewJobPage() {
   // Redirect contractors and admins to their own dashboards if they
   // somehow land here (e.g. navigating manually in mock mode).
   useEffect(() => {
-    if (USE_MOCK_DATA) {
-      const user = getMockUser();
-      if (user?.role === "contractor") { router.replace("/contractors/dashboard"); return; }
-      if (user?.role === "admin") { router.replace("/admin-demo"); return; }
-    }
+
     setAuthReady(true);
   }, [router]);
 

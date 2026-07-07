@@ -28,9 +28,7 @@ import {
 } from "lucide-react";
 import { selectBidAsWinner } from "@/lib/job-store";
 import { acceptBid as acceptBidAction, getJobBids } from "@/lib/supabase/actions";
-import { getJobBids as getDemoJobBids } from "@/lib/demo/services";
-import { USE_MOCK_DATA, getMockUser } from "@/lib/mock-auth";
-import { demoContractorBids } from "@/lib/demo/data/contractor-bids";
+import { getMockUser } from "@/lib/mock-auth";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -321,19 +319,16 @@ export default function BidsPage() {
   const isContractor = currentUser?.role === "contractor";
 
   // Find this contractor's own bid for this job (used in contractor view)
-  const ownContractorBid = isContractor
-    ? demoContractorBids.find((b) => b.job_id === jobId) ?? null
-    : null;
+  const ownContractorBid = null;
   const [bids, setBids] = useState<Bid[]>(sampleBids);
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
   const [messages, setMessages] = useState<Record<string, Message[]>>(sampleMessages);
 
-  // Fetch bids — mock mode always uses demo service.
+  // Fetch bids from Supabase.
   useEffect(() => {
     if (!jobId) return;
 
-    const isDemoJob = USE_MOCK_DATA || jobId.startsWith("demo-job-");
-    const fetchBids = isDemoJob ? getDemoJobBids(jobId) : getJobBids(jobId);
+    const fetchBids = getJobBids(jobId);
 
     fetchBids.then(({ bids: rawBids, error }) => {
       if (error) {

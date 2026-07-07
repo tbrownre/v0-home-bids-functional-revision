@@ -20,9 +20,7 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { USE_MOCK_DATA } from "@/lib/mock-auth";
 import { getJobStatus } from "@/lib/supabase/actions";
-import { getJobStatus as getDemoJobStatus } from "@/lib/demo/services";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -150,9 +148,7 @@ export default function JobStatusPage() {
 
   useEffect(() => {
     if (!id) return;
-    const isDemo = USE_MOCK_DATA || id.startsWith("demo-");
-    const fetch = isDemo ? getDemoJobStatus(id) : getJobStatus(id);
-    fetch.then(({ jobStatus, error: err }) => {
+    getJobStatus(id).then(({ jobStatus, error: err }) => {
       if (err || !jobStatus) setError(err ?? "Job not found");
       else setData(jobStatus);
       setLoading(false);

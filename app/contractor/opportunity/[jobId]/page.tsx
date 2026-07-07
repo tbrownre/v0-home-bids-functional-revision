@@ -75,8 +75,7 @@ export default function ContractorOpportunityPage() {
     if (!job) return;
     setBuilding(true);
     // Record interest
-    const interestFn = isDemo ? demoCreateInterest : createContractorInterest;
-    await interestFn(job.id);
+    await createContractorInterest(job.id);
     // TODO: if contractor is not authenticated, route through sample/trial flow
     // TODO: if authenticated, attach contractor to job before routing
 

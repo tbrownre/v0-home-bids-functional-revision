@@ -28,9 +28,6 @@ import { completeJob, archiveJob, type JobStatusOwner } from "@/lib/job-store";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { getJobById } from "@/lib/supabase/actions";
-import { getJobById as getDemoJobById } from "@/lib/demo/services";
-import { USE_MOCK_DATA, getMockUser } from "@/lib/mock-auth";
-import { demoContractorBids } from "@/lib/demo/data/contractor-bids";
 
 // Shape of a job record returned from Supabase
 interface JobRecord {
@@ -76,10 +73,7 @@ export default function JobDetailsPage() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    // In mock mode always use demo service; otherwise detect by ID prefix.
-    const isDemoJob = USE_MOCK_DATA || id.startsWith("demo-job-");
-    const fetchJob = isDemoJob ? getDemoJobById(id) : getJobById(id);
-    fetchJob.then(({ job, error }) => {
+    getJobById(id).then(({ job, error }) => {
       if (error || !job) {
         setFetchError(error ?? "Job not found");
       } else {

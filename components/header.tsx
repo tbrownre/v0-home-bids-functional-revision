@@ -15,7 +15,7 @@ import {
   type NotificationType,
 } from "@/lib/inbox-store";
 import { createClient } from "@/lib/supabase/client";
-import { getMockUser, mockSignOut, USE_MOCK_AUTH, syncMirrorFromSupabase } from "@/lib/mock-auth";
+import { getMockUser, mockSignOut, syncMirrorFromSupabase } from "@/lib/mock-auth";
 
 export interface HeaderProps {
   isContractor?: boolean;
@@ -111,7 +111,7 @@ export function Header({
       setIsSignedIn(cached.role !== "contractor");
       setIsContractor(cached.role === "contractor");
     }
-    if (USE_MOCK_AUTH) return;
+
     // Reconcile with the real Supabase session and keep it in sync.
     let subscription: { unsubscribe: () => void } | null = null;
     try {

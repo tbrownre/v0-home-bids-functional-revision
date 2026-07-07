@@ -8,7 +8,7 @@ import {
 import { loadStripe } from '@stripe/stripe-js'
 import { startSubscriptionCheckout } from '@/app/actions/stripe'
 import { createClient } from '@/lib/supabase/client'
-import { getMockUser, USE_MOCK_DATA } from '@/lib/mock-auth'
+import { getMockUser } from '@/lib/mock-auth'
 import { CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -33,11 +33,6 @@ export function SubscriptionCheckout({ planId, onSuccess, onCancel }: Subscripti
   // Resolve the current user once so the fetchClientSecret callback can
   // include it in the Stripe session metadata for the webhook to use.
   useEffect(() => {
-    if (USE_MOCK_DATA) {
-      const user = getMockUser();
-      if (user) setUserId(user.id);
-      return;
-    }
     const sb = createClient()
     sb.auth.getUser().then(({ data }) => {
       if (data.user) setUserId(data.user.id)
