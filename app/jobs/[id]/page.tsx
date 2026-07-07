@@ -28,6 +28,7 @@ import { completeJob, archiveJob, type JobStatusOwner } from "@/lib/job-store";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { getJobById } from "@/lib/supabase/actions";
+import { getMockUser } from "@/lib/mock-auth";
 
 // Shape of a job record returned from Supabase
 interface JobRecord {
