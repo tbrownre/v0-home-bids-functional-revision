@@ -53,7 +53,6 @@ import { resumeDraftBid, type NeedsActionContext } from "@/lib/bid-resume";
 import { getContractorSmsLink } from "@/lib/sms-config";
 import { timeAgo } from "@/lib/proposal-format";
 import { getMockUser, mockSignOut, syncMirrorFromSupabase } from "@/lib/mock-auth";
-import { getContractorBids } from "@/lib/supabase/actions";
 import { getContractorProposals, type Proposal, type ProposalStatus } from "@/lib/supabase/proposals";
 import { ContractorProposalCard } from "@/components/proposal/contractor-proposal-card";
 import { ProfileCompletionSection } from "@/components/contractor/profile-completion-section";
@@ -426,16 +425,6 @@ export default function ContractorDashboard() {
   }, []);
 
   const [bidsCount, setBidsCount] = useState(0);
-  useEffect(() => {
-    async function load() {
-      try {
-        if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
-        const { bids } = await getContractorBids();
-        setBidsCount((bids ?? []).length);
-      } catch { /* non-fatal */ }
-    }
-    load();
-  }, []);
 
   // Hosted proposals (written by the external Bid Builder workflow). Read-only
   // here — the dashboard only displays and shares them.
@@ -450,6 +439,17 @@ export default function ContractorDashboard() {
         }
         const { proposals: rows } = await getContractorProposals();
         setProposals(rows);
+
+        // Count proposals created in the current calendar month for BID MOMENTUM
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+        const monthProposals = (rows ?? []).filter((p) => {
+          if (!p.created_at) return false;
+          const pDate = new Date(p.created_at);
+          return pDate.getFullYear() === currentYear && pDate.getMonth() === currentMonth;
+        });
+        setBidsCount(monthProposals.length);
       } catch { /* non-fatal */ }
       finally { setProposalsLoaded(true); }
     }
@@ -676,45 +676,68 @@ export default function ContractorDashboard() {
 
   // Real (mock/demo) context for the in-progress draft. Structured so it can be
   // swapped for a Supabase row later without touching the card UI.
-  const kitchenRemodelDraft: NeedsActionContext = {
-    needsActionId: "na-draft",
-    actionType: "finish_draft",
-    contractorId: "contractor-demo",
-    jobId: "job-kitchen-remodel",
-    draftBidId: "draft-kitchen-remodel",
-    bidId: null,
-    title: "Kitchen Remodel Bid",
-    status: "draft",
-    sourceType: "needs_action",
-  };
+  // Derive NEEDS ACTION items from fetched proposals
+  const needsAction: { id: string; title: string; sub: string; cta: string; icon: React.ElementType; onClick: () => void; context?: NeedsActionContext }[] = (() => {
+    const items: { id: string; title: string; sub: string; cta: string; icon: React.ElementType; onClick: () => void; context?: NeedsActionContext }[] = [];
 
-  // Resume the saved draft in the on-site bid builder — seeds the builder with
-  // the draft's context so it continues an existing bid instead of starting new.
-  function finishDraftOnSite(ctx: NeedsActionContext) {
-    resumeDraftBid(ctx);
-    startBidByText("my", { id: ctx.draftBidId, projectTitle: ctx.title });
-  }
+    // Add draft proposals (status "draft")
+    proposals
+      .filter((p) => p.status === "draft")
+      .forEach((p) => {
+        items.push({
+          id: `na-draft-${p.id}`,
+          title: p.project_title || "Draft Bid",
+          sub: "Draft started — finish and send it.",
+          cta: "Finish Bid",
+          icon: FileText,
+          onClick: () => {
+            const user = getMockUser();
+            const ctx: NeedsActionContext = {
+              needsActionId: `na-draft-${p.id}`,
+              actionType: "finish_draft",
+              contractorId: user?.id || "",
+              jobId: null,
+              draftBidId: p.id || "",
+              bidId: null,
+              title: p.project_title || "Draft",
+              status: "draft",
+              sourceType: "needs_action",
+            };
+            openBuildChoice(() => resumeDraftBid(ctx), ctx);
+          },
+        });
+      });
 
-  const needsAction: { id: string; title: string; sub: string; cta: string; icon: React.ElementType; onClick: () => void; context?: NeedsActionContext }[] = [
-    {
-      id: "na-draft",
-      title: kitchenRemodelDraft.title,
-      sub: "Draft started — project details are ready.",
-      cta: "Finish Bid",
-      icon: FileText,
-      context: kitchenRemodelDraft,
-      onClick: () => openBuildChoice(() => finishDraftOnSite(kitchenRemodelDraft), kitchenRemodelDraft),
-    },
-    {
-      id: "na-follow",
-      title: "Bathroom Tile Proposal",
-      sub: "Sent 2 days ago — this bid may need a follow-up.",
-      cta: "Follow Up",
-      icon: Send,
-      onClick: () => handleTabChange("leads"),
-    },
-    thirdCard,
-  ].slice(0, 3);
+    // Add sent proposals that are older than 48 hours
+    const now = new Date();
+    const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+    proposals
+      .filter((p) => p.status === "sent" && p.updated_at && new Date(p.updated_at) < fortyEightHoursAgo)
+      .slice(0, 3 - items.length) // Cap total at 3
+      .forEach((p) => {
+        items.push({
+          id: `na-followup-${p.id}`,
+          title: p.project_title || "Sent Proposal",
+          sub: `Sent ${timeAgo(p.updated_at)} — check on your bid.`,
+          cta: "Follow Up",
+          icon: Send,
+          onClick: () => {
+            // Link to the proposal in the proposals list
+            window.location.hash = `proposal-${p.id}`;
+          },
+        });
+      });
+
+    // If fewer than 3 items, add the Bid Momentum card as third item
+    if (items.length < 3) {
+      items.push(thirdCard);
+    }
+
+    return items.slice(0, 3);
+  })();
+
+  // If no real items, show empty state
+  const showNeedsActionEmpty = needsAction.length === 0;
 
   const homeContent = (
     <div className="space-y-6">
@@ -722,11 +745,13 @@ export default function ContractorDashboard() {
       <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
         <h1 className="text-2xl font-bold text-foreground text-balance">{greeting}, {contractorName}.</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {momentum.state === "complete"
-            ? "You've hit your 30-bid goal this month."
-            : bidsCount > 0
-              ? `You're ${bidsCount} ${bidsCount === 1 ? "bid" : "bids"} into your 30-bid monthly goal.`
-              : "Let's start building your pipeline this month."}
+          {!proposalsLoaded
+            ? "Loading your bid momentum..."
+            : momentum.state === "complete"
+              ? "You've hit your 30-bid goal this month."
+              : bidsCount > 0
+                ? `You're ${bidsCount} ${bidsCount === 1 ? "bid" : "bids"} into your 30-bid monthly goal.`
+                : "Let's start building your pipeline this month."}
         </p>
 
         <div className="mt-4 rounded-xl border border-border bg-background p-4">
