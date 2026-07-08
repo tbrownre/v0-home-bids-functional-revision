@@ -501,7 +501,8 @@ export default function ContractorDashboard() {
   // Track HomeBids leads that have become approved (direct messaging unlocked) in this session
   const [unlockedLeadIds, setUnlockedLeadIds] = useState<Set<string>>(new Set());
 
-  const companyName = "[Your Company Name]";
+  // Company name for PDF preview — will be updated when profile loads
+  const [companyName, setCompanyName] = useState("[Your Company Name]");
 
   // Open the chat-based Bid Builder. leadType drives messaging/approval rules.
   function startBidByText(leadType: BidLeadType, lead?: BidChatLeadContext | null) {
@@ -1256,6 +1257,15 @@ export default function ContractorDashboard() {
         const contractorRes = await getContractorProfile();
         if (contractorRes.profile) {
           setContractorProfile(contractorRes.profile);
+          // Update company name with real business name
+          if (contractorRes.profile.business_name) {
+            setCompanyName(contractorRes.profile.business_name);
+          } else if (userRes.profile?.full_name) {
+            setCompanyName(userRes.profile.full_name);
+          }
+        } else if (userRes.profile?.full_name) {
+          // Fallback to user name if contractor profile not found
+          setCompanyName(userRes.profile.full_name);
         }
       } catch { /* non-fatal */ }
       finally { setProfileLoaded(true); }
