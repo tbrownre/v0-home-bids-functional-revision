@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   email TEXT,
   phone TEXT,
   avatar_url TEXT,
+  notifications_seen_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

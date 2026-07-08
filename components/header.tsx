@@ -12,6 +12,7 @@ import {
   subscribeInbox,
   getHomeownerUnreadSnapshot,
   getContractorUnreadSnapshot,
+  hydrateNotifications,
   type NotificationType,
 } from "@/lib/inbox-store";
 import { createClient } from "@/lib/supabase/client";
@@ -142,6 +143,21 @@ export function Header({
     () => 0,
   );
   const unreadCount = mounted && isLoggedIn ? unreadSnapshot : 0;
+
+  // Hydrate notifications on mount for signed-in users
+  useEffect(() => {
+    if (!mounted || !isLoggedIn) return;
+    async function hydrate() {
+      try {
+        const { getNotificationsFeed } = await import("@/lib/supabase/actions");
+        const { notifications } = await getNotificationsFeed();
+        hydrateNotifications(notifications, isContractor);
+      } catch (e) {
+        console.error("[Header] Failed to hydrate notifications:", e);
+      }
+    }
+    hydrate();
+  }, [mounted, isLoggedIn, isContractor]);
 
   const handleSignOut = () => {
     closeMenu();

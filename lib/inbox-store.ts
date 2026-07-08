@@ -106,3 +106,35 @@ export function subscribeInbox(listener: Listener) {
     listeners.delete(listener);
   };
 }
+
+/** Hydrate the store with real notification data from the API. */
+export function hydrateNotifications(
+  newNotifications: Array<{
+    id: string;
+    title: string;
+    href: string;
+    created_at: string;
+    read: boolean;
+  }>,
+  isContractor: boolean,
+) {
+  const notifications: InboxNotification[] = newNotifications.map((n) => ({
+    id: n.id,
+    type: "bid_received", // Simplified; real type would come from API
+    title: n.title,
+    description: "",
+    timestamp: new Date(n.created_at),
+    read: n.read,
+    jobId: "",
+    jobTitle: "",
+    fromName: "",
+    href: n.href,
+  }));
+
+  if (isContractor) {
+    contractorState = notifications;
+  } else {
+    homeownerState = notifications;
+  }
+  notify();
+}

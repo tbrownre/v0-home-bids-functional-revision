@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/header";
@@ -30,6 +30,7 @@ import {
   getHomeownerUnreadSnapshot,
   getContractorUnreadSnapshot,
   subscribeInbox,
+  hydrateNotifications,
   type InboxNotification,
   type NotificationType,
 } from "@/lib/inbox-store";
@@ -157,6 +158,21 @@ export default function InboxPage() {
 
   const [activeTab, setActiveTab] = useState<TabFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Hydrate notifications on mount and mark as seen when inbox is opened
+  useEffect(() => {
+    async function loadAndMark() {
+      try {
+        const { getNotificationsFeed, markNotificationsSeen } = await import("@/lib/supabase/actions");
+        const { notifications } = await getNotificationsFeed();
+        hydrateNotifications(notifications, isContractor);
+        await markNotificationsSeen();
+      } catch (e) {
+        console.error("[InboxPage] Failed to load/mark notifications:", e);
+      }
+    }
+    loadAndMark();
+  }, [isContractor]);
 
   // Subscribe to inbox store with stable snapshot getters
   const notifications = useSyncExternalStore(

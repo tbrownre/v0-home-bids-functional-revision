@@ -746,6 +746,191 @@ export async function updateContractorProfile(profile: {
   return { error: null };
 }
 
+// ── Notifications ─────────────────────────────────────────────────────────────
+
+export interface NotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  href: string;
+  created_at: string;
+  read: boolean;
+}
+
+/** Assemble real notifications from database events. Capped at 30, newest first. */
+export async function getNotificationsFeed(): Promise<{
+  notifications: NotificationItem[];
+  error: string | null;
+}> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { notifications: [], error: "Not authenticated" };
+
+  // Get user's profile to check user_type and notifications_seen_at
+  const { data: profileData, error: profileError } = await supabase
+    .from("profiles")
+    .select("user_type, notifications_seen_at")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError || !profileData) {
+    return { notifications: [], error: profileError?.message ?? "Profile not found" };
+  }
+
+  const isContractor = profileData.user_type === "contractor";
+  const seenAt = profileData.notifications_seen_at ? new Date(profileData.notifications_seen_at) : new Date(0);
+  const notifications: NotificationItem[] = [];
+
+  if (isContractor) {
+    // Contractor notifications: proposal events, accepted bids, new open jobs
+
+    // 1. Proposal events (view, approval_clicked, call_clicked, pdf_download)
+    const { data: proposalEvents } = await supabase
+      .from("proposals")
+      .select("id, project_title, view_count, approval_clicked_at, call_clicked_at, pdf_downloaded_at, created_at, share_token")
+      .eq("contractor_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    if (proposalEvents) {
+      for (const p of proposalEvents) {
+        if (p.view_count && p.view_count > 0) {
+          notifications.push({
+            id: `proposal-view-${p.id}`,
+            type: "proposal_viewed",
+            title: `Your proposal '${p.project_title}' was viewed`,
+            href: `/p/${p.share_token}`,
+            created_at: p.created_at,
+            read: new Date(p.created_at) <= seenAt,
+          });
+        }
+        if (p.approval_clicked_at) {
+          notifications.push({
+            id: `proposal-approval-${p.id}`,
+            type: "proposal_approval_clicked",
+            title: `'${p.project_title}': homeowner clicked Approve — reach out!`,
+            href: `/p/${p.share_token}`,
+            created_at: p.approval_clicked_at,
+            read: new Date(p.approval_clicked_at) <= seenAt,
+          });
+        }
+        if (p.call_clicked_at) {
+          notifications.push({
+            id: `proposal-call-${p.id}`,
+            type: "proposal_call_clicked",
+            title: `'${p.project_title}': homeowner tapped Call`,
+            href: `/p/${p.share_token}`,
+            created_at: p.call_clicked_at,
+            read: new Date(p.call_clicked_at) <= seenAt,
+          });
+        }
+        if (p.pdf_downloaded_at) {
+          notifications.push({
+            id: `proposal-pdf-${p.id}`,
+            type: "proposal_pdf_downloaded",
+            title: `'${p.project_title}': PDF downloaded`,
+            href: `/p/${p.share_token}`,
+            created_at: p.pdf_downloaded_at,
+            read: new Date(p.pdf_downloaded_at) <= seenAt,
+          });
+        }
+      }
+    }
+
+    // 2. Accepted bids
+    const { data: acceptedBids } = await supabase
+      .from("bids")
+      .select("id, job_id, amount, updated_at, jobs(title)")
+      .eq("contractor_id", user.id)
+      .eq("status", "accepted")
+      .order("updated_at", { ascending: false })
+      .limit(30);
+
+    if (acceptedBids) {
+      for (const bid of acceptedBids) {
+        const job = Array.isArray(bid.jobs) ? bid.jobs[0] : bid.jobs;
+        notifications.push({
+          id: `bid-accepted-${bid.id}`,
+          type: "bid_accepted",
+          title: `You won '${job?.title || "a job"}'!`,
+          href: "/contractors/dashboard?tab=bids",
+          created_at: bid.updated_at,
+          read: new Date(bid.updated_at) <= seenAt,
+        });
+      }
+    }
+
+    // 3. New open jobs in the last 7 days
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: newJobs } = await supabase
+      .from("jobs")
+      .select("id, title, location, created_at")
+      .eq("status", "open")
+      .gt("created_at", sevenDaysAgo)
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    if (newJobs) {
+      for (const job of newJobs) {
+        notifications.push({
+          id: `job-new-${job.id}`,
+          type: "job_new",
+          title: `New job: ${job.title}${job.location ? ` — ${job.location}` : ""}`,
+          href: `/contractor/opportunity/${job.id}`,
+          created_at: job.created_at,
+          read: new Date(job.created_at) <= seenAt,
+        });
+      }
+    }
+  } else {
+    // Homeowner notifications: bids on their jobs
+    const { data: bidsData } = await supabase
+      .from("bids")
+      .select("id, job_id, contractor_id, amount, created_at, jobs(title), profiles(full_name)")
+      .eq("jobs.homeowner_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    if (bidsData) {
+      for (const bid of bidsData) {
+        const job = Array.isArray(bid.jobs) ? bid.jobs[0] : bid.jobs;
+        const contractor = Array.isArray(bid.profiles) ? bid.profiles[0] : bid.profiles;
+        notifications.push({
+          id: `bid-received-${bid.id}`,
+          type: "bid_received",
+          title: `New bid on '${job?.title || "your job"}': $${(bid.amount / 100).toLocaleString()}`,
+          href: `/jobs/${bid.job_id}/bids`,
+          created_at: bid.created_at,
+          read: new Date(bid.created_at) <= seenAt,
+        });
+      }
+    }
+  }
+
+  // Sort by created_at descending, cap at 30
+  notifications.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const result = notifications.slice(0, 30);
+
+  return { notifications: result, error: null };
+}
+
+/** Mark all notifications as seen by updating profiles.notifications_seen_at. */
+export async function markNotificationsSeen(): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ notifications_seen_at: new Date().toISOString() })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/inbox");
+  revalidatePath("/contractors/dashboard");
+  return { error: null };
+}
+
 // ── Admin outreach ────────────────────────────────────────────────────────────
 
 /** Load all recent jobs for the admin outreach view. */
