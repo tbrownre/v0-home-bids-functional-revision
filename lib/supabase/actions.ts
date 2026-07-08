@@ -747,6 +747,87 @@ export async function updateContractorProfile(profile: {
   return { error: null };
 }
 
+// ── Proposals (Online Bid Builder) ────────────────────────────────────────────
+
+export interface CreateProposalInput {
+  homeownerName?: string;
+  projectTitle: string;
+  projectSummary?: string;
+  scopeItems: Array<{ title: string; description?: string }>;
+  totalPrice?: number;
+  priceNote?: string;
+  addOns?: Array<{ title: string }>;
+  timelineCompletion?: string;
+}
+
+/** Create a real proposal in the database from the online Bid Builder. */
+export async function createProposalFromBuilder(
+  input: CreateProposalInput,
+): Promise<{ shareToken: string | null; proposalId: string | null; error: string | null }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { shareToken: null, proposalId: null, error: "Not authenticated" };
+
+  try {
+    // Load contractor branding
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, phone")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const { data: contractorProfile } = await supabase
+      .from("contractor_profiles")
+      .select("business_name, logo_url")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    // Generate share token: 12-char lowercase alphanumeric
+    const token1 = Math.random().toString(36).substring(2, 8);
+    const token2 = Math.random().toString(36).substring(2, 8);
+    const shareToken = (token1 + token2).substring(0, 12);
+
+    // INSERT proposal
+    const { data: inserted, error: insertError } = await supabase
+      .from("proposals")
+      .insert({
+        share_token: shareToken,
+        contractor_id: user.id,
+        contractor_company_name: contractorProfile?.business_name || profile?.full_name,
+        contractor_phone: profile?.phone,
+        contractor_logo_url: contractorProfile?.logo_url,
+        homeowner_name: input.homeownerName,
+        project_title: input.projectTitle,
+        project_summary: input.projectSummary,
+        scope_items: input.scopeItems || [],
+        total_price: input.totalPrice,
+        price_note: input.priceNote,
+        add_ons: input.addOns || [],
+        timeline_completion: input.timelineCompletion,
+        status: "draft",
+      })
+      .select("id")
+      .maybeSingle();
+
+    if (insertError) {
+      return { shareToken: null, proposalId: null, error: insertError.message };
+    }
+
+    revalidatePath("/contractors/dashboard");
+    return {
+      shareToken,
+      proposalId: inserted?.id || null,
+      error: null,
+    };
+  } catch (e) {
+    return {
+      shareToken: null,
+      proposalId: null,
+      error: (e as Error).message || "Failed to create proposal",
+    };
+  }
+}
+
 // ── Notifications ─────────────────────────────────────────────────────────────
 
 export interface NotificationItem {

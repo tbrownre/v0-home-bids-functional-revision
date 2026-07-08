@@ -402,6 +402,9 @@ export function BidBuilderChat({
   const [copied, setCopied] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [completenessError, setCompletenessError] = useState<string | null>(null);
+  const [proposalId, setProposalId] = useState<string | null>(null);
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const bidRef = useRef<BidData>(DEFAULT_BID);
@@ -795,7 +798,7 @@ export function BidBuilderChat({
 
   // ── Approve handler ───────────────────────────────────────────────────────
 
-  function handleApprove() {
+  async function handleApprove() {
     // Completeness check before finalizing
     const status = checkCompleteness(bidRef.current);
     if (status !== "complete") {
@@ -819,6 +822,41 @@ export function BidBuilderChat({
     }
 
     setCompletenessError(null);
+
+    // Create the proposal if not already created
+    if (!proposalId && !isSaving) {
+      setIsSaving(true);
+      try {
+        const { createProposalFromBuilder } = await import("@/lib/supabase/actions");
+        const b = bidRef.current;
+        const priceNum = b.price ? parseInt(b.price.replace(/\D/g, ""), 10) : undefined;
+        const response = await createProposalFromBuilder({
+          homeownerName: b.owner,
+          projectTitle: b.project,
+          projectSummary: b.notes,
+          scopeItems: b.scope.map((title) => ({ title })),
+          totalPrice: priceNum,
+          priceNote: b.priceType ? `${b.priceType.charAt(0).toUpperCase() + b.priceType.slice(1)} — final price confirmed on site.` : undefined,
+          addOns: b.optional.map((title) => ({ title })),
+          timelineCompletion: b.timeline,
+        });
+
+        if (response.error) {
+          pushAi(`Error creating proposal: ${response.error}`, "system");
+          setIsSaving(false);
+          return;
+        }
+
+        setProposalId(response.proposalId);
+        setShareToken(response.shareToken);
+      } catch (e) {
+        pushAi(`Failed to create proposal: ${(e as Error).message}`, "system");
+        setIsSaving(false);
+        return;
+      }
+      setIsSaving(false);
+    }
+
     aiRespond(() => {
       if (leadType === "my") {
         setPhase("approved");
@@ -921,7 +959,17 @@ export function BidBuilderChat({
     setTimeout(() => setCopied(null), 2000);
   }
 
-  const bidLink = `https://homebids.com/bid/${lead?.id ?? "draft"}-${(bid.owner || "owner").split(" ")[0].toLowerCase()}`;
+  // Build the real proposal link using share token, fallback to site URL for drafts
+  const getDraftLink = () => {
+    if (shareToken) {
+      const isDev = process.env.NODE_ENV !== "production";
+      const devOverride = isDev ? process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL : undefined;
+      const base = devOverride || process.env.NEXT_PUBLIC_SITE_URL || "https://homebids.ai";
+      return `${base}/p/${shareToken}`;
+    }
+    return `https://homebids.ai/draft/${lead?.id ?? "draft"}-${(bid.owner || "owner").split(" ")[0].toLowerCase()}`;
+  };
+  const bidLink = getDraftLink();
   const canApproveInline = phase === "review";
 
   // ── PDF preview ──────────────────────────────────────────────────────────
