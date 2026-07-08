@@ -678,7 +678,37 @@ export async function createBidFromJob(jobId: string) {
 
 // ── Contractor profile ────────────────────────────────────────────────────────
 
-/** Load the contractor profile for the currently authenticated user. */
+// ── User profiles ────────────────────────────────────────────────────────────
+
+/** Load the current user's profile (full_name, email, phone). */
+export async function getUserProfile() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { profile: null, error: "Not authenticated" };
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (error) return { profile: null, error: error.message };
+  return { profile: data, error: null };
+}
+
+/** Update the current user's profile fields (full_name, phone). */
+export async function updateUserProfile(updates: { full_name?: string; phone?: string }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+  const { error } = await supabase
+    .from("profiles")
+    .update(updates)
+    .eq("id", user.id);
+  if (error) return { error: error.message };
+  revalidatePath("/profile");
+  return { error: null };
+}
+
+/** Load the current contractor's profile completion data. */
 export async function getContractorProfile() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -690,6 +720,30 @@ export async function getContractorProfile() {
     .maybeSingle();
   if (error) return { profile: null, error: error.message };
   return { profile: data, error: null };
+}
+
+/** Upsert contractor profile completion data. */
+export async function updateContractorProfile(profile: {
+  logo_url?: string | null;
+  bio?: string | null;
+  website?: string | null;
+  business_address?: string | null;
+  license_number?: string | null;
+  insurance_details?: string | null;
+  years_experience?: number | null;
+  google_review_link?: string | null;
+  specialties?: string[];
+  social_links?: Record<string, string>;
+}) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+  const { error } = await supabase
+    .from("contractor_profiles")
+    .upsert({ id: user.id, ...profile }, { onConflict: "id" });
+  if (error) return { error: error.message };
+  revalidatePath("/contractors/dashboard");
+  return { error: null };
 }
 
 // ── Admin outreach ────────────────────────────────────────────────────────────

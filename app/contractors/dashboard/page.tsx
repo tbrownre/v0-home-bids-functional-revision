@@ -884,7 +884,7 @@ export default function ContractorDashboard() {
 
   // ── LEADS tab ──���───────────────────────────────────────────────────────────
 
-  // ── Bid Inbox ───────────────────────────────────────────────────────────────
+  // ── Bid Inbox ────────────────────────��──────────────────────────────────────
   // Contractor-owned customers, bid drafts, sent proposals, and follow-ups
   // created through HomeBids.ai. This is NOT a marketplace/lead-source feed.
   const inboxSource: BidInboxItem[] = proposals.map((p) => {
@@ -1242,6 +1242,21 @@ export default function ContractorDashboard() {
 
   // ── ACCOUNT tab ────────────────────────────────────────────────────────────
 
+  const [userProfile, setUserProfile] = useState<{ full_name?: string; email?: string; phone?: string } | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  useEffect(() => {
+    async function loadUserProfile() {
+      try {
+        const { profile } = await (await import("@/lib/supabase/actions")).getUserProfile();
+        if (profile) {
+          setUserProfile(profile);
+        }
+      } catch { /* non-fatal */ }
+      finally { setProfileLoaded(true); }
+    }
+    loadUserProfile();
+  }, []);
+
   const accountContent = (
     <div className="space-y-5">
       <h1 className="text-xl font-bold text-foreground">Account</h1>
@@ -1251,16 +1266,16 @@ export default function ContractorDashboard() {
           <h2 className="text-sm font-semibold text-foreground">Profile</h2>
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary">
-              {contractorName.charAt(0)}
+              {(userProfile?.full_name ?? contractorName).charAt(0)}
             </div>
             <div>
-              <p className="font-semibold text-foreground">{contractorName} Rodriguez</p>
+              <p className="font-semibold text-foreground">{userProfile?.full_name ?? contractorName}</p>
               <p className="text-xs text-muted-foreground">Contractor</p>
             </div>
           </div>
           <div className="space-y-2 pt-1">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-4 w-4 shrink-0" />contractor@homebids.demo</div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Phone className="h-4 w-4 shrink-0" />(480) 555-0192</div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-4 w-4 shrink-0" />{userProfile?.email ?? "loading..."}</div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Phone className="h-4 w-4 shrink-0" />{userProfile?.phone ?? "—"}</div>
           </div>
         </div>
 
