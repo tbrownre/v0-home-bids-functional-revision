@@ -1243,18 +1243,24 @@ export default function ContractorDashboard() {
   // ── ACCOUNT tab ────────────────────────────────────────────────────────────
 
   const [userProfile, setUserProfile] = useState<{ full_name?: string; email?: string; phone?: string } | null>(null);
+  const [contractorProfile, setContractorProfile] = useState<{ business_name?: string } | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
   useEffect(() => {
-    async function loadUserProfile() {
+    async function loadProfiles() {
       try {
-        const { profile } = await (await import("@/lib/supabase/actions")).getUserProfile();
-        if (profile) {
-          setUserProfile(profile);
+        const { getUserProfile, getContractorProfile } = await import("@/lib/supabase/actions");
+        const userRes = await getUserProfile();
+        if (userRes.profile) {
+          setUserProfile(userRes.profile);
+        }
+        const contractorRes = await getContractorProfile();
+        if (contractorRes.profile) {
+          setContractorProfile(contractorRes.profile);
         }
       } catch { /* non-fatal */ }
       finally { setProfileLoaded(true); }
     }
-    loadUserProfile();
+    loadProfiles();
   }, []);
 
   const accountContent = (
@@ -1270,6 +1276,9 @@ export default function ContractorDashboard() {
             </div>
             <div>
               <p className="font-semibold text-foreground">{userProfile?.full_name ?? contractorName}</p>
+              {contractorProfile?.business_name && (
+                <p className="text-sm font-medium text-foreground">{contractorProfile.business_name}</p>
+              )}
               <p className="text-xs text-muted-foreground">Contractor</p>
             </div>
           </div>

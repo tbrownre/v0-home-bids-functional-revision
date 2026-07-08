@@ -8,6 +8,7 @@
 // tracked here — those are intentionally excluded from the completion flow.
 
 export type ContractorProfileField =
+  | "businessName"
   | "logoUrl"
   | "companyDescription"
   | "website"
@@ -20,6 +21,7 @@ export type ContractorProfileField =
   | "socialLinks";
 
 export interface ContractorOptionalProfile {
+  businessName: string;
   logoUrl: string;
   companyDescription: string;
   website: string;
@@ -51,6 +53,7 @@ export const PROFILE_SECTIONS: ProfileSectionDef[] = [
     id: "basics",
     title: "Business Basics",
     fields: [
+      { key: "businessName", label: "Business Name", placeholder: "ABC Plumbing" },
       { key: "logoUrl", label: "Company Logo URL", placeholder: "https://.../logo.png" },
       {
         key: "companyDescription",
@@ -93,6 +96,7 @@ export const ALL_PROFILE_FIELDS: ContractorProfileField[] = PROFILE_SECTIONS.fla
 
 export function emptyProfile(): ContractorOptionalProfile {
   return {
+    businessName: "",
     logoUrl: "",
     companyDescription: "",
     website: "",

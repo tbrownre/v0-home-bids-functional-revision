@@ -49,6 +49,7 @@ export function ProfileCompletionSection() {
         const { profile: dbProfile } = await getContractorProfile();
         if (dbProfile) {
           setProfile({
+            businessName: dbProfile.business_name || "",
             logoUrl: dbProfile.logo_url || "",
             companyDescription: dbProfile.bio || "",
             website: dbProfile.website || "",
@@ -83,6 +84,7 @@ export function ProfileCompletionSection() {
     try {
       const { updateContractorProfile } = await import("@/lib/supabase/actions");
       const { error } = await updateContractorProfile({
+        business_name: profile.businessName || null,
         logo_url: profile.logoUrl || null,
         bio: profile.companyDescription || null,
         website: profile.website || null,

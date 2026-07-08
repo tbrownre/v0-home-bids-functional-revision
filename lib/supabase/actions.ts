@@ -724,6 +724,7 @@ export async function getContractorProfile() {
 
 /** Upsert contractor profile completion data. */
 export async function updateContractorProfile(profile: {
+  business_name?: string | null;
   logo_url?: string | null;
   bio?: string | null;
   website?: string | null;
