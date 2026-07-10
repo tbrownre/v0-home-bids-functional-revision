@@ -1230,7 +1230,33 @@ export default function ContractorDashboard() {
                     <span className="text-[11px] text-muted-foreground">· Updated {d.lastUpdated}</span>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => openBuildChoice(() => startBidByText("my", null))}>
+                    <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={async () => {
+                      const proposal = proposals.find(p => p.id === d.id);
+                      if (!proposal) return;
+                      const user = getMockUser();
+                      const ctx: NeedsActionContext = {
+                        needsActionId: proposal.id || "",
+                        actionType: "finish_draft",
+                        contractorId: user?.id || "",
+                        jobId: null,
+                        draftBidId: proposal.id || "",
+                        bidId: null,
+                        title: proposal.project_title || "Draft",
+                        status: "draft",
+                        sourceType: "needs_action",
+                        proposalId: proposal.id,
+                        shareToken: proposal.share_token,
+                        proposalData: {
+                          project: proposal.project_title || "",
+                          owner: proposal.homeowner_name || "",
+                          scope: (proposal.scope_items || []).map((item: any) => item.title || ""),
+                          optional: (proposal.add_ons || []).map((item: any) => item.title || ""),
+                          price: proposal.total_price ? `$${proposal.total_price}` : "",
+                          timeline: proposal.timeline_completion || "",
+                        },
+                      };
+                      openBuildChoice(() => { setActiveTab("ai"); }, ctx);
+                    }}>
                       Continue
                     </Button>
                     <Button
@@ -1267,7 +1293,7 @@ export default function ContractorDashboard() {
     );
   })();
 
-  // ── ACCOUNT tab ──────────────────────────────────────────────────────────��─
+  // ── ACCOUNT tab ─────────────────────────────────────────────��────────────��─
 
   const [userProfile, setUserProfile] = useState<{ full_name?: string; email?: string; phone?: string } | null>(null);
   const [contractorProfile, setContractorProfile] = useState<{ business_name?: string } | null>(null);

@@ -415,7 +415,6 @@ export function BidBuilderChat({
   bidRef.current = bid;
 
   useEffect(() => {
-    // If editing an existing draft, use initialData; otherwise seed from lead
     const seeded: BidData = {
       ...DEFAULT_BID,
       ...(initialData || {}),
@@ -427,18 +426,28 @@ export function BidBuilderChat({
       price: initialData?.price ?? lead?.price ?? "",
     };
     setBid(seeded);
+
+    // Determine phase and greeting based on whether we're resuming a draft
+    const isResumingDraft = !!initialData && !!proposalId;
+    const greeting = isResumingDraft
+      ? `Welcome back — resuming your draft: ${seeded.project || "your project"} for ${seeded.owner || "the homeowner"}, currently ${seeded.price || "pending pricing"}. Tell me what to change, or type APPROVE to finalize and send.`
+      : "Hi! I'm your HomeBids bid assistant. Send rough project details — project type, scope, pricing, timeline, and the customer info. I'll organize everything into a complete professional bid, then ask a few quick follow-up questions about inspection, deposit, and warranty so the homeowner gets a full picture.";
+
     setMessages([
       {
         id: nextId(),
         role: "ai",
-        text: "Hi! I'm your HomeBids bid assistant. Send rough project details — project type, scope, pricing, timeline, and the customer info. I'll organize everything into a complete professional bid, then ask a few quick follow-up questions about inspection, deposit, and warranty so the homeowner gets a full picture.",
+        text: greeting,
       },
     ]);
-    setPhase("intake");
+
+    // When resuming a draft, start in review phase so APPROVE works immediately
+    // Otherwise, start in intake phase for new bids
+    setPhase(isResumingDraft ? "review" : "intake");
     setGatherField(null);
     setCompletenessError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lead?.id, leadType]);
+  }, [lead?.id, leadType, initialData, proposalId]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
