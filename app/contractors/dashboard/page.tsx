@@ -310,13 +310,13 @@ interface BidInboxItem {
 
 const INBOX_STATUS: Record<InboxStatusKey, { label: string; cls: string; primary: string; action: "build" | "followup" | "view" }> = {
   new_request:       { label: "New Request",        cls: "bg-blue-100 text-blue-700",     primary: "Start Bid",                action: "build" },
-  draft_ready:       { label: "Draft Ready",        cls: "bg-indigo-100 text-indigo-700", primary: "Review Proposal",          action: "build" },
+  draft_ready:       { label: "Draft Ready",        cls: "bg-indigo-100 text-indigo-700", primary: "Review Bid",               action: "build" },
   missing_details:   { label: "Missing Details",    cls: "bg-amber-100 text-amber-700",   primary: "Continue Bid",             action: "build" },
-  proposal_sent:     { label: "Proposal Sent",      cls: "bg-sky-100 text-sky-700",       primary: "View Proposal",            action: "view"  },
+  proposal_sent:     { label: "Bid Sent",           cls: "bg-sky-100 text-sky-700",       primary: "View Bid",                 action: "view"  },
   waiting_customer:  { label: "Waiting on Customer", cls: "bg-amber-100 text-amber-700",  primary: "Send Follow-Up",           action: "followup" },
   follow_up_ready:   { label: "Follow-Up Ready",    cls: "bg-purple-100 text-purple-700", primary: "Send Follow-Up",           action: "followup" },
-  changes_requested: { label: "Changes Requested",  cls: "bg-orange-100 text-orange-700", primary: "Edit Proposal",            action: "build" },
-  accepted:          { label: "Accepted",           cls: "bg-emerald-100 text-emerald-700", primary: "View Accepted Proposal", action: "view"  },
+  changes_requested: { label: "Changes Requested",  cls: "bg-orange-100 text-orange-700", primary: "Edit Bid",                 action: "build" },
+  accepted:          { label: "Accepted",           cls: "bg-emerald-100 text-emerald-700", primary: "View Accepted Bid",     action: "view"  },
   archived:          { label: "Archived",           cls: "bg-muted text-muted-foreground", primary: "View Details",            action: "view"  },
 };
 
@@ -647,7 +647,7 @@ export default function ContractorDashboard() {
     );
   }
 
-  // ── HOME tab ──────────────────────────────────────���────────────────────────
+  // ── HOME tab ─────────────────────────────────��────���────────────────────────
 
   // ── Bid status config (full set) ────────────────────────────────────────────
   const BID_STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
@@ -848,13 +848,13 @@ export default function ContractorDashboard() {
         )}
       </section>
 
-      {/* Your Proposals — hosted proposal links (max 3 on home) */}
+      {/* Your Bids — hosted proposal links (max 3 on home) */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Your Proposals</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Your Bids</h2>
           {proposals.length > 3 && (
             <Button size="sm" variant="ghost" className="h-7 gap-1 rounded-full px-3 text-xs" asChild>
-              <a href="/contractors/bids">View all <ChevronRight className="h-3 w-3" /></a>
+              <a href="/contractors/bids-history">View all <ChevronRight className="h-3 w-3" /></a>
             </Button>
           )}
         </div>
@@ -866,9 +866,9 @@ export default function ContractorDashboard() {
           </div>
         ) : proposalsLoaded ? (
           <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center">
-            <p className="text-sm font-medium text-foreground">No proposals yet.</p>
+            <p className="text-sm font-medium text-foreground">No bids yet.</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Build a bid by text and your hosted proposal link will appear here.
+              Build a bid by text and your hosted bid link will appear here.
             </p>
             <Button className="mt-3 gap-2 rounded-full font-semibold" onClick={() => openBuildChoice(() => startBidByText("my", null))}>
               <Sparkles className="h-4 w-4" /> Build Today&apos;s Bid
@@ -876,7 +876,7 @@ export default function ContractorDashboard() {
           </div>
         ) : (
           <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
-            Loading proposals…
+            Loading bids…
           </div>
         )}
       </section>
@@ -1012,11 +1012,11 @@ export default function ContractorDashboard() {
 
                   {item.secondary === "text" ? (
                     <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => openSms(item.phone)}>
-                      <MessageCircle className="h-3 w-3" /> Text Customer
+                      <MessageCircle className="h-3 w-3" /> Message Customer
                     </Button>
                   ) : (
-                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { window.location.href = "/contractors/bids"; }}>
-                      <ExternalLink className="h-3 w-3" /> View Proposal
+                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { window.location.href = "/contractors/bids-history"; }}>
+                      <ExternalLink className="h-3 w-3" /> View Bid
                     </Button>
                   )}
                 </div>

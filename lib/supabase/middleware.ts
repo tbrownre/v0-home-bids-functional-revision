@@ -3,9 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * Routes that require an authenticated user. Everything else is public
- * (marketing pages, contractor signup, SMS demo flows, admin-demo, etc.).
+ * (marketing pages, contractor signup, SMS demo flows, etc.).
  */
-const PROTECTED_PREFIXES = ["/contractors/dashboard", "/contractors/jobs", "/profile"];
+const PROTECTED_PREFIXES = ["/contractors/dashboard", "/contractors/jobs", "/profile", "/admin"];
 
 /** Auth pages a signed-in user should be bounced away from. */
 const AUTH_PREFIXES = ["/auth/sign-in", "/auth/sign-up", "/signup"];

@@ -1100,7 +1100,7 @@ export function BidBuilderChat({
               window.location.href = `sms:${phone}?body=${encodeURIComponent(`Hi ${bid.owner.split(" ")[0] || "there"}, here's your bid for ${bid.project}. ${bidLink}`)}`;
             }}
           >
-            <MessageCircle className="h-3.5 w-3.5" /> Text Customer
+            <MessageCircle className="h-3.5 w-3.5" /> Message Customer
           </Button>
         </>
       )}

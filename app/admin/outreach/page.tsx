@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Radio,
@@ -80,10 +81,39 @@ function timeAgo(dateStr: string) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminOutreachPage() {
+  const router = useRouter();
   const [runs, setRuns] = useState<OutreachRun[]>([]);
   const [jobs, setJobs] = useState<AdminJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  // Check admin authorization
+  useEffect(() => {
+    async function checkAdmin() {
+      try {
+        const { getUserProfile } = await import("@/lib/supabase/actions");
+        const { profile } = await getUserProfile();
+        
+        if (!profile) {
+          router.push("/auth/sign-in");
+          return;
+        }
+
+        if (profile.admin_flag !== true) {
+          router.push("/");
+          return;
+        }
+
+        setIsAuthorized(true);
+      } catch (e) {
+        console.error("[AdminOutreach] Auth check failed:", e);
+        router.push("/");
+      }
+    }
+
+    checkAdmin();
+  }, [router]);
 
   const loadData = async () => {
     const [runsResult, jobsResult] = await Promise.all([
@@ -95,9 +125,10 @@ export default function AdminOutreachPage() {
   };
 
   useEffect(() => {
+    if (!isAuthorized) return;
     loadData().finally(() => setLoading(false));
     // TODO: subscribe to Supabase Realtime for live outreach run updates
-  }, []);
+  }, [isAuthorized]);
 
   const handleRefresh = async () => {
     setRefreshing(true);

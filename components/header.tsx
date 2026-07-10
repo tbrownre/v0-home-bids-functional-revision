@@ -282,8 +282,8 @@ export function Header({
                 </>
               )}
 
-              {/* Homeowner nav */}
-              {isLoggedIn && !isContractor && (
+              {/* Homeowner nav — hidden when on contractor routes */}
+              {isLoggedIn && !isContractor && !pathname.startsWith("/contractors") && (
                 <>
                   {homeownerNavItems.map((item) => {
                     const hrefPath = item.href.split("?")[0];
