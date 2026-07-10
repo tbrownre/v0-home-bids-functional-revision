@@ -100,7 +100,7 @@ export default function AdminOutreachPage() {
           return;
         }
 
-        if (profile.admin_flag !== true) {
+        if (profile.is_admin !== true) {
           router.push("/");
           return;
         }
