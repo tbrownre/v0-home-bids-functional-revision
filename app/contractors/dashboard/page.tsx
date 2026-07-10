@@ -649,7 +649,7 @@ export default function ContractorDashboard() {
 
   // ── HOME tab ─────────────────────────────────��────���────────────────────────
 
-  // ── Bid status config (full set) ────────────────────────────────────────────
+  // ── Bid status config (full set) ──────────────────────────────────��─────────
   const BID_STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
     draft:          { label: "Draft",           cls: "bg-muted text-muted-foreground"         },
     ready_to_send:  { label: "Ready to Send",   cls: "bg-blue-50 text-blue-700"               },
@@ -721,7 +721,7 @@ export default function ContractorDashboard() {
               },
             };
             // Open the choice modal WITH the context, and set the on-site action to switch to Build a Bid tab
-            openBuildChoice(() => { setActiveTab("ai"); }, ctx);
+            openBuildChoice(() => { setActiveTool("bid"); setActiveTab("ai"); }, ctx);
           },
         });
       });
@@ -1255,7 +1255,7 @@ export default function ContractorDashboard() {
                           timeline: proposal.timeline_completion || "",
                         },
                       };
-                      openBuildChoice(() => { setActiveTab("ai"); }, ctx);
+                      openBuildChoice(() => { setActiveTool("bid"); setActiveTab("ai"); }, ctx);
                     }}>
                       Continue
                     </Button>
