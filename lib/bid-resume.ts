@@ -53,6 +53,19 @@ export interface NeedsActionContext {
   title: string;
   status: string;
   sourceType: BidSourceType;
+  /** Optional: pre-populated proposal data for resuming a draft. */
+  proposalData?: {
+    project: string;
+    owner: string;
+    scope: string[];
+    optional: string[];
+    price: string;
+    timeline: string;
+  };
+  /** Optional: proposal ID when resuming an existing draft. */
+  proposalId?: string;
+  /** Optional: share token from proposal. */
+  shareToken?: string;
 }
 
 /**
@@ -154,12 +167,14 @@ export function createResumeSession(ctx: NeedsActionContext): ResumeSession {
 }
 
 /**
- * Resumes a draft bid — the "Continue on Site" entry point. Returns the session
- * (creating one if needed) so the in-app bid builder can be seeded with the
- * saved draft context instead of starting a brand-new bid.
- * TODO(backend): load the draft from Supabase and hydrate the bid builder.
+ * Resumes a draft bid — the "Continue on Site" entry point. When proposalData
+ * is provided, uses real proposal data instead of creating a session. Returns
+ * the session (creating one if needed) so the in-app bid builder can be seeded
+ * with the saved draft context instead of starting a brand-new bid.
+ * TODO(backend): If proposalData is not provided, load the draft from Supabase.
  */
 export function resumeDraftBid(ctx: NeedsActionContext): ResumeSession {
+  // If resuming with real proposal data, just create a session without needing to fetch
   const existing = getExistingDraft(ctx.draftBidId);
   if (existing) {
     console.log("[v0] Resuming existing draft:", ctx.draftBidId);

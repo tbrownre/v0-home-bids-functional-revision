@@ -704,7 +704,26 @@ export default function ContractorDashboard() {
               status: "draft",
               sourceType: "needs_action",
             };
-            openBuildChoice(() => resumeDraftBid(ctx), ctx);
+            // Resume draft with real proposal data
+            openBuildChoice(async () => {
+              const { getProposalById } = await import("@/lib/supabase/actions");
+              const { proposal } = await getProposalById(p.id || "");
+              if (proposal) {
+                resumeDraftBid({
+                  ...ctx,
+                  proposalData: {
+                    project: proposal.project_title || "",
+                    owner: proposal.homeowner_name || "",
+                    scope: (proposal.scope_items || []).map((item: any) => item.title || ""),
+                    optional: (proposal.add_ons || []).map((item: any) => item.title || ""),
+                    price: proposal.total_price ? `$${proposal.total_price}` : "",
+                    timeline: proposal.timeline_completion || "",
+                  },
+                  proposalId: proposal.id,
+                  shareToken: proposal.share_token,
+                });
+              }
+            }, ctx);
           },
         });
       });
@@ -1061,6 +1080,15 @@ export default function ContractorDashboard() {
             companyName={companyName}
             onClose={closeBidBuilder}
             onHomeownerApproved={handleHomeownerApproved}
+            proposalId={buildChoiceContext?.proposalId || undefined}
+            initialData={buildChoiceContext?.proposalData ? {
+              project: buildChoiceContext.proposalData.project,
+              owner: buildChoiceContext.proposalData.owner,
+              scope: buildChoiceContext.proposalData.scope,
+              optional: buildChoiceContext.proposalData.optional,
+              price: buildChoiceContext.proposalData.price,
+              timeline: buildChoiceContext.proposalData.timeline,
+            } : undefined}
           />
         </div>
       );

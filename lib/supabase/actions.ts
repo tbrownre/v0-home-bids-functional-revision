@@ -749,6 +749,28 @@ export async function updateContractorProfile(profile: {
 
 // ── Proposals (Online Bid Builder) ────────────────────────────────────────────
 
+/** Fetch a proposal by ID for editing (only owner can read via RLS). */
+export async function getProposalById(proposalId: string): Promise<{ proposal: any | null; error: string | null }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { proposal: null, error: "Not authenticated" };
+
+  try {
+    const { data, error } = await supabase
+      .from("proposals")
+      .select("*")
+      .eq("id", proposalId)
+      .maybeSingle();
+
+    if (error) return { proposal: null, error: error.message };
+    if (!data) return { proposal: null, error: "Proposal not found" };
+
+    return { proposal: data, error: null };
+  } catch (e) {
+    return { proposal: null, error: (e as Error).message };
+  }
+}
+
 export interface CreateProposalInput {
   homeownerName?: string;
   projectTitle: string;
@@ -825,6 +847,41 @@ export async function createProposalFromBuilder(
       proposalId: null,
       error: (e as Error).message || "Failed to create proposal",
     };
+  }
+}
+
+/** Update an existing draft proposal (keeps share_token, updates status to 'sent' on approve). */
+export async function updateProposalFromBuilder(
+  proposalId: string,
+  input: CreateProposalInput & { status?: string },
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  try {
+    const { error } = await supabase
+      .from("proposals")
+      .update({
+        homeowner_name: input.homeownerName || null,
+        project_title: input.projectTitle,
+        project_summary: input.projectSummary || null,
+        scope_items: input.scopeItems || [],
+        total_price: input.totalPrice || null,
+        price_note: input.priceNote || null,
+        add_ons: input.addOns || [],
+        timeline_completion: input.timelineCompletion || null,
+        status: input.status || "draft",
+      })
+      .eq("id", proposalId)
+      .eq("contractor_id", user.id); // Ensure ownership
+
+    if (error) return { error: error.message };
+
+    revalidatePath("/contractors/dashboard");
+    return { error: null };
+  } catch (e) {
+    return { error: (e as Error).message || "Failed to update proposal" };
   }
 }
 

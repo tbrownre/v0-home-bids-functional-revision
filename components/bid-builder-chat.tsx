@@ -124,6 +124,8 @@ interface Props {
   companyName: string;
   onClose: () => void;
   onHomeownerApproved?: (leadId: string) => void;
+  proposalId?: string | null;
+  initialData?: Partial<BidData> | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -391,6 +393,8 @@ export function BidBuilderChat({
   companyName,
   onClose,
   onHomeownerApproved,
+  proposalId,
+  initialData,
 }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -402,7 +406,7 @@ export function BidBuilderChat({
   const [copied, setCopied] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [completenessError, setCompletenessError] = useState<string | null>(null);
-  const [proposalId, setProposalId] = useState<string | null>(null);
+  const [draftProposalId, setDraftProposalId] = useState<string | null>(proposalId || null);
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -411,14 +415,16 @@ export function BidBuilderChat({
   bidRef.current = bid;
 
   useEffect(() => {
+    // If editing an existing draft, use initialData; otherwise seed from lead
     const seeded: BidData = {
       ...DEFAULT_BID,
-      project: lead?.projectTitle ?? "",
-      owner: lead?.ownerName ?? "",
-      phone: lead?.ownerPhone ?? "",
-      address: lead?.address ?? "",
-      timeline: lead?.timeline ?? "",
-      price: lead?.price ?? "",
+      ...(initialData || {}),
+      project: initialData?.project ?? lead?.projectTitle ?? "",
+      owner: initialData?.owner ?? lead?.ownerName ?? "",
+      phone: initialData?.phone ?? lead?.ownerPhone ?? "",
+      address: initialData?.address ?? lead?.address ?? "",
+      timeline: initialData?.timeline ?? lead?.timeline ?? "",
+      price: initialData?.price ?? lead?.price ?? "",
     };
     setBid(seeded);
     setMessages([
@@ -823,14 +829,13 @@ export function BidBuilderChat({
 
     setCompletenessError(null);
 
-    // Create the proposal if not already created
-    if (!proposalId && !isSaving) {
+    // Create or update the proposal
+    if (!isSaving) {
       setIsSaving(true);
       try {
-        const { createProposalFromBuilder } = await import("@/lib/supabase/actions");
         const b = bidRef.current;
         const priceNum = b.price ? parseInt(b.price.replace(/\D/g, ""), 10) : undefined;
-        const response = await createProposalFromBuilder({
+        const proposalData = {
           homeownerName: b.owner,
           projectTitle: b.project,
           projectSummary: b.notes,
@@ -839,18 +844,32 @@ export function BidBuilderChat({
           priceNote: b.priceType ? `${b.priceType.charAt(0).toUpperCase() + b.priceType.slice(1)} — final price confirmed on site.` : undefined,
           addOns: b.optional.map((title) => ({ title })),
           timelineCompletion: b.timeline,
-        });
+          status: "sent",
+        };
 
-        if (response.error) {
-          pushAi(`Error creating proposal: ${response.error}`, "system");
-          setIsSaving(false);
-          return;
+        if (draftProposalId) {
+          // Update existing draft
+          const { updateProposalFromBuilder } = await import("@/lib/supabase/actions");
+          const response = await updateProposalFromBuilder(draftProposalId, proposalData);
+          if (response.error) {
+            pushAi(`Error updating proposal: ${response.error}`, "system");
+            setIsSaving(false);
+            return;
+          }
+        } else {
+          // Create new proposal
+          const { createProposalFromBuilder } = await import("@/lib/supabase/actions");
+          const response = await createProposalFromBuilder(proposalData);
+          if (response.error) {
+            pushAi(`Error creating proposal: ${response.error}`, "system");
+            setIsSaving(false);
+            return;
+          }
+          setDraftProposalId(response.proposalId);
+          setShareToken(response.shareToken);
         }
-
-        setProposalId(response.proposalId);
-        setShareToken(response.shareToken);
       } catch (e) {
-        pushAi(`Failed to create proposal: ${(e as Error).message}`, "system");
+        pushAi(`Failed to save proposal: ${(e as Error).message}`, "system");
         setIsSaving(false);
         return;
       }
