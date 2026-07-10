@@ -691,39 +691,37 @@ export default function ContractorDashboard() {
           sub: "Draft started — finish and send it.",
           cta: "Finish Bid",
           icon: FileText,
-          onClick: () => {
+          onClick: async () => {
             const user = getMockUser();
+            // Load the real proposal data first
+            const { getProposalById } = await import("@/lib/supabase/actions");
+            const { proposal } = await getProposalById(p.id || "");
+            if (!proposal) return;
+
+            // Build the full context with loaded data
             const ctx: NeedsActionContext = {
-              needsActionId: `na-draft-${p.id}`,
+              needsActionId: p.id || "",
               actionType: "finish_draft",
               contractorId: user?.id || "",
               jobId: null,
               draftBidId: p.id || "",
               bidId: null,
-              title: p.project_title || "Draft",
+              title: proposal.project_title || "Draft",
               status: "draft",
               sourceType: "needs_action",
+              proposalId: proposal.id,
+              shareToken: proposal.share_token,
+              proposalData: {
+                project: proposal.project_title || "",
+                owner: proposal.homeowner_name || "",
+                scope: (proposal.scope_items || []).map((item: any) => item.title || ""),
+                optional: (proposal.add_ons || []).map((item: any) => item.title || ""),
+                price: proposal.total_price ? `$${proposal.total_price}` : "",
+                timeline: proposal.timeline_completion || "",
+              },
             };
-            // Resume draft with real proposal data
-            openBuildChoice(async () => {
-              const { getProposalById } = await import("@/lib/supabase/actions");
-              const { proposal } = await getProposalById(p.id || "");
-              if (proposal) {
-                resumeDraftBid({
-                  ...ctx,
-                  proposalData: {
-                    project: proposal.project_title || "",
-                    owner: proposal.homeowner_name || "",
-                    scope: (proposal.scope_items || []).map((item: any) => item.title || ""),
-                    optional: (proposal.add_ons || []).map((item: any) => item.title || ""),
-                    price: proposal.total_price ? `$${proposal.total_price}` : "",
-                    timeline: proposal.timeline_completion || "",
-                  },
-                  proposalId: proposal.id,
-                  shareToken: proposal.share_token,
-                });
-              }
-            }, ctx);
+            // Open the choice modal WITH the context, and set the on-site action to switch to Build a Bid tab
+            openBuildChoice(() => { setActiveTab("ai"); }, ctx);
           },
         });
       });
@@ -1269,7 +1267,7 @@ export default function ContractorDashboard() {
     );
   })();
 
-  // ── ACCOUNT tab ────────────────────────────────────────────────────────────
+  // ── ACCOUNT tab ──────────────────────────────────────────────────────────��─
 
   const [userProfile, setUserProfile] = useState<{ full_name?: string; email?: string; phone?: string } | null>(null);
   const [contractorProfile, setContractorProfile] = useState<{ business_name?: string } | null>(null);
