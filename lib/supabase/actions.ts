@@ -207,7 +207,7 @@ export async function signOut() {
 }
 
 /** Claim a homeowner account using a claim token and set a password. */
-export async function claimAccount(token: string, password: string): Promise<{ error?: string }> {
+export async function claimAccount(token: string, password: string): Promise<{ success?: boolean; error?: string }> {
   const adminClient = createAdminClient();
   const supabase = await createClient();
 
@@ -257,9 +257,9 @@ export async function claimAccount(token: string, password: string): Promise<{ e
       return { error: "Failed to sign in. Please try again." };
     }
 
-    // 6. Redirect to homeowner dashboard
+    // 6. Revalidate and return success (client will redirect)
     revalidatePath("/", "layout");
-    redirect("/homeowners/dashboard");
+    return { success: true };
   } catch (e) {
     return { error: (e as Error).message || "An error occurred." };
   }
@@ -269,7 +269,7 @@ export async function claimAccount(token: string, password: string): Promise<{ e
  * Sign in a homeowner using phone number + password.
  * Normalizes phone to last 10 digits, finds the profile, and signs in with email.
  */
-export async function phoneSignIn(phone: string, password: string): Promise<{ error?: string }> {
+export async function phoneSignIn(phone: string, password: string): Promise<{ success?: boolean; error?: string }> {
   const adminClient = createAdminClient();
   const supabase = await createClient();
 
@@ -302,9 +302,9 @@ export async function phoneSignIn(phone: string, password: string): Promise<{ er
       return { error: "Phone or password incorrect" };
     }
 
-    // Redirect to homeowner dashboard
+    // Revalidate and return success (client will redirect)
     revalidatePath("/", "layout");
-    redirect("/homeowners/dashboard");
+    return { success: true };
   } catch (e) {
     return { error: "Phone or password incorrect" };
   }

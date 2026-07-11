@@ -80,8 +80,10 @@ export default function ClaimPage({ params: paramsPromise }: ClaimPageProps) {
       if (result.error) {
         setError(result.error);
         setFormState("idle");
+      } else if (result.success) {
+        // Redirect client-side on success
+        router.push("/homeowners/dashboard");
       }
-      // On success, redirect happens server-side
     } catch (e) {
       setError((e as Error).message || "Something went wrong.");
       setFormState("idle");

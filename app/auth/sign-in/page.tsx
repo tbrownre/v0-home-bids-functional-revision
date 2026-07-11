@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ type UserType = "contractor" | "homeowner";
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignInPage() {
+  const router = useRouter();
   const [view, setView] = useState<View>("signin");
   const [userType, setUserType] = useState<UserType>("contractor");
   const [usePhoneForHomeowner, setUsePhoneForHomeowner] = useState(false);
@@ -113,8 +115,10 @@ export default function SignInPage() {
       if (result.error) {
         setError(result.error);
         setLoading(false);
+      } else if (result.success) {
+        // Redirect client-side on success
+        router.push("/homeowners/dashboard");
       }
-      // On success, redirect happens server-side
     } else {
       // Contractor or homeowner email sign-in
       if (!email.trim() || !password) {
