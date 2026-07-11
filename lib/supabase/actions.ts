@@ -206,7 +206,109 @@ export async function signOut() {
   redirect("/auth/sign-in");
 }
 
+/** Claim a homeowner account using a claim token and set a password. */
+export async function claimAccount(token: string, password: string): Promise<{ error?: string }> {
+  const adminClient = createAdminClient();
+  const supabase = await createClient();
 
+  try {
+    // 1. Find the profile by claim_token
+    const { data: profile, error: queryError } = await adminClient
+      .from("profiles")
+      .select("id, email, claimed_at")
+      .eq("claim_token", token)
+      .maybeSingle();
+
+    if (queryError || !profile) {
+      return { error: "This link is invalid or expired." };
+    }
+
+    // 2. Check if already claimed
+    if (profile.claimed_at) {
+      return { error: "Account already claimed — sign in instead" };
+    }
+
+    // 3. Update the user password (admin API)
+    const { error: updateError } = await adminClient.auth.admin.updateUserById(profile.id, {
+      password,
+    });
+
+    if (updateError) {
+      return { error: "Failed to set password. Please try again." };
+    }
+
+    // 4. Mark as claimed
+    const { error: claimedError } = await adminClient
+      .from("profiles")
+      .update({ claimed_at: new Date().toISOString() })
+      .eq("id", profile.id);
+
+    if (claimedError) {
+      return { error: "Failed to save. Please try again." };
+    }
+
+    // 5. Sign in the user server-side (sets cookies)
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: profile.email,
+      password,
+    });
+
+    if (signInError) {
+      return { error: "Failed to sign in. Please try again." };
+    }
+
+    // 6. Redirect to homeowner dashboard
+    revalidatePath("/", "layout");
+    redirect("/homeowners/dashboard");
+  } catch (e) {
+    return { error: (e as Error).message || "An error occurred." };
+  }
+}
+
+/**
+ * Sign in a homeowner using phone number + password.
+ * Normalizes phone to last 10 digits, finds the profile, and signs in with email.
+ */
+export async function phoneSignIn(phone: string, password: string): Promise<{ error?: string }> {
+  const adminClient = createAdminClient();
+  const supabase = await createClient();
+
+  try {
+    // Normalize phone: extract last 10 digits
+    const normalized = phone.replace(/\D/g, "").slice(-10);
+    if (normalized.length !== 10) {
+      return { error: "Phone or password incorrect" };
+    }
+
+    // Find profile by phone (last 10 digits)
+    const { data: profile, error: queryError } = await adminClient
+      .from("profiles")
+      .select("id, email")
+      .eq("user_type", "homeowner")
+      .filter("phone", "ilike", `%${normalized}`)
+      .maybeSingle();
+
+    if (queryError || !profile) {
+      return { error: "Phone or password incorrect" };
+    }
+
+    // Sign in with email + password
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: profile.email,
+      password,
+    });
+
+    if (signInError) {
+      return { error: "Phone or password incorrect" };
+    }
+
+    // Redirect to homeowner dashboard
+    revalidatePath("/", "layout");
+    redirect("/homeowners/dashboard");
+  } catch (e) {
+    return { error: "Phone or password incorrect" };
+  }
+}
 
 // ── Jobs ─────────────────────────────────────────────────────────────────────
 
