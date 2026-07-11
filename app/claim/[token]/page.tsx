@@ -10,16 +10,17 @@ import { HomeBidsLogo } from "@/components/homebids-logo";
 import { claimAccount, getClaimInfo } from "@/lib/supabase/actions";
 
 interface ClaimPageProps {
-  params: {
+  params: Promise<{
     token: string;
-  };
+  }>;
 }
 
 type PageState = "loading" | "invalid" | "already_claimed" | "form";
 type FormState = "idle" | "submitting";
 
-export default function ClaimPage({ params }: ClaimPageProps) {
+export default function ClaimPage({ params: paramsPromise }: ClaimPageProps) {
   const router = useRouter();
+  const { token } = React.use(paramsPromise);
   const [state, setState] = useState<PageState>("loading");
   const [formState, setFormState] = useState<FormState>("idle");
   const [firstName, setFirstName] = useState<string>("");
@@ -33,7 +34,7 @@ export default function ClaimPage({ params }: ClaimPageProps) {
   // Validate and load profile data on mount (server-side via getClaimInfo)
   React.useEffect(() => {
     async function loadProfile() {
-      const claimInfo = await getClaimInfo(params.token);
+      const claimInfo = await getClaimInfo(token);
 
       if (!claimInfo) {
         setState("invalid");
@@ -51,7 +52,7 @@ export default function ClaimPage({ params }: ClaimPageProps) {
     }
 
     loadProfile();
-  }, [params.token]);
+  }, [token]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,7 +76,7 @@ export default function ClaimPage({ params }: ClaimPageProps) {
     setError("");
 
     try {
-      const result = await claimAccount(params.token, password);
+      const result = await claimAccount(token, password);
       if (result.error) {
         setError(result.error);
         setFormState("idle");
