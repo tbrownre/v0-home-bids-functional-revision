@@ -310,6 +310,51 @@ export async function phoneSignIn(phone: string, password: string): Promise<{ er
   }
 }
 
+/**
+ * Retrieve safe claim information for the claim flow (server-side only).
+ * Returns masked phone and first name, or null if invalid/already claimed.
+ */
+export async function getClaimInfo(token: string): Promise<{
+  firstName: string | null;
+  phoneMasked: string | null;
+  alreadyClaimed: boolean;
+} | null> {
+  const adminClient = createAdminClient();
+
+  try {
+    const { data: profile, error: queryError } = await adminClient
+      .from("profiles")
+      .select("full_name, phone, claimed_at")
+      .eq("claim_token", token)
+      .maybeSingle();
+
+    if (queryError || !profile) {
+      return null;
+    }
+
+    // Extract first name (first word of full_name)
+    const firstName = profile.full_name?.split(" ")[0] || null;
+
+    // Mask phone: keep last 4 digits, mask the rest
+    let phoneMasked: string | null = null;
+    if (profile.phone) {
+      const digits = profile.phone.replace(/\D/g, "");
+      if (digits.length >= 4) {
+        const lastFour = digits.slice(-4);
+        phoneMasked = `(555) •••-${lastFour}`;
+      }
+    }
+
+    return {
+      firstName,
+      phoneMasked,
+      alreadyClaimed: !!profile.claimed_at,
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
 // ── Jobs ─────────────────────────────────────────────────────────────────────
 
 export async function createJob(formData: {

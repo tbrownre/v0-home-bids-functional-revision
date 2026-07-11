@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AlertCircle, Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { HomeBidsLogo } from "@/components/homebids-logo";
-import { claimAccount } from "@/lib/supabase/actions";
+import { claimAccount, getClaimInfo } from "@/lib/supabase/actions";
 
 interface ClaimPageProps {
   params: {
@@ -30,35 +30,24 @@ export default function ClaimPage({ params }: ClaimPageProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
 
-  // Validate and load profile data on mount
+  // Validate and load profile data on mount (server-side via getClaimInfo)
   React.useEffect(() => {
     async function loadProfile() {
-      try {
-        const { createAdminClient } = await import("@/lib/supabase/admin");
-        const adminClient = createAdminClient();
+      const claimInfo = await getClaimInfo(params.token);
 
-        const { data: profile, error: queryError } = await adminClient
-          .from("profiles")
-          .select("full_name, phone, claimed_at")
-          .eq("claim_token", params.token)
-          .maybeSingle();
-
-        if (queryError || !profile) {
-          setState("invalid");
-          return;
-        }
-
-        if (profile.claimed_at) {
-          setState("already_claimed");
-          return;
-        }
-
-        setFirstName(profile.full_name?.split(" ")[0] || "");
-        setPhone(profile.phone || "");
-        setState("form");
-      } catch {
+      if (!claimInfo) {
         setState("invalid");
+        return;
       }
+
+      if (claimInfo.alreadyClaimed) {
+        setState("already_claimed");
+        return;
+      }
+
+      setFirstName(claimInfo.firstName || "");
+      setPhone(claimInfo.phoneMasked || "");
+      setState("form");
     }
 
     loadProfile();
