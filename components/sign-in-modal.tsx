@@ -36,7 +36,7 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
   const router = useRouter();
   const [view, setView] = useState<ModalView>("signin");
   const [userType, setUserType] = useState<UserType>("contractor");
-  const [usePhoneForHomeowner, setUsePhoneForHomeowner] = useState(false);
+  const [usePhoneForHomeowner, setUsePhoneForHomeowner] = useState(true);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -178,7 +178,10 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
             </button>
             <button
               type="button"
-              onClick={() => setUserType("homeowner")}
+              onClick={() => {
+                setUserType("homeowner");
+                setUsePhoneForHomeowner(true);
+              }}
               className={`flex-1 rounded px-3 py-2 text-sm font-medium transition-colors ${
                 userType === "homeowner"
                   ? "bg-background text-foreground shadow-sm"

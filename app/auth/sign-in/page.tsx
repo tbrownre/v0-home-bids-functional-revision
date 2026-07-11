@@ -24,7 +24,7 @@ export default function SignInPage() {
   const router = useRouter();
   const [view, setView] = useState<View>("signin");
   const [userType, setUserType] = useState<UserType>("contractor");
-  const [usePhoneForHomeowner, setUsePhoneForHomeowner] = useState(false);
+  const [usePhoneForHomeowner, setUsePhoneForHomeowner] = useState(true);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
