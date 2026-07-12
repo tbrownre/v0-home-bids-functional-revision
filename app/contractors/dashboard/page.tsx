@@ -56,7 +56,6 @@ import { getMockUser, mockSignOut, syncMirrorFromSupabase } from "@/lib/mock-aut
 import { getContractorProposals, type Proposal, type ProposalStatus } from "@/lib/supabase/proposals";
 import { ContractorProposalCard } from "@/components/proposal/contractor-proposal-card";
 import { ProfileCompletionSection } from "@/components/contractor/profile-completion-section";
-import { loadContractorProfile, getProfileCompletion } from "@/lib/contractor-profile";
 import { createClient } from "@/lib/supabase/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -426,6 +425,22 @@ export default function ContractorDashboard() {
 
   const [bidsCount, setBidsCount] = useState(0);
 
+  // Profile completion computed from Supabase contractor_profiles data
+  const [contractorProfile, setContractorProfile] = useState<{
+    business_name?: string;
+    logo_url?: string;
+    bio?: string;
+    website?: string;
+    business_address?: string;
+    license_number?: string;
+    insurance_details?: string;
+    years_experience?: number;
+    google_review_link?: string;
+    specialties?: string[];
+    social_links?: Record<string, string>;
+  } | null>(null);
+  const [profileCompletion, setProfileCompletion] = useState<{ completed: number; total: number; percent: number; isComplete: boolean } | null>(null);
+
   // Hosted proposals (written by the external Bid Builder workflow). Read-only
   // here — the dashboard only displays and shares them.
   const [proposals, setProposals] = useState<Proposal[]>([]);
@@ -472,13 +487,6 @@ export default function ContractorDashboard() {
     () => computeBidMomentum(bidsCount, MONTH_GOAL, monthFraction),
     [bidsCount, monthFraction],
   );
-
-  // Optional profile completion (from localStorage). Refreshes whenever the
-  // active tab changes so edits made in the Account tab reflect on Home.
-  const [profileCompletion, setProfileCompletion] = useState<{ completed: number; total: number; percent: number; isComplete: boolean } | null>(null);
-  useEffect(() => {
-    setProfileCompletion(getProfileCompletion(loadContractorProfile()));
-  }, [activeTab]);
 
   // Leads segment — "myleads" is the default
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("needs_action");
@@ -649,7 +657,7 @@ export default function ContractorDashboard() {
 
   // ── HOME tab ─────────────────────────────────��────���────────────────────────
 
-  // ── Bid status config (full set) ──────────────────────────────────��─────────
+  // ── Bid status config (full set) ──────────────────────────────────���─────────
   const BID_STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
     draft:          { label: "Draft",           cls: "bg-muted text-muted-foreground"         },
     ready_to_send:  { label: "Ready to Send",   cls: "bg-blue-50 text-blue-700"               },
@@ -1296,7 +1304,6 @@ export default function ContractorDashboard() {
   // ── ACCOUNT tab ─────────────────────────────────────────────��────────────��─
 
   const [userProfile, setUserProfile] = useState<{ full_name?: string; email?: string; phone?: string } | null>(null);
-  const [contractorProfile, setContractorProfile] = useState<{ business_name?: string } | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
   useEffect(() => {
     async function loadProfiles() {
@@ -1324,6 +1331,42 @@ export default function ContractorDashboard() {
     }
     loadProfiles();
   }, []);
+
+  // Profile completion computed from Supabase contractor_profiles data
+  useEffect(() => {
+    if (!contractorProfile) {
+      setProfileCompletion(null);
+      return;
+    }
+
+    // Count non-empty fields from contractorProfile (11 fields total)
+    const fields = [
+      contractorProfile.business_name,
+      contractorProfile.logo_url,
+      contractorProfile.bio,
+      contractorProfile.website,
+      contractorProfile.business_address,
+      contractorProfile.license_number,
+      contractorProfile.insurance_details,
+      contractorProfile.years_experience,
+      contractorProfile.google_review_link,
+      // specialties: non-empty array
+      Array.isArray(contractorProfile.specialties) && contractorProfile.specialties.length > 0 ? "filled" : null,
+      // social_links: non-empty object
+      contractorProfile.social_links && Object.keys(contractorProfile.social_links).length > 0 ? "filled" : null,
+    ];
+
+    const completed = fields.filter((f) => f != null && f !== "").length;
+    const total = 11;
+    const percent = Math.round((completed / total) * 100);
+
+    setProfileCompletion({
+      completed,
+      total,
+      percent,
+      isComplete: completed === total,
+    });
+  }, [contractorProfile]);
 
   const accountContent = (
     <div className="space-y-5">
