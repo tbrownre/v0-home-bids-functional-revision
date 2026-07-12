@@ -358,6 +358,7 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
               New to HomeBids?{" "}
               <a
                 href="https://www.homebids.ai/homeowners"
+                target="_top"
                 className="font-medium text-primary hover:underline"
               >
                 Click here.
