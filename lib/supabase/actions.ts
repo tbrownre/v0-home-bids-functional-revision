@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-const MAKE_WEBHOOK_URL = "https://hook.us2.make.com/1v7w6jnit6c3cbddxsqeyrobgnf21su9";
+const EVENTS_WEBHOOK_URL = "https://vmi3163821.contaboserver.net/webhook/homebids-events";
 
 function getConfirmUrl() {
   // In development/preview only, allow the v0 redirect override so Supabase
@@ -20,7 +20,7 @@ function getConfirmUrl() {
 
 async function fireWebhook(event: string, payload: Record<string, unknown>) {
   try {
-    await fetch(MAKE_WEBHOOK_URL, {
+    await fetch(EVENTS_WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ event, ...payload, timestamp: new Date().toISOString() }),

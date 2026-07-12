@@ -657,7 +657,7 @@ export default function ContractorDashboard() {
 
   // ── HOME tab ─────────────────────────────────��────���────────────────────────
 
-  // ── Bid status config (full set) ──────────────────────────────────���─────────
+  // ─�� Bid status config (full set) ──────────────────────────────────���─────────
   const BID_STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
     draft:          { label: "Draft",           cls: "bg-muted text-muted-foreground"         },
     ready_to_send:  { label: "Ready to Send",   cls: "bg-blue-50 text-blue-700"               },
@@ -801,7 +801,7 @@ export default function ContractorDashboard() {
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{momentum.copy}</p>
 
           <a
-            href="sms:+13472370362?&body=I want to build a new bid"
+            href="sms:+12832291348?&body=I want to build a new bid"
             className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 cursor-pointer mt-4 sm:w-auto w-full justify-center sm:justify-start"
           >
             <Sparkles className="h-4 w-4" />

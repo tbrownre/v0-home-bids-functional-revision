@@ -1,11 +1,11 @@
 // ── Homeowner SMS number ──────────────────────────────────────────────────────
-export const SMS_PHONE_NUMBER = "+18722964991";
-export const SMS_PHONE_DISPLAY = "(872) 296-4991";
+export const SMS_PHONE_NUMBER = "+14043952879";
+export const SMS_PHONE_DISPLAY = "(404) 395-2879";
 export const SMS_BODY_PREFIX = "Hi HomeBids! I need help with";
 
 // ── Contractor SMS number ─────────────────────────────────────────────────────
-export const CONTRACTOR_SMS_PHONE_NUMBER = "+13472370362";
-export const CONTRACTOR_SMS_PHONE_DISPLAY = "(347) 237-0362";
+export const CONTRACTOR_SMS_PHONE_NUMBER = "+12832291348";
+export const CONTRACTOR_SMS_PHONE_DISPLAY = "(283) 229-1348";
 export const CONTRACTOR_SMS_BODY_PREFIX = "Let's create a new bid";
 
 /**
