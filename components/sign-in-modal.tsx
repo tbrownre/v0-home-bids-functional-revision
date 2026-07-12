@@ -353,16 +353,29 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
             </Button>
           </form>
 
-          <p className="text-center text-sm text-muted-foreground">
-            New contractor?{" "}
-            <Link
-              href="/contractors/signup"
-              onClick={handleClose}
-              className="font-medium text-primary hover:underline"
-            >
-              Create an account
-            </Link>
-          </p>
+          {userType === "homeowner" ? (
+            <p className="text-center text-sm text-muted-foreground">
+              New to HomeBids?{" "}
+              <a
+                href="https://www.homebids.ai/homeowners"
+                target="_top"
+                className="font-medium text-primary hover:underline"
+              >
+                Click here.
+              </a>
+            </p>
+          ) : (
+            <p className="text-center text-sm text-muted-foreground">
+              New contractor?{" "}
+              <Link
+                href="/contractors/signup"
+                onClick={handleClose}
+                className="font-medium text-primary hover:underline"
+              >
+                Create an account
+              </Link>
+            </p>
+          )}
           </>
           )}
 
