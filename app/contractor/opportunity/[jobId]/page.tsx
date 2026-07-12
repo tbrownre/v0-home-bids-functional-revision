@@ -18,9 +18,7 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { USE_MOCK_DATA } from "@/lib/mock-auth";
 import { getJobOpportunity, createContractorInterest } from "@/lib/supabase/actions";
-import { getJobById as getDemoJobById, createContractorInterest as demoCreateInterest } from "@/lib/demo/services";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -62,28 +60,22 @@ export default function ContractorOpportunityPage() {
   const [notInterested, setNotInterested] = useState(false);
   const [building, setBuilding] = useState(false);
 
-  const isDemo = USE_MOCK_DATA || (jobId?.startsWith("demo-") ?? false) || (jobId?.startsWith("cjob-") ?? false);
-
   useEffect(() => {
     if (!jobId) return;
-    const fetcher = isDemo
-      ? getDemoJobById(jobId)
-      : getJobOpportunity(jobId);
-    fetcher.then((result) => {
+    getJobOpportunity(jobId).then((result) => {
       const j = (result as { job?: unknown }).job;
       const err = (result as { error?: string | null }).error ?? null;
       if (err || !j) setError(err ?? "Job not found");
       else setJob(j as JobOpportunity);
       setLoading(false);
     });
-  }, [jobId, isDemo]);
+  }, [jobId]);
 
   const handleBuildBid = async () => {
     if (!job) return;
     setBuilding(true);
     // Record interest
-    const interestFn = isDemo ? demoCreateInterest : createContractorInterest;
-    await interestFn(job.id);
+    await createContractorInterest(job.id);
     // TODO: if contractor is not authenticated, route through sample/trial flow
     // TODO: if authenticated, attach contractor to job before routing
 

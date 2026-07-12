@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/header";
@@ -44,21 +45,18 @@ import {
   FileText,
   Plus,
   Archive,
+  Search,
 } from "lucide-react";
 import { BidBuilderChat, type BidLeadType, type BidChatLeadContext } from "@/components/bid-builder-chat";
 import { BuildBidChoiceModal } from "@/components/build-bid-choice-modal";
 import { resumeDraftBid, type NeedsActionContext } from "@/lib/bid-resume";
 import { getContractorSmsLink } from "@/lib/sms-config";
 import { timeAgo } from "@/lib/proposal-format";
-import { getMockUser, mockSignOut, USE_MOCK_DATA, syncMirrorFromSupabase } from "@/lib/mock-auth";
-import { getContractorBids } from "@/lib/supabase/actions";
+import { getMockUser, mockSignOut, syncMirrorFromSupabase } from "@/lib/mock-auth";
 import { getContractorProposals, type Proposal, type ProposalStatus } from "@/lib/supabase/proposals";
 import { ContractorProposalCard } from "@/components/proposal/contractor-proposal-card";
 import { ProfileCompletionSection } from "@/components/contractor/profile-completion-section";
-import { loadContractorProfile, getProfileCompletion } from "@/lib/contractor-profile";
 import { createClient } from "@/lib/supabase/client";
-import { getContractorBids as getDemoContractorBids } from "@/lib/demo/services";
-import { DEMO_CONTRACTOR_EMAIL, isDemoEmail } from "@/lib/demo-guard";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -311,13 +309,13 @@ interface BidInboxItem {
 
 const INBOX_STATUS: Record<InboxStatusKey, { label: string; cls: string; primary: string; action: "build" | "followup" | "view" }> = {
   new_request:       { label: "New Request",        cls: "bg-blue-100 text-blue-700",     primary: "Start Bid",                action: "build" },
-  draft_ready:       { label: "Draft Ready",        cls: "bg-indigo-100 text-indigo-700", primary: "Review Proposal",          action: "build" },
+  draft_ready:       { label: "Draft Ready",        cls: "bg-indigo-100 text-indigo-700", primary: "Review Bid",               action: "build" },
   missing_details:   { label: "Missing Details",    cls: "bg-amber-100 text-amber-700",   primary: "Continue Bid",             action: "build" },
-  proposal_sent:     { label: "Proposal Sent",      cls: "bg-sky-100 text-sky-700",       primary: "View Proposal",            action: "view"  },
+  proposal_sent:     { label: "Bid Sent",           cls: "bg-sky-100 text-sky-700",       primary: "View Bid",                 action: "view"  },
   waiting_customer:  { label: "Waiting on Customer", cls: "bg-amber-100 text-amber-700",  primary: "Send Follow-Up",           action: "followup" },
   follow_up_ready:   { label: "Follow-Up Ready",    cls: "bg-purple-100 text-purple-700", primary: "Send Follow-Up",           action: "followup" },
-  changes_requested: { label: "Changes Requested",  cls: "bg-orange-100 text-orange-700", primary: "Edit Proposal",            action: "build" },
-  accepted:          { label: "Accepted",           cls: "bg-emerald-100 text-emerald-700", primary: "View Accepted Proposal", action: "view"  },
+  changes_requested: { label: "Changes Requested",  cls: "bg-orange-100 text-orange-700", primary: "Edit Bid",                 action: "build" },
+  accepted:          { label: "Accepted",           cls: "bg-emerald-100 text-emerald-700", primary: "View Accepted Bid",     action: "view"  },
   archived:          { label: "Archived",           cls: "bg-muted text-muted-foreground", primary: "View Details",            action: "view"  },
 };
 
@@ -398,10 +396,7 @@ export default function ContractorDashboard() {
   }, [searchParams]);
 
   const [contractorName, setContractorName] = useState("there");
-  // Demo mode is the ONLY gate for sample data / demo banner. It is true when
-  // the whole app runs as a demo build (USE_MOCK_DATA) OR the signed-in account
-  // is a seeded/mock demo account. Real contractor accounts are NEVER demo —
-  // they show only their own real data and proper empty states.
+  // Demo mode — always false for production. Shows only real contractor data.
   const [isDemoMode, setIsDemoMode] = useState(false);
   // Locally-hidden (archived) drafts for this session.
   const [dismissedDraftIds, setDismissedDraftIds] = useState<Set<string>>(new Set());
@@ -423,35 +418,28 @@ export default function ContractorDashboard() {
         return;
       }
       if (user.firstName) setContractorName(user.firstName);
-      const email = (user.email ?? "").toLowerCase();
-      setIsDemoMode(USE_MOCK_DATA || isDemoEmail(email) || email.endsWith("@homebids.demo"));
+      setIsDemoMode(false);
     })();
     return () => { cancelled = true; };
   }, []);
 
   const [bidsCount, setBidsCount] = useState(0);
-  useEffect(() => {
-    async function load() {
-      try {
-        if (USE_MOCK_DATA) {
-          const { bids } = await getDemoContractorBids();
-          setBidsCount((bids ?? []).length);
-          return;
-        }
-        if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.email === DEMO_CONTRACTOR_EMAIL) {
-          const { bids } = await getDemoContractorBids();
-          setBidsCount((bids ?? []).length);
-          return;
-        }
-        const { bids } = await getContractorBids();
-        setBidsCount((bids ?? []).length);
-      } catch { /* non-fatal */ }
-    }
-    load();
-  }, []);
+
+  // Profile completion computed from Supabase contractor_profiles data
+  const [contractorProfile, setContractorProfile] = useState<{
+    business_name?: string;
+    logo_url?: string;
+    bio?: string;
+    website?: string;
+    business_address?: string;
+    license_number?: string;
+    insurance_details?: string;
+    years_experience?: number;
+    google_review_link?: string;
+    specialties?: string[];
+    social_links?: Record<string, string>;
+  } | null>(null);
+  const [profileCompletion, setProfileCompletion] = useState<{ completed: number; total: number; percent: number; isComplete: boolean } | null>(null);
 
   // Hosted proposals (written by the external Bid Builder workflow). Read-only
   // here — the dashboard only displays and shares them.
@@ -466,6 +454,17 @@ export default function ContractorDashboard() {
         }
         const { proposals: rows } = await getContractorProposals();
         setProposals(rows);
+
+        // Count proposals created in the current calendar month for BID MOMENTUM
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+        const monthProposals = (rows ?? []).filter((p) => {
+          if (!p.created_at) return false;
+          const pDate = new Date(p.created_at);
+          return pDate.getFullYear() === currentYear && pDate.getMonth() === currentMonth;
+        });
+        setBidsCount(monthProposals.length);
       } catch { /* non-fatal */ }
       finally { setProposalsLoaded(true); }
     }
@@ -489,13 +488,6 @@ export default function ContractorDashboard() {
     [bidsCount, monthFraction],
   );
 
-  // Optional profile completion (from localStorage). Refreshes whenever the
-  // active tab changes so edits made in the Account tab reflect on Home.
-  const [profileCompletion, setProfileCompletion] = useState<{ completed: number; total: number; percent: number; isComplete: boolean } | null>(null);
-  useEffect(() => {
-    setProfileCompletion(getProfileCompletion(loadContractorProfile()));
-  }, [activeTab]);
-
   // Leads segment — "myleads" is the default
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("needs_action");
   const [showRelayModal, setShowRelayModal] = useState(false);
@@ -517,7 +509,8 @@ export default function ContractorDashboard() {
   // Track HomeBids leads that have become approved (direct messaging unlocked) in this session
   const [unlockedLeadIds, setUnlockedLeadIds] = useState<Set<string>>(new Set());
 
-  const companyName = "[Your Company Name]";
+  // Company name for PDF preview — will be updated when profile loads
+  const [companyName, setCompanyName] = useState("[Your Company Name]");
 
   // Open the chat-based Bid Builder. leadType drives messaging/approval rules.
   function startBidByText(leadType: BidLeadType, lead?: BidChatLeadContext | null) {
@@ -598,6 +591,9 @@ export default function ContractorDashboard() {
     { id: "account", label: "Account",  icon: Wrench },
   ];
 
+  // Browse Jobs link (separate page, not a tab)
+  const browseJobsLink = { label: "Browse Jobs", href: "/contractors/jobs", icon: "Search" };
+
   function handleTabChange(id: Tab) {
     setActiveTab(id);
     if (id !== "ai") setActiveTool(null);
@@ -659,9 +655,9 @@ export default function ContractorDashboard() {
     );
   }
 
-  // ── HOME tab ──────────────────────────────────────���────────────────────────
+  // ── HOME tab ─────────────────────────────────��────���────────────────────────
 
-  // ── Bid status config (full set) ────────────────────────────────────────────
+  // ── Bid status config (full set) ──────────────────────────────────���─────────
   const BID_STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
     draft:          { label: "Draft",           cls: "bg-muted text-muted-foreground"         },
     ready_to_send:  { label: "Ready to Send",   cls: "bg-blue-50 text-blue-700"               },
@@ -678,19 +674,7 @@ export default function ContractorDashboard() {
 
   // Up to 3 action items. The third card adapts: when behind pace it nudges
   // momentum; when on/ahead/complete it surfaces a fresh homeowner lead.
-  // Sample homeowner leads are demo-only — never surface them in real accounts.
-  const newHomeBidsLead = isDemoMode ? DEMO_HOMEBIDS_LEADS.find((l) => l.status === "new") : undefined;
-  const thirdCard =
-    (momentum.state === "ahead" || momentum.state === "complete" || momentum.state === "onpace") && newHomeBidsLead
-      ? {
-          id: "na-lead",
-          title: newHomeBidsLead.title,
-          sub: `New homeowner lead in ${newHomeBidsLead.location}.`,
-          cta: "Build Bid",
-          icon: Sparkles as React.ElementType,
-          onClick: () => openBuildChoice(() => startBidFromHomeBidsLead(newHomeBidsLead)),
-        }
-      : {
+  const thirdCard = {
           id: "na-momentum",
           title: "Monthly Bid Momentum",
           sub: momentum.copy,
@@ -701,45 +685,85 @@ export default function ContractorDashboard() {
 
   // Real (mock/demo) context for the in-progress draft. Structured so it can be
   // swapped for a Supabase row later without touching the card UI.
-  const kitchenRemodelDraft: NeedsActionContext = {
-    needsActionId: "na-draft",
-    actionType: "finish_draft",
-    contractorId: "contractor-demo",
-    jobId: "job-kitchen-remodel",
-    draftBidId: "draft-kitchen-remodel",
-    bidId: null,
-    title: "Kitchen Remodel Bid",
-    status: "draft",
-    sourceType: "needs_action",
-  };
+  // Derive NEEDS ACTION items from fetched proposals
+  const needsAction: { id: string; title: string; sub: string; cta: string; icon: React.ElementType; onClick: () => void; context?: NeedsActionContext }[] = (() => {
+    const items: { id: string; title: string; sub: string; cta: string; icon: React.ElementType; onClick: () => void; context?: NeedsActionContext }[] = [];
 
-  // Resume the saved draft in the on-site bid builder — seeds the builder with
-  // the draft's context so it continues an existing bid instead of starting new.
-  function finishDraftOnSite(ctx: NeedsActionContext) {
-    resumeDraftBid(ctx);
-    startBidByText("my", { id: ctx.draftBidId, projectTitle: ctx.title });
-  }
+    // Add draft proposals (status "draft")
+    proposals
+      .filter((p) => p.status === "draft")
+      .forEach((p) => {
+        items.push({
+          id: `na-draft-${p.id}`,
+          title: p.project_title || "Draft Bid",
+          sub: "Draft started — finish and send it.",
+          cta: "Finish Bid",
+          icon: FileText,
+          onClick: async () => {
+            const user = getMockUser();
+            // Load the real proposal data first
+            const { getProposalById } = await import("@/lib/supabase/actions");
+            const { proposal } = await getProposalById(p.id || "");
+            if (!proposal) return;
 
-  const needsAction: { id: string; title: string; sub: string; cta: string; icon: React.ElementType; onClick: () => void; context?: NeedsActionContext }[] = [
-    {
-      id: "na-draft",
-      title: kitchenRemodelDraft.title,
-      sub: "Draft started — project details are ready.",
-      cta: "Finish Bid",
-      icon: FileText,
-      context: kitchenRemodelDraft,
-      onClick: () => openBuildChoice(() => finishDraftOnSite(kitchenRemodelDraft), kitchenRemodelDraft),
-    },
-    {
-      id: "na-follow",
-      title: "Bathroom Tile Proposal",
-      sub: "Sent 2 days ago — this bid may need a follow-up.",
-      cta: "Follow Up",
-      icon: Send,
-      onClick: () => handleTabChange("leads"),
-    },
-    thirdCard,
-  ].slice(0, 3);
+            // Build the full context with loaded data
+            const ctx: NeedsActionContext = {
+              needsActionId: p.id || "",
+              actionType: "finish_draft",
+              contractorId: user?.id || "",
+              jobId: null,
+              draftBidId: p.id || "",
+              bidId: null,
+              title: proposal.project_title || "Draft",
+              status: "draft",
+              sourceType: "needs_action",
+              proposalId: proposal.id,
+              shareToken: proposal.share_token,
+              proposalData: {
+                project: proposal.project_title || "",
+                owner: proposal.homeowner_name || "",
+                scope: (proposal.scope_items || []).map((item: any) => item.title || ""),
+                optional: (proposal.add_ons || []).map((item: any) => item.title || ""),
+                price: proposal.total_price ? `$${proposal.total_price}` : "",
+                timeline: proposal.timeline_completion || "",
+              },
+            };
+            // Open the choice modal WITH the context, and set the on-site action to switch to Build a Bid tab
+            openBuildChoice(() => { setActiveTool("bid"); setActiveTab("ai"); }, ctx);
+          },
+        });
+      });
+
+    // Add sent proposals that are older than 48 hours
+    const now = new Date();
+    const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+    proposals
+      .filter((p) => p.status === "sent" && p.updated_at && new Date(p.updated_at) < fortyEightHoursAgo)
+      .slice(0, 3 - items.length) // Cap total at 3
+      .forEach((p) => {
+        items.push({
+          id: `na-followup-${p.id}`,
+          title: p.project_title || "Sent Proposal",
+          sub: `Sent ${timeAgo(p.updated_at)} — check on your bid.`,
+          cta: "Follow Up",
+          icon: Send,
+          onClick: () => {
+            // Link to the proposal in the proposals list
+            window.location.hash = `proposal-${p.id}`;
+          },
+        });
+      });
+
+    // If fewer than 3 items, add the Bid Momentum card as third item
+    if (items.length < 3) {
+      items.push(thirdCard);
+    }
+
+    return items.slice(0, 3);
+  })();
+
+  // If no real items, show empty state
+  const showNeedsActionEmpty = needsAction.length === 0;
 
   const homeContent = (
     <div className="space-y-6">
@@ -747,11 +771,13 @@ export default function ContractorDashboard() {
       <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
         <h1 className="text-2xl font-bold text-foreground text-balance">{greeting}, {contractorName}.</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {momentum.state === "complete"
-            ? "You've hit your 30-bid goal this month."
-            : bidsCount > 0
-              ? `You're ${bidsCount} ${bidsCount === 1 ? "bid" : "bids"} into your 30-bid monthly goal.`
-              : "Let's start building your pipeline this month."}
+          {!proposalsLoaded
+            ? "Loading your bid momentum..."
+            : momentum.state === "complete"
+              ? "You've hit your 30-bid goal this month."
+              : bidsCount > 0
+                ? `You're ${bidsCount} ${bidsCount === 1 ? "bid" : "bids"} into your 30-bid monthly goal.`
+                : "Let's start building your pipeline this month."}
         </p>
 
         <div className="mt-4 rounded-xl border border-border bg-background p-4">
@@ -847,13 +873,13 @@ export default function ContractorDashboard() {
         )}
       </section>
 
-      {/* Your Proposals — hosted proposal links (max 3 on home) */}
+      {/* Your Bids — hosted proposal links (max 3 on home) */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Your Proposals</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Your Bids</h2>
           {proposals.length > 3 && (
             <Button size="sm" variant="ghost" className="h-7 gap-1 rounded-full px-3 text-xs" asChild>
-              <a href="/contractors/bids">View all <ChevronRight className="h-3 w-3" /></a>
+              <a href="/contractors/bids-history">View all <ChevronRight className="h-3 w-3" /></a>
             </Button>
           )}
         </div>
@@ -865,9 +891,9 @@ export default function ContractorDashboard() {
           </div>
         ) : proposalsLoaded ? (
           <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center">
-            <p className="text-sm font-medium text-foreground">No proposals yet.</p>
+            <p className="text-sm font-medium text-foreground">No bids yet.</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Build a bid by text and your hosted proposal link will appear here.
+              Build a bid by text and your hosted bid link will appear here.
             </p>
             <Button className="mt-3 gap-2 rounded-full font-semibold" onClick={() => openBuildChoice(() => startBidByText("my", null))}>
               <Sparkles className="h-4 w-4" /> Build Today&apos;s Bid
@@ -875,7 +901,7 @@ export default function ContractorDashboard() {
           </div>
         ) : (
           <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
-            Loading proposals…
+            Loading bids…
           </div>
         )}
       </section>
@@ -884,16 +910,10 @@ export default function ContractorDashboard() {
 
   // ── LEADS tab ──���───────────────────────────────────────────────────────────
 
-  // ── Bid Inbox ───────────────────────────────────────────────────────────────
+  // ── Bid Inbox ────────────────────────��──────────────────────────────────────
   // Contractor-owned customers, bid drafts, sent proposals, and follow-ups
   // created through HomeBids.ai. This is NOT a marketplace/lead-source feed.
-  //
-  // Demo accounts show the sample set; REAL accounts derive the inbox solely
-  // from their own proposals (RLS-scoped to contractor_id) so no contractor
-  // ever sees another account's customers or sample data.
-  const inboxSource: BidInboxItem[] = isDemoMode
-    ? BID_INBOX_ITEMS
-    : proposals.map((p) => {
+  const inboxSource: BidInboxItem[] = proposals.map((p) => {
         const mapped = PROPOSAL_STATUS_TO_INBOX[p.status] ?? { status: "proposal_sent" as InboxStatusKey, secondary: "view" as const };
         return {
           id: p.id,
@@ -1017,11 +1037,11 @@ export default function ContractorDashboard() {
 
                   {item.secondary === "text" ? (
                     <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => openSms(item.phone)}>
-                      <MessageCircle className="h-3 w-3" /> Text Customer
+                      <MessageCircle className="h-3 w-3" /> Message Customer
                     </Button>
                   ) : (
-                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { window.location.href = "/contractors/bids"; }}>
-                      <ExternalLink className="h-3 w-3" /> View Proposal
+                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { window.location.href = "/contractors/bids-history"; }}>
+                      <ExternalLink className="h-3 w-3" /> View Bid
                     </Button>
                   )}
                 </div>
@@ -1066,17 +1086,23 @@ export default function ContractorDashboard() {
             companyName={companyName}
             onClose={closeBidBuilder}
             onHomeownerApproved={handleHomeownerApproved}
+            proposalId={buildChoiceContext?.proposalId || undefined}
+            initialData={buildChoiceContext?.proposalData ? {
+              project: buildChoiceContext.proposalData.project,
+              owner: buildChoiceContext.proposalData.owner,
+              scope: buildChoiceContext.proposalData.scope,
+              optional: buildChoiceContext.proposalData.optional,
+              price: buildChoiceContext.proposalData.price,
+              timeline: buildChoiceContext.proposalData.timeline,
+            } : undefined}
           />
         </div>
       );
     }
 
     // Start screen: choose how to build a bid + unfinished drafts.
-    // Demo accounts show sample drafts; real accounts show ONLY their own
-    // proposals still in "draft" status (filtered server-side by RLS).
-    const allDrafts: DraftItem[] = isDemoMode
-      ? DEMO_DRAFTS
-      : proposals
+    // Real accounts show ONLY their own proposals still in "draft" status (filtered server-side by RLS).
+    const allDrafts: DraftItem[] = proposals
           .filter((p) => p.status === "draft")
           .map((p) => ({
             id: p.id,
@@ -1212,7 +1238,33 @@ export default function ContractorDashboard() {
                     <span className="text-[11px] text-muted-foreground">· Updated {d.lastUpdated}</span>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => openBuildChoice(() => startBidByText("my", null))}>
+                    <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={async () => {
+                      const proposal = proposals.find(p => p.id === d.id);
+                      if (!proposal) return;
+                      const user = getMockUser();
+                      const ctx: NeedsActionContext = {
+                        needsActionId: proposal.id || "",
+                        actionType: "finish_draft",
+                        contractorId: user?.id || "",
+                        jobId: null,
+                        draftBidId: proposal.id || "",
+                        bidId: null,
+                        title: proposal.project_title || "Draft",
+                        status: "draft",
+                        sourceType: "needs_action",
+                        proposalId: proposal.id,
+                        shareToken: proposal.share_token,
+                        proposalData: {
+                          project: proposal.project_title || "",
+                          owner: proposal.homeowner_name || "",
+                          scope: (proposal.scope_items || []).map((item: any) => item.title || ""),
+                          optional: (proposal.add_ons || []).map((item: any) => item.title || ""),
+                          price: proposal.total_price ? `$${proposal.total_price}` : "",
+                          timeline: proposal.timeline_completion || "",
+                        },
+                      };
+                      openBuildChoice(() => { setActiveTool("bid"); setActiveTab("ai"); }, ctx);
+                    }}>
                       Continue
                     </Button>
                     <Button
@@ -1249,7 +1301,72 @@ export default function ContractorDashboard() {
     );
   })();
 
-  // ── ACCOUNT tab ────────────────────────────────────────────────────────────
+  // ── ACCOUNT tab ─────────────────────────────────────────────��────────────��─
+
+  const [userProfile, setUserProfile] = useState<{ full_name?: string; email?: string; phone?: string } | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  useEffect(() => {
+    async function loadProfiles() {
+      try {
+        const { getUserProfile, getContractorProfile } = await import("@/lib/supabase/actions");
+        const userRes = await getUserProfile();
+        if (userRes.profile) {
+          setUserProfile(userRes.profile);
+        }
+        const contractorRes = await getContractorProfile();
+        if (contractorRes.profile) {
+          setContractorProfile(contractorRes.profile);
+          // Update company name with real business name
+          if (contractorRes.profile.business_name) {
+            setCompanyName(contractorRes.profile.business_name);
+          } else if (userRes.profile?.full_name) {
+            setCompanyName(userRes.profile.full_name);
+          }
+        } else if (userRes.profile?.full_name) {
+          // Fallback to user name if contractor profile not found
+          setCompanyName(userRes.profile.full_name);
+        }
+      } catch { /* non-fatal */ }
+      finally { setProfileLoaded(true); }
+    }
+    loadProfiles();
+  }, []);
+
+  // Profile completion computed from Supabase contractor_profiles data
+  useEffect(() => {
+    if (!contractorProfile) {
+      setProfileCompletion(null);
+      return;
+    }
+
+    // Count non-empty fields from contractorProfile (11 fields total)
+    const fields = [
+      contractorProfile.business_name,
+      contractorProfile.logo_url,
+      contractorProfile.bio,
+      contractorProfile.website,
+      contractorProfile.business_address,
+      contractorProfile.license_number,
+      contractorProfile.insurance_details,
+      contractorProfile.years_experience,
+      contractorProfile.google_review_link,
+      // specialties: non-empty array
+      Array.isArray(contractorProfile.specialties) && contractorProfile.specialties.length > 0 ? "filled" : null,
+      // social_links: non-empty object
+      contractorProfile.social_links && Object.keys(contractorProfile.social_links).length > 0 ? "filled" : null,
+    ];
+
+    const completed = fields.filter((f) => f != null && f !== "").length;
+    const total = 11;
+    const percent = Math.round((completed / total) * 100);
+
+    setProfileCompletion({
+      completed,
+      total,
+      percent,
+      isComplete: completed === total,
+    });
+  }, [contractorProfile]);
 
   const accountContent = (
     <div className="space-y-5">
@@ -1260,16 +1377,19 @@ export default function ContractorDashboard() {
           <h2 className="text-sm font-semibold text-foreground">Profile</h2>
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary">
-              {contractorName.charAt(0)}
+              {(userProfile?.full_name ?? contractorName).charAt(0)}
             </div>
             <div>
-              <p className="font-semibold text-foreground">{contractorName} Rodriguez</p>
+              <p className="font-semibold text-foreground">{userProfile?.full_name ?? contractorName}</p>
+              {contractorProfile?.business_name && (
+                <p className="text-sm font-medium text-foreground">{contractorProfile.business_name}</p>
+              )}
               <p className="text-xs text-muted-foreground">Contractor</p>
             </div>
           </div>
           <div className="space-y-2 pt-1">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-4 w-4 shrink-0" />contractor@homebids.demo</div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Phone className="h-4 w-4 shrink-0" />(480) 555-0192</div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-4 w-4 shrink-0" />{userProfile?.email ?? "loading..."}</div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Phone className="h-4 w-4 shrink-0" />{userProfile?.phone ?? "—"}</div>
           </div>
         </div>
 

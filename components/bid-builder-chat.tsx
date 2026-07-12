@@ -124,6 +124,8 @@ interface Props {
   companyName: string;
   onClose: () => void;
   onHomeownerApproved?: (leadId: string) => void;
+  proposalId?: string | null;
+  initialData?: Partial<BidData> | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -391,6 +393,8 @@ export function BidBuilderChat({
   companyName,
   onClose,
   onHomeownerApproved,
+  proposalId,
+  initialData,
 }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -402,6 +406,9 @@ export function BidBuilderChat({
   const [copied, setCopied] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [completenessError, setCompletenessError] = useState<string | null>(null);
+  const [draftProposalId, setDraftProposalId] = useState<string | null>(proposalId || null);
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const bidRef = useRef<BidData>(DEFAULT_BID);
@@ -410,26 +417,37 @@ export function BidBuilderChat({
   useEffect(() => {
     const seeded: BidData = {
       ...DEFAULT_BID,
-      project: lead?.projectTitle ?? "",
-      owner: lead?.ownerName ?? "",
-      phone: lead?.ownerPhone ?? "",
-      address: lead?.address ?? "",
-      timeline: lead?.timeline ?? "",
-      price: lead?.price ?? "",
+      ...(initialData || {}),
+      project: initialData?.project ?? lead?.projectTitle ?? "",
+      owner: initialData?.owner ?? lead?.ownerName ?? "",
+      phone: initialData?.phone ?? lead?.ownerPhone ?? "",
+      address: initialData?.address ?? lead?.address ?? "",
+      timeline: initialData?.timeline ?? lead?.timeline ?? "",
+      price: initialData?.price ?? lead?.price ?? "",
     };
     setBid(seeded);
+
+    // Determine phase and greeting based on whether we're resuming a draft
+    const isResumingDraft = !!initialData && !!proposalId;
+    const greeting = isResumingDraft
+      ? `Welcome back — resuming your draft: ${seeded.project || "your project"} for ${seeded.owner || "the homeowner"}, currently ${seeded.price || "pending pricing"}. Tell me what to change, or type APPROVE to finalize and send.`
+      : "Hi! I'm your HomeBids bid assistant. Send rough project details — project type, scope, pricing, timeline, and the customer info. I'll organize everything into a complete professional bid, then ask a few quick follow-up questions about inspection, deposit, and warranty so the homeowner gets a full picture.";
+
     setMessages([
       {
         id: nextId(),
         role: "ai",
-        text: "Hi! I'm your HomeBids bid assistant. Send rough project details — project type, scope, pricing, timeline, and the customer info. I'll organize everything into a complete professional bid, then ask a few quick follow-up questions about inspection, deposit, and warranty so the homeowner gets a full picture.",
+        text: greeting,
       },
     ]);
-    setPhase("intake");
+
+    // When resuming a draft, start in review phase so APPROVE works immediately
+    // Otherwise, start in intake phase for new bids
+    setPhase(isResumingDraft ? "review" : "intake");
     setGatherField(null);
     setCompletenessError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lead?.id, leadType]);
+  }, [lead?.id, leadType, initialData, proposalId]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -795,7 +813,7 @@ export function BidBuilderChat({
 
   // ── Approve handler ───────────────────────────────────────────────────────
 
-  function handleApprove() {
+  async function handleApprove() {
     // Completeness check before finalizing
     const status = checkCompleteness(bidRef.current);
     if (status !== "complete") {
@@ -819,6 +837,54 @@ export function BidBuilderChat({
     }
 
     setCompletenessError(null);
+
+    // Create or update the proposal
+    if (!isSaving) {
+      setIsSaving(true);
+      try {
+        const b = bidRef.current;
+        const priceNum = b.price ? parseInt(b.price.replace(/\D/g, ""), 10) : undefined;
+        const proposalData = {
+          homeownerName: b.owner,
+          projectTitle: b.project,
+          projectSummary: b.notes,
+          scopeItems: b.scope.map((title) => ({ title })),
+          totalPrice: priceNum,
+          priceNote: b.priceType ? `${b.priceType.charAt(0).toUpperCase() + b.priceType.slice(1)} — final price confirmed on site.` : undefined,
+          addOns: b.optional.map((title) => ({ title })),
+          timelineCompletion: b.timeline,
+          status: "sent",
+        };
+
+        if (draftProposalId) {
+          // Update existing draft
+          const { updateProposalFromBuilder } = await import("@/lib/supabase/actions");
+          const response = await updateProposalFromBuilder(draftProposalId, proposalData);
+          if (response.error) {
+            pushAi(`Error updating proposal: ${response.error}`, "system");
+            setIsSaving(false);
+            return;
+          }
+        } else {
+          // Create new proposal
+          const { createProposalFromBuilder } = await import("@/lib/supabase/actions");
+          const response = await createProposalFromBuilder(proposalData);
+          if (response.error) {
+            pushAi(`Error creating proposal: ${response.error}`, "system");
+            setIsSaving(false);
+            return;
+          }
+          setDraftProposalId(response.proposalId);
+          setShareToken(response.shareToken);
+        }
+      } catch (e) {
+        pushAi(`Failed to save proposal: ${(e as Error).message}`, "system");
+        setIsSaving(false);
+        return;
+      }
+      setIsSaving(false);
+    }
+
     aiRespond(() => {
       if (leadType === "my") {
         setPhase("approved");
@@ -921,7 +987,17 @@ export function BidBuilderChat({
     setTimeout(() => setCopied(null), 2000);
   }
 
-  const bidLink = `https://homebids.com/bid/${lead?.id ?? "draft"}-${(bid.owner || "owner").split(" ")[0].toLowerCase()}`;
+  // Build the real proposal link using share token, fallback to site URL for drafts
+  const getDraftLink = () => {
+    if (shareToken) {
+      const isDev = process.env.NODE_ENV !== "production";
+      const devOverride = isDev ? process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL : undefined;
+      const base = devOverride || process.env.NEXT_PUBLIC_SITE_URL || "https://homebids.ai";
+      return `${base}/p/${shareToken}`;
+    }
+    return `https://homebids.ai/draft/${lead?.id ?? "draft"}-${(bid.owner || "owner").split(" ")[0].toLowerCase()}`;
+  };
+  const bidLink = getDraftLink();
   const canApproveInline = phase === "review";
 
   // ── PDF preview ──────────────────────────────────────────────────────────
@@ -1052,7 +1128,7 @@ export function BidBuilderChat({
               window.location.href = `sms:${phone}?body=${encodeURIComponent(`Hi ${bid.owner.split(" ")[0] || "there"}, here's your bid for ${bid.project}. ${bidLink}`)}`;
             }}
           >
-            <MessageCircle className="h-3.5 w-3.5" /> Text Customer
+            <MessageCircle className="h-3.5 w-3.5" /> Message Customer
           </Button>
         </>
       )}

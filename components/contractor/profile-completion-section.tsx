@@ -5,17 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, AlertCircle } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import {
   PROFILE_SECTIONS,
-  loadContractorProfile,
-  saveContractorProfile,
-  isFieldComplete,
-  getProfileCompletion,
   emptyProfile,
   type ContractorOptionalProfile,
   type ContractorProfileField,
 } from "@/lib/contractor-profile";
+
+function isFieldComplete(profile: ContractorOptionalProfile, key: ContractorProfileField): boolean {
+  return (profile[key] ?? "").trim() !== "";
+}
 
 /** Small yellow "Needs attention" pill, or a subtle "Completed" marker. */
 function FieldBadge({ complete }: { complete: boolean }) {
@@ -38,24 +38,83 @@ function FieldBadge({ complete }: { complete: boolean }) {
 export function ProfileCompletionSection() {
   const [profile, setProfile] = useState<ContractorOptionalProfile>(emptyProfile());
   const [loaded, setLoaded] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
-    setProfile(loadContractorProfile());
-    setLoaded(true);
+    async function loadProfile() {
+      try {
+        const { getContractorProfile } = await import("@/lib/supabase/actions");
+        const { profile: dbProfile } = await getContractorProfile();
+        if (dbProfile) {
+          setProfile({
+            businessName: dbProfile.business_name || "",
+            logoUrl: dbProfile.logo_url || "",
+            companyDescription: dbProfile.bio || "",
+            website: dbProfile.website || "",
+            businessAddress: dbProfile.business_address || "",
+            licenseNumber: dbProfile.license_number || "",
+            insuranceDetails: dbProfile.insurance_details || "",
+            yearsInBusiness: dbProfile.years_experience?.toString() || "",
+            googleReviewLink: dbProfile.google_review_link || "",
+            servicesOffered: (dbProfile.specialties || []).join(", ") || "",
+            socialLinks: JSON.stringify(dbProfile.social_links || {}),
+          });
+        }
+      } catch (e) {
+        console.error("[ProfileCompletionSection] Failed to load profile:", e);
+      } finally {
+        setLoaded(true);
+      }
+    }
+    loadProfile();
   }, []);
 
   const setField = (key: ContractorProfileField, value: string) => {
     setProfile((prev) => ({ ...prev, [key]: value }));
-    setSaved(false);
+    setSaveSuccess(false);
+    setSaveError(null);
   };
 
-  const handleSave = () => {
-    saveContractorProfile(profile);
-    setSaved(true);
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+    try {
+      const { updateContractorProfile } = await import("@/lib/supabase/actions");
+      const { error } = await updateContractorProfile({
+        business_name: profile.businessName || null,
+        logo_url: profile.logoUrl || null,
+        bio: profile.companyDescription || null,
+        website: profile.website || null,
+        business_address: profile.businessAddress || null,
+        license_number: profile.licenseNumber || null,
+        insurance_details: profile.insuranceDetails || null,
+        years_experience: profile.yearsInBusiness ? parseInt(profile.yearsInBusiness) : null,
+        google_review_link: profile.googleReviewLink || null,
+        specialties: profile.servicesOffered ? profile.servicesOffered.split(",").map((s) => s.trim()).filter(Boolean) : [],
+        social_links: profile.socialLinks ? JSON.parse(profile.socialLinks) : {},
+      });
+      if (error) {
+        setSaveError(error);
+      } else {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      }
+    } catch (e) {
+      setSaveError((e as Error).message || "Failed to save profile");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const completion = getProfileCompletion(profile);
+  // Compute completion from current profile values
+  const ALL_FIELDS = Object.keys(emptyProfile()) as ContractorProfileField[];
+  const completed = ALL_FIELDS.filter((k) => (profile[k] ?? "").trim() !== "").length;
+  const total = ALL_FIELDS.length;
+  const percent = total > 0 ? Math.round((completed / total) * 100) : 100;
+  const completion = { completed, total, percent, isComplete: completed === total };
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
@@ -124,11 +183,26 @@ export function ProfileCompletionSection() {
       </div>
 
       <div className="mt-6 flex items-center gap-3">
-        <Button onClick={handleSave}>Save Profile Details</Button>
-        {saved && (
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Profile Details"
+          )}
+        </Button>
+        {saveSuccess && (
           <span className="inline-flex items-center gap-1.5 text-sm font-medium text-green-600">
             <CheckCircle2 className="h-4 w-4" />
             Saved
+          </span>
+        )}
+        {saveError && (
+          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-red-600">
+            <AlertCircle className="h-4 w-4" />
+            Error: {saveError}
           </span>
         )}
       </div>

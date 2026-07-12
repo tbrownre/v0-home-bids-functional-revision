@@ -28,9 +28,7 @@ import {
 } from "lucide-react";
 import { selectBidAsWinner } from "@/lib/job-store";
 import { acceptBid as acceptBidAction, getJobBids } from "@/lib/supabase/actions";
-import { getJobBids as getDemoJobBids } from "@/lib/demo/services";
-import { USE_MOCK_DATA, getMockUser } from "@/lib/mock-auth";
-import { demoContractorBids } from "@/lib/demo/data/contractor-bids";
+import { getMockUser } from "@/lib/mock-auth";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -39,6 +37,9 @@ import { Header } from "@/components/header";
 
 interface Bid {
   id: string;
+  contractor_id?: string;
+  status?: string;
+  created_at?: string;
   companyName: string;
   companyLogo: string;
   price: number;
@@ -86,232 +87,6 @@ interface Message {
   isOwn: boolean;
 }
 
-// Sample bid data
-const sampleBids: Bid[] = [
-  {
-    id: "1",
-    companyName: "ABC Plumbing & Roofing",
-    companyLogo: "/images/contractor-placeholder.png",
-    price: 8500,
-    timeline: "5-7 days",
-    rating: 4.9,
-    reviewCount: 127,
-    message: "Hi! We'd love to help with your roof replacement. We specialize in residential roofing and have completed over 500 projects in your area. Our team uses premium materials with a 25-year warranty. We can start as early as next week.",
-    verified: true,
-    yearsInBusiness: 15,
-    location: "Austin, TX",
-    phone: "(512) 555-0123",
-    email: "contact@abcplumbing.com",
-    website: "www.abcplumbing.com",
-    completedJobs: 523,
-    responseTime: "Usually responds within 2 hours",
-    financingAvailable: true,
-    inspectionFee: "Free",
-    depositRequired: "None",
-  },
-  {
-    id: "2",
-    companyName: "ProFix Home Services",
-    companyLogo: "/images/contractor-placeholder.png",
-    price: 7200,
-    timeline: "7-10 days",
-    rating: 4.7,
-    reviewCount: 89,
-    message: "Thank you for considering us! We've reviewed your project details and believe we're a great fit. Our competitive pricing includes all materials and labor, with no hidden fees. We also offer financing options if needed.",
-    verified: true,
-    yearsInBusiness: 8,
-    location: "Round Rock, TX",
-    phone: "(512) 555-0456",
-    email: "info@profixhome.com",
-    website: "www.profixhome.com",
-    completedJobs: 312,
-    responseTime: "Usually responds within 4 hours",
-    financingAvailable: true,
-    inspectionFee: "$75",
-    depositRequired: "$1,500",
-  },
-  {
-    id: "3",
-    companyName: "Quality Home Co.",
-    companyLogo: "/images/contractor-placeholder.png",
-    price: 9100,
-    timeline: "3-5 days",
-    rating: 4.8,
-    reviewCount: 203,
-    message: "We're excited about your project! As a family-owned business with 20 years of experience, we pride ourselves on quality craftsmanship. Our faster timeline is possible because we have a dedicated roofing crew available immediately.",
-    verified: true,
-    yearsInBusiness: 20,
-    location: "Cedar Park, TX",
-    phone: "(512) 555-0789",
-    email: "hello@qualityhomeco.com",
-    website: "www.qualityhomeco.com",
-    completedJobs: 847,
-    responseTime: "Usually responds within 1 hour",
-    inspectionFee: "Free",
-    depositRequired: "$2,000",
-  },
-  {
-    id: "4",
-    companyName: "Summit Roofing Pros",
-    companyLogo: "/images/contractor-placeholder.png",
-    price: 7850,
-    timeline: "6-8 days",
-    rating: 4.6,
-    reviewCount: 156,
-    message: "Hello! Summit Roofing has been serving the Austin metro for over a decade. We offer comprehensive roofing solutions with a focus on durability and aesthetics. Free inspection included with every bid!",
-    verified: true,
-    yearsInBusiness: 12,
-    location: "Pflugerville, TX",
-    phone: "(512) 555-1234",
-    email: "info@summitroofing.com",
-    website: "www.summitroofingpros.com",
-    completedJobs: 428,
-    responseTime: "Usually responds within 3 hours",
-    inspectionFee: "Free",
-    depositRequired: "None",
-  },
-  {
-    id: "5",
-    companyName: "Lone Star Exteriors",
-    companyLogo: "/images/contractor-placeholder.png",
-    price: 8200,
-    timeline: "4-6 days",
-    rating: 4.9,
-    reviewCount: 312,
-    message: "Howdy! We're a Texas-proud company with the best warranties in the state. Our crews are GAF Master Elite certified, meaning top-tier installation quality. We'd be honored to work on your home.",
-    verified: true,
-    yearsInBusiness: 18,
-    location: "Austin, TX",
-    phone: "(512) 555-2345",
-    email: "hello@lonestarexteriors.com",
-    website: "www.lonestarexteriors.com",
-    completedJobs: 692,
-    responseTime: "Usually responds within 1 hour",
-    inspectionFee: "$100",
-    depositRequired: "$1,800",
-  },
-  {
-    id: "6",
-    companyName: "Blue Sky Contractors",
-    companyLogo: "/images/contractor-placeholder.png",
-    price: 6900,
-    timeline: "10-14 days",
-    rating: 4.5,
-    reviewCount: 67,
-    message: "We appreciate you considering Blue Sky! While our timeline is a bit longer, we ensure meticulous attention to detail. Our lower price reflects our efficient operations, not compromised quality.",
-    verified: false,
-    yearsInBusiness: 5,
-    location: "Georgetown, TX",
-    phone: "(512) 555-3456",
-    email: "contact@blueskycontractors.com",
-    website: "www.blueskycontractors.com",
-    completedJobs: 145,
-    responseTime: "Usually responds within 6 hours",
-    inspectionFee: "$50",
-    depositRequired: "None",
-  },
-  {
-    id: "7",
-    companyName: "Premier Roofing Solutions",
-    companyLogo: "/images/contractor-placeholder.png",
-    price: 9800,
-    timeline: "3-4 days",
-    rating: 5.0,
-    reviewCount: 89,
-    message: "At Premier, we deliver exactly what our name suggests - premium service. Our expedited timeline and premium materials come at a higher cost, but our 5-star rating speaks for itself. Excellence guaranteed.",
-    verified: true,
-    yearsInBusiness: 10,
-    location: "Lakeway, TX",
-    phone: "(512) 555-4567",
-    email: "info@premierroofing.com",
-    website: "www.premierroofingsolutions.com",
-    completedJobs: 234,
-    responseTime: "Usually responds within 30 minutes",
-    financingAvailable: true,
-    inspectionFee: "Free",
-    depositRequired: "$2,500",
-  },
-  {
-    id: "8",
-    companyName: "Hill Country Roofing",
-    companyLogo: "/images/contractor-placeholder.png",
-    price: 7500,
-    timeline: "8-10 days",
-    rating: 4.7,
-    reviewCount: 198,
-    message: "Family-owned since 1998! We know Texas weather and build roofs to withstand it. Our mid-range pricing offers the best value without cutting corners. References available upon request.",
-    verified: true,
-    yearsInBusiness: 26,
-    location: "Dripping Springs, TX",
-    phone: "(512) 555-5678",
-    email: "team@hillcountryroofing.com",
-    website: "www.hillcountryroofing.com",
-    completedJobs: 1024,
-    responseTime: "Usually responds within 2 hours",
-    financingAvailable: true,
-    inspectionFee: "$125",
-    depositRequired: "$1,000",
-  },
-];
-
-// Sample messages
-const sampleMessages: Record<string, Message[]> = {
-  "1": [
-    {
-      id: "m1",
-      senderId: "contractor",
-      text: "Hi! Thanks for your interest. Do you have any specific material preferences for the shingles?",
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      isOwn: false,
-    },
-    {
-      id: "m2",
-      senderId: "homeowner",
-      text: "I was thinking architectural shingles. What brands do you recommend?",
-      timestamp: new Date(Date.now() - 1.5 * 60 * 60 * 1000),
-      isOwn: true,
-    },
-    {
-      id: "m3",
-      senderId: "contractor",
-      text: "Great choice! We typically use GAF or Owens Corning. Both come with excellent warranties. GAF Timberline is our most popular option.",
-      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
-      isOwn: false,
-    },
-  ],
-  "2": [],
-  "3": [
-    {
-      id: "m1",
-      senderId: "contractor",
-      text: "Hello! We noticed you're looking at our bid. Let us know if you have any questions!",
-      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-      isOwn: false,
-    },
-  ],
-  "4": [],
-  "5": [
-    {
-      id: "m1",
-      senderId: "contractor",
-      text: "Thanks for viewing our bid! We're ready to start whenever works for you.",
-      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-      isOwn: false,
-    },
-  ],
-  "6": [],
-  "7": [
-    {
-      id: "m1",
-      senderId: "contractor",
-      text: "Hi there! Premier Roofing here. Happy to answer any questions about our premium service.",
-      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
-      isOwn: false,
-    },
-  ],
-  "8": [],
-};
-
 export default function BidsPage() {
   const searchParams = useSearchParams();
   const { id: jobId } = useParams<{ id: string }>();
@@ -320,36 +95,37 @@ export default function BidsPage() {
   const currentUser = getMockUser();
   const isContractor = currentUser?.role === "contractor";
 
-  // Find this contractor's own bid for this job (used in contractor view)
-  const ownContractorBid = isContractor
-    ? demoContractorBids.find((b) => b.job_id === jobId) ?? null
-    : null;
-  const [bids, setBids] = useState<Bid[]>(sampleBids);
+  const [bids, setBids] = useState<Bid[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
-  const [messages, setMessages] = useState<Record<string, Message[]>>(sampleMessages);
+  const [messages, setMessages] = useState<Record<string, Message[]>>({});
 
-  // Fetch bids — mock mode always uses demo service.
+  // Fetch bids from Supabase.
   useEffect(() => {
     if (!jobId) return;
 
-    const isDemoJob = USE_MOCK_DATA || jobId.startsWith("demo-job-");
-    const fetchBids = isDemoJob ? getDemoJobBids(jobId) : getJobBids(jobId);
+    setLoading(true);
+    const fetchBids = getJobBids(jobId);
 
     fetchBids.then(({ bids: rawBids, error }) => {
       if (error) {
         console.error("[BidsPage] Failed to load bids:", error);
+        setLoading(false);
         return;
       }
       if (rawBids && rawBids.length > 0) {
         const mapped: Bid[] = rawBids.map((b: any) => ({
           id: b.id,
+          contractor_id: b.contractor_id,
+          status: b.status,
+          created_at: b.created_at,
           companyName: b.companyName ?? b.business_name ?? "Contractor",
           companyLogo: b.companyLogo ?? "/images/contractor-placeholder.png",
-          price: b.price ?? b.amount ?? 0,
+          price: b.amount ?? 0,
           timeline: b.timeline ?? "Flexible",
           rating: b.rating ?? 0,
           reviewCount: b.reviewCount ?? 0,
-          message: b.message ?? b.message_text ?? "",
+          message: b.message ?? "",
           verified: b.verified ?? false,
           yearsInBusiness: b.yearsInBusiness ?? 0,
           location: b.location ?? "",
@@ -378,8 +154,14 @@ export default function BidsPage() {
         }));
         setBids(mapped);
       }
+      setLoading(false);
     });
   }, [jobId]);
+
+  // Find this contractor's own bid for this job (used in contractor view)
+  const ownContractorBid = isContractor && currentUser
+    ? bids.find(b => b.contractor_id === currentUser.id) ?? null
+    : null;
   const [newMessage, setNewMessage] = useState("");
   const [showMobileDetail, setShowMobileDetail] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -513,7 +295,12 @@ export default function BidsPage() {
           </div>
 
           {/* Own bid summary */}
-          {ownContractorBid ? (
+          {loading ? (
+            <div className="rounded-2xl border border-border bg-card p-6 text-center">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-primary border-r-transparent" />
+              <p className="mt-3 text-sm text-muted-foreground">Loading bids...</p>
+            </div>
+          ) : ownContractorBid ? (
             <div className="rounded-2xl border border-border bg-card p-6">
               <div className="flex items-center gap-2 mb-4">
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
@@ -522,7 +309,7 @@ export default function BidsPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl bg-muted/50 p-3">
                   <p className="text-xs text-muted-foreground">Your Bid Amount</p>
-                  <p className="mt-1 text-sm font-semibold text-foreground">{ownContractorBid.bidAmount}</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">${ownContractorBid.price?.toLocaleString()}</p>
                 </div>
                 <div className="rounded-xl bg-muted/50 p-3">
                   <p className="text-xs text-muted-foreground">Timeline</p>
@@ -531,13 +318,15 @@ export default function BidsPage() {
                 <div className="rounded-xl bg-muted/50 p-3">
                   <p className="text-xs text-muted-foreground">Status</p>
                   <p className="mt-1 text-sm font-semibold capitalize text-foreground">
-                    {ownContractorBid.status.replace("_", " ")}
+                    {ownContractorBid.status?.replace("_", " ")}
                   </p>
                 </div>
                 <div className="rounded-xl bg-muted/50 p-3">
                   <p className="text-xs text-muted-foreground">Submitted</p>
                   <p className="mt-1 text-sm font-semibold text-foreground">
-                    {ownContractorBid.submittedAt.toLocaleDateString()}
+                    {ownContractorBid.created_at
+                      ? new Date(ownContractorBid.created_at).toLocaleDateString()
+                      : "—"}
                   </p>
                 </div>
               </div>
@@ -581,12 +370,34 @@ export default function BidsPage() {
             <div className="text-center lg:text-left">
               <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Contractor Bids</h1>
               <p className="mt-2 text-muted-foreground">
-                {bids.length} bids received. Select a bid to view details and message the contractor.
+                {loading ? "Loading bids..." : `${bids.length} bids received. Select a bid to view details and message the contractor.`}
               </p>
             </div>
           </div>
 
+          {/* Loading state */}
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-primary border-r-transparent" />
+                <p className="mt-3 text-sm text-muted-foreground">Loading bids...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!loading && bids.length === 0 && (
+            <div className="rounded-2xl border border-border bg-card p-8 text-center">
+              <MessageCircle className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h2 className="mt-3 text-lg font-semibold text-foreground">No Bids Yet</h2>
+              <p className="mt-2 text-muted-foreground">
+                Contractors will start submitting bids soon. Check back later!
+              </p>
+            </div>
+          )}
+
           {/* Grid Layout */}
+          {!loading && bids.length > 0 && (
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Bids List */}
             <div className={`space-y-3 ${showMobileDetail ? "hidden lg:block" : "block"}`}>
@@ -1212,6 +1023,7 @@ export default function BidsPage() {
               </AnimatePresence>
             </div>
           </div>
+          )}
         </div>
         </main>
       )}

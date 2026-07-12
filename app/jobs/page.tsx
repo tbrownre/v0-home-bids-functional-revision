@@ -14,9 +14,8 @@ import {
   isJobArchived,
   type JobStatusOwner,
 } from "@/lib/job-store";
-import { USE_MOCK_DATA, getMockUser, type MockUser } from "@/lib/mock-auth";
+import { type MockUser } from "@/lib/mock-auth";
 import { getHomeownerJobs } from "@/lib/supabase/actions";
-import { getHomeownerJobs as getDemoHomeownerJobs } from "@/lib/demo/services";
 
 interface OwnerJob {
   id: string;
@@ -40,20 +39,18 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<OwnerJob[]>([]);
   const [jobsLoaded, setJobsLoaded] = useState(false);
 
-  // Resolve the current user (mock session in demo mode).
+  // No user pre-loaded — real auth via Supabase middleware
   useEffect(() => {
-    const u = USE_MOCK_DATA ? getMockUser() : null;
-    setUser(u);
+    setUser(null);
     setAuthReady(true);
   }, []);
 
-  // Load jobs once we know who the user is. Demo accounts get the seeded demo
-  // jobs; real homeowners get their Supabase jobs.
+  // Load jobs from Supabase (auth is required for Supabase access).
   useEffect(() => {
-    if (!authReady || !user || user.role !== "homeowner") return;
+    if (!authReady) return;
     let active = true;
 
-    const loader = USE_MOCK_DATA ? getDemoHomeownerJobs() : getHomeownerJobs();
+    const loader = getHomeownerJobs();
     loader
       .then(({ jobs: rawJobs, error }) => {
         if (!active) return;

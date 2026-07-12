@@ -81,10 +81,9 @@ function FlyoutGroup({ label, items }: { label: string; items: { href?: string; 
 
 export function Footer() {
   const pathname = usePathname();
-  // admin-demo has its own layout — skip footer there.
   // Hosted proposals (/p/[shareToken]) are standalone, contractor-branded pages
   // and must not show the HomeBids marketing footer.
-  if (pathname?.startsWith("/admin-demo") || pathname?.startsWith("/p/")) return null;
+  if (pathname?.startsWith("/p/")) return null;
 
   const [showContact, setShowContact] = useState(false);
   const [contactType, setContactType] = useState<"homeowner" | "contractor">("homeowner");

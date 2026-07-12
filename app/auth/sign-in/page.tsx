@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,18 +10,23 @@ import { HomeBidsLogo } from "@/components/homebids-logo";
 import { createClient } from "@/lib/supabase/client";
 import {
   realSignIn,
-  realDemoSignIn,
   getMockUser,
   redirectAfterSignIn,
 } from "@/lib/mock-auth";
+import { phoneSignIn } from "@/lib/supabase/actions";
 
 type View = "signin" | "forgot" | "forgot-sent";
+type UserType = "contractor" | "homeowner";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignInPage() {
+  const router = useRouter();
   const [view, setView] = useState<View>("signin");
+  const [userType, setUserType] = useState<UserType>("contractor");
+  const [usePhoneForHomeowner, setUsePhoneForHomeowner] = useState(true);
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -96,30 +102,38 @@ export default function SignInPage() {
 
   async function handlePasswordSignIn(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim() || !password) {
-      setError("Please enter your email and password.");
-      return;
-    }
-    setLoading(true);
-    setError("");
-    const result = await realSignIn(email, password);
-    if (result.user) {
-      redirectAfterSignIn(result.user.role);
-    } else {
-      setError(result.error ?? "Unable to sign in.");
-      setLoading(false);
-    }
-  }
 
-  async function handleDemoSignIn(role: "homeowner" | "contractor") {
-    setLoading(true);
-    setError("");
-    const result = await realDemoSignIn(role);
-    if (result.user) {
-      redirectAfterSignIn(result.user.role);
+    if (userType === "homeowner" && usePhoneForHomeowner) {
+      // Homeowner phone sign-in
+      if (!phone.trim() || !password) {
+        setError("Please enter your phone and password.");
+        return;
+      }
+      setLoading(true);
+      setError("");
+      const result = await phoneSignIn(phone, password);
+      if (result.error) {
+        setError(result.error);
+        setLoading(false);
+      } else if (result.success) {
+        // Redirect client-side on success
+        router.push("/homeowners/dashboard");
+      }
     } else {
-      setError(result.error ?? "Demo sign-in failed.");
-      setLoading(false);
+      // Contractor or homeowner email sign-in
+      if (!email.trim() || !password) {
+        setError("Please enter your email and password.");
+        return;
+      }
+      setLoading(true);
+      setError("");
+      const result = await realSignIn(email, password);
+      if (result.user) {
+        redirectAfterSignIn(result.user.role);
+      } else {
+        setError(result.error ?? "Unable to sign in.");
+        setLoading(false);
+      }
     }
   }
 
@@ -155,10 +169,41 @@ export default function SignInPage() {
         <div className="w-full max-w-sm space-y-5">
           {view === "signin" && (
           <>
+          {/* User Type Toggle */}
+          <div className="flex gap-2 rounded-lg border border-border bg-muted/50 p-1">
+            <button
+              type="button"
+              onClick={() => {
+                setUserType("contractor");
+                setUsePhoneForHomeowner(false);
+              }}
+              className={`flex-1 rounded px-3 py-2 text-sm font-medium transition-colors ${
+                userType === "contractor"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Contractor
+            </button>
+            <button
+              type="button"
+              onClick={() => setUserType("homeowner")}
+              className={`flex-1 rounded px-3 py-2 text-sm font-medium transition-colors ${
+                userType === "homeowner"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Homeowner
+            </button>
+          </div>
+
           <div className="text-center">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome back to HomeBids</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Sign in to view your project, bids, messages, and contractor activity.
+              {userType === "contractor"
+                ? "Sign in to view your project, bids, messages, and contractor activity."
+                : "Sign in to view your project and bids."}
             </p>
           </div>
 
@@ -170,21 +215,79 @@ export default function SignInPage() {
           )}
 
           <form onSubmit={handlePasswordSignIn} className="space-y-3">
-            <div className="space-y-1.5">
-              <label htmlFor="email" className="text-sm font-medium text-foreground">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-11"
-                disabled={loading}
-              />
-            </div>
+            {userType === "homeowner" && (
+              <>
+                {usePhoneForHomeowner ? (
+                  <div className="space-y-1.5">
+                    <label htmlFor="phone" className="text-sm font-medium text-foreground">
+                      Phone Number
+                    </label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      autoComplete="tel"
+                      placeholder="(555) 123-4567"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="h-11"
+                      disabled={loading}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <label htmlFor="email" className="text-sm font-medium text-foreground">
+                      Email
+                    </label>
+                    <Input
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="h-11"
+                      disabled={loading}
+                    />
+                  </div>
+                )}
+                <p className="text-center text-xs text-muted-foreground">
+                  {usePhoneForHomeowner ? (
+                    <button
+                      type="button"
+                      onClick={() => setUsePhoneForHomeowner(false)}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      Prefer email? Sign in with email
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setUsePhoneForHomeowner(true)}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      Sign in with phone instead
+                    </button>
+                  )}
+                </p>
+              </>
+            )}
+            {userType === "contractor" && (
+              <div className="space-y-1.5">
+                <label htmlFor="email" className="text-sm font-medium text-foreground">
+                  Email
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-11"
+                  disabled={loading}
+                />
+              </div>
+            )}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label htmlFor="password" className="text-sm font-medium text-foreground">
@@ -231,33 +334,6 @@ export default function SignInPage() {
               Create an account
             </Link>
           </p>
-
-          {/* Demo accounts — real seeded Supabase sessions */}
-          <div className="rounded-xl border border-dashed border-border bg-muted/40 p-4">
-            <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Or explore a demo account
-            </p>
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleDemoSignIn("homeowner")}
-                className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50 cursor-pointer"
-              >
-                <Home className="h-4 w-4 text-muted-foreground" />
-                Homeowner demo
-              </button>
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleDemoSignIn("contractor")}
-                className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50 cursor-pointer"
-              >
-                <Hammer className="h-4 w-4 text-muted-foreground" />
-                Contractor demo
-              </button>
-            </div>
-          </div>
           </>
           )}
 

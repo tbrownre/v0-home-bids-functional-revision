@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Radio,
@@ -21,8 +22,6 @@ import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getAdminJobs, getAdminOutreachRuns } from "@/lib/supabase/actions";
-import { getAdminJobs as getDemoAdminJobs, getAdminOutreachRuns as getDemoOutreachRuns } from "@/lib/demo/services";
-import { USE_MOCK_DATA } from "@/lib/mock-auth";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -82,26 +81,54 @@ function timeAgo(dateStr: string) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminOutreachPage() {
+  const router = useRouter();
   const [runs, setRuns] = useState<OutreachRun[]>([]);
   const [jobs, setJobs] = useState<AdminJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
-  const isDemo = USE_MOCK_DATA;
+  // Check admin authorization
+  useEffect(() => {
+    async function checkAdmin() {
+      try {
+        const { getUserProfile } = await import("@/lib/supabase/actions");
+        const { profile } = await getUserProfile();
+        
+        if (!profile) {
+          router.push("/auth/sign-in");
+          return;
+        }
+
+        if (profile.is_admin !== true) {
+          router.push("/");
+          return;
+        }
+
+        setIsAuthorized(true);
+      } catch (e) {
+        console.error("[AdminOutreach] Auth check failed:", e);
+        router.push("/");
+      }
+    }
+
+    checkAdmin();
+  }, [router]);
 
   const loadData = async () => {
     const [runsResult, jobsResult] = await Promise.all([
-      isDemo ? getDemoOutreachRuns() : getAdminOutreachRuns(),
-      isDemo ? getDemoAdminJobs() : getAdminJobs(),
+      getAdminOutreachRuns(),
+      getAdminJobs(),
     ]);
     setRuns((runsResult.runs ?? []) as OutreachRun[]);
     setJobs((jobsResult.jobs ?? []) as AdminJob[]);
   };
 
   useEffect(() => {
+    if (!isAuthorized) return;
     loadData().finally(() => setLoading(false));
     // TODO: subscribe to Supabase Realtime for live outreach run updates
-  }, []);
+  }, [isAuthorized]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -158,17 +185,6 @@ export default function AdminOutreachPage() {
         </div>
 
         {/* TODO: Add admin auth guard — this page should only be accessible to admin users */}
-        {isDemo && (
-          <div className="mb-6 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>
-              <strong>Demo mode:</strong> Showing mock outreach data. Connect Supabase and implement{" "}
-              <code className="rounded bg-amber-100 px-1 py-0.5 text-xs">outreach_runs</code>,{" "}
-              <code className="rounded bg-amber-100 px-1 py-0.5 text-xs">contractor_invites</code>, and{" "}
-              <code className="rounded bg-amber-100 px-1 py-0.5 text-xs">contractor_replies</code> tables to see live data.
-            </span>
-          </div>
-        )}
 
         {/* Global totals */}
         <div className="mb-8 grid grid-cols-4 gap-3 sm:grid-cols-7">

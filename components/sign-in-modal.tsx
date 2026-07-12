@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Home, Hammer, AlertCircle, Loader2, MailCheck } from "lucide-react";
+import { Home, Hammer, AlertCircle, Loader2, MailCheck, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import {
   Dialog,
@@ -15,10 +16,10 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import {
   realSignIn,
-  realDemoSignIn,
   redirectAfterSignIn,
   type MockRole,
 } from "@/lib/mock-auth";
+import { phoneSignIn } from "@/lib/supabase/actions";
 
 interface SignInModalProps {
   open: boolean;
@@ -27,15 +28,21 @@ interface SignInModalProps {
 }
 
 type ModalView = "signin" | "forgot" | "forgot-sent";
+type UserType = "contractor" | "homeowner";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) {
+  const router = useRouter();
   const [view, setView] = useState<ModalView>("signin");
+  const [userType, setUserType] = useState<UserType>("contractor");
+  const [usePhoneForHomeowner, setUsePhoneForHomeowner] = useState(true);
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Forgot-password sub-form state
   const [resetEmail, setResetEmail] = useState("");
@@ -46,10 +53,14 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
     onOpenChange(false);
     setTimeout(() => {
       setView("signin");
+      setUserType("contractor");
+      setUsePhoneForHomeowner(false);
       setEmail("");
+      setPhone("");
       setPassword("");
       setError("");
       setLoading(false);
+      setShowPassword(false);
       setResetEmail("");
       setResetError("");
       setResetLoading(false);
@@ -107,30 +118,39 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
 
   async function handlePasswordSignIn(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim() || !password) {
-      setError("Please enter your email and password.");
-      return;
-    }
-    setLoading(true);
-    setError("");
-    const result = await realSignIn(email, password);
-    if (result.user) {
-      finishSignIn(result.user.role);
-    } else {
-      setError(result.error ?? "Unable to sign in.");
-      setLoading(false);
-    }
-  }
 
-  async function handleDemoSignIn(role: "homeowner" | "contractor") {
-    setLoading(true);
-    setError("");
-    const result = await realDemoSignIn(role);
-    if (result.user) {
-      finishSignIn(result.user.role);
+    if (userType === "homeowner" && usePhoneForHomeowner) {
+      // Homeowner phone sign-in
+      if (!phone.trim() || !password) {
+        setError("Please enter your phone and password.");
+        return;
+      }
+      setLoading(true);
+      setError("");
+      const result = await phoneSignIn(phone, password);
+      if (result.error) {
+        setError(result.error);
+        setLoading(false);
+      } else if (result.success) {
+        // Close modal and redirect client-side on success
+        handleClose();
+        router.push("/homeowners/dashboard");
+      }
     } else {
-      setError(result.error ?? "Demo sign-in failed.");
-      setLoading(false);
+      // Contractor or homeowner email sign-in
+      if (!email.trim() || !password) {
+        setError("Please enter your email and password.");
+        return;
+      }
+      setLoading(true);
+      setError("");
+      const result = await realSignIn(email, password);
+      if (result.user) {
+        finishSignIn(result.user.role);
+      } else {
+        setError(result.error ?? "Unable to sign in.");
+        setLoading(false);
+      }
     }
   }
 
@@ -140,10 +160,52 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
         <div className="space-y-5">
           {view === "signin" && (
           <>
+          {/* User Type Toggle */}
+          <div
+            role="radiogroup"
+            aria-label="Select account type"
+            className="flex items-center gap-1 rounded-full border border-border bg-muted/60 p-1"
+          >
+            <button
+              type="button"
+              role="radio"
+              aria-checked={userType === "contractor"}
+              onClick={() => {
+                setUserType("contractor");
+                setUsePhoneForHomeowner(false);
+              }}
+              className={`flex-1 rounded-full px-3 py-2 text-center text-sm font-medium transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A84FF] focus-visible:ring-offset-2 ${
+                userType === "contractor"
+                  ? "border border-[#0A84FF] bg-[#0A84FF] text-white shadow-sm"
+                  : "border border-transparent bg-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Contractor
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={userType === "homeowner"}
+              onClick={() => {
+                setUserType("homeowner");
+                setUsePhoneForHomeowner(true);
+              }}
+              className={`flex-1 rounded-full px-3 py-2 text-center text-sm font-medium transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A84FF] focus-visible:ring-offset-2 ${
+                userType === "homeowner"
+                  ? "border border-[#0A84FF] bg-[#0A84FF] text-white shadow-sm"
+                  : "border border-transparent bg-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Homeowner
+            </button>
+          </div>
+
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">Welcome back to HomeBids</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
-              Sign in to view your project, bids, and messages.
+              {userType === "contractor"
+                ? "Sign in to view your project, bids, and messages."
+                : "Sign in to view your project and bids."}
             </DialogDescription>
           </DialogHeader>
 
@@ -155,45 +217,116 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
           )}
 
           <form onSubmit={handlePasswordSignIn} className="space-y-3">
-            <div className="space-y-1.5">
-              <label htmlFor="modal-email" className="text-sm font-medium text-foreground">
-                Email
-              </label>
-              <Input
-                id="modal-email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-11"
-                disabled={loading}
-                autoFocus
-              />
-            </div>
+            {userType === "homeowner" && (
+              <>
+                {usePhoneForHomeowner ? (
+                  <div className="space-y-1.5">
+                    <label htmlFor="modal-phone" className="text-sm font-medium text-foreground">
+                      Phone Number
+                    </label>
+                    <Input
+                      id="modal-phone"
+                      type="tel"
+                      autoComplete="tel"
+                      placeholder="(555) 123-4567"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="h-11"
+                      disabled={loading}
+                      autoFocus
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <label htmlFor="modal-email" className="text-sm font-medium text-foreground">
+                      Email
+                    </label>
+                    <Input
+                      id="modal-email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="h-11"
+                      disabled={loading}
+                      autoFocus
+                    />
+                  </div>
+                )}
+                <p className="text-center text-xs text-muted-foreground">
+                  {usePhoneForHomeowner ? (
+                    <button
+                      type="button"
+                      onClick={() => setUsePhoneForHomeowner(false)}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      Prefer email? Sign in with email
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setUsePhoneForHomeowner(true)}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      Sign in with phone instead
+                    </button>
+                  )}
+                </p>
+              </>
+            )}
+            {userType === "contractor" && (
+              <div className="space-y-1.5">
+                <label htmlFor="modal-email" className="text-sm font-medium text-foreground">
+                  Email
+                </label>
+                <Input
+                  id="modal-email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-11"
+                  disabled={loading}
+                  autoFocus
+                />
+              </div>
+            )}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label htmlFor="modal-password" className="text-sm font-medium text-foreground">
                   Password
                 </label>
+                {userType === "contractor" && (
+                  <button
+                    type="button"
+                    onClick={openForgot}
+                    className="text-sm font-medium text-primary hover:underline"
+                  >
+                    Forgot Password?
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <Input
+                  id="modal-password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-11 pr-10"
+                  disabled={loading}
+                />
                 <button
                   type="button"
-                  onClick={openForgot}
-                  className="text-sm font-medium text-primary hover:underline"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  Forgot Password?
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <Input
-                id="modal-password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-11"
-                disabled={loading}
-              />
             </div>
             <Button type="submit" className="w-full h-10 cursor-pointer" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -211,31 +344,6 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
               Create an account
             </Link>
           </p>
-
-          {/* Demo accounts — real seeded Supabase sessions */}
-          <div className="rounded-lg border border-dashed border-border bg-muted/40 p-3">
-            <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Or explore a demo account
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleDemoSignIn("homeowner")}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border bg-background px-2 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50 cursor-pointer"
-              >
-                <Home className="h-3.5 w-3.5" /> Homeowner
-              </button>
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleDemoSignIn("contractor")}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border bg-background px-2 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50 cursor-pointer"
-              >
-                <Hammer className="h-3.5 w-3.5" /> Contractor
-              </button>
-            </div>
-          </div>
           </>
           )}
 

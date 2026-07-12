@@ -3,7 +3,7 @@
 import Link from "next/link";
 import React, { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle, LayoutDashboard, Sparkles, Users, Wrench } from "lucide-react";
+import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle, LayoutDashboard, Sparkles, Users, Wrench, Search } from "lucide-react";
 import { homeownerNavItems, loggedOutNavItems, contractorNavItems } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
@@ -12,10 +12,11 @@ import {
   subscribeInbox,
   getHomeownerUnreadSnapshot,
   getContractorUnreadSnapshot,
+  hydrateNotifications,
   type NotificationType,
 } from "@/lib/inbox-store";
 import { createClient } from "@/lib/supabase/client";
-import { getMockUser, mockSignOut, USE_MOCK_AUTH, syncMirrorFromSupabase } from "@/lib/mock-auth";
+import { getMockUser, mockSignOut, syncMirrorFromSupabase } from "@/lib/mock-auth";
 
 export interface HeaderProps {
   isContractor?: boolean;
@@ -111,7 +112,7 @@ export function Header({
       setIsSignedIn(cached.role !== "contractor");
       setIsContractor(cached.role === "contractor");
     }
-    if (USE_MOCK_AUTH) return;
+
     // Reconcile with the real Supabase session and keep it in sync.
     let subscription: { unsubscribe: () => void } | null = null;
     try {
@@ -142,6 +143,21 @@ export function Header({
     () => 0,
   );
   const unreadCount = mounted && isLoggedIn ? unreadSnapshot : 0;
+
+  // Hydrate notifications on mount for signed-in users
+  useEffect(() => {
+    if (!mounted || !isLoggedIn) return;
+    async function hydrate() {
+      try {
+        const { getNotificationsFeed } = await import("@/lib/supabase/actions");
+        const { notifications } = await getNotificationsFeed();
+        hydrateNotifications(notifications, isContractor);
+      } catch (e) {
+        console.error("[Header] Failed to hydrate notifications:", e);
+      }
+    }
+    hydrate();
+  }, [mounted, isLoggedIn, isContractor]);
 
   const handleSignOut = () => {
     closeMenu();
@@ -266,8 +282,8 @@ export function Header({
                 </>
               )}
 
-              {/* Homeowner nav */}
-              {isLoggedIn && !isContractor && (
+              {/* Homeowner nav — hidden when on contractor routes */}
+              {isLoggedIn && !isContractor && !pathname.startsWith("/contractors") && (
                 <>
                   {homeownerNavItems.map((item) => {
                     const hrefPath = item.href.split("?")[0];
@@ -318,8 +334,8 @@ export function Header({
               {isLoggedIn && isContractor && (
                 <>
                   {contractorNavItems.map((item) => {
-                    const tabParam = item.href.split("tab=")[1] ?? "home";
-                    const isActive = activeContractorTab === tabParam;
+                    const tabParam = item.href.split("tab=")[1];
+                    const isActive = tabParam ? activeContractorTab === tabParam : pathname.startsWith(item.href.split("?")[0]);
                     return (
                       <Link
                         key={item.label}
@@ -332,6 +348,7 @@ export function Header({
                         {item.label === "Bid Inbox"   && <Users           className="h-4 w-4 shrink-0" />}
                         {item.label === "Build a Bid" && <Sparkles        className="h-4 w-4 shrink-0" />}
                         {item.label === "Account"     && <Wrench          className="h-4 w-4 shrink-0" />}
+                        {item.label === "Browse Jobs" && <Search          className="h-4 w-4 shrink-0" />}
                         {item.label}
                       </Link>
                     );

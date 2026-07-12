@@ -17,8 +17,6 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { getJobStatus, getJobStatusLabel, isJobArchived, type JobStatusOwner } from "@/lib/job-store";
-import { getMockUser, USE_MOCK_DATA } from "@/lib/mock-auth";
-import { getHomeownerJobs as getDemoHomeownerJobs } from "@/lib/demo/services";
 import { getHomeownerJobs } from "@/lib/supabase/actions";
 
 interface Job {
@@ -81,8 +79,7 @@ export default function HomeownerDashboardPage() {
   const loadJobs = useCallback(async () => {
     setLoading(true);
     try {
-      const isDemoMode = USE_MOCK_DATA;
-      const result = isDemoMode ? await getDemoHomeownerJobs() : await getHomeownerJobs();
+      const result = await getHomeownerJobs();
       if (result.jobs) {
         setJobs(
           result.jobs
@@ -112,20 +109,8 @@ export default function HomeownerDashboardPage() {
     }
   }, []);
 
-  // Auth guard — redirect contractors/admins; allow homeowners through
+  // Auth guard — redirect non-homeowners; set user name
   useEffect(() => {
-    if (USE_MOCK_DATA) {
-      const user = getMockUser();
-      if (user?.role === "contractor") {
-        router.replace("/contractors/dashboard");
-        return;
-      }
-      if (user?.role === "admin") {
-        router.replace("/admin-demo");
-        return;
-      }
-      setUserName(user?.firstName ?? null);
-    }
     setAuthReady(true);
   }, [router]);
 

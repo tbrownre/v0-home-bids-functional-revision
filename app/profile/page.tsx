@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { getSmsLink } from "@/lib/sms-config";
 import { Header } from "@/components/header";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
-import { getMockUser, mockSignOut, USE_MOCK_DATA, type MockUser } from "@/lib/mock-auth";
+import { getMockUser, mockSignOut, type MockUser } from "@/lib/mock-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,10 +71,10 @@ function loadProfile(user: MockUser): StoredProfile {
 
 function defaultProfile(user: MockUser): StoredProfile {
   return {
-    firstName: user.firstName ?? "Sarah",
-    lastName: user.lastName ?? "Johnson",
+    firstName: "",
+    lastName: "",
     email: user.email ?? "homeowner@homebids.demo",
-    phone: user.phone ?? "(555) 867-5309",
+    phone: "",
     street: "1420 Harbor Blvd",
     unit: "",
     city: "Pasadena",
@@ -153,12 +153,37 @@ export default function ProfilePage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showAddCardModal, setShowAddCardModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Load user + profile from localStorage
+  // Load user + profile from auth and Supabase
   useEffect(() => {
-    const u = USE_MOCK_DATA ? getMockUser() : null;
-    setUser(u);
-    if (u) setProfile(loadProfile(u));
+    async function loadUserData() {
+      const u = getMockUser();
+      setUser(u);
+      if (u?.role === "homeowner") {
+        try {
+          const { getUserProfile } = await import("@/lib/supabase/actions");
+          const { profile: dbProfile } = await getUserProfile();
+          if (dbProfile) {
+            const stored = loadProfile(u);
+            setProfile({
+              ...stored,
+              firstName: dbProfile.full_name?.split(" ")[0] || "",
+              lastName: dbProfile.full_name?.split(" ").slice(1).join(" ") || "",
+              email: dbProfile.email || u.email || "homeowner@homebids.demo",
+              phone: dbProfile.phone || "",
+            });
+          } else {
+            setProfile(loadProfile(u));
+          }
+        } catch (e) {
+          console.error("[ProfilePage] Failed to load user profile:", e);
+          setProfile(loadProfile(u));
+        }
+      }
+    }
+    loadUserData();
   }, []);
 
   const showToast = (msg: string) => setToast(msg);
@@ -219,14 +244,31 @@ export default function ProfilePage() {
     showToast("Profile photo removed.");
   };
 
-  const handleSavePersonal = () => {
-    saveProfile({
-      firstName: profile.firstName,
-      lastName: profile.lastName,
-      email: profile.email,
-      phone: profile.phone,
-    });
-    showToast("Personal info saved.");
+  const handleSavePersonal = async () => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const { updateUserProfile } = await import("@/lib/supabase/actions");
+      const { error } = await updateUserProfile({
+        full_name: `${profile.firstName} ${profile.lastName}`.trim(),
+        phone: profile.phone,
+      });
+      if (error) {
+        setSaveError(error);
+      } else {
+        saveProfile({
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          email: profile.email,
+          phone: profile.phone,
+        });
+        showToast("Personal info saved.");
+      }
+    } catch (e) {
+      setSaveError((e as Error).message || "Failed to save personal info");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSaveAddress = () => {
@@ -397,9 +439,21 @@ export default function ProfilePage() {
                 />
               </div>
             </div>
-            <Button className="mt-5" onClick={handleSavePersonal}>
-              Save Personal Info
-            </Button>
+            <div className="mt-5 flex items-center gap-3">
+              <Button onClick={handleSavePersonal} disabled={saving}>
+                {saving ? (
+                  <>
+                    <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Personal Info"
+                )}
+              </Button>
+              {saveError && (
+                <span className="text-sm font-medium text-red-600">{saveError}</span>
+              )}
+            </div>
           </Section>
 
           {/* 3. Property Address */}
@@ -624,7 +678,7 @@ export default function ProfilePage() {
               Delete your account?
             </DialogTitle>
             <DialogDescription>
-              This is a demo — your mock data and localStorage profile will be cleared and you will be signed out. No real data is deleted.
+              This will permanently delete your account and all associated data. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
@@ -632,7 +686,7 @@ export default function ProfilePage() {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteAccount}>
-              Delete (Demo Reset)
+              Delete Account
             </Button>
           </DialogFooter>
         </DialogContent>

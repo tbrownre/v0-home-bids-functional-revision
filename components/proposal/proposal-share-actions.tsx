@@ -73,7 +73,7 @@ export function ProposalShareActions({
         </Button>
         <Button size="sm" variant="outline" className="h-8 gap-1.5 rounded-full bg-transparent px-3 text-xs" onClick={handleText}>
           <MessageCircle className="h-3.5 w-3.5" />
-          Text Customer
+          Message Customer
         </Button>
         <Button
           size="sm"

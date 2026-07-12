@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { isDemoEmail } from "@/lib/demo-guard";
+
 const MAKE_WEBHOOK_URL = "https://hook.us2.make.com/1v7w6jnit6c3cbddxsqeyrobgnf21su9";
 
 function getConfirmUrl() {
@@ -206,7 +206,154 @@ export async function signOut() {
   redirect("/auth/sign-in");
 }
 
+/** Claim a homeowner account using a claim token and set a password. */
+export async function claimAccount(token: string, password: string): Promise<{ success?: boolean; error?: string }> {
+  const adminClient = createAdminClient();
+  const supabase = await createClient();
 
+  try {
+    // 1. Find the profile by claim_token
+    const { data: profile, error: queryError } = await adminClient
+      .from("profiles")
+      .select("id, email, claimed_at")
+      .eq("claim_token", token)
+      .maybeSingle();
+
+    if (queryError || !profile) {
+      return { error: "This link is invalid or expired." };
+    }
+
+    // 2. Check if already claimed
+    if (profile.claimed_at) {
+      return { error: "Account already claimed — sign in instead" };
+    }
+
+    // 3. Update the user password (admin API)
+    const { error: updateError } = await adminClient.auth.admin.updateUserById(profile.id, {
+      password,
+    });
+
+    if (updateError) {
+      return { error: "Failed to set password. Please try again." };
+    }
+
+    // 4. Mark as claimed
+    const { error: claimedError } = await adminClient
+      .from("profiles")
+      .update({ claimed_at: new Date().toISOString() })
+      .eq("id", profile.id);
+
+    if (claimedError) {
+      return { error: "Failed to save. Please try again." };
+    }
+
+    // 5. Sign in the user server-side (sets cookies)
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: profile.email,
+      password,
+    });
+
+    if (signInError) {
+      return { error: "Failed to sign in. Please try again." };
+    }
+
+    // 6. Revalidate and return success (client will redirect)
+    revalidatePath("/", "layout");
+    return { success: true };
+  } catch (e) {
+    return { error: (e as Error).message || "An error occurred." };
+  }
+}
+
+/**
+ * Sign in a homeowner using phone number + password.
+ * Normalizes phone to last 10 digits, finds the profile, and signs in with email.
+ */
+export async function phoneSignIn(phone: string, password: string): Promise<{ success?: boolean; error?: string }> {
+  const adminClient = createAdminClient();
+  const supabase = await createClient();
+
+  try {
+    // Normalize phone: extract last 10 digits
+    const normalized = phone.replace(/\D/g, "").slice(-10);
+    if (normalized.length !== 10) {
+      return { error: "Phone or password incorrect" };
+    }
+
+    // Find profile by phone (last 10 digits)
+    const { data: profile, error: queryError } = await adminClient
+      .from("profiles")
+      .select("id, email")
+      .eq("user_type", "homeowner")
+      .filter("phone", "ilike", `%${normalized}`)
+      .maybeSingle();
+
+    if (queryError || !profile) {
+      return { error: "Phone or password incorrect" };
+    }
+
+    // Sign in with email + password
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: profile.email,
+      password,
+    });
+
+    if (signInError) {
+      return { error: "Phone or password incorrect" };
+    }
+
+    // Revalidate and return success (client will redirect)
+    revalidatePath("/", "layout");
+    return { success: true };
+  } catch (e) {
+    return { error: "Phone or password incorrect" };
+  }
+}
+
+/**
+ * Retrieve safe claim information for the claim flow (server-side only).
+ * Returns masked phone and first name, or null if invalid/already claimed.
+ */
+export async function getClaimInfo(token: string): Promise<{
+  firstName: string | null;
+  phoneMasked: string | null;
+  alreadyClaimed: boolean;
+} | null> {
+  const adminClient = createAdminClient();
+
+  try {
+    const { data: profile, error: queryError } = await adminClient
+      .from("profiles")
+      .select("full_name, phone, claimed_at")
+      .eq("claim_token", token)
+      .maybeSingle();
+
+    if (queryError || !profile) {
+      return null;
+    }
+
+    // Extract first name (first word of full_name)
+    const firstName = profile.full_name?.split(" ")[0] || null;
+
+    // Mask phone: keep last 4 digits, mask the rest
+    let phoneMasked: string | null = null;
+    if (profile.phone) {
+      const digits = profile.phone.replace(/\D/g, "");
+      if (digits.length >= 4) {
+        const lastFour = digits.slice(-4);
+        phoneMasked = `(555) •••-${lastFour}`;
+      }
+    }
+
+    return {
+      firstName,
+      phoneMasked,
+      alreadyClaimed: !!profile.claimed_at,
+    };
+  } catch (e) {
+    return null;
+  }
+}
 
 // ── Jobs ─────────────────────────────────────────────────────────────────────
 
@@ -222,24 +369,7 @@ export async function createJob(formData: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  // Demo accounts: return a mock job without writing to the DB.
-  if (isDemoEmail(user.email)) {
-    return {
-      success: true,
-      job: {
-        id: `demo-job-${Date.now()}`,
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        location: formData.location,
-        budget_min: formData.budget_min ?? null,
-        budget_max: formData.budget_max ?? null,
-        status: "open",
-        created_at: new Date().toISOString(),
-        homeowner_id: user.id,
-      },
-    };
-  }
+
 
   const { data, error } = await supabase
     .from("jobs")
@@ -396,22 +526,7 @@ export async function submitBid(formData: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  // Demo accounts: return a mock bid without writing to the DB.
-  if (isDemoEmail(user.email)) {
-    return {
-      success: true,
-      bid: {
-        id: `demo-bid-${Date.now()}`,
-        job_id: formData.job_id,
-        contractor_id: user.id,
-        amount: formData.amount,
-        message: formData.message,
-        timeline: formData.timeline ?? null,
-        status: "pending",
-        created_at: new Date().toISOString(),
-      },
-    };
-  }
+
 
   // Duplicate-bid guard: one active bid per contractor per job.
   const { data: existing } = await supabase
@@ -462,10 +577,7 @@ export async function acceptBid(bidId: string, jobId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  // Demo accounts: mock success without mutating any real data.
-  if (isDemoEmail(user.email)) {
-    return { success: true };
-  }
+
 
   // Mark selected bid as accepted, others as rejected
   const { error: rejectError } = await supabase
@@ -526,10 +638,7 @@ export async function sendMessage(formData: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  // Demo accounts: mock success without writing to the messages table.
-  if (isDemoEmail(user.email)) {
-    return { success: true };
-  }
+
 
   const { error } = await supabase.from("messages").insert({
     job_id: formData.job_id,
@@ -716,7 +825,37 @@ export async function createBidFromJob(jobId: string) {
 
 // ── Contractor profile ────────────────────────────────────────────────────────
 
-/** Load the contractor profile for the currently authenticated user. */
+// ── User profiles ────────────────────────────────────────────────────────────
+
+/** Load the current user's profile (full_name, email, phone). */
+export async function getUserProfile() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { profile: null, error: "Not authenticated" };
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (error) return { profile: null, error: error.message };
+  return { profile: data, error: null };
+}
+
+/** Update the current user's profile fields (full_name, phone). */
+export async function updateUserProfile(updates: { full_name?: string; phone?: string }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+  const { error } = await supabase
+    .from("profiles")
+    .update(updates)
+    .eq("id", user.id);
+  if (error) return { error: error.message };
+  revalidatePath("/profile");
+  return { error: null };
+}
+
+/** Load the current contractor's profile completion data. */
 export async function getContractorProfile() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -728,6 +867,354 @@ export async function getContractorProfile() {
     .maybeSingle();
   if (error) return { profile: null, error: error.message };
   return { profile: data, error: null };
+}
+
+/** Upsert contractor profile completion data. */
+export async function updateContractorProfile(profile: {
+  business_name?: string | null;
+  logo_url?: string | null;
+  bio?: string | null;
+  website?: string | null;
+  business_address?: string | null;
+  license_number?: string | null;
+  insurance_details?: string | null;
+  years_experience?: number | null;
+  google_review_link?: string | null;
+  specialties?: string[];
+  social_links?: Record<string, string>;
+}) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+  const { error } = await supabase
+    .from("contractor_profiles")
+    .upsert({ id: user.id, ...profile }, { onConflict: "id" });
+  if (error) return { error: error.message };
+  revalidatePath("/contractors/dashboard");
+  return { error: null };
+}
+
+// ── Proposals (Online Bid Builder) ────────────────────────────────────────────
+
+/** Fetch a proposal by ID for editing (only owner can read via RLS). */
+export async function getProposalById(proposalId: string): Promise<{ proposal: any | null; error: string | null }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { proposal: null, error: "Not authenticated" };
+
+  try {
+    const { data, error } = await supabase
+      .from("proposals")
+      .select("*")
+      .eq("id", proposalId)
+      .maybeSingle();
+
+    if (error) return { proposal: null, error: error.message };
+    if (!data) return { proposal: null, error: "Proposal not found" };
+
+    return { proposal: data, error: null };
+  } catch (e) {
+    return { proposal: null, error: (e as Error).message };
+  }
+}
+
+export interface CreateProposalInput {
+  homeownerName?: string;
+  projectTitle: string;
+  projectSummary?: string;
+  scopeItems: Array<{ title: string; description?: string }>;
+  totalPrice?: number;
+  priceNote?: string;
+  addOns?: Array<{ title: string }>;
+  timelineCompletion?: string;
+}
+
+/** Create a real proposal in the database from the online Bid Builder. */
+export async function createProposalFromBuilder(
+  input: CreateProposalInput,
+): Promise<{ shareToken: string | null; proposalId: string | null; error: string | null }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { shareToken: null, proposalId: null, error: "Not authenticated" };
+
+  try {
+    // Load contractor branding
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, phone")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const { data: contractorProfile } = await supabase
+      .from("contractor_profiles")
+      .select("business_name, logo_url")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    // Generate share token: 12-char lowercase alphanumeric
+    const token1 = Math.random().toString(36).substring(2, 8);
+    const token2 = Math.random().toString(36).substring(2, 8);
+    const shareToken = (token1 + token2).substring(0, 12);
+
+    // INSERT proposal
+    const { data: inserted, error: insertError } = await supabase
+      .from("proposals")
+      .insert({
+        share_token: shareToken,
+        contractor_id: user.id,
+        contractor_company_name: contractorProfile?.business_name || profile?.full_name,
+        contractor_phone: profile?.phone,
+        contractor_logo_url: contractorProfile?.logo_url,
+        homeowner_name: input.homeownerName,
+        project_title: input.projectTitle,
+        project_summary: input.projectSummary,
+        scope_items: input.scopeItems || [],
+        total_price: input.totalPrice,
+        price_note: input.priceNote,
+        add_ons: input.addOns || [],
+        timeline_completion: input.timelineCompletion,
+        status: "draft",
+      })
+      .select("id")
+      .maybeSingle();
+
+    if (insertError) {
+      return { shareToken: null, proposalId: null, error: insertError.message };
+    }
+
+    revalidatePath("/contractors/dashboard");
+    return {
+      shareToken,
+      proposalId: inserted?.id || null,
+      error: null,
+    };
+  } catch (e) {
+    return {
+      shareToken: null,
+      proposalId: null,
+      error: (e as Error).message || "Failed to create proposal",
+    };
+  }
+}
+
+/** Update an existing draft proposal (keeps share_token, updates status to 'sent' on approve). */
+export async function updateProposalFromBuilder(
+  proposalId: string,
+  input: CreateProposalInput & { status?: string },
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  try {
+    const { error } = await supabase
+      .from("proposals")
+      .update({
+        homeowner_name: input.homeownerName || null,
+        project_title: input.projectTitle,
+        project_summary: input.projectSummary || null,
+        scope_items: input.scopeItems || [],
+        total_price: input.totalPrice || null,
+        price_note: input.priceNote || null,
+        add_ons: input.addOns || [],
+        timeline_completion: input.timelineCompletion || null,
+        status: input.status || "draft",
+      })
+      .eq("id", proposalId)
+      .eq("contractor_id", user.id); // Ensure ownership
+
+    if (error) return { error: error.message };
+
+    revalidatePath("/contractors/dashboard");
+    return { error: null };
+  } catch (e) {
+    return { error: (e as Error).message || "Failed to update proposal" };
+  }
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+
+export interface NotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  href: string;
+  created_at: string;
+  read: boolean;
+}
+
+/** Assemble real notifications from database events. Capped at 30, newest first. */
+export async function getNotificationsFeed(): Promise<{
+  notifications: NotificationItem[];
+  error: string | null;
+}> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { notifications: [], error: "Not authenticated" };
+
+  // Get user's profile to check user_type and notifications_seen_at
+  const { data: profileData, error: profileError } = await supabase
+    .from("profiles")
+    .select("user_type, notifications_seen_at")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError || !profileData) {
+    return { notifications: [], error: profileError?.message ?? "Profile not found" };
+  }
+
+  const isContractor = profileData.user_type === "contractor";
+  const seenAt = profileData.notifications_seen_at ? new Date(profileData.notifications_seen_at) : new Date(0);
+  const notifications: NotificationItem[] = [];
+
+  if (isContractor) {
+    // Contractor notifications: proposal events, accepted bids, new open jobs
+
+    // 1. Proposal events (view, approval_clicked, call_clicked, pdf_download)
+    const { data: proposalEvents } = await supabase
+      .from("proposals")
+      .select("id, project_title, view_count, approval_clicked_at, call_clicked_at, pdf_downloaded_at, created_at, share_token")
+      .eq("contractor_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    if (proposalEvents) {
+      for (const p of proposalEvents) {
+        if (p.view_count && p.view_count > 0) {
+          notifications.push({
+            id: `proposal-view-${p.id}`,
+            type: "proposal_viewed",
+            title: `Your proposal '${p.project_title}' was viewed`,
+            href: `/p/${p.share_token}`,
+            created_at: p.created_at,
+            read: new Date(p.created_at) <= seenAt,
+          });
+        }
+        if (p.approval_clicked_at) {
+          notifications.push({
+            id: `proposal-approval-${p.id}`,
+            type: "proposal_approval_clicked",
+            title: `'${p.project_title}': homeowner clicked Approve — reach out!`,
+            href: `/p/${p.share_token}`,
+            created_at: p.approval_clicked_at,
+            read: new Date(p.approval_clicked_at) <= seenAt,
+          });
+        }
+        if (p.call_clicked_at) {
+          notifications.push({
+            id: `proposal-call-${p.id}`,
+            type: "proposal_call_clicked",
+            title: `'${p.project_title}': homeowner tapped Call`,
+            href: `/p/${p.share_token}`,
+            created_at: p.call_clicked_at,
+            read: new Date(p.call_clicked_at) <= seenAt,
+          });
+        }
+        if (p.pdf_downloaded_at) {
+          notifications.push({
+            id: `proposal-pdf-${p.id}`,
+            type: "proposal_pdf_downloaded",
+            title: `'${p.project_title}': PDF downloaded`,
+            href: `/p/${p.share_token}`,
+            created_at: p.pdf_downloaded_at,
+            read: new Date(p.pdf_downloaded_at) <= seenAt,
+          });
+        }
+      }
+    }
+
+    // 2. Accepted bids
+    const { data: acceptedBids } = await supabase
+      .from("bids")
+      .select("id, job_id, amount, updated_at, jobs(title)")
+      .eq("contractor_id", user.id)
+      .eq("status", "accepted")
+      .order("updated_at", { ascending: false })
+      .limit(30);
+
+    if (acceptedBids) {
+      for (const bid of acceptedBids) {
+        const job = Array.isArray(bid.jobs) ? bid.jobs[0] : bid.jobs;
+        notifications.push({
+          id: `bid-accepted-${bid.id}`,
+          type: "bid_accepted",
+          title: `You won '${job?.title || "a job"}'!`,
+          href: "/contractors/dashboard?tab=bids",
+          created_at: bid.updated_at,
+          read: new Date(bid.updated_at) <= seenAt,
+        });
+      }
+    }
+
+    // 3. New open jobs in the last 7 days
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: newJobs } = await supabase
+      .from("jobs")
+      .select("id, title, location, created_at")
+      .eq("status", "open")
+      .gt("created_at", sevenDaysAgo)
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    if (newJobs) {
+      for (const job of newJobs) {
+        notifications.push({
+          id: `job-new-${job.id}`,
+          type: "job_new",
+          title: `New job: ${job.title}${job.location ? ` — ${job.location}` : ""}`,
+          href: `/contractor/opportunity/${job.id}`,
+          created_at: job.created_at,
+          read: new Date(job.created_at) <= seenAt,
+        });
+      }
+    }
+  } else {
+    // Homeowner notifications: bids on their jobs
+    const { data: bidsData } = await supabase
+      .from("bids")
+      .select("id, job_id, contractor_id, amount, created_at, jobs(title), profiles(full_name)")
+      .eq("jobs.homeowner_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    if (bidsData) {
+      for (const bid of bidsData) {
+        const job = Array.isArray(bid.jobs) ? bid.jobs[0] : bid.jobs;
+        const contractor = Array.isArray(bid.profiles) ? bid.profiles[0] : bid.profiles;
+        notifications.push({
+          id: `bid-received-${bid.id}`,
+          type: "bid_received",
+          title: `New bid on '${job?.title || "your job"}': $${(bid.amount / 100).toLocaleString()}`,
+          href: `/jobs/${bid.job_id}/bids`,
+          created_at: bid.created_at,
+          read: new Date(bid.created_at) <= seenAt,
+        });
+      }
+    }
+  }
+
+  // Sort by created_at descending, cap at 30
+  notifications.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const result = notifications.slice(0, 30);
+
+  return { notifications: result, error: null };
+}
+
+/** Mark all notifications as seen by updating profiles.notifications_seen_at. */
+export async function markNotificationsSeen(): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ notifications_seen_at: new Date().toISOString() })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/inbox");
+  revalidatePath("/contractors/dashboard");
+  return { error: null };
 }
 
 // ── Admin outreach ────────────────────────────────────────────────────────────
