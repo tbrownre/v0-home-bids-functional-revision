@@ -32,11 +32,23 @@ type UserType = "contractor" | "homeowner";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const SIGNIN_ROLE_KEY = "homebids_signin_role";
+
+// Read the last selected role from this device. Defaults to "homeowner" for
+// first-time visitors with no saved preference.
+function getSavedRole(): UserType {
+  if (typeof window !== "undefined") {
+    const saved = window.localStorage.getItem(SIGNIN_ROLE_KEY);
+    if (saved === "contractor" || saved === "homeowner") return saved;
+  }
+  return "homeowner";
+}
+
 export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) {
   const router = useRouter();
   const [view, setView] = useState<ModalView>("signin");
-  const [userType, setUserType] = useState<UserType>("contractor");
-  const [usePhoneForHomeowner, setUsePhoneForHomeowner] = useState(true);
+  const [userType, setUserType] = useState<UserType>(() => getSavedRole());
+  const [usePhoneForHomeowner, setUsePhoneForHomeowner] = useState(() => getSavedRole() === "homeowner");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -53,8 +65,9 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
     onOpenChange(false);
     setTimeout(() => {
       setView("signin");
-      setUserType("contractor");
-      setUsePhoneForHomeowner(false);
+      const savedRole = getSavedRole();
+      setUserType(savedRole);
+      setUsePhoneForHomeowner(savedRole === "homeowner");
       setEmail("");
       setPhone("");
       setPassword("");
@@ -173,6 +186,9 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
               onClick={() => {
                 setUserType("contractor");
                 setUsePhoneForHomeowner(false);
+                if (typeof window !== "undefined") {
+                  window.localStorage.setItem(SIGNIN_ROLE_KEY, "contractor");
+                }
               }}
               className={`flex-1 rounded-full px-3 py-2 text-center text-sm font-medium transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A84FF] focus-visible:ring-offset-2 ${
                 userType === "contractor"
@@ -189,6 +205,9 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
               onClick={() => {
                 setUserType("homeowner");
                 setUsePhoneForHomeowner(true);
+                if (typeof window !== "undefined") {
+                  window.localStorage.setItem(SIGNIN_ROLE_KEY, "homeowner");
+                }
               }}
               className={`flex-1 rounded-full px-3 py-2 text-center text-sm font-medium transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A84FF] focus-visible:ring-offset-2 ${
                 userType === "homeowner"
@@ -201,7 +220,7 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
           </div>
 
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Welcome back to HomeBids</DialogTitle>
+            <DialogTitle className="text-xl font-bold">Welcome to HomeBids</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
               {userType === "contractor"
                 ? "Sign in to view your project, bids, and messages."
