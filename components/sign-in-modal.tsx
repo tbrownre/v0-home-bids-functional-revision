@@ -161,31 +161,39 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
           {view === "signin" && (
           <>
           {/* User Type Toggle */}
-          <div className="flex gap-2 rounded-lg border border-border bg-muted/50 p-1">
+          <div
+            role="radiogroup"
+            aria-label="Select account type"
+            className="flex items-center gap-1 rounded-full border border-border bg-muted/60 p-1"
+          >
             <button
               type="button"
+              role="radio"
+              aria-checked={userType === "contractor"}
               onClick={() => {
                 setUserType("contractor");
                 setUsePhoneForHomeowner(false);
               }}
-              className={`flex-1 rounded px-3 py-2 text-sm font-medium transition-colors ${
+              className={`flex-1 rounded-full px-3 py-2 text-center text-sm font-medium transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A84FF] focus-visible:ring-offset-2 ${
                 userType === "contractor"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "border border-[#0A84FF] bg-[#0A84FF] text-white shadow-sm"
+                  : "border border-transparent bg-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               Contractor
             </button>
             <button
               type="button"
+              role="radio"
+              aria-checked={userType === "homeowner"}
               onClick={() => {
                 setUserType("homeowner");
                 setUsePhoneForHomeowner(true);
               }}
-              className={`flex-1 rounded px-3 py-2 text-sm font-medium transition-colors ${
+              className={`flex-1 rounded-full px-3 py-2 text-center text-sm font-medium transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A84FF] focus-visible:ring-offset-2 ${
                 userType === "homeowner"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "border border-[#0A84FF] bg-[#0A84FF] text-white shadow-sm"
+                  : "border border-transparent bg-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               Homeowner
