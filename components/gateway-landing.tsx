@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Home, Wrench } from "lucide-react";
 import { SmsIphonePreview } from "@/components/sms-iphone-preview";
 import { HomeBidsLogo } from "@/components/homebids-logo";
+import { HomeownerTextModal } from "@/components/homeowner-text-modal";
 import { Button } from "@/components/ui/button";
 import { getSmsLink, HOMEBIDS_SMS, isSmsCapableDevice } from "@/lib/sms-config";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
@@ -225,6 +226,7 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
 export function GatewayLanding() {
   const [mounted, setMounted] = useState(false);
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
+  const [textModalOpen, setTextModalOpen] = useState(false);
   const { openSignIn } = useSignInModal();
 
   useEffect(() => setMounted(true), []);
@@ -327,7 +329,7 @@ export function GatewayLanding() {
                 if (!isSmsCapableDevice()) {
                   e.preventDefault();
                   localStorage.setItem("homebids_audience", "homeowner");
-                  window.location.href = "/new-job";
+                  setTextModalOpen(true);
                 }
               }}
               className="inline-flex h-12 items-center justify-center gap-2.5 rounded-full px-8 text-base font-semibold bg-[#0A84FF] text-white hover:bg-[#0A84FF]/90 transition-colors"
@@ -386,6 +388,9 @@ export function GatewayLanding() {
 
       {/* Role picker modal — opened by "Try for free" in the header nav */}
       <RolePickerModal open={rolePickerOpen} onClose={() => setRolePickerOpen(false)} />
+
+      {/* Desktop text modal — shown when a non-SMS-capable device taps "I'm a Homeowner" */}
+      <HomeownerTextModal open={textModalOpen} onClose={() => setTextModalOpen(false)} />
     </div>
   );
 }

@@ -3,6 +3,9 @@ export const SMS_PHONE_NUMBER = "+14043952879";
 export const SMS_PHONE_DISPLAY = "(404) 395-2879";
 export const SMS_BODY_PREFIX = "Hi HomeBids! I need help with";
 
+/** Canonical homeowner starter message used by the desktop text modal and /text route. */
+export const HOMEOWNER_STARTER_MESSAGE = "Hi HomeBids, I need help with a home project.";
+
 // ── Contractor SMS number ─────────────────────────────────────────────────────
 export const CONTRACTOR_SMS_PHONE_NUMBER = "+12832291348";
 export const CONTRACTOR_SMS_PHONE_DISPLAY = "(283) 229-1348";
