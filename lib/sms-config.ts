@@ -36,15 +36,25 @@ export function getContractorSmsLink(body?: string): string {
 
 /**
  * Generic SMS href builder for any phone number and optional body.
+ * Normalizes phone to E.164 format to match n8n workflow normalization.
+ * Handles formatted numbers like "(480) 555-0192" → "+14805550192".
  * Uses the project's standard "?&" convention for cross-platform reliability.
- * Returns just "sms:{phone}" when no body is provided.
+ * Returns empty string if phone cannot be normalized.
  */
 export function getSmsHref(phone: string, body?: string): string {
-  if (!body) {
-    return `sms:${phone}`;
+  const digits = String(phone).replace(/\D/g, "");
+  const normalized = digits ? "+" + (digits.length === 10 ? "1" + digits : digits) : "";
+  
+  if (!normalized) {
+    return "";
   }
+  
+  if (!body) {
+    return `sms:${normalized}`;
+  }
+  
   const encodedBody = encodeURIComponent(body);
-  return `sms:${phone}?&body=${encodedBody}`;
+  return `sms:${normalized}?&body=${encodedBody}`;
 }
 
 /**
