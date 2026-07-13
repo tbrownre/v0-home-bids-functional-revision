@@ -35,6 +35,19 @@ export function getContractorSmsLink(body?: string): string {
 }
 
 /**
+ * Generic SMS href builder for any phone number and optional body.
+ * Uses the project's standard "?&" convention for cross-platform reliability.
+ * Returns just "sms:{phone}" when no body is provided.
+ */
+export function getSmsHref(phone: string, body?: string): string {
+  if (!body) {
+    return `sms:${phone}`;
+  }
+  const encodedBody = encodeURIComponent(body);
+  return `sms:${phone}?&body=${encodedBody}`;
+}
+
+/**
  * Returns true for any device that has a native SMS/iMessage handler:
  * - iPhone, iPod, Android — UA string match
  * - iPad running iPadOS 13+ which fakes a Mac Safari UA — detected via

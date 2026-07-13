@@ -4,6 +4,7 @@ import { CheckCircle2, MessageCircle, Phone, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logProposalAction, type ProposalActionEvent } from "@/lib/supabase/proposals";
 import { PROPOSAL_SMS } from "@/lib/proposal-format";
+import { getSmsHref } from "@/lib/sms-config";
 
 interface ProposalCtaProps {
   shareToken: string;
@@ -11,12 +12,6 @@ interface ProposalCtaProps {
   pdfUrl: string | null;
   /** Sticky variant pins the primary actions to the bottom on mobile. */
   variant?: "inline" | "sticky";
-}
-
-function smsHref(phone: string, body: string) {
-  // The "&" after "?" mirrors the project's existing SMS link convention,
-  // which improves prefill reliability across iOS/Android SMS handlers.
-  return `sms:${phone}?&body=${encodeURIComponent(body)}`;
 }
 
 export function ProposalCta({
@@ -33,12 +28,12 @@ export function ProposalCta({
 
   function handleAccept() {
     track("accepted_clicked");
-    if (contractorPhone) window.location.href = smsHref(contractorPhone, PROPOSAL_SMS.accept);
+    if (contractorPhone) window.location.href = getSmsHref(contractorPhone, PROPOSAL_SMS.accept);
   }
 
   function handleQuestion() {
     track("question_clicked");
-    if (contractorPhone) window.location.href = smsHref(contractorPhone, PROPOSAL_SMS.question);
+    if (contractorPhone) window.location.href = getSmsHref(contractorPhone, PROPOSAL_SMS.question);
   }
 
   function handleCall() {

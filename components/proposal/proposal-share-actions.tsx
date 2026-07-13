@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Copy, Check, MessageCircle, Download, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CONTRACTOR_SMS_PHONE_NUMBER } from "@/lib/sms-config";
+import { CONTRACTOR_SMS_PHONE_NUMBER, getSmsHref } from "@/lib/sms-config";
 
 interface ProposalShareActionsProps {
   shareToken: string;
@@ -18,10 +18,6 @@ interface ProposalShareActionsProps {
 function proposalUrl(shareToken: string) {
   if (typeof window === "undefined") return `/p/${shareToken}`;
   return `${window.location.origin}/p/${shareToken}`;
-}
-
-function smsHref(phone: string, body: string) {
-  return `sms:${phone}?&body=${encodeURIComponent(body)}`;
 }
 
 export function ProposalShareActions({
@@ -48,7 +44,7 @@ export function ProposalShareActions({
     // otherwise open a blank SMS the contractor can address themselves.
     const body = `Here's your proposal for "${projectTitle}": ${proposalUrl(shareToken)}`;
     const to = homeownerPhone ?? "";
-    window.location.href = smsHref(to, body);
+    window.location.href = getSmsHref(to, body);
   }
 
   function handlePdf() {
@@ -58,7 +54,7 @@ export function ProposalShareActions({
   function handleEdit() {
     // The Bid Builder lives in an external SMS workflow. "Edit" opens a text to
     // the HomeBids builder line referencing this proposal.
-    window.location.href = smsHref(
+    window.location.href = getSmsHref(
       CONTRACTOR_SMS_PHONE_NUMBER,
       `I'd like to edit my proposal: ${projectTitle}`,
     );
