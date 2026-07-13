@@ -17,6 +17,8 @@ import {
   Phone,
   Shield,
   Star,
+  Lock,
+  MapPin,
 } from "lucide-react";
 
 const fadeInUp = {
@@ -263,15 +265,15 @@ export default function HomeownersPage() {
               Your Information Stays Private
             </h2>
             <p className="mt-4 text-muted-foreground">
-              HomeBids is designed to protect homeowners from the chaos of traditional contractor
-              searches.
+              HomeBids protects your personal information while contractors review and prepare bids
+              for your project.
             </p>
             <ul className="mt-6 space-y-3 text-left">
               {[
-                "Your contact info is not publicly shared",
-                "No unexpected contractor visits",
-                "No endless follow-up calls",
-                "Communication stays organized in one place",
+                "Your name, phone number, email, and exact address remain private",
+                "Contractors initially receive only your project details and city/ZIP code",
+                "Your contact information is shared only after you approve a contractor's bid or estimate",
+                "You remain in control of who can contact you",
               ].map((item, i) => (
                 <li key={i} className="flex items-center gap-3 text-sm text-foreground">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
@@ -281,7 +283,7 @@ export default function HomeownersPage() {
             </ul>
           </motion.div>
 
-          {/* iMessage group chat mockup */}
+          {/* Privacy-focused project card mockup */}
           <motion.div {...fadeInUp} transition={{ duration: 0.5, delay: 0.1 }} className="mt-10">
             {/* iPhone shell */}
             <div
@@ -324,122 +326,82 @@ export default function HomeownersPage() {
                 </div>
               </div>
 
-              {/* iMessage header */}
+              {/* Card header */}
               <div
-                className="flex flex-col items-center pb-2 pt-1"
+                className="flex items-center gap-2 px-4 pb-3 pt-3"
                 style={{ background: "#F2F2F7", borderBottom: "0.5px solid rgba(0,0,0,0.15)" }}
               >
-                {/* Back + video row */}
-                <div className="flex w-full items-center justify-between px-3 pb-1">
-                  <div className="flex items-center gap-0.5 text-[#0A84FF]" style={{ fontSize: 15 }}>
-                    <svg width="9" height="14" viewBox="0 0 9 14" fill="none"><path d="M8 1L2 7L8 13" stroke="#0A84FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span style={{ fontSize: 12, fontWeight: 400, color: "#0A84FF", marginLeft: 2 }}>3</span>
-                  </div>
-                  <svg width="22" height="16" viewBox="0 0 22 16" fill="none">
-                    <rect x="1" y="3" width="14" height="10" rx="2" stroke="#1C1C1E" strokeWidth="1.5"/>
-                    <path d="M15 6.5L21 3.5V12.5L15 9.5V6.5Z" stroke="#1C1C1E" strokeWidth="1.5" strokeLinejoin="round"/>
-                  </svg>
+                <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#0A84FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Shield className="h-4 w-4" style={{ color: "#fff" }} />
                 </div>
-                {/* Avatars — group of 3 overlapping */}
-                <div className="relative flex items-center justify-center" style={{ width: 56, height: 38 }}>
-                  {/* Contractor avatar */}
-                  <div className="absolute" style={{ left: 0, top: 4, width: 28, height: 28, borderRadius: "50%", background: "#FF9500", border: "2px solid #F2F2F7", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "#fff" }}>MC</span>
-                  </div>
-                  {/* HomeBids AI avatar */}
-                  <div className="absolute" style={{ left: 14, top: 0, width: 28, height: 28, borderRadius: "50%", background: "#6366F1", border: "2px solid #F2F2F7", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "#fff" }}>HB</span>
-                  </div>
-                  {/* Homeowner avatar */}
-                  <div className="absolute" style={{ left: 28, top: 4, width: 28, height: 28, borderRadius: "50%", background: "#34C759", border: "2px solid #F2F2F7", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "#fff" }}>YO</span>
-                  </div>
+                <div className="flex flex-col text-left">
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#000" }}>Contractor View</span>
+                  <span style={{ fontSize: 11, color: "#8E8E93" }}>What contractors see</span>
                 </div>
-                {/* Group name */}
-                <div className="flex items-center gap-0.5 mt-0.5">
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#000" }}>HomeBids Introduction</span>
-                  <svg width="8" height="12" viewBox="0 0 8 12" fill="none"><path d="M2 2L6 6L2 10" stroke="#8E8E93" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </div>
-                <span style={{ fontSize: 11, color: "#8E8E93" }}>Mike C., HomeBids AI &amp; You</span>
               </div>
 
-              {/* Messages */}
-              <div className="flex flex-col gap-2 px-3 py-3" style={{ background: "#fff", minHeight: 340 }}>
-                {/* Timestamp */}
-                <div className="text-center" style={{ fontSize: 11, color: "#8E8E93", marginBottom: 2 }}>Today 2:14 PM</div>
+              {/* Card body */}
+              <div className="flex flex-col gap-3 px-4 py-4" style={{ background: "#fff", minHeight: 340 }}>
+                {/* Project details — shared */}
+                <div style={{ background: "#F2F2F7", borderRadius: 14, padding: "12px 14px" }}>
+                  <div className="flex items-center justify-between">
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.04em" }}>Project</span>
+                    <span className="flex items-center gap-1" style={{ fontSize: 10, fontWeight: 600, color: "#34C759" }}>
+                      <CheckCircle2 className="h-3 w-3" style={{ color: "#34C759" }} />
+                      Shared
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "#000", marginTop: 4 }}>Roof repair — asphalt shingle</p>
+                  <p style={{ fontSize: 12, color: "#636366", marginTop: 2, lineHeight: 1.4 }}>Approx. 1,800 sq ft. Storm damage on north-facing slope. Budget ~$6k.</p>
+                </div>
 
-                {/* HomeBids AI → homeowner (1:1 before group) */}
-                <div className="flex flex-col items-start gap-0.5">
-                  <span style={{ fontSize: 10, color: "#8E8E93", marginLeft: 2 }}>HomeBids AI</span>
-                  <div style={{ background: "#E9E9EB", borderRadius: "18px 18px 18px 4px", padding: "8px 12px", maxWidth: "82%", fontSize: 13, color: "#000", lineHeight: 1.4 }}>
-                    You have 3 bids ready. Mike C. came in best at $6,200. Ready for me to make the introduction?
+                {/* City / ZIP — visible */}
+                <div style={{ background: "#F2F2F7", borderRadius: 14, padding: "12px 14px" }}>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5" style={{ fontSize: 13, fontWeight: 600, color: "#000" }}>
+                      <MapPin className="h-4 w-4" style={{ color: "#0A84FF" }} />
+                      Austin, TX 78704
+                    </span>
+                    <span className="flex items-center gap-1" style={{ fontSize: 10, fontWeight: 600, color: "#34C759" }}>
+                      <CheckCircle2 className="h-3 w-3" style={{ color: "#34C759" }} />
+                      Visible
+                    </span>
                   </div>
                 </div>
 
-                {/* Homeowner reply */}
-                <div className="flex flex-col items-end gap-0.5">
-                  <div style={{ background: "#0A84FF", borderRadius: "18px 18px 4px 18px", padding: "8px 12px", maxWidth: "75%", fontSize: 13, color: "#fff", lineHeight: 1.4 }}>
-                    Yes, go ahead!
+                {/* Personal contact — private */}
+                <div style={{ background: "#F8F8FA", border: "1px dashed #C7C7CC", borderRadius: 14, padding: "12px 14px" }}>
+                  <div className="flex items-center justify-between">
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.04em" }}>Contact Info</span>
+                    <span className="flex items-center gap-1" style={{ fontSize: 10, fontWeight: 600, color: "#8E8E93" }}>
+                      <Lock className="h-3 w-3" style={{ color: "#8E8E93" }} />
+                      Private
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1.5" style={{ marginTop: 8 }}>
+                    {["Name", "Phone", "Email", "Exact address"].map((label) => (
+                      <div key={label} className="flex items-center justify-between">
+                        <span style={{ fontSize: 12, color: "#636366" }}>{label}</span>
+                        <span style={{ height: 8, width: 72, borderRadius: 4, background: "#D8D8DC" }} />
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* System event */}
-                <div className="flex justify-center">
-                  <div style={{ background: "#F2F2F7", borderRadius: 10, padding: "5px 10px", fontSize: 11, color: "#636366", maxWidth: "90%", textAlign: "center" }}>
-                    HomeBids AI added Mike C. to the conversation
-                  </div>
-                </div>
-
-                {/* HomeBids group intro message */}
-                <div className="flex flex-col items-start gap-0.5">
-                  <span style={{ fontSize: 10, color: "#8E8E93", marginLeft: 2 }}>HomeBids AI</span>
-                  <div style={{ background: "#E9E9EB", borderRadius: "18px 18px 18px 4px", padding: "8px 12px", maxWidth: "85%", fontSize: 13, color: "#000", lineHeight: 1.4 }}>
-                    Mike, meet your new client! They need a roof repair in Austin, TX. Budget ~$6k. They&apos;re ready to move forward.
-                  </div>
-                </div>
-
-                {/* Contractor reply */}
-                <div className="flex flex-col items-start gap-0.5">
-                  <span style={{ fontSize: 10, color: "#8E8E93", marginLeft: 2 }}>Mike C.</span>
-                  <div style={{ background: "#E9E9EB", borderRadius: "18px 18px 18px 4px", padding: "8px 12px", maxWidth: "80%", fontSize: 13, color: "#000", lineHeight: 1.4 }}>
-                    Great to meet you! I can be there Thursday at 9 AM. Does that work?
-                  </div>
-                </div>
-
-                {/* Homeowner thumbs up */}
-                <div className="flex flex-col items-end gap-0.5">
-                  <div style={{ background: "#0A84FF", borderRadius: "18px 18px 4px 18px", padding: "8px 14px", fontSize: 13, color: "#fff" }}>
-                    Thursday works perfectly!
-                  </div>
-                </div>
-
-                {/* iMessage input bar */}
-                <div className="mt-auto" />
-              </div>
-
-              {/* Input bar */}
-              <div
-                className="flex items-center gap-2 px-3 py-2"
-                style={{ background: "#fff", borderTop: "0.5px solid rgba(0,0,0,0.12)" }}
-              >
-                <div style={{ width: 26, height: 26, borderRadius: "50%", border: "1.5px solid #8E8E93", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2V10M2 6H10" stroke="#8E8E93" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                </div>
-                <div style={{ flex: 1, height: 30, borderRadius: 15, border: "1px solid #C7C7CC", display: "flex", alignItems: "center", paddingLeft: 10 }}>
-                  <span style={{ fontSize: 13, color: "#8E8E93" }}>iMessage</span>
-                </div>
-                <div style={{ width: 26, height: 26, borderRadius: "50%", border: "1.5px solid #8E8E93", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.5A4.5 4.5 0 1 0 11 6.5A4.5 4.5 0 0 0 2 6.5Z" stroke="#8E8E93" strokeWidth="1.3"/><path d="M5 6.5C5 5.5 6 4 6.5 4C7 4 8 5.5 8 6.5" stroke="#8E8E93" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                {/* Footer note */}
+                <div className="mt-auto flex items-center gap-2" style={{ background: "#E8F1FF", borderRadius: 12, padding: "10px 12px" }}>
+                  <Lock className="h-4 w-4 shrink-0" style={{ color: "#0A84FF" }} />
+                  <span style={{ fontSize: 12, color: "#0A66D6", fontWeight: 500, lineHeight: 1.35 }}>Shared only after bid approval</span>
                 </div>
               </div>
 
               {/* Home indicator */}
-              <div className="flex justify-center pb-2 pt-1" style={{ background: "#fff" }}>
+              <div className="flex justify-center pb-2 pt-3" style={{ background: "#fff" }}>
                 <div style={{ width: 100, height: 4, borderRadius: 2, background: "#1C1C1E" }} />
               </div>
             </div>
             <p className="mt-3 text-center text-xs text-muted-foreground">
-              HomeBids handles the introduction — you stay in control
+              You stay in control of who can contact you
             </p>
           </motion.div>
         </div>
