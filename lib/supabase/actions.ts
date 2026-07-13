@@ -817,9 +817,35 @@ export async function getContractorInvitesByJobId(_jobId: string) {
 }
 
 /** Load contractor replies for a job (placeholder until contractor_replies table exists). */
-export async function getContractorRepliesByJobId(_jobId: string) {
-  // TODO: query contractor_replies table
-  return { replies: [], error: null };
+export async function getContractorRepliesByJobId(jobId: string) {
+  try {
+    const adminClient = createAdminClient();
+    const { data, error } = await adminClient
+      .from("outreach_replies")
+      .select("*")
+      .eq("job_id", jobId)
+      .order("received_at", { ascending: false });
+    
+    return { replies: data ?? [], error: error?.message ?? null };
+  } catch (e) {
+    return { replies: [], error: (e as Error).message ?? "Unknown error" };
+  }
+}
+
+/** Load all contractor email replies for admin dashboard. */
+export async function getAdminReplies() {
+  try {
+    const adminClient = createAdminClient();
+    const { data, error } = await adminClient
+      .from("outreach_replies")
+      .select("*")
+      .order("received_at", { ascending: false })
+      .limit(100);
+    
+    return { replies: data ?? [], error: error?.message ?? null };
+  } catch (e) {
+    return { replies: [], error: (e as Error).message ?? "Unknown error" };
+  }
 }
 
 // ── Contractor opportunity ────────────────────────────────────────────────────
@@ -1290,6 +1316,21 @@ export async function getAdminOutreachRuns() {
       });
     }
     
+    // Query outreach_replies for this set of job_ids to count replies per job
+    const { data: replies } = await adminClient
+      .from("outreach_replies")
+      .select("job_id")
+      .in("job_id", jobIds);
+    
+    // Count replies per job_id in memory
+    const repliesPerJob = new Map<string, number>();
+    if (replies) {
+      replies.forEach(reply => {
+        const count = repliesPerJob.get(reply.job_id) ?? 0;
+        repliesPerJob.set(reply.job_id, count + 1);
+      });
+    }
+    
     // Map outreach_runs to OutreachRun interface
     const mappedRuns = runs.map(run => ({
       id: run.id,
@@ -1300,7 +1341,7 @@ export async function getAdminOutreachRuns() {
       invites_queued: 0,
       invites_sent: run.emails_sent ?? 0,
       invites_failed: 0,
-      replies_received: 0,
+      replies_received: repliesPerJob.get(run.job_id) ?? 0,
       interested_count: 0,
       bids_started: 0,
       bids_submitted: 0,
