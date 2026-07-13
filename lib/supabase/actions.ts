@@ -514,7 +514,7 @@ export async function getJobBids(jobId: string) {
   return { bids: enrichedBids, error: null };
 }
 
-// ── Bids ─────────────────────────────────────────────────────────────────────
+// ── Bids ────────────────────────────────────────────────────────────���────────
 
 export async function submitBid(formData: {
   job_id: string;
@@ -752,6 +752,8 @@ export async function getBidsByJobId(jobId: string) {
 /** Full job status for the homeowner status page including outreach + bid counts. */
 export async function getJobStatus(jobId: string) {
   const supabase = await createClient();
+  const adminClient = createAdminClient();
+  
   const { data: job, error } = await supabase
     .from("jobs")
     .select("*")
@@ -764,22 +766,48 @@ export async function getJobStatus(jobId: string) {
     .select("id", { count: "exact", head: true })
     .eq("job_id", jobId);
 
+  // Load outreach run data for this job
+  const { data: outreachRun } = await adminClient
+    .from("outreach_runs")
+    .select("status, contractors_contacted")
+    .eq("job_id", jobId)
+    .maybeSingle();
+
+  // Map outreach status: 'running' → 'active', 'completed' → 'completed', 'failed' → 'failed', no row → 'pending'
+  const mapOutreachStatus = (status?: string | null): "pending" | "active" | "completed" | "failed" => {
+    if (!status) return "pending";
+    if (status === "running") return "active";
+    if (status === "completed") return "completed";
+    if (status === "failed") return "failed";
+    return "pending";
+  };
+
   return {
     jobStatus: {
       job,
-      contractorsContacted: 0,   // TODO: load from contractor_invites table
-      contractorsInterested: 0,  // TODO: load from contractor_replies table
+      contractorsContacted: outreachRun?.contractors_contacted ?? 0,
+      contractorsInterested: 0,  // No data source yet
       bidsReceived: bidCount ?? 0,
-      outreachStatus: "pending" as const,  // TODO: load from outreach_runs table
+      outreachStatus: mapOutreachStatus(outreachRun?.status),
     },
     error: null,
   };
 }
 
-/** Load outreach run for a job (placeholder until outreach_runs table exists). */
-export async function getOutreachRunByJobId(_jobId: string) {
-  // TODO: query outreach_runs table
-  return { outreachRun: null, error: null };
+/** Load outreach run for a job. */
+export async function getOutreachRunByJobId(jobId: string) {
+  try {
+    const adminClient = createAdminClient();
+    const { data, error } = await adminClient
+      .from("outreach_runs")
+      .select("*")
+      .eq("job_id", jobId)
+      .maybeSingle();
+    
+    return { outreachRun: data ?? null, error: error?.message ?? null };
+  } catch (e) {
+    return { outreachRun: null, error: (e as Error).message ?? "Unknown error" };
+  }
 }
 
 /** Load contractor invites for a job (placeholder until contractor_invites table exists). */
@@ -1233,6 +1261,54 @@ export async function getAdminJobs() {
 
 /** Load outreach runs for admin view (placeholder until outreach_runs table exists). */
 export async function getAdminOutreachRuns() {
-  // TODO: query outreach_runs joined with contractor_invites and contractor_replies
-  return { runs: [], error: null };
+  try {
+    const adminClient = createAdminClient();
+    
+    // Query outreach_runs ordered by started_at descending, limit 50
+    const { data: runs, error: runsError } = await adminClient
+      .from("outreach_runs")
+      .select("*")
+      .order("started_at", { ascending: false })
+      .limit(50);
+    
+    if (runsError || !runs) {
+      return { runs: [], error: runsError?.message ?? "Failed to load outreach runs" };
+    }
+    
+    // Get unique job_ids and query jobs table for titles
+    const jobIds = [...new Set(runs.map(r => r.job_id))];
+    const { data: jobs, error: jobsError } = await adminClient
+      .from("jobs")
+      .select("id, title")
+      .in("id", jobIds);
+    
+    // Build job_id → title map, fallback to "Untitled job"
+    const jobTitleMap = new Map<string, string>();
+    if (jobs) {
+      jobs.forEach(job => {
+        jobTitleMap.set(job.id, job.title ?? "Untitled job");
+      });
+    }
+    
+    // Map outreach_runs to OutreachRun interface
+    const mappedRuns = runs.map(run => ({
+      id: run.id,
+      job_id: run.job_id,
+      job_title: jobTitleMap.get(run.job_id) ?? "Untitled job",
+      status: run.status === "running" ? "active" : run.status === "completed" ? "completed" : run.status === "failed" ? "failed" : "pending",
+      contractors_selected: run.contractors_contacted ?? 0,
+      invites_queued: 0,
+      invites_sent: run.emails_sent ?? 0,
+      invites_failed: 0,
+      replies_received: 0,
+      interested_count: 0,
+      bids_started: 0,
+      bids_submitted: 0,
+      created_at: run.started_at ?? run.created_at,
+    }));
+    
+    return { runs: mappedRuns, error: null };
+  } catch (e) {
+    return { runs: [], error: (e as Error).message ?? "Unknown error" };
+  }
 }
