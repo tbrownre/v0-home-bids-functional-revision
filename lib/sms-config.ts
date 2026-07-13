@@ -4,7 +4,7 @@ export const SMS_PHONE_DISPLAY = "(404) 395-2879";
 export const SMS_BODY_PREFIX = "Hi HomeBids! I need help with";
 
 /** Canonical homeowner starter message used by the desktop text modal and /text route. */
-export const HOMEOWNER_STARTER_MESSAGE = "Hi HomeBids, I need help with a home project.";
+export const HOMEOWNER_STARTER_MESSAGE = "Hi HomeBids, I need help with a home project!";
 
 // ── Contractor SMS number ─────────────────────────────────────────────────────
 export const CONTRACTOR_SMS_PHONE_NUMBER = "+12832291348";
@@ -18,7 +18,7 @@ export const HOMEBIDS_SMS = {
   homeowner: {
     phone: SMS_PHONE_NUMBER,
     display: SMS_PHONE_DISPLAY,
-    href: `sms:${SMS_PHONE_NUMBER}?&body=${encodeURIComponent("Hi HomeBids, I need help with a home project")}`,
+    href: `sms:${SMS_PHONE_NUMBER}?&body=${encodeURIComponent(HOMEOWNER_STARTER_MESSAGE)}`,
   },
   contractor: {
     phone: CONTRACTOR_SMS_PHONE_NUMBER,
