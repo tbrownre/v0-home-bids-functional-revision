@@ -17,11 +17,12 @@ import {
   Clock,
   MapPin,
   AlertTriangle,
+  Mail,
 } from "lucide-react";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getAdminJobs, getAdminOutreachRuns } from "@/lib/supabase/actions";
+import { getAdminJobs, getAdminOutreachRuns, getAdminReplies } from "@/lib/supabase/actions";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -49,6 +50,19 @@ interface AdminJob {
   status: string;
   created_at: string;
   bids?: { count: number }[];
+}
+
+interface OutreachReply {
+  id: string;
+  job_id: string | null;
+  lead_id: string | null;
+  company_name: string | null;
+  from_email: string;
+  to_email: string;
+  subject: string;
+  reply_text: string;
+  received_at: string;
+  created_at: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -84,6 +98,7 @@ export default function AdminOutreachPage() {
   const router = useRouter();
   const [runs, setRuns] = useState<OutreachRun[]>([]);
   const [jobs, setJobs] = useState<AdminJob[]>([]);
+  const [replies, setReplies] = useState<OutreachReply[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -116,12 +131,14 @@ export default function AdminOutreachPage() {
   }, [router]);
 
   const loadData = async () => {
-    const [runsResult, jobsResult] = await Promise.all([
+    const [runsResult, jobsResult, repliesResult] = await Promise.all([
       getAdminOutreachRuns(),
       getAdminJobs(),
+      getAdminReplies(),
     ]);
     setRuns((runsResult.runs ?? []) as OutreachRun[]);
     setJobs((jobsResult.jobs ?? []) as AdminJob[]);
+    setReplies((repliesResult.replies ?? []) as OutreachReply[]);
   };
 
   useEffect(() => {
@@ -358,6 +375,63 @@ export default function AdminOutreachPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Recent replies */}
+        <h2 className="mb-4 mt-10 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Recent Email Replies
+        </h2>
+
+        {replies.length === 0 ? (
+          <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground text-sm">
+            No replies yet.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {replies.map((reply) => {
+              // Clamp reply_text to 3 lines (~120 chars)
+              const truncatedText = reply.reply_text.length > 120 
+                ? reply.reply_text.substring(0, 120) + "..." 
+                : reply.reply_text;
+              
+              return (
+                <div key={reply.id} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-start gap-3">
+                    {/* Icon */}
+                    <Mail className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    
+                    {/* Content */}
+                    <div className="min-w-0 flex-1">
+                      {/* From/Company */}
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        {reply.company_name || reply.from_email}
+                      </p>
+                      
+                      {/* Subject */}
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        {reply.subject || "(no subject)"}
+                      </p>
+                      
+                      {/* Reply text */}
+                      <p className="text-xs text-muted-foreground mt-2 line-clamp-3">
+                        {truncatedText}
+                      </p>
+                      
+                      {/* Footer: timestamp + inbox */}
+                      <div className="flex items-center justify-between gap-2 mt-3">
+                        <span className="text-xs text-muted-foreground">
+                          {timeAgo(reply.received_at)}
+                        </span>
+                        <span className="text-xs text-muted-foreground/70 truncate">
+                          to: {reply.to_email}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </main>

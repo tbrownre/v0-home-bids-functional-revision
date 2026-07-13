@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { copyToClipboard } from "@/lib/utils";
+import { getSmsHref } from "@/lib/sms-config";
 import {
   Dialog,
   DialogContent,
@@ -468,7 +469,7 @@ export function BidBuilderChat({
     }, delay);
   }
 
-  // ── Gather field prompts ───────────────────────────────────────────────────
+  // ─�� Gather field prompts ───────────────────────────────────────────────────
 
   function askForField(field: GatherField, b?: BidData) {
     const current = b ?? bidRef.current;
@@ -1125,7 +1126,7 @@ export function BidBuilderChat({
             className="w-full gap-1.5 text-xs"
             onClick={() => {
               const phone = bid.phone || "";
-              window.location.href = `sms:${phone}?body=${encodeURIComponent(`Hi ${bid.owner.split(" ")[0] || "there"}, here's your bid for ${bid.project}. ${bidLink}`)}`;
+              window.location.href = getSmsHref(phone, `Hi ${bid.owner.split(" ")[0] || "there"}, here's your bid for ${bid.project}. ${bidLink}`);
             }}
           >
             <MessageCircle className="h-3.5 w-3.5" /> Message Customer
@@ -1172,7 +1173,7 @@ export function BidBuilderChat({
               size="sm"
               className="h-8 gap-1.5 bg-green-600 text-xs text-white hover:bg-green-700"
               onClick={() => {
-                window.location.href = `sms:${bid.phone || ""}?body=${encodeURIComponent(`Hi ${bid.owner.split(" ")[0] || "there"}, thanks for approving the bid! When works to get started?`)}`;
+                window.location.href = getSmsHref(bid.phone || "", `Hi ${bid.owner.split(" ")[0] || "there"}, thanks for approving the bid! When works to get started?`);
               }}
             >
               <MessageCircle className="h-3.5 w-3.5" /> Text Homeowner

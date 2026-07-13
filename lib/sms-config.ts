@@ -1,11 +1,11 @@
 // ── Homeowner SMS number ──────────────────────────────────────────────────────
-export const SMS_PHONE_NUMBER = "+18722964991";
-export const SMS_PHONE_DISPLAY = "(872) 296-4991";
+export const SMS_PHONE_NUMBER = "+14043952879";
+export const SMS_PHONE_DISPLAY = "(404) 395-2879";
 export const SMS_BODY_PREFIX = "Hi HomeBids! I need help with";
 
 // ── Contractor SMS number ─────────────────────────────────────────────────────
-export const CONTRACTOR_SMS_PHONE_NUMBER = "+13472370362";
-export const CONTRACTOR_SMS_PHONE_DISPLAY = "(347) 237-0362";
+export const CONTRACTOR_SMS_PHONE_NUMBER = "+12832291348";
+export const CONTRACTOR_SMS_PHONE_DISPLAY = "(283) 229-1348";
 export const CONTRACTOR_SMS_BODY_PREFIX = "Let's create a new bid";
 
 /**
@@ -32,6 +32,29 @@ export function getSmsLink(body?: string): string {
 export function getContractorSmsLink(body?: string): string {
   const encodedBody = encodeURIComponent(body || CONTRACTOR_SMS_BODY_PREFIX);
   return `sms:${CONTRACTOR_SMS_PHONE_NUMBER}?&body=${encodedBody}`;
+}
+
+/**
+ * Generic SMS href builder for any phone number and optional body.
+ * Normalizes phone to E.164 format to match n8n workflow normalization.
+ * Handles formatted numbers like "(480) 555-0192" → "+14805550192".
+ * Uses the project's standard "?&" convention for cross-platform reliability.
+ * Returns empty string if phone cannot be normalized.
+ */
+export function getSmsHref(phone: string, body?: string): string {
+  const digits = String(phone).replace(/\D/g, "");
+  const normalized = digits ? "+" + (digits.length === 10 ? "1" + digits : digits) : "";
+  
+  if (!normalized) {
+    return "";
+  }
+  
+  if (!body) {
+    return `sms:${normalized}`;
+  }
+  
+  const encodedBody = encodeURIComponent(body);
+  return `sms:${normalized}?&body=${encodedBody}`;
 }
 
 /**

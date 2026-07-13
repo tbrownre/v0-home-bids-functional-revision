@@ -40,7 +40,7 @@ interface JobStatusData {
   contractorsContacted: number;
   contractorsInterested: number;
   bidsReceived: number;
-  outreachStatus: "pending" | "active" | "completed";
+  outreachStatus: "pending" | "active" | "completed" | "failed";
 }
 
 // ── Pipeline step config ──────────────────────────────────────────────────────
