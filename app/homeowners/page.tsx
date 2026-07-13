@@ -69,6 +69,10 @@ const FAQS = [
     a: "Only contractors you choose to engage with can message you. Your contact information stays private until you decide to share it.",
   },
   {
+    q: "Do contractors pay HomeBids for homeowner leads?",
+    a: "No. Contractors never pay HomeBids for individual leads, and we never sell your information to the highest bidder. Our goal is to connect you with qualified contractors who are a strong fit for your project, so you can compare competitive estimates and choose the option that works best for you.",
+  },
+  {
     q: "What types of projects can I post?",
     a: "Any home improvement, remodeling, repair, or maintenance project — roofing, plumbing, HVAC, painting, flooring, landscaping, and more.",
   },
