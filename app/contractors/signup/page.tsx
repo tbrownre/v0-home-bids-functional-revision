@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { signUpContractor } from "@/lib/supabase/actions";
+import { createClient } from "@/lib/supabase/client";
+import { checkContractorSubscription } from "@/lib/subscription-check";
 import {
   ArrowRight,
   ArrowLeft,
@@ -57,6 +59,37 @@ const trades = [
 export default function ContractorSignupPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<Step>("info");
+  const [checking, setChecking] = useState(true);
+
+  // If a signed-in contractor with no subscription tries to re-signup, send to payment
+  useEffect(() => {
+    const checkExistingContractor = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          const { hasValidSubscription } = await checkContractorSubscription(user.id);
+          if (hasValidSubscription) {
+            // Already has a subscription — shouldn't be on signup page
+            router.push("/contractors/dashboard");
+            return;
+          }
+          // No subscription but signed in — send to payment instead
+          router.push("/subscribe?type=contractor");
+          return;
+        }
+
+        // Not signed in — allow access to signup
+        setChecking(false);
+      } catch (e) {
+        console.error("[contractors-signup] Check failed:", e);
+        setChecking(false);
+      }
+    };
+
+    checkExistingContractor();
+  }, [router]);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -120,8 +153,21 @@ export default function ContractorSignupPage() {
       return;
     }
 
-    router.push("/contractors/signup/pending");
+    // Route to payment with the new userId so checkout links the subscription correctly
+    const params = new URLSearchParams({
+      type: 'contractor',
+      userId: result.userId ?? '',
+    });
+    router.push(`/subscribe?${params.toString()}`);
   };
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground">Checking account status...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
