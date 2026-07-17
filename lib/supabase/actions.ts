@@ -437,7 +437,7 @@ export async function getJobById(id: string) {
     .from("jobs")
     .select("*, profiles(full_name)")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (jobError) return { error: jobError.message, job: null };
   if (!job) return { error: "Job not found", job: null };
