@@ -21,18 +21,24 @@ const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
 
 interface SubscriptionCheckoutProps {
   planId: string
+  userId?: string
   onSuccess?: () => void
   onCancel?: () => void
 }
 
-export function SubscriptionCheckout({ planId, onSuccess, onCancel }: SubscriptionCheckoutProps) {
+export function SubscriptionCheckout({ planId, userId: propUserId, onSuccess, onCancel }: SubscriptionCheckoutProps) {
   const [isComplete, setIsComplete] = useState(false)
-  const [userId, setUserId] = useState<string | undefined>(undefined)
+  const [userId, setUserId] = useState<string | undefined>(propUserId)
   const [error, setError] = useState<string | null>(null)
 
   // Resolve the current user once so the fetchClientSecret callback can
   // include it in the Stripe session metadata for the webhook to use.
+  // If userId is provided as a prop, use that; otherwise get from auth.
   useEffect(() => {
+    if (propUserId) {
+      setUserId(propUserId)
+      return
+    }
     const sb = createClient()
     sb.auth.getUser().then(({ data }) => {
       if (data.user) setUserId(data.user.id)
@@ -40,7 +46,7 @@ export function SubscriptionCheckout({ planId, onSuccess, onCancel }: Subscripti
       console.error('[SubscriptionCheckout] Auth check failed:', err)
       setError("We couldn't verify your account. Please try again.")
     })
-  }, [])
+  }, [propUserId])
 
   // Keep the latest onSuccess in a ref so the stable onComplete callback
   // can call it without ever changing its own identity — Stripe forbids

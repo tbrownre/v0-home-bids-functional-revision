@@ -69,14 +69,30 @@ export default function ContractorSignupPage() {
         const { data: { user } } = await supabase.auth.getUser();
 
         if (user) {
+          // Check the user's profile to see if they're a contractor or homeowner
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('user_type')
+            .eq('id', user.id)
+            .single();
+
+          const userType = profile?.user_type ?? 'homeowner';
+
+          // If this is a signed-in homeowner, show error message instead
+          if (userType === 'homeowner') {
+            setHomeownerError(true);
+            setChecking(false);
+            return;
+          }
+
           const { hasValidSubscription } = await checkContractorSubscription(user.id);
           if (hasValidSubscription) {
             // Already has a subscription — shouldn't be on signup page
             router.push("/contractors/dashboard");
             return;
           }
-          // No subscription but signed in — send to payment instead
-          router.push("/subscribe?type=contractor");
+          // No subscription but signed in as contractor — send to payment with userId
+          router.push(`/subscribe?type=contractor&userId=${user.id}`);
           return;
         }
 
@@ -91,6 +107,7 @@ export default function ContractorSignupPage() {
     checkExistingContractor();
   }, [router]);
 
+  const [homeownerError, setHomeownerError] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
     phone: "",
@@ -102,7 +119,6 @@ export default function ContractorSignupPage() {
     confirmPassword: "",
     agreeToTerms: false,
   });
-
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -165,6 +181,22 @@ export default function ContractorSignupPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-muted-foreground">Checking account status...</div>
+      </div>
+    );
+  }
+
+  if (homeownerError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <h1 className="text-2xl font-bold text-foreground mb-2">Already Signed In</h1>
+          <p className="text-muted-foreground mb-6">You&apos;re signed in as a homeowner. Sign out to create a contractor account.</p>
+          <form action="/auth/sign-out" method="POST">
+            <button type="submit" className="inline-flex h-10 px-6 rounded-full bg-foreground text-background font-semibold hover:opacity-90 transition-opacity">
+              Sign Out
+            </button>
+          </form>
+        </div>
       </div>
     );
   }
