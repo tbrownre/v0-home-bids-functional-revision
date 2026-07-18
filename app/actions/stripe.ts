@@ -52,10 +52,6 @@ export async function startSubscriptionCheckout(
       planId,
       userType: plan.userType,
     },
-    payment_method_types: [
-      'card',
-      'link',
-    ],
   })
 
   if (!session.client_secret) {

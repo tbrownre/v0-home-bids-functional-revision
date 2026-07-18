@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SubscriptionGate } from "@/components/subscription-gate";
 
 export const metadata: Metadata = {
   title: "For Contractors | HomeBids — Win More Jobs with AI-Powered Bids",
@@ -17,5 +18,5 @@ export default function ContractorsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return <SubscriptionGate userType="contractor">{children}</SubscriptionGate>;
 }

@@ -49,6 +49,16 @@ export default function SubscribePage() {
         setError("Please select a contractor plan to continue.");
       }
     }
+
+    // If coming from new contractor signup, auto-select the contractor plan and show checkout
+    const userId = searchParams.get("userId");
+    if (userId && type === "contractor" && !planId) {
+      const plan = getContractorPlans()[0];
+      if (plan) {
+        setSelectedPlan(plan);
+        setShowCheckout(true);
+      }
+    }
   }, [searchParams]);
 
   const homeownerPlan = getHomeownerPlan();
@@ -68,10 +78,9 @@ export default function SubscribePage() {
     const isContractor = selectedPlan?.userType === "contractor";
     
     setShowCheckout(false);
-    if (isContractor && selectedPlan) {
-      // Payment confirmed — send contractor to complete their profile
-      const params = new URLSearchParams({ plan: selectedPlan.id });
-      router.push(`/contractors/signup?${params.toString()}`);
+    if (isContractor) {
+      // Payment confirmed — send contractor to their dashboard
+      router.push("/contractors/dashboard");
     } else {
       // Homeowner payment confirmed — send them to post their first job
       router.push("/new-job");
