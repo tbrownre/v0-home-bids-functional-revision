@@ -31,8 +31,8 @@ export function SubscriptionGate({ children, userType }: SubscriptionGateProps) 
         const { data: { user }, error: userError } = await supabase.auth.getUser()
 
         if (userError || !user) {
-          // Not signed in — redirect to sign-in
-          router.push('/sign-in')
+          // Not signed in — redirect to payment flow
+          router.push('/subscribe?type=contractor')
           return
         }
 

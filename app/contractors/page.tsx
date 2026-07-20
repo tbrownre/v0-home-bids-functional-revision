@@ -18,7 +18,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import Link from "next/link";
-import { HOMEBIDS_SMS } from "@/lib/sms-config";
 import { motion, useInView, useMotionValue, useSpring, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
@@ -300,13 +299,13 @@ export default function ContractorsPage() {
             </motion.p>
 
             <motion.div variants={fadeUp} className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-              <a
-                href={HOMEBIDS_SMS.contractor.href}
+              <Link
+                href="/contractors/signup"
                 className="inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-full bg-primary px-10 text-base font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 active:scale-[0.98] sm:w-auto"
               >
                 <ArrowRight className="h-4 w-4" />
                 Text Us To Build A Bid
-              </a>
+              </Link>
               <Link
                 href="/contractors/signup"
                 className="inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-full border border-primary bg-background px-10 text-base font-semibold text-primary shadow-sm transition-colors hover:bg-primary/5 active:scale-[0.98] sm:w-auto"
@@ -590,13 +589,13 @@ export default function ContractorsPage() {
                   ))}
                 </ul>
 
-                <a
-                  href={HOMEBIDS_SMS.contractor.href}
+                <Link
+                  href="/contractors/signup"
                   className="relative mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 active:scale-[0.98]"
                 >
                   <ArrowRight className="h-4 w-4" />
                   Start A Bid By Text
-                </a>
+                </Link>
                 <div className="relative mt-3 text-center">
                   <Link href="/subscribe?type=contractor" className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
                     Prefer to use a form?
@@ -674,13 +673,13 @@ export default function ContractorsPage() {
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">You don&apos;t have to.</p>
           <div className="mt-10 flex flex-col items-center gap-4">
-            <a
-              href={HOMEBIDS_SMS.contractor.href}
+            <Link
+              href="/contractors/signup"
               className="inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-primary px-10 text-lg font-bold text-primary-foreground shadow-xl transition-colors hover:bg-primary/90 active:scale-[0.98]"
             >
               <ArrowRight className="h-5 w-5" />
               Text Us To Build A Bid
-            </a>
+            </Link>
             <Link href="/subscribe?type=contractor" className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
               Use web form instead
             </Link>

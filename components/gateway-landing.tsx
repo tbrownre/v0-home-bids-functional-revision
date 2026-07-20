@@ -126,7 +126,7 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
   const handlePro = () => {
     onClose();
     localStorage.setItem("homebids_audience", "contractor");
-    window.location.href = HOMEBIDS_SMS.contractor.href;
+    window.location.href = "/contractors/signup";
   };
 
   return (
