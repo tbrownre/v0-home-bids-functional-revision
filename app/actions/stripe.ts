@@ -1,63 +1,127 @@
 'use server'
 
+import { headers } from 'next/headers'
+import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe'
 import { getPlanById } from '@/lib/products'
+import { createClient } from '@/lib/supabase/server'
+
+const EXPECTED_PRICE_AMOUNT = 9900
+const EXPECTED_PRICE_CURRENCY = 'usd'
+
+async function getValidatedContractorPrice(): Promise<Stripe.Price> {
+  const priceId = process.env.STRIPE_CONTRACTOR_PRICE_ID
+  if (!priceId || !priceId.startsWith('price_')) {
+    throw new Error('STRIPE_CONTRACTOR_PRICE_ID must be configured with a valid Stripe Price ID')
+  }
+
+  const price = await stripe.prices.retrieve(priceId, { expand: ['product'] })
+  const product = price.product as Stripe.Product
+  const keyIsLive = process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_') ?? false
+
+  if (
+    !price.active ||
+    price.unit_amount !== EXPECTED_PRICE_AMOUNT ||
+    price.currency !== EXPECTED_PRICE_CURRENCY ||
+    price.recurring?.interval !== 'month' ||
+    price.recurring.interval_count !== 1 ||
+    !product.active ||
+    price.livemode !== keyIsLive
+  ) {
+    throw new Error('STRIPE_CONTRACTOR_PRICE_ID does not match the active $99/month HomeBids contractor plan')
+  }
+
+  return price
+}
+
+async function getCheckoutOrigin(): Promise<string> {
+  const requestHeaders = await headers()
+  const host = requestHeaders.get('x-forwarded-host') ?? requestHeaders.get('host')
+  const protocol = requestHeaders.get('x-forwarded-proto') ?? 'https'
+  if (!host) throw new Error('Unable to determine the checkout return URL')
+  return `${protocol}://${host}`
+}
 
 /**
- * Create a Stripe Embedded Checkout session for a subscription plan.
- * Returns the client_secret needed to mount EmbeddedCheckout.
+ * Create one reusable Stripe Embedded Checkout session for the authenticated
+ * contractor. The server, not the browser, is authoritative for user identity.
  */
 export async function startSubscriptionCheckout(
   planId: string,
-  userId?: string,
+  requestedUserId?: string,
 ): Promise<string> {
   const plan = getPlanById(planId)
-  if (!plan) {
-    throw new Error(`Plan "${planId}" not found`)
+  if (!plan || plan.userType !== 'contractor') {
+    throw new Error(`Contractor plan "${planId}" not found`)
   }
 
-  const session = await stripe.checkout.sessions.create({
-    ui_mode: 'embedded',
-    redirect_on_completion: 'never',
-    line_items: [
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('You must be signed in to start contractor checkout')
+  if (requestedUserId && requestedUserId !== user.id) throw new Error('Checkout user does not match the signed-in account')
+
+  const price = await getValidatedContractorPrice()
+  const { data: storedSubscription } = await supabase
+    .from('subscriptions')
+    .select('stripe_customer_id, stripe_subscription_id, status')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (storedSubscription?.stripe_subscription_id && ['active', 'trialing', 'incomplete', 'past_due', 'unpaid'].includes(storedSubscription.status)) {
+    throw new Error('This contractor already has a Stripe subscription')
+  }
+
+  let customerId = storedSubscription?.stripe_customer_id ?? null
+  if (customerId) {
+    const customer = await stripe.customers.retrieve(customerId)
+    if (customer.deleted) customerId = null
+  }
+
+  if (!customerId) {
+    const matchingCustomers = await stripe.customers.search({
+      query: `metadata['homebids_user_id']:'${user.id}'`,
+      limit: 1,
+    })
+    customerId = matchingCustomers.data[0]?.id ?? null
+  }
+
+  if (!customerId) {
+    const customer = await stripe.customers.create(
       {
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: `HomeBids ${plan.name} Plan`,
-            description: plan.description,
-          },
-          unit_amount: plan.priceInCents,
-          recurring: {
-            interval: 'month',
-          },
-        },
-        quantity: 1,
+        email: user.email,
+        metadata: { homebids_user_id: user.id, userType: 'contractor' },
       },
-    ],
-    mode: 'subscription',
-    subscription_data: {
-      trial_period_days: 3,
-      // Pass userId + planId through so the webhook can link the subscription
-      // back to the correct Supabase user without relying on the browser session.
-      metadata: {
-        userId: userId ?? '',
-        planId,
-        userType: plan.userType,
-      },
-    },
-    // Also store on the session itself for checkout.session.completed events.
-    metadata: {
-      userId: userId ?? '',
-      planId,
-      userType: plan.userType,
-    },
-  })
-
-  if (!session.client_secret) {
-    throw new Error('Failed to create checkout session')
+      { idempotencyKey: `homebids-contractor-customer-${user.id}` },
+    )
+    customerId = customer.id
   }
 
+  const existingSubscriptions = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 10 })
+  if (existingSubscriptions.data.some((subscription) => ['active', 'trialing', 'incomplete', 'past_due', 'unpaid'].includes(subscription.status))) {
+    throw new Error('This contractor already has a Stripe subscription')
+  }
+
+  const origin = await getCheckoutOrigin()
+  const metadata = { userId: user.id, planId, userType: 'contractor' }
+  const session = await stripe.checkout.sessions.create(
+    {
+      ui_mode: 'embedded',
+      return_url: `${origin}/onboarding/complete?session_id={CHECKOUT_SESSION_ID}`,
+      redirect_on_completion: 'always',
+      customer: customerId,
+      line_items: [{ price: price.id, quantity: 1 }],
+      mode: 'subscription',
+      payment_method_collection: 'always',
+      subscription_data: {
+        trial_period_days: 3,
+        metadata,
+      },
+      metadata,
+    },
+    { idempotencyKey: `homebids-contractor-checkout-${user.id}-${planId}` },
+  )
+
+  if (!session.client_secret) throw new Error('Failed to create checkout session')
   return session.client_secret
 }
 
