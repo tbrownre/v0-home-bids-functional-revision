@@ -444,7 +444,12 @@ export default function SubscribePage() {
         </div>
       )}
       
-      <Dialog open={showCheckout} onOpenChange={(open) => { if (!open) setShowCheckout(false); }}>
+      <Dialog open={showCheckout} onOpenChange={(open) => {
+        if (!open) {
+          setShowCheckout(false);
+          if (requestedType === "contractor") router.replace("/contractors/signup?checkout=canceled");
+        }
+      }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl p-0">
           <DialogHeader className="px-6 pt-6">
             <DialogTitle>

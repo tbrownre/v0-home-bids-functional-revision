@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, Clock, Eye, EyeOff, Loader2, Shield, User, Wrench, Zap } from "lucide-react";
 import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
@@ -21,6 +21,8 @@ const trades = ["Roofing", "Electrical", "Plumbing", "HVAC", "Garage Door", "Lan
 
 export default function ContractorSignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const checkoutCanceled = searchParams.get("checkout") === "canceled";
   const [step, setStep] = useState<Step>("info");
   const [checking, setChecking] = useState(true);
   const [signedInEmail, setSignedInEmail] = useState("");
@@ -42,6 +44,7 @@ export default function ContractorSignupPage() {
     const status = state.subscription?.status;
     const retainedAccess = status === "canceled" && state.subscription?.current_period_end && new Date(state.subscription.current_period_end) > new Date();
     if (status === "trialing" || status === "active" || retainedAccess) { router.replace("/contractors/dashboard"); return; }
+    if (checkoutCanceled) { setStep("trial"); setShowAccountChoice(false); return; }
     setShowAccountChoice(true);
   };
 
@@ -53,6 +56,11 @@ export default function ContractorSignupPage() {
   }, []);
 
   const continueExisting = () => { setShowAccountChoice(false); setStep("trial"); };
+  const openSecureCheckout = () => {
+    if (submitting) return;
+    setSubmitting(true);
+    router.push("/subscribe?type=contractor");
+  };
   const signOutAndReset = async () => {
     setSubmitting(true);
     await createClient().auth.signOut();
@@ -87,9 +95,9 @@ export default function ContractorSignupPage() {
       {step === "info" ? <div className="space-y-5"><div><h2 className="text-xl font-semibold">Your Info</h2><p className="mt-1 text-sm text-muted-foreground">Just the essentials to create your account.</p></div>
         <div className="grid gap-4 sm:grid-cols-2"><Field label="Full Name *" id="fullName" value={form.fullName} onChange={(v) => update("fullName", v)} autoComplete="name" wide /><Field label="Phone Number *" id="phone" value={form.phone} onChange={(v) => update("phone", v)} autoComplete="tel" type="tel" /><Field label="Company Name *" id="companyName" value={form.companyName} onChange={(v) => update("companyName", v)} autoComplete="organization" /><div><Label htmlFor="trade">Primary Trade *</Label><select id="trade" value={form.trade} onChange={(e) => update("trade", e.target.value)} className="mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Select your trade...</option>{trades.map((trade) => <option key={trade}>{trade}</option>)}</select></div><Field label="Service Area *" id="serviceArea" value={form.serviceArea} onChange={(v) => update("serviceArea", v)} /></div>
         {!signedInEmail && <div className="space-y-4 border-t border-border pt-5"><Field label="Email Address *" id="email" value={form.email} onChange={(v) => update("email", v)} type="email" autoComplete="email" /><div className="grid gap-4 sm:grid-cols-2"><PasswordField label="Password *" id="password" value={form.password} onChange={(v) => update("password", v)} visible={showPassword} toggle={() => setShowPassword(!showPassword)} /><PasswordField label="Confirm Password *" id="confirmPassword" value={form.confirmPassword} onChange={(v) => update("confirmPassword", v)} visible={showConfirm} toggle={() => setShowConfirm(!showConfirm)} /></div><label className="flex items-start gap-3"><Checkbox checked={form.agreeToTerms} onCheckedChange={(v) => update("agreeToTerms", Boolean(v))} className="mt-0.5" /><span className="text-sm text-muted-foreground">I agree to the <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>. *</span></label><label className="flex items-start gap-3"><Checkbox checked={form.communicationsConsent} onCheckedChange={(v) => update("communicationsConsent", Boolean(v))} className="mt-0.5" /><span className="text-sm text-muted-foreground">I agree to receive email and text messages from HomeBids about my account, free trial, and related services. Message and data rates may apply. Reply STOP to unsubscribe.</span></label></div>}
-      </div> : <div className="space-y-6"><div><h2 className="text-xl font-semibold">Start Your Free Trial</h2><p className="mt-1 text-sm text-muted-foreground">Try HomeBids free for 3 days. Cancel anytime before it ends and you won&apos;t be charged.</p></div><div className="rounded-xl border border-primary/30 bg-primary/5 p-5"><div className="flex items-baseline justify-between"><p className="text-2xl font-bold">$99 / month</p><span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary"><Clock className="h-3 w-3" />3-day free trial</span></div><ul className="mt-4 grid gap-2">{["Unlimited AI-generated bids", "Build professional proposals by text", "Shareable proposal link + PDF included", "No bid fees — ever"].map((text) => <li key={text} className="flex gap-2 text-sm"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{text}</li>)}</ul></div><div className="rounded-lg border border-border p-4"><h3 className="text-sm font-semibold">Account Summary</h3><div className="mt-2 grid gap-1 text-sm">{[["Name", form.fullName], ["Company", form.companyName], ["Trade", form.trade], ["Service Area", form.serviceArea], ["Email", signedInEmail || form.email]].map(([label, value]) => <p key={label}><span className="text-muted-foreground">{label}:</span> {value}</p>)}</div></div></div>}
+      </div> : <div className="space-y-6">{checkoutCanceled && <div role="status" className="rounded-lg border border-primary/30 bg-primary/5 p-4"><p className="font-semibold text-foreground">Your Account Is Saved</p><p className="mt-1 text-sm text-muted-foreground">Your free trial has not started, and no payment was submitted. Complete the final step whenever you&apos;re ready.</p></div>}<div><h2 className="text-xl font-semibold">Start Your Free Trial</h2><p className="mt-1 text-sm text-muted-foreground">Try HomeBids free for 3 days. Cancel anytime before it ends and you won&apos;t be charged.</p></div><div className="rounded-xl border border-primary/30 bg-primary/5 p-5"><div className="flex items-baseline justify-between"><p className="text-2xl font-bold">$99 / month</p><span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary"><Clock className="h-3 w-3" />3-day free trial</span></div><ul className="mt-4 grid gap-2">{["Unlimited AI-generated bids", "Build professional proposals by text", "Shareable proposal link + PDF included", "No bid fees — ever"].map((text) => <li key={text} className="flex gap-2 text-sm"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{text}</li>)}</ul></div><div className="rounded-lg border border-border p-4"><h3 className="text-sm font-semibold">Account Summary</h3><div className="mt-2 grid gap-1 text-sm">{[["Name", form.fullName], ["Company", form.companyName], ["Trade", form.trade], ["Service Area", form.serviceArea], ["Email", signedInEmail || form.email]].map(([label, value]) => <p key={label}><span className="text-muted-foreground">{label}:</span> {value}</p>)}</div></div></div>}
       {error && <div role="alert" className="mt-6 flex gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"><AlertCircle className="h-4 w-4 shrink-0" />{error}</div>}
-      <div className="mt-8 flex items-center justify-between border-t border-border pt-6">{step === "trial" ? <Button variant="outline" onClick={() => setStep("info")}><ArrowLeft className="mr-2 h-4 w-4" />Edit Information</Button> : <Button variant="outline" asChild><Link href="/contractors"><ArrowLeft className="mr-2 h-4 w-4" />Cancel</Link></Button>}{step === "info" ? <Button onClick={continueToTrial} disabled={submitting}>{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating Account...</> : <>Continue to Free Trial<ArrowRight className="ml-2 h-4 w-4" /></>}</Button> : <Button onClick={() => router.push("/subscribe?type=contractor")}>Continue to Secure Checkout<ArrowRight className="ml-2 h-4 w-4" /></Button>}</div>
+      <div className="mt-8 flex items-center justify-between border-t border-border pt-6">{step === "trial" ? <Button variant="outline" onClick={() => setStep("info")}><ArrowLeft className="mr-2 h-4 w-4" />Edit Information</Button> : <Button variant="outline" asChild><Link href="/contractors"><ArrowLeft className="mr-2 h-4 w-4" />Cancel</Link></Button>}{step === "info" ? <Button onClick={continueToTrial} disabled={submitting}>{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating Account...</> : <>Continue to Free Trial<ArrowRight className="ml-2 h-4 w-4" /></>}</Button> : <Button onClick={openSecureCheckout} disabled={submitting}>{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Opening Secure Checkout…</> : <>{checkoutCanceled ? "Complete Trial Activation" : "Start Free Trial — $0 Today"}<ArrowRight className="ml-2 h-4 w-4" /></>}</Button>}</div>
     </CardContent></Card>
     <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm text-muted-foreground"><span className="flex items-center gap-2"><Shield className="h-4 w-4" />SSL Encrypted</span><span className="flex items-center gap-2"><Clock className="h-4 w-4" />Cancel Anytime</span><span className="flex items-center gap-2"><Wrench className="h-4 w-4" />Build Bids Instantly</span></div>
   </div></main><ScrollToTop /></div>;

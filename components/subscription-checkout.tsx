@@ -1,35 +1,50 @@
-"use client";
+'use client'
 
-import { useCallback, useState } from "react";
-import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
-import { AlertCircle, Loader2, LockKeyhole } from "lucide-react";
-import { startSubscriptionCheckout } from "@/app/actions/stripe";
-import { Button } from "@/components/ui/button";
+import { useCallback, useState } from 'react'
+import { EmbeddedCheckout, EmbeddedCheckoutProvider } from '@stripe/react-stripe-js'
+import { loadStripe } from '@stripe/stripe-js'
+import { AlertCircle } from 'lucide-react'
+import { startSubscriptionCheckout } from '@/app/actions/stripe'
+import { Button } from '@/components/ui/button'
 
-const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
-const failureMessage = "We couldn’t open secure checkout. Your account and progress are saved. Please try again.";
+const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+const stripePromise = publishableKey ? loadStripe(publishableKey) : null
+const failureMessage = "We couldn’t open secure checkout. Your account and information are saved. Please try again."
 
-export function SubscriptionCheckout({ planId }: { planId: string; userId?: string; onSuccess?: () => void; onCancel?: () => void }) {
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [opening, setOpening] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function SubscriptionCheckout({ planId }: { planId: string; onSuccess?: () => void; onCancel?: () => void }) {
+  const [attempt, setAttempt] = useState(0)
+  const [error, setError] = useState<string | null>(null)
 
-  const openCheckout = useCallback(async () => {
-    if (opening) return;
-    setOpening(true);
-    setError(null);
+  const fetchClientSecret = useCallback(async () => {
+    setError(null)
     try {
-      setClientSecret(await startSubscriptionCheckout(planId));
-    } catch {
-      setError(failureMessage);
-    } finally {
-      setOpening(false);
+      return await startSubscriptionCheckout(planId)
+    } catch (err) {
+      console.error('[SubscriptionCheckout] Failed to open secure checkout:', err)
+      setError(failureMessage)
+      throw err
     }
-  }, [opening, planId]);
+  }, [planId, attempt])
 
-  if (!stripePromise) return <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">Secure checkout is temporarily unavailable. Please try again shortly.</div>;
-  if (!clientSecret) return <div className="space-y-4 py-2"><div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground"><div className="flex items-center gap-2 font-medium text-foreground"><LockKeyhole className="h-4 w-4 text-primary" />Secure Stripe Checkout</div><p className="mt-2">Add a payment method to begin your 3-day free trial. You pay $0 today.</p></div>{error && <div role="alert" className="flex gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}<Button className="w-full" size="lg" onClick={openCheckout} disabled={opening}>{opening ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Opening Secure Checkout…</> : error ? "Try Again" : "Start Free Trial — $0 Today"}</Button></div>;
-  return <EmbeddedCheckoutProvider stripe={stripePromise} options={{ clientSecret }}><EmbeddedCheckout /></EmbeddedCheckoutProvider>;
+  if (!stripePromise) {
+    return <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">{failureMessage}</div>
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-8 text-center">
+        <AlertCircle className="h-8 w-8 text-destructive" aria-hidden="true" />
+        <p className="max-w-md text-sm text-destructive" role="alert">{error}</p>
+        <Button onClick={() => { setError(null); setAttempt((value) => value + 1) }}>Try Again</Button>
+      </div>
+    )
+  }
+
+  return (
+    <div id="checkout" aria-label="Secure Stripe checkout">
+      <EmbeddedCheckoutProvider key={attempt} stripe={stripePromise} options={{ fetchClientSecret }}>
+        <EmbeddedCheckout className="rounded-xl" />
+      </EmbeddedCheckoutProvider>
+    </div>
+  )
 }

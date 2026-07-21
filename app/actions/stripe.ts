@@ -57,10 +57,17 @@ export async function startSubscriptionCheckout(planId: string): Promise<string>
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) throw new Error('You must be signed in to start contractor checkout')
 
+  const { data: contractorProfile, error: contractorError } = await supabase
+    .from('contractor_profiles')
+    .select('id, business_name')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (contractorError || !contractorProfile) throw new Error('A valid contractor profile is required for checkout')
+
   const price = await getValidatedContractorPrice()
   const { data: storedSubscription } = await supabase
     .from('subscriptions')
-    .select('stripe_customer_id, stripe_subscription_id, status')
+    .select('stripe_customer_id, stripe_subscription_id, stripe_checkout_session_id, status')
     .eq('user_id', user.id)
     .maybeSingle()
 
@@ -71,7 +78,7 @@ export async function startSubscriptionCheckout(planId: string): Promise<string>
   let customerId = storedSubscription?.stripe_customer_id ?? null
   if (customerId) {
     const customer = await stripe.customers.retrieve(customerId)
-    if (customer.deleted) customerId = null
+    if (customer.deleted || customer.metadata.homebids_user_id !== user.id) customerId = null
   }
 
   if (!customerId) {
@@ -98,8 +105,23 @@ export async function startSubscriptionCheckout(planId: string): Promise<string>
     throw new Error('This contractor already has a Stripe subscription')
   }
 
+  if (storedSubscription?.stripe_checkout_session_id) {
+    const priorSession = await stripe.checkout.sessions.retrieve(storedSubscription.stripe_checkout_session_id)
+    if (priorSession.status === 'open' && priorSession.client_secret && priorSession.customer === customerId) {
+      return priorSession.client_secret
+    }
+  }
+
   const origin = await getCheckoutOrigin()
-  const metadata = { userId: user.id, planId, userType: 'contractor' }
+  const metadata = {
+    userId: user.id,
+    supabase_user_id: user.id,
+    contractor_profile_id: contractorProfile.id,
+    company_name: contractorProfile.business_name ?? '',
+    signup_source: 'contractor_onboarding',
+    planId,
+    userType: 'contractor',
+  }
   const session = await stripe.checkout.sessions.create(
     {
       ui_mode: 'embedded',
@@ -115,6 +137,7 @@ export async function startSubscriptionCheckout(planId: string): Promise<string>
       },
       metadata,
     },
+    { idempotencyKey: `homebids-checkout-${user.id}-${storedSubscription?.stripe_checkout_session_id ?? 'initial'}` },
   )
 
   if (!session.client_secret) throw new Error('Failed to create checkout session')

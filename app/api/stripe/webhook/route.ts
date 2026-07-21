@@ -83,6 +83,7 @@ async function syncSubscription(subscription: Stripe.Subscription, supabase: Adm
     stripe_customer_id: customerId,
     stripe_subscription_id: subscription.id,
     current_period_end: getPeriodEnd(subscription),
+    trial_start: isoFromUnix(subscription.trial_start),
     trial_end: isoFromUnix(subscription.trial_end),
     cancel_at_period_end: subscription.cancel_at_period_end,
     updated_at: new Date().toISOString(),
@@ -127,6 +128,7 @@ export async function POST(request: NextRequest) {
           await supabase.from('subscriptions').update({ stripe_checkout_session_id: session.id }).eq('user_id', userId)
           await supabase.from('contractor_profiles').update({
             onboarding_step: 3,
+            onboarding_status: 'onboarding_complete',
             onboarding_completed_at: new Date().toISOString(),
             onboarding_updated_at: new Date().toISOString(),
             approval_status: 'approved',
@@ -189,6 +191,7 @@ export async function POST(request: NextRequest) {
         }
         break
       }
+      case 'invoice.paid':
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object
         const subscriptionId = typeof invoice.parent?.subscription_details?.subscription === 'string'
