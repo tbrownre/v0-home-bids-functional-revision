@@ -1,134 +1,35 @@
-'use client'
+"use client";
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  EmbeddedCheckout,
-  EmbeddedCheckoutProvider,
-} from '@stripe/react-stripe-js'
-import { loadStripe } from '@stripe/stripe-js'
-import { startSubscriptionCheckout } from '@/app/actions/stripe'
-import { createClient } from '@/lib/supabase/client'
-import { getMockUser } from '@/lib/mock-auth'
-import { CheckCircle2, AlertCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useCallback, useState } from "react";
+import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
+import { AlertCircle, Loader2, LockKeyhole } from "lucide-react";
+import { startSubscriptionCheckout } from "@/app/actions/stripe";
+import { Button } from "@/components/ui/button";
 
-// Defer Stripe initialization — only call loadStripe when the publishable key
-// is actually present. Passing null tells EmbeddedCheckoutProvider to wait,
-// avoiding the "publishable key undefined" runtime error in environments where
-// the env var has not been configured yet.
-const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
+const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
+const failureMessage = "We couldn’t open secure checkout. Your account and progress are saved. Please try again.";
 
-interface SubscriptionCheckoutProps {
-  planId: string
-  userId?: string
-  onSuccess?: () => void
-  onCancel?: () => void
-}
+export function SubscriptionCheckout({ planId }: { planId: string; userId?: string; onSuccess?: () => void; onCancel?: () => void }) {
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [opening, setOpening] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-export function SubscriptionCheckout({ planId, userId: propUserId, onSuccess, onCancel }: SubscriptionCheckoutProps) {
-  const [isComplete, setIsComplete] = useState(false)
-  const [userId, setUserId] = useState<string | undefined>(propUserId)
-  const [error, setError] = useState<string | null>(null)
-
-  // Resolve the current user once so the fetchClientSecret callback can
-  // include it in the Stripe session metadata for the webhook to use.
-  // If userId is provided as a prop, use that; otherwise get from auth.
-  useEffect(() => {
-    if (propUserId) {
-      setUserId(propUserId)
-      return
+  const openCheckout = useCallback(async () => {
+    if (opening) return;
+    setOpening(true);
+    setError(null);
+    try {
+      setClientSecret(await startSubscriptionCheckout(planId));
+    } catch {
+      setError(failureMessage);
+    } finally {
+      setOpening(false);
     }
-    const sb = createClient()
-    sb.auth.getUser().then(({ data }) => {
-      if (data.user) setUserId(data.user.id)
-    }).catch(err => {
-      console.error('[SubscriptionCheckout] Auth check failed:', err)
-      setError("We couldn't verify your account. Please try again.")
-    })
-  }, [propUserId])
+  }, [opening, planId]);
 
-  // Keep the latest onSuccess in a ref so the stable onComplete callback
-  // can call it without ever changing its own identity — Stripe forbids
-  // mutating options (including onComplete) after the first render.
-  const onSuccessRef = useRef(onSuccess)
-  useEffect(() => { onSuccessRef.current = onSuccess }, [onSuccess])
-
-  const fetchClientSecret = useCallback(
-    async () => {
-      try {
-        return await startSubscriptionCheckout(planId, userId)
-      } catch (err) {
-        console.error('[SubscriptionCheckout] Failed to start checkout:', err)
-        setError("We couldn't start checkout. Please try again.")
-        throw err
-      }
-    },
-    [planId, userId],
-  )
-
-  // Stable reference — created once per mount, never recreated.
-  const handleComplete = useCallback(() => {
-    setIsComplete(true)
-  }, [])
-
-  if (!stripeKey) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 border border-destructive/30">
-          <AlertCircle className="h-8 w-8 text-destructive" />
-        </div>
-        <h3 className="mt-4 text-xl font-semibold text-foreground">Payments not configured</h3>
-        <p className="mt-2 text-muted-foreground">
-          Add your <code className="font-mono text-sm">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> environment variable to enable checkout.
-        </p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 border border-destructive/30">
-          <AlertCircle className="h-8 w-8 text-destructive" />
-        </div>
-        <h3 className="mt-4 text-xl font-semibold text-foreground">Something went wrong</h3>
-        <p className="mt-2 text-muted-foreground">{error}</p>
-        <Button className="mt-6" onClick={() => window.location.reload()}>
-          Try Again
-        </Button>
-      </div>
-    )
-  }
-
-  if (isComplete) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-          <CheckCircle2 className="h-8 w-8 text-green-600" />
-        </div>
-        <h3 className="mt-4 text-xl font-semibold text-foreground">Subscription Active!</h3>
-        <p className="mt-2 text-muted-foreground">
-          Your subscription is active. Welcome to HomeBids.
-        </p>
-        <Button className="mt-6" onClick={() => onSuccessRef.current?.()}>
-          Get Started
-        </Button>
-      </div>
-    )
-  }
-
-  return (
-    <div id="checkout">
-      <EmbeddedCheckoutProvider
-        stripe={stripePromise}
-        options={{
-          fetchClientSecret,
-          onComplete: handleComplete,
-        }}
-      >
-        <EmbeddedCheckout className="rounded-xl" />
-      </EmbeddedCheckoutProvider>
-    </div>
-  )
+  if (!stripePromise) return <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">Secure checkout is temporarily unavailable. Please try again shortly.</div>;
+  if (!clientSecret) return <div className="space-y-4 py-2"><div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground"><div className="flex items-center gap-2 font-medium text-foreground"><LockKeyhole className="h-4 w-4 text-primary" />Secure Stripe Checkout</div><p className="mt-2">Add a payment method to begin your 3-day free trial. You pay $0 today.</p></div>{error && <div role="alert" className="flex gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}<Button className="w-full" size="lg" onClick={openCheckout} disabled={opening}>{opening ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Opening Secure Checkout…</> : error ? "Try Again" : "Start Free Trial — $0 Today"}</Button></div>;
+  return <EmbeddedCheckoutProvider stripe={stripePromise} options={{ clientSecret }}><EmbeddedCheckout /></EmbeddedCheckoutProvider>;
 }

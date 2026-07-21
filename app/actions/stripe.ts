@@ -47,10 +47,7 @@ async function getCheckoutOrigin(): Promise<string> {
  * Create one reusable Stripe Embedded Checkout session for the authenticated
  * contractor. The server, not the browser, is authoritative for user identity.
  */
-export async function startSubscriptionCheckout(
-  planId: string,
-  requestedUserId?: string,
-): Promise<string> {
+export async function startSubscriptionCheckout(planId: string): Promise<string> {
   const plan = getPlanById(planId)
   if (!plan || plan.userType !== 'contractor') {
     throw new Error(`Contractor plan "${planId}" not found`)
@@ -59,7 +56,6 @@ export async function startSubscriptionCheckout(
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) throw new Error('You must be signed in to start contractor checkout')
-  if (requestedUserId && requestedUserId !== user.id) throw new Error('Checkout user does not match the signed-in account')
 
   const price = await getValidatedContractorPrice()
   const { data: storedSubscription } = await supabase
@@ -68,7 +64,7 @@ export async function startSubscriptionCheckout(
     .eq('user_id', user.id)
     .maybeSingle()
 
-  if (storedSubscription?.stripe_subscription_id && ['active', 'trialing', 'incomplete', 'past_due', 'unpaid'].includes(storedSubscription.status)) {
+  if (storedSubscription?.stripe_subscription_id && ['active', 'trialing', 'past_due', 'unpaid'].includes(storedSubscription.status)) {
     throw new Error('This contractor already has a Stripe subscription')
   }
 
@@ -98,7 +94,7 @@ export async function startSubscriptionCheckout(
   }
 
   const existingSubscriptions = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 10 })
-  if (existingSubscriptions.data.some((subscription) => ['active', 'trialing', 'incomplete', 'past_due', 'unpaid'].includes(subscription.status))) {
+  if (existingSubscriptions.data.some((subscription) => ['active', 'trialing', 'past_due', 'unpaid'].includes(subscription.status))) {
     throw new Error('This contractor already has a Stripe subscription')
   }
 
@@ -119,7 +115,6 @@ export async function startSubscriptionCheckout(
       },
       metadata,
     },
-    { idempotencyKey: `homebids-contractor-checkout-${user.id}-${planId}` },
   )
 
   if (!session.client_secret) throw new Error('Failed to create checkout session')

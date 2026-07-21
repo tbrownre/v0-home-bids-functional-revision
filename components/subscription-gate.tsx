@@ -49,20 +49,14 @@ export function SubscriptionGate({ children, userType }: SubscriptionGateProps) 
         const { hasValidSubscription } = await checkContractorSubscription(user.id)
 
         if (!hasValidSubscription) {
-          // No valid subscription — redirect to payment with userId
-          router.push(`/subscribe?type=contractor&userId=${user.id}`)
+          router.replace('/contractors/signup')
           return
         }
 
         setAuthorized(true)
       } catch (e) {
         console.error('[subscription-gate] Access check failed:', e)
-        // If we have a userId, include it in the redirect so the webhook can link the subscription
-        if (userId) {
-          router.push(`/subscribe?type=contractor&userId=${userId}`)
-        } else {
-          router.push('/subscribe?type=contractor')
-        }
+        router.replace(userId ? '/contractors/signup' : '/auth/sign-in?redirect=/contractors/signup')
       } finally {
         setLoading(false)
       }

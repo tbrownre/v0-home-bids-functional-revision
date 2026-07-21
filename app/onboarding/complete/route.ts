@@ -17,15 +17,21 @@ export async function GET(request: NextRequest) {
 
   const session = await stripe.checkout.sessions.retrieve(sessionId)
   if (session.metadata?.userId !== user.id || session.status !== 'complete') {
-    return NextResponse.redirect(new URL(`/subscribe?type=contractor&userId=${user.id}`, request.url))
+    return NextResponse.redirect(new URL('/subscribe?type=contractor', request.url))
   }
 
-  const admin = createAdminClient()
   const subscriptionId = typeof session.subscription === 'string'
     ? session.subscription
     : session.subscription?.id
-  if (subscriptionId) {
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['items'] })
+  if (!subscriptionId) return NextResponse.redirect(new URL('/subscribe?type=contractor', request.url))
+
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['items'] })
+  if (!['trialing', 'active'].includes(subscription.status)) {
+    return NextResponse.redirect(new URL('/subscribe?type=contractor', request.url))
+  }
+
+  const admin = createAdminClient()
+  {
     const item = subscription.items.data[0] as typeof subscription.items.data[number] & { current_period_end?: number }
     await admin.from('subscriptions').upsert({
       user_id: user.id,

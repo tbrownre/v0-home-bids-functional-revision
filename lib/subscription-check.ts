@@ -30,7 +30,7 @@ export async function checkContractorSubscription(userId: string) {
     // Check subscription status in the subscriptions table
     const { data: subscription, error: subError } = await supabase
       .from('subscriptions')
-      .select('status')
+      .select('status, current_period_end, cancel_at_period_end')
       .eq('user_id', userId)
       .single()
 
@@ -40,9 +40,11 @@ export async function checkContractorSubscription(userId: string) {
       return { hasValidSubscription: false }
     }
 
-    // Only 'active' and 'trialing' statuses are valid
-    const isValid = subscription?.status === 'active' || subscription?.status === 'trialing'
-    return { hasValidSubscription: isValid }
+    const retainedAccess = subscription?.status === 'canceled'
+      && Boolean(subscription.current_period_end)
+      && new Date(subscription.current_period_end).getTime() > Date.now()
+    const isValid = subscription?.status === 'active' || subscription?.status === 'trialing' || retainedAccess
+    return { hasValidSubscription: isValid, status: subscription?.status }
   } catch (e) {
     console.error('[subscription-check] Error:', e)
     return { hasValidSubscription: false, error: (e as Error).message ?? 'Unknown error' }
