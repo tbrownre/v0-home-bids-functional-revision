@@ -201,7 +201,7 @@ export async function signUpContractor(formData: {
   if (recoveryMessages.length > 0) {
     await admin.from("communication_outbox").upsert(recoveryMessages, { onConflict: "dedupe_key", ignoreDuplicates: true });
   }
-  
+
   await fireWebhook("user.signup", {
     user_type: "contractor",
     email: formData.email,
