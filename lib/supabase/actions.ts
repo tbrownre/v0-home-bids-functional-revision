@@ -83,7 +83,9 @@ export async function signUpContractor(formData: {
   companyName: string;
   trade: string;
   serviceArea: string;
-}) {
+  marketingEmailConsent?: boolean;
+  marketingSmsConsent?: boolean;
+  }) {
   const supabase = await createClient();
 
   const fullName = formData.fullName.trim();
@@ -145,11 +147,61 @@ export async function signUpContractor(formData: {
     is_approved: true,
   });
   if (contractorError) {
-    // Friendly error — don't expose raw DB messages to the UI
-    console.error("[signUpContractor] contractor_profiles insert error:", contractorError.message);
-    return { error: "We couldn't save your contractor details. Please try again or contact support." };
+  // Friendly error — don't expose raw DB messages to the UI
+  console.error("[signUpContractor] contractor_profiles insert error:", contractorError.message);
+  return { error: "We couldn't save your contractor details. Please try again or contact support." };
   }
 
+  const consentedAt = formData.marketingEmailConsent || formData.marketingSmsConsent
+    ? new Date().toISOString()
+    : null;
+  await admin.from("profiles").update({
+    marketing_email_consent: Boolean(formData.marketingEmailConsent),
+    marketing_sms_consent: Boolean(formData.marketingSmsConsent),
+    marketing_consent_at: consentedAt,
+    marketing_consent_source: consentedAt ? "contractor_signup" : null,
+  }).eq("id", userId);
+
+  await admin.from("onboarding_events").insert({
+    user_id: userId,
+    event_type: "account_created",
+    metadata: { trade, service_area: serviceArea },
+  });
+
+  const recoveryMessages = [
+    formData.marketingEmailConsent ? {
+      user_id: userId,
+      channel: "email",
+      template_key: "checkout_reminder_1",
+      recipient: formData.email.trim().toLowerCase(),
+      scheduled_for: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      dedupe_key: `checkout-reminder-1:${userId}`,
+      payload: { first_name: fullName.split(" ")[0], company_name: companyName },
+    } : null,
+    formData.marketingEmailConsent ? {
+      user_id: userId,
+      channel: "email",
+      template_key: "checkout_reminder_2",
+      recipient: formData.email.trim().toLowerCase(),
+      scheduled_for: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      dedupe_key: `checkout-reminder-2:${userId}`,
+      payload: { first_name: fullName.split(" ")[0], company_name: companyName },
+    } : null,
+    formData.marketingSmsConsent ? {
+      user_id: userId,
+      channel: "sms",
+      template_key: "checkout_reminder_sms",
+      recipient: formData.phone.trim(),
+      scheduled_for: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+      dedupe_key: `checkout-reminder-sms:${userId}`,
+      payload: { first_name: fullName.split(" ")[0] },
+    } : null,
+  ].filter((message): message is NonNullable<typeof message> => message !== null);
+
+  if (recoveryMessages.length > 0) {
+    await admin.from("communication_outbox").upsert(recoveryMessages, { onConflict: "dedupe_key", ignoreDuplicates: true });
+  }
+  
   await fireWebhook("user.signup", {
     user_type: "contractor",
     email: formData.email,
@@ -907,6 +959,20 @@ export async function updateUserProfile(updates: { full_name?: string; phone?: s
   if (error) return { error: error.message };
   revalidatePath("/profile");
   return { error: null };
+}
+
+/** Load the signed-in contractor's current billing lifecycle state. */
+export async function getContractorSubscriptionLifecycle() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { subscription: null, error: "Not authenticated" };
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .select("status, trial_end, current_period_end, cancel_at_period_end, last_payment_error")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (error) return { subscription: null, error: error.message };
+  return { subscription: data, error: null };
 }
 
 /** Load the current contractor's profile completion data. */

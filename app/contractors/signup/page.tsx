@@ -118,6 +118,8 @@ export default function ContractorSignupPage() {
     password: "",
     confirmPassword: "",
     agreeToTerms: false,
+    marketingEmailConsent: false,
+    marketingSmsConsent: false,
   });
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -157,6 +159,8 @@ export default function ContractorSignupPage() {
       companyName: formData.companyName,
       trade: formData.trade,
       serviceArea: formData.serviceArea,
+      marketingEmailConsent: formData.marketingEmailConsent,
+      marketingSmsConsent: formData.marketingSmsConsent,
     });
     setSubmitting(false);
 
@@ -528,24 +532,46 @@ export default function ContractorSignupPage() {
                     </div>
                   </div>
 
-                  <label className="flex items-start gap-3">
-                    <Checkbox
-                      checked={formData.agreeToTerms}
-                      onCheckedChange={(checked) => update("agreeToTerms", checked as boolean)}
-                      className="mt-0.5"
-                    />
-                    <span className="text-sm text-muted-foreground">
-                      I agree to the{" "}
-                      <Link href="/terms" className="text-primary hover:underline">
-                        Terms of Service
-                      </Link>{" "}
-                      and{" "}
-                      <Link href="/privacy" className="text-primary hover:underline">
-                        Privacy Policy
-                      </Link>
-                      .
-                    </span>
-                  </label>
+                  <div className="space-y-3">
+                    <label className="flex items-start gap-3">
+                      <Checkbox
+                        checked={formData.agreeToTerms}
+                        onCheckedChange={(checked) => update("agreeToTerms", checked as boolean)}
+                        className="mt-0.5"
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        I agree to the{" "}
+                        <Link href="/terms" className="text-primary hover:underline">
+                          Terms of Service
+                        </Link>{" "}
+                        and{" "}
+                        <Link href="/privacy" className="text-primary hover:underline">
+                          Privacy Policy
+                        </Link>
+                        .
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-3">
+                      <Checkbox
+                        checked={formData.marketingEmailConsent}
+                        onCheckedChange={(checked) => update("marketingEmailConsent", checked as boolean)}
+                        className="mt-0.5"
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        Email me trial tips and reminders if I don&apos;t finish checkout. Optional.
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-3">
+                      <Checkbox
+                        checked={formData.marketingSmsConsent}
+                        onCheckedChange={(checked) => update("marketingSmsConsent", checked as boolean)}
+                        className="mt-0.5"
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        Text me trial tips and checkout reminders. Message and data rates may apply. Reply STOP to opt out. Optional.
+                      </span>
+                    </label>
+                  </div>
                 </motion.div>
               )}
 

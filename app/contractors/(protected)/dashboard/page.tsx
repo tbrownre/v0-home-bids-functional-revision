@@ -440,6 +440,24 @@ export default function ContractorDashboard() {
     social_links?: Record<string, string>;
   } | null>(null);
   const [profileCompletion, setProfileCompletion] = useState<{ completed: number; total: number; percent: number; isComplete: boolean } | null>(null);
+  const [subscriptionLifecycle, setSubscriptionLifecycle] = useState<{
+    status: string;
+    trial_end?: string | null;
+    current_period_end?: string | null;
+    cancel_at_period_end?: boolean;
+    last_payment_error?: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    async function loadSubscriptionLifecycle() {
+      try {
+        const { getContractorSubscriptionLifecycle } = await import("@/lib/supabase/actions");
+        const result = await getContractorSubscriptionLifecycle();
+        if (result.subscription) setSubscriptionLifecycle(result.subscription);
+      } catch { /* non-fatal */ }
+    }
+    loadSubscriptionLifecycle();
+  }, []);
 
   // Hosted proposals (written by the external Bid Builder workflow). Read-only
   // here — the dashboard only displays and shares them.
@@ -807,6 +825,47 @@ export default function ContractorDashboard() {
           </a>
         </div>
       </section>
+
+      {searchParams?.get("onboarding") === "complete" && (
+        <section className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4" role="status">
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+          <div>
+            <p className="text-sm font-semibold text-foreground">Your contractor account is ready</p>
+            <p className="mt-1 text-sm text-muted-foreground">Your 3-day trial has started. Build and send your first professional bid today.</p>
+          </div>
+        </section>
+      )}
+
+      {subscriptionLifecycle?.status === "trialing" && subscriptionLifecycle.trial_end && (
+        <section className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Free trial active</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Your trial ends {new Date(subscriptionLifecycle.trial_end).toLocaleDateString(undefined, { month: "long", day: "numeric" })}. You&apos;ll then be billed $99 monthly.
+            </p>
+          </div>
+          <Button size="sm" variant="outline" className="shrink-0 rounded-full bg-transparent" onClick={() => handleTabChange("account")}>View Plan</Button>
+        </section>
+      )}
+
+      {(subscriptionLifecycle?.status === "past_due" || subscriptionLifecycle?.status === "unpaid" || subscriptionLifecycle?.last_payment_error) && (
+        <section className="flex flex-col gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between" role="alert">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Payment needs attention</p>
+            <p className="mt-1 text-sm text-muted-foreground">Update your billing method to keep uninterrupted access to HomeBids.</p>
+          </div>
+          <Button size="sm" className="shrink-0 rounded-full" asChild><Link href="/subscribe?type=contractor">Update Billing</Link></Button>
+        </section>
+      )}
+
+      {subscriptionLifecycle?.cancel_at_period_end && (
+        <section className="rounded-xl border border-border bg-card p-4">
+          <p className="text-sm font-semibold text-foreground">Subscription scheduled to end</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Access continues through {subscriptionLifecycle.current_period_end ? new Date(subscriptionLifecycle.current_period_end).toLocaleDateString() : "the end of your billing period"}.
+          </p>
+        </section>
+      )}
 
       {/* Profile completion — secondary nudge, only when incomplete */}
       {profileCompletion && !profileCompletion.isComplete && (

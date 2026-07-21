@@ -5,6 +5,7 @@ import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe'
 import { getPlanById } from '@/lib/products'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const EXPECTED_PRICE_AMOUNT = 9900
 const EXPECTED_PRICE_CURRENCY = 'usd'
@@ -122,6 +123,28 @@ export async function startSubscriptionCheckout(
   )
 
   if (!session.client_secret) throw new Error('Failed to create checkout session')
+
+  const admin = createAdminClient()
+  const { error: persistError } = await admin.from('subscriptions').upsert({
+    user_id: user.id,
+    plan_id: planId,
+    status: 'incomplete',
+    stripe_customer_id: customerId,
+    stripe_checkout_session_id: session.id,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id' })
+  if (persistError) throw new Error('Failed to save checkout progress')
+
+  await admin.from('contractor_profiles').update({
+    onboarding_step: 2,
+    onboarding_updated_at: new Date().toISOString(),
+  }).eq('id', user.id)
+  await admin.from('onboarding_events').insert({
+    user_id: user.id,
+    event_type: 'checkout_started',
+    metadata: { checkout_session_id: session.id, plan_id: planId },
+  })
+
   return session.client_secret
 }
 
