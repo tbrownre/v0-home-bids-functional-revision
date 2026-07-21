@@ -83,23 +83,18 @@ export async function signUpContractor(formData: {
   companyName: string;
   trade: string;
   serviceArea: string;
-  termsAccepted: boolean;
-  communicationsConsent?: boolean;
-  }) {
+}) {
   const supabase = await createClient();
 
-  const email = formData.email.trim().toLowerCase();
   const fullName = formData.fullName.trim();
-  const phone = formData.phone.trim();
   const companyName = formData.companyName.trim();
   const trade = formData.trade.trim();
   const serviceArea = formData.serviceArea.trim();
 
-  if (!fullName || !phone || !companyName || !trade || !serviceArea || !/^\S+@\S+\.\S+$/.test(email)) {
-    return { error: "Please complete all required fields with valid information." };
+  // Minimal server-side validation mirroring the client requirements.
+  if (!fullName || !formData.phone.trim() || !companyName || !trade || !serviceArea) {
+    return { error: "Please fill in your name, phone, company, trade, and service area." };
   }
-  if (formData.password.length < 8) return { error: "Password must be at least 8 characters." };
-  if (!formData.termsAccepted) return { error: "You must agree to the Terms of Service and Privacy Policy." };
 
   // 1. Create the auth user with the admin API and auto-confirm the email.
   //
@@ -111,7 +106,7 @@ export async function signUpContractor(formData: {
   // is ever sent — and then sign them in below to establish a session.
   const admin = createAdminClient();
   const { data, error } = await admin.auth.admin.createUser({
-    email,
+    email: formData.email,
     password: formData.password,
     email_confirm: true,
     user_metadata: {
@@ -150,64 +145,9 @@ export async function signUpContractor(formData: {
     is_approved: true,
   });
   if (contractorError) {
+    // Friendly error — don't expose raw DB messages to the UI
     console.error("[signUpContractor] contractor_profiles insert error:", contractorError.message);
-    await admin.auth.admin.deleteUser(userId);
     return { error: "We couldn't save your contractor details. Please try again or contact support." };
-  }
-
-  const communicationsConsent = Boolean(formData.communicationsConsent);
-  const acceptedAt = new Date().toISOString();
-  const { error: profileError } = await admin.from("profiles").update({
-    marketing_email_consent: communicationsConsent,
-    marketing_sms_consent: communicationsConsent,
-    marketing_consent_at: communicationsConsent ? acceptedAt : null,
-    marketing_consent_source: communicationsConsent ? "contractor_signup" : null,
-    terms_accepted_at: acceptedAt,
-    terms_version: "2026-07-21",
-  }).eq("id", userId);
-  if (profileError) {
-    await admin.auth.admin.deleteUser(userId);
-    return { error: "We couldn't finish creating your account. Please try again." };
-  }
-
-  await admin.from("onboarding_events").insert({
-    user_id: userId,
-    event_type: "account_created",
-    metadata: { trade, service_area: serviceArea },
-  });
-
-  const recoveryMessages = [
-    communicationsConsent ? {
-      user_id: userId,
-      channel: "email",
-      template_key: "checkout_reminder_1",
-      recipient: email,
-      scheduled_for: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-      dedupe_key: `checkout-reminder-1:${userId}`,
-      payload: { first_name: fullName.split(" ")[0], company_name: companyName },
-    } : null,
-    communicationsConsent ? {
-      user_id: userId,
-      channel: "email",
-      template_key: "checkout_reminder_2",
-      recipient: email,
-      scheduled_for: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      dedupe_key: `checkout-reminder-2:${userId}`,
-      payload: { first_name: fullName.split(" ")[0], company_name: companyName },
-    } : null,
-    communicationsConsent ? {
-      user_id: userId,
-      channel: "sms",
-      template_key: "checkout_reminder_sms",
-      recipient: formData.phone.trim(),
-      scheduled_for: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-      dedupe_key: `checkout-reminder-sms:${userId}`,
-      payload: { first_name: fullName.split(" ")[0] },
-    } : null,
-  ].filter((message): message is NonNullable<typeof message> => message !== null);
-
-  if (recoveryMessages.length > 0) {
-    await admin.from("communication_outbox").upsert(recoveryMessages, { onConflict: "dedupe_key", ignoreDuplicates: true });
   }
 
   await fireWebhook("user.signup", {
@@ -224,7 +164,7 @@ export async function signUpContractor(formData: {
   // signed in and can go straight to the dashboard. If this fails for any
   // reason, the account still exists — they can sign in manually.
   const { error: signInError } = await supabase.auth.signInWithPassword({
-    email,
+    email: formData.email,
     password: formData.password,
   });
   if (signInError) {
@@ -969,76 +909,6 @@ export async function updateUserProfile(updates: { full_name?: string; phone?: s
   return { error: null };
 }
 
-export async function getContractorOnboardingState() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { state: null, error: "Not authenticated" };
-
-  const [{ data: profile }, { data: contractor }, { data: subscription }] = await Promise.all([
-    supabase.from("profiles").select("full_name, phone, user_type").eq("id", user.id).maybeSingle(),
-    supabase.from("contractor_profiles").select("business_name, specialties, service_area, onboarding_step").eq("id", user.id).maybeSingle(),
-    supabase.from("subscriptions").select("status, current_period_end, cancel_at_period_end").eq("user_id", user.id).maybeSingle(),
-  ]);
-  return {
-    state: {
-      email: user.email ?? "",
-      fullName: profile?.full_name ?? user.user_metadata?.full_name ?? "",
-      phone: profile?.phone ?? user.user_metadata?.phone ?? "",
-      companyName: contractor?.business_name ?? "",
-      trade: contractor?.specialties?.[0] ?? "",
-      serviceArea: contractor?.service_area ?? "",
-      onboardingStep: contractor?.onboarding_step ?? 1,
-      userType: profile?.user_type ?? user.user_metadata?.user_type ?? "homeowner",
-      subscription,
-    },
-    error: null,
-  };
-}
-
-export async function updateContractorOnboardingInfo(updates: {
-  fullName: string;
-  phone: string;
-  companyName: string;
-  trade: string;
-  serviceArea: string;
-}) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated" };
-  const fullName = updates.fullName.trim();
-  const phone = updates.phone.trim();
-  const companyName = updates.companyName.trim();
-  const trade = updates.trade.trim();
-  const serviceArea = updates.serviceArea.trim();
-  if (!fullName || !phone || !companyName || !trade || !serviceArea) return { error: "Please complete all required fields." };
-
-  const admin = createAdminClient();
-  const { error: profileError } = await admin.from("profiles").update({ full_name: fullName, phone }).eq("id", user.id);
-  const { error: contractorError } = await admin.from("contractor_profiles").update({
-    business_name: companyName,
-    specialties: [trade],
-    service_area: serviceArea,
-    onboarding_step: 2,
-    onboarding_updated_at: new Date().toISOString(),
-  }).eq("id", user.id);
-  if (profileError || contractorError) return { error: "We couldn't save your changes. Please try again." };
-  return { success: true };
-}
-
-/** Load the signed-in contractor's current billing lifecycle state. */
-export async function getContractorSubscriptionLifecycle() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { subscription: null, error: "Not authenticated" };
-  const { data, error } = await supabase
-    .from("subscriptions")
-    .select("status, trial_end, current_period_end, cancel_at_period_end, last_payment_error")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (error) return { subscription: null, error: error.message };
-  return { subscription: data, error: null };
-}
-
 /** Load the current contractor's profile completion data. */
 export async function getContractorProfile() {
   const supabase = await createClient();
@@ -1401,7 +1271,7 @@ export async function markNotificationsSeen(): Promise<{ error: string | null }>
   return { error: null };
 }
 
-// ── Admin outreach ───────────────────────────────��────────────────────────────
+// ── Admin outreach ────────────────────────────────────────────────────────────
 
 /** Load all recent jobs for the admin outreach view. */
 export async function getAdminJobs() {

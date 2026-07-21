@@ -21,7 +21,7 @@ import { useRouter } from "next/navigation";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import { getContractorOnboardingState } from "@/lib/supabase/actions";
+import { createClient } from "@/lib/supabase/client";
 
 type UserTypeFilter = "homeowner" | "contractor";
 
@@ -30,33 +30,53 @@ export default function SubscribePage() {
   const router = useRouter();
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
-  const requestedType = searchParams.get("type");
-  const [userType, setUserType] = useState<UserTypeFilter | null>(requestedType === "contractor" ? "contractor" : requestedType === "homeowner" ? "homeowner" : null);
+  const [userType, setUserType] = useState<UserTypeFilter>("homeowner");
   const [error, setError] = useState<string | null>(null);
+  const [resolvedUserId, setResolvedUserId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    async function setupSubscribePage() {
-      const type = requestedType;
-      if (type === "contractor") {
-        const result = await getContractorOnboardingState();
-        if (!result.state || result.state.userType !== "contractor") {
-          router.replace("/contractors/signup");
-          return;
+    const setupSubscribePage = async () => {
+      const type = searchParams.get("type");
+      if (type === "contractor") setUserType("contractor");
+      else if (type === "homeowner") setUserType("homeowner");
+
+      // If a plan ID is provided, auto-select it and show checkout
+      const planId = searchParams.get("plan");
+      if (planId) {
+        const plan = [getHomeownerPlan(), ...getContractorPlans()].find(p => p.id === planId);
+        if (plan) {
+          setSelectedPlan(plan);
+          setShowCheckout(true);
+        } else {
+          setError("Please select a contractor plan to continue.");
         }
-        const status = result.state.subscription?.status;
-        if (status === "trialing" || status === "active") {
-          router.replace("/contractors/dashboard");
-          return;
-        }
-        setUserType("contractor");
-        const plan = getContractorPlans()[0];
-        if (plan) { setSelectedPlan(plan); setShowCheckout(true); }
-        return;
       }
-      setUserType("homeowner");
-    }
+
+      // Get userId from params, or fall back to signed-in user's ID as safety net
+      let userId = searchParams.get("userId") ?? undefined;
+      if (!userId && type === "contractor") {
+        // Safety net: if no userId param but a contractor is trying to checkout, use their signed-in ID
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id) {
+          userId = user.id;
+          console.warn('[subscribe] No userId in params but user is signed in, using user ID for checkout');
+        }
+      }
+      setResolvedUserId(userId);
+
+      // If coming from new contractor signup, auto-select the contractor plan and show checkout
+      if (userId && type === "contractor" && !planId) {
+        const plan = getContractorPlans()[0];
+        if (plan) {
+          setSelectedPlan(plan);
+          setShowCheckout(true);
+        }
+      }
+    };
+
     setupSubscribePage();
-  }, [requestedType, router]);
+  }, [searchParams]);
 
   const homeownerPlan = getHomeownerPlan();
   const contractorPlans = getContractorPlans();
@@ -83,10 +103,6 @@ export default function SubscribePage() {
       router.push("/new-job");
     }
   };
-
-  if (!userType) {
-    return <div className="flex min-h-screen items-center justify-center bg-background"><div className="text-sm text-muted-foreground">Loading secure checkout...</div></div>;
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -444,12 +460,7 @@ export default function SubscribePage() {
         </div>
       )}
       
-      <Dialog open={showCheckout} onOpenChange={(open) => {
-        if (!open) {
-          setShowCheckout(false);
-          if (requestedType === "contractor") router.replace("/contractors/signup?checkout=canceled");
-        }
-      }}>
+      <Dialog open={showCheckout} onOpenChange={(open) => { if (!open) setShowCheckout(false); }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl p-0">
           <DialogHeader className="px-6 pt-6">
             <DialogTitle>
@@ -465,6 +476,7 @@ export default function SubscribePage() {
             {selectedPlan && (
               <SubscriptionCheckout
                 planId={selectedPlan.id}
+                userId={resolvedUserId}
                 onSuccess={handleSuccess}
                 onCancel={() => setShowCheckout(false)}
               />
