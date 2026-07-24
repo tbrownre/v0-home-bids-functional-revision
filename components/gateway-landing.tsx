@@ -10,6 +10,7 @@ import { HomeownerTextModal } from "@/components/homeowner-text-modal";
 import { Button } from "@/components/ui/button";
 import { getSmsLink, HOMEBIDS_SMS, isSmsCapableDevice } from "@/lib/sms-config";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
+import { createClient } from "@/lib/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -109,6 +110,27 @@ function TickerRow({ items, speed, reverse = false }: { items: TickerItem[]; spe
 
 // ── Role picker modal (opened by "Try for free") ──────────────────────────────
 function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [isContractorLoggedIn, setIsContractorLoggedIn] = useState(false);
+
+  useEffect(() => {
+    async function checkAuth() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.id) {
+        // Check if contractor has active subscription
+        const { data: subscription } = await supabase
+          .from('subscriptions')
+          .select('status')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        setIsContractorLoggedIn(subscription?.status === 'active' || subscription?.status === 'trialing');
+      } else {
+        setIsContractorLoggedIn(false);
+      }
+    }
+    if (open) checkAuth();
+  }, [open]);
+
   const handleHomeowner = () => {
     onClose();
     localStorage.setItem("homebids_audience", "homeowner");
@@ -126,7 +148,11 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
   const handlePro = () => {
     onClose();
     localStorage.setItem("homebids_audience", "contractor");
-    window.location.href = "/contractors/signup";
+    if (isContractorLoggedIn) {
+      window.location.href = "/contractors/dashboard";
+    } else {
+      window.location.href = "/contractors/signup";
+    }
   };
 
   return (
@@ -146,7 +172,10 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
 
               {/* Logo */}
               <div className="mb-6 flex justify-center">
-                <HomeBidsLogo size="32px" linked={false} />
+                <HomeBidsLogo 
+                  size="32px" 
+                  href={isContractorLoggedIn ? "/contractors/dashboard" : "/"} 
+                />
               </div>
 
               {/* Question */}

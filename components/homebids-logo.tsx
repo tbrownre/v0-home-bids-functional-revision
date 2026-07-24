@@ -6,8 +6,10 @@ interface HomeBidsLogoProps {
    * Defaults to a responsive clamp suitable for the main header.
    */
   size?: string;
-  /** Wrap in a <Link href="/">. Defaults to true. */
+  /** Wrap in a <Link>. Defaults to true. */
   linked?: boolean;
+  /** Destination href when linked. Defaults to "/". */
+  href?: string;
   className?: string;
 }
 
@@ -19,6 +21,7 @@ interface HomeBidsLogoProps {
 export function HomeBidsLogo({
   size = "clamp(20px, 3vw, 28px)",
   linked = true,
+  href = "/",
   className = "",
 }: HomeBidsLogoProps) {
   const wordmark = (
@@ -51,8 +54,8 @@ export function HomeBidsLogo({
 
   return (
     <Link
-      href="/"
-      aria-label="Go to HomeBids homepage"
+      href={href}
+      aria-label={href === "/" ? "Go to HomeBids homepage" : "Go to dashboard"}
       className="inline-flex items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
