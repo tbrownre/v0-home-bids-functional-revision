@@ -97,17 +97,22 @@ export function Footer() {
 
   useEffect(() => {
     async function checkAuth() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.id) {
-        // Check if contractor has active subscription
-        const { data: subscription } = await supabase
-          .from('subscriptions')
-          .select('status')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        setIsContractorLoggedIn(subscription?.status === 'active' || subscription?.status === 'trialing');
-      } else {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id) {
+          // Simple check: is user a contractor (check profile user_type)
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('user_type')
+            .eq('id', user.id)
+            .maybeSingle();
+          setIsContractorLoggedIn(profile?.user_type === 'contractor');
+        } else {
+          setIsContractorLoggedIn(false);
+        }
+      } catch (e) {
+        console.error('[footer] Failed to check contractor status:', e);
         setIsContractorLoggedIn(false);
       }
     }
