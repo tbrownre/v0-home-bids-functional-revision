@@ -10,7 +10,7 @@ import { HomeownerTextModal } from "@/components/homeowner-text-modal";
 import { Button } from "@/components/ui/button";
 import { getSmsLink, HOMEBIDS_SMS, isSmsCapableDevice } from "@/lib/sms-config";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
-import { createClient } from "@/lib/supabase/client";
+import { useContractorLogoHref } from "@/lib/use-contractor-logo-href";
 import {
   Dialog,
   DialogContent,
@@ -110,31 +110,7 @@ function TickerRow({ items, speed, reverse = false }: { items: TickerItem[]; spe
 
 // ── Role picker modal (opened by "Try for free") ──────────────────────────────
 function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [isContractorLoggedIn, setIsContractorLoggedIn] = useState(false);
-
-  useEffect(() => {
-    async function checkAuth() {
-      try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.id) {
-          // Simple check: is user a contractor (check profile user_type)
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('user_type')
-            .eq('id', user.id)
-            .maybeSingle();
-          setIsContractorLoggedIn(profile?.user_type === 'contractor');
-        } else {
-          setIsContractorLoggedIn(false);
-        }
-      } catch (e) {
-        console.error('[gateway-landing] Failed to check contractor status:', e);
-        setIsContractorLoggedIn(false);
-      }
-    }
-    if (open) checkAuth();
-  }, [open]);
+  const logoHref = useContractorLogoHref();
 
   const handleHomeowner = () => {
     onClose();
@@ -153,11 +129,7 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
   const handlePro = () => {
     onClose();
     localStorage.setItem("homebids_audience", "contractor");
-    if (isContractorLoggedIn) {
-      window.location.href = "/contractors/dashboard";
-    } else {
-      window.location.href = "/contractors/signup";
-    }
+    window.location.href = "/contractors/signup";
   };
 
   return (
@@ -179,7 +151,7 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
               <div className="mb-6 flex justify-center">
                 <HomeBidsLogo 
                   size="32px" 
-                  href={isContractorLoggedIn ? "/contractors/dashboard" : "/"} 
+                  href={logoHref} 
                 />
               </div>
 
@@ -262,6 +234,7 @@ export function GatewayLanding() {
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
   const [textModalOpen, setTextModalOpen] = useState(false);
   const { openSignIn } = useSignInModal();
+  const logoHref = useContractorLogoHref();
 
   useEffect(() => setMounted(true), []);
 
@@ -302,7 +275,7 @@ export function GatewayLanding() {
 
           {/* Logo — left-aligned, prominent */}
           <div className="shrink-0">
-            <HomeBidsLogo size="clamp(20px, 2.5vw, 26px)" />
+            <HomeBidsLogo size="clamp(20px, 2.5vw, 26px)" href={logoHref} />
           </div>
 
           {/* Nav — right-aligned, noticeably smaller than the logo */}

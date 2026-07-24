@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Home, Building2, Send, CheckCircle2, ChevronUp } from "lucide-react";
 import { HomeBidsLogo } from "@/components/homebids-logo";
-import { createClient } from "@/lib/supabase/client";
+import { useContractorLogoHref } from "@/lib/use-contractor-logo-href";
 
 // Flyout group — keeps open while hovering trigger or panel
 function FlyoutGroup({ label, items }: { label: string; items: { href?: string; label: string; onClick?: () => void }[] }) {
@@ -93,31 +93,7 @@ export function Footer() {
   const [contactPhone, setContactPhone] = useState("");
   const [contactMessage, setContactMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [isContractorLoggedIn, setIsContractorLoggedIn] = useState(false);
-
-  useEffect(() => {
-    async function checkAuth() {
-      try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.id) {
-          // Simple check: is user a contractor (check profile user_type)
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('user_type')
-            .eq('id', user.id)
-            .maybeSingle();
-          setIsContractorLoggedIn(profile?.user_type === 'contractor');
-        } else {
-          setIsContractorLoggedIn(false);
-        }
-      } catch (e) {
-        console.error('[footer] Failed to check contractor status:', e);
-        setIsContractorLoggedIn(false);
-      }
-    }
-    checkAuth();
-  }, []);
+  const logoHref = useContractorLogoHref();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,7 +139,7 @@ export function Footer() {
               />
             </nav>
             <div className="border-t border-border w-full pt-4 flex flex-col items-center gap-1">
-              <HomeBidsLogo size="16px" href={isContractorLoggedIn ? "/contractors/dashboard" : "/"} />
+              <HomeBidsLogo size="16px" href={logoHref} />
               <p className="text-xs text-muted-foreground">
                 &copy; {new Date().getFullYear()} HomeBids.ai. All rights reserved.
               </p>
@@ -173,7 +149,7 @@ export function Footer() {
           {/* Desktop: single-line layout */}
           <div className="hidden sm:flex flex-wrap items-center justify-between gap-y-2 py-3">
             <div className="flex items-center gap-3">
-              <HomeBidsLogo size="14px" href={isContractorLoggedIn ? "/contractors/dashboard" : "/"} />
+              <HomeBidsLogo size="14px" href={logoHref} />
               <span className="text-muted-foreground/40">|</span>
               <span className="text-xs text-muted-foreground">
                 &copy; {new Date().getFullYear()} HomeBids.ai. All rights reserved.

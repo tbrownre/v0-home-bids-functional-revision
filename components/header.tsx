@@ -8,6 +8,7 @@ import { homeownerNavItems, loggedOutNavItems, contractorNavItems } from "@/lib/
 import { Button } from "@/components/ui/button";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
 import { HomeBidsLogo } from "@/components/homebids-logo";
+import { useContractorLogoHref } from "@/lib/use-contractor-logo-href";
 import {
   subscribeInbox,
   getHomeownerUnreadSnapshot,
@@ -57,6 +58,7 @@ export function Header({
 }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { openSignIn } = useSignInModal();
+  const logoHref = useContractorLogoHref();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -369,9 +371,7 @@ export function Header({
             (hamburger vs. back link / Log In + Try for Free CTAs). */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="pointer-events-auto">
-            <Link href={isContractor ? "/contractors/dashboard" : "/"}>
-              <HomeBidsLogo size="clamp(17px, 2.5vw, 26px)" />
-            </Link>
+            <HomeBidsLogo size="clamp(17px, 2.5vw, 26px)" href={logoHref} />
           </div>
         </div>
         {/* Grid placeholder keeps the 3-column structure intact */}
