@@ -1353,3 +1353,42 @@ export async function getAdminOutreachRuns() {
     return { runs: [], error: (e as Error).message ?? "Unknown error" };
   }
 }
+
+export async function uploadContractorLogo(
+  file: File
+): Promise<{ url: string | null; error: string | null }> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { url: null, error: "Not authenticated" };
+
+    const admin = createAdminClient();
+    const fileName = `contractors/${user.id}/logo-${Date.now()}`;
+    const { data, error: uploadError } = await admin.storage
+      .from("contractor-assets")
+      .upload(fileName, file, { upsert: true });
+
+    if (uploadError) {
+      return { url: null, error: uploadError.message };
+    }
+
+    // Get public URL for the uploaded file
+    const { data: { publicUrl } } = admin.storage
+      .from("contractor-assets")
+      .getPublicUrl(fileName);
+
+    // Save the URL to contractor_profiles
+    const { error: updateError } = await admin
+      .from("contractor_profiles")
+      .update({ logo_url: publicUrl })
+      .eq("id", user.id);
+
+    if (updateError) {
+      return { url: null, error: updateError.message };
+    }
+
+    return { url: publicUrl, error: null };
+  } catch (e) {
+    return { url: null, error: (e as Error).message || "Failed to upload logo" };
+  }
+}

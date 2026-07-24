@@ -60,16 +60,7 @@ export function ProposalCta({
         Accept This Proposal
       </Button>
 
-      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <Button
-          variant="outline"
-          className="h-11 gap-2 rounded-full bg-transparent"
-          onClick={handleQuestion}
-          disabled={!hasPhone}
-        >
-          <MessageCircle className="h-4 w-4" />
-          Ask / Request Changes
-        </Button>
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
         <Button
           variant="outline"
           className="h-11 gap-2 rounded-full bg-transparent"

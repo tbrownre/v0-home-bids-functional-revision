@@ -369,13 +369,15 @@ export function Header({
             (hamburger vs. back link / Log In + Try for Free CTAs). */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="pointer-events-auto">
-            <HomeBidsLogo size="clamp(17px, 2.5vw, 26px)" />
+            <Link href={isContractor ? "/contractors/dashboard" : "/"}>
+              <HomeBidsLogo size="clamp(17px, 2.5vw, 26px)" />
+            </Link>
           </div>
         </div>
         {/* Grid placeholder keeps the 3-column structure intact */}
         <div aria-hidden="true" />
 
-        {/* Right: back link | signed-out CTAs | spacer */}
+        {/* Right: back link | signed-out CTAs | return to dashboard | spacer */}
         <div className="flex items-center justify-end gap-1.5">
           {backHref ? (
             <Link
@@ -384,6 +386,14 @@ export function Header({
             >
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">{backLabel || "Back"}</span>
+            </Link>
+          ) : isLoggedIn && isContractor ? (
+            <Link
+              href="/contractors/dashboard"
+              className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <span>Return to dashboard</span>
+              <ArrowLeft className="h-4 w-4 scale-x-[-1]" />
             </Link>
           ) : !isLoggedIn ? (
             // Unauthenticated — show Log In + Try for Free on every public page

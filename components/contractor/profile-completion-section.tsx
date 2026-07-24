@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2, Upload } from "lucide-react";
 import {
   PROFILE_SECTIONS,
   emptyProfile,
@@ -41,6 +41,8 @@ export function ProfileCompletionSection() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function loadProfile() {
@@ -75,6 +77,40 @@ export function ProfileCompletionSection() {
     setProfile((prev) => ({ ...prev, [key]: value }));
     setSaveSuccess(false);
     setSaveError(null);
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type and size
+    if (!file.type.startsWith("image/")) {
+      setSaveError("Please select an image file");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setSaveError("Image must be smaller than 5MB");
+      return;
+    }
+
+    setLogoUploading(true);
+    setSaveError(null);
+    try {
+      const { uploadContractorLogo } = await import("@/lib/supabase/actions");
+      const { url, error } = await uploadContractorLogo(file);
+      if (error) {
+        setSaveError(error);
+      } else if (url) {
+        setField("logoUrl", url);
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      }
+    } catch (e) {
+      setSaveError((e as Error).message || "Failed to upload logo");
+    } finally {
+      setLogoUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const handleSave = async () => {
@@ -148,6 +184,50 @@ export function ProfileCompletionSection() {
             <div className="mt-3 grid gap-4 sm:grid-cols-2">
               {section.fields.map((field) => {
                 const complete = loaded && isFieldComplete(profile, field.key);
+                // Special handling for logo upload
+                if (field.key === "logoUrl") {
+                  return (
+                    <div key={field.key}>
+                      <div className="flex items-center justify-between gap-2">
+                        <Label>Company Logo</Label>
+                        <FieldBadge complete={complete} />
+                      </div>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          disabled={logoUploading}
+                          className="hidden"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={logoUploading}
+                          className="gap-2"
+                        >
+                          <Upload className="h-4 w-4" />
+                          {logoUploading ? "Uploading…" : "Upload Logo"}
+                        </Button>
+                        {profile.logoUrl && (
+                          <img
+                            src={profile.logoUrl}
+                            alt="Logo preview"
+                            className="h-10 w-10 rounded-lg object-cover"
+                          />
+                        )}
+                      </div>
+                      {profile.logoUrl && (
+                        <p className="mt-1.5 text-xs text-muted-foreground truncate">
+                          {profile.logoUrl}
+                        </p>
+                      )}
+                    </div>
+                  );
+                }
                 return (
                   <div
                     key={field.key}
