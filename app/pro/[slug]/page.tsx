@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { createClient } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { EstimatePageContent } from '@/components/pro/estimate-page-content';
 import { EstimatePage404 } from '@/components/pro/estimate-page-404';
 import { EstimatePagePaused } from '@/components/pro/estimate-page-paused';
@@ -12,10 +12,13 @@ export const revalidate = 60; // Cache for 60 seconds
 
 async function getContractorLandingPage(slug: string) {
   try {
-    const supabase = createClient();
+    // Use service-role client for server-side reads (bypasses RLS)
+    const supabase = createAdminClient();
+
+    // Fetch landing page with minimal columns
     const { data: landingPage, error } = await supabase
       .from('contractor_landing_pages')
-      .select('*')
+      .select('id, slug, status, config, contractor_id')
       .eq('slug', slug)
       .maybeSingle();
 
@@ -28,7 +31,7 @@ async function getContractorLandingPage(slug: string) {
       return { page: null, error: null };
     }
 
-    // Fetch contractor profile separately
+    // Fetch contractor profile (RLS would block anon client)
     const { data: profile } = await supabase
       .from('contractor_profiles')
       .select('business_name, contractor_logo_url')
@@ -38,7 +41,7 @@ async function getContractorLandingPage(slug: string) {
     return {
       page: {
         ...landingPage,
-        contractor_profiles: profile,
+        contractor_profiles: profile || undefined,
       },
       error: null,
     };
