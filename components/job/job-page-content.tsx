@@ -36,6 +36,7 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [isMobile, setIsMobile] = useState(true);
+  const [scrolledPastCTA, setScrolledPastCTA] = useState(false);
 
   useEffect(() => {
     const checkDevice = () => {
@@ -45,9 +46,22 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
       setIsMobile(hasTouch && isSmallScreen && !ua.includes('ipad'));
     };
 
+    const handleScroll = () => {
+      // Find the CTA section and check if user has scrolled past it
+      const ctaSection = document.querySelector('[data-cta-section]');
+      if (ctaSection) {
+        const rect = ctaSection.getBoundingClientRect();
+        setScrolledPastCTA(rect.bottom < 0);
+      }
+    };
+
     checkDevice();
     window.addEventListener('resize', checkDevice);
-    return () => window.removeEventListener('resize', checkDevice);
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('resize', checkDevice);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   const phoneNumber = '+12832291348';
@@ -75,7 +89,18 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
   });
 
   // Privacy: show only ZIP and area, never full street address
-  const cityDisplay = job.zip_code || 'Your area';
+  let locationDisplay = '';
+  if (job.zip_code) {
+    locationDisplay = job.zip_code;
+  } else if (job.location) {
+    // Try to extract just the city from location if available
+    const parts = job.location.split(',');
+    if (parts.length > 0) {
+      locationDisplay = parts[0].trim();
+    }
+  }
+  
+  const locationPhrase = locationDisplay ? `${homeownerFirstName} in ${locationDisplay}` : homeownerFirstName;
 
   return (
     <div className="min-h-screen bg-background">
@@ -134,12 +159,12 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
 
         {/* Facts Row */}
         <section className="mb-8 space-y-4">
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="text-sm font-normal">
               {job.category}
             </Badge>
             <span className="text-sm text-muted-foreground">
-              {homeownerFirstName} in {cityDisplay}
+              {locationPhrase}
             </span>
             {job.budget_min && job.budget_max && (
               <span className="text-sm text-muted-foreground">
@@ -150,7 +175,7 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
         </section>
 
         {/* CTA Section */}
-        <section className="mb-8 space-y-4">
+        <section className="mb-8 space-y-4" data-cta-section>
           {isMobile ? (
             <a
               href={smsLink}
@@ -215,8 +240,8 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
         </div>
       </footer>
 
-      {/* Sticky Mobile CTA */}
-      {isMobile && (
+      {/* Sticky Mobile CTA - only show after user scrolls past the inline CTA */}
+      {isMobile && scrolledPastCTA && (
         <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <a
             href={smsLink}
