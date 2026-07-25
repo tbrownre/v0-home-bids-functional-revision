@@ -110,14 +110,16 @@ export function EstimatePageContent({ page }: { page: LandingPageData }) {
           {companyName}
         </h1>
 
-        {/* Trust line */}
-        <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
-          {trust.license && <span>{trust.license}</span>}
-          {trust.years && <span>{trust.years}+ years</span>}
-          {trust.google_rating !== undefined && trust.review_count !== undefined && (
-            <span>⭐ {trust.google_rating} ({trust.review_count} reviews)</span>
-          )}
-        </div>
+        {/* Trust line - only render if at least one field is present */}
+        {(trust.license || trust.years || (typeof trust.google_rating === 'number' && typeof trust.review_count === 'number')) && (
+          <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
+            {trust.license && <span>{trust.license}</span>}
+            {trust.years && <span>{trust.years}+ years</span>}
+            {typeof trust.google_rating === 'number' && typeof trust.review_count === 'number' && (
+              <span>⭐ {trust.google_rating} ({trust.review_count} reviews)</span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Copy */}
