@@ -16,6 +16,7 @@ interface LandingPageData {
   slug: string;
   config: {
     brand?: {
+      company_name?: string;
       logo_url?: string;
       accent?: string;
       accent_checked?: string;
@@ -51,7 +52,7 @@ export function EstimatePageContent({ page }: { page: LandingPageData }) {
   const trust = config.trust || {};
   const cta = config.cta || {};
 
-  const companyName = page.contractor_profiles?.business_name || 'Contractor';
+  const companyName = brand.company_name || page.contractor_profiles?.business_name || 'Contractor';
   const logoUrl = brand.logo_url || page.contractor_profiles?.contractor_logo_url;
   const accentColor = brand.accent || '#3b82f6';
   const smsNumber = cta.sms_number || '';

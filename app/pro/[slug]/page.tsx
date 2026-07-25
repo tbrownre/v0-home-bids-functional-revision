@@ -63,7 +63,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const config = page.config as any;
-  const companyName = page.contractor_profiles?.business_name || 'Contractor';
+  const companyName = config?.brand?.company_name || page.contractor_profiles?.business_name || 'Contractor';
   const headline = config?.copy?.headline || `Get an estimate from ${companyName}`;
   const subhead = config?.copy?.subhead || '';
 
