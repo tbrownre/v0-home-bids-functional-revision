@@ -168,23 +168,21 @@ const DEMO_HOMEBIDS_LEADS: HomeBidsLead[] = [
 // ── AI helper functions ───────────��───────────────────────��───────��────────────
 
 function _getBidDefenderResponse(projectType: string, bidAmount: string, objection: string) {
-  const refLink = `https://homebids.com/compare?ref=contractor-demo&project=${encodeURIComponent(projectType)}`;
   const objectionLower = objection.toLowerCase();
   const isPrice = objectionLower.includes("expens") || objectionLower.includes("price") || objectionLower.includes("cost") || objectionLower.includes("cheap");
   const isMoreBids = objectionLower.includes("bid") || objectionLower.includes("quot") || objectionLower.includes("compar");
 
   let response = "";
   if (isPrice) {
-    response = `I completely understand — ${bidAmount} is a real investment and you deserve to feel confident about it. Here's what separates my bid from a cheaper option: [Your unique value here].\n\nI also partnered with HomeBids so you can easily compare what other qualified contractors charge for the same scope. You'll likely find my pricing is competitive for the quality you're getting:\n${refLink}\n\nEither way, I appreciate the opportunity and want you to feel great about whoever you choose.`;
+    response = `I completely understand — ${bidAmount} is a real investment and you deserve to feel confident about it. Here's what separates my bid from a cheaper option: [Your unique value here].\n\nEither way, I appreciate the opportunity and want you to feel great about whoever you choose.`;
   } else if (isMoreBids) {
-    response = `That's completely reasonable — smart homeowners get multiple quotes. I actually partnered with HomeBids to make that easier for you. Here's a link to compare pricing from other vetted contractors in your area:\n${refLink}\n\nIf another contractor ends up being a better fit, no hard feelings. I just want the job done right for you.`;
+    response = `That's completely reasonable — smart homeowners get multiple quotes.\n\nIf another contractor ends up being a better fit, no hard feelings. I just want the job done right for you.`;
   } else {
-    response = `I understand the hesitation. I want you to feel 100% confident before you commit to anything.\n\nI partnered with HomeBids so homeowners can easily compare quotes and make the most informed decision possible:\n${refLink}\n\nIf you have any specific concerns I haven't addressed, I'm happy to talk through them directly.`;
+    response = `I understand the hesitation. I want you to feel 100% confident before you commit to anything.\n\nIf you have any specific concerns I haven't addressed, I'm happy to talk through them directly.`;
   }
 
   return {
     response,
-    refLink,
     earnings: { potentialPerReferral: "$45–$120", jobsReferred: 7, affiliateEarned: "$490" },
   };
 }
@@ -655,7 +653,7 @@ export default function ContractorDashboard() {
 
   // ── HOME tab ─────────────────────────────────��────���────────────────────────
 
-  // ─��� Bid status config (full set) ──────────────────────────────────���─────────
+  // ─��� Bid status config (full set) ─────────────��────────────────────���─────────
   const BID_STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
     draft:          { label: "Draft",           cls: "bg-muted text-muted-foreground"         },
     ready_to_send:  { label: "Ready to Send",   cls: "bg-blue-50 text-blue-700"               },
