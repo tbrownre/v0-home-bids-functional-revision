@@ -65,9 +65,13 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
   }, []);
 
   const phoneNumber = '+12832291348';
-  const jobRefEncoded = encodeURIComponent(`Job: ${job.job_ref || job.id.slice(0, 8)}`);
+  const jobRefShort = job.job_ref || job.id.slice(0, 8);
+  const jobRefEncoded = encodeURIComponent(`Job: ${jobRefShort}`);
   const smsBody = `Hi!%20I%20want%20to%20bid%20on%20this%20job%20(${jobRefEncoded})`;
   const smsLink = `sms:${phoneNumber}?&body=${smsBody}`;
+  
+  const questionBody = `Hi!%20I%20have%20a%20question%20about%20this%20job%20(Job:%20${jobRefShort}):%20`;
+  const questionLink = `sms:${phoneNumber}?&body=${questionBody}`;
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -88,25 +92,32 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
     year: 'numeric',
   });
 
-  // Privacy: show only ZIP and area, never full street address
-  let locationDisplay = '';
-  if (job.zip_code) {
-    locationDisplay = job.zip_code;
-  } else if (job.location) {
-    // Try to extract just the city from location if available
-    const parts = job.location.split(',');
-    if (parts.length > 0) {
-      locationDisplay = parts[0].trim();
+  // Privacy: extract location with city + state, fallback to ZIP, fallback to just name
+  let locationPhrase = homeownerFirstName;
+  if (job.location) {
+    // Parse location field: could be "City, State" or "City" or full address
+    const parts = job.location.split(',').map(p => p.trim());
+    if (parts.length >= 2) {
+      // Format: "City, State" or "City, State, ZIP" etc.
+      const city = parts[0];
+      const state = parts[1];
+      locationPhrase = `${homeownerFirstName} from ${city}, ${state}`;
+    } else if (parts.length === 1) {
+      // Just a city or single part
+      const city = parts[0];
+      // Default to AZ if no state detected
+      locationPhrase = `${homeownerFirstName} from ${city}, AZ`;
     }
+  } else if (job.zip_code) {
+    // Fallback to ZIP if location not available
+    locationPhrase = `${homeownerFirstName} from ${job.zip_code}`;
   }
-  
-  const locationPhrase = locationDisplay ? `${homeownerFirstName} in ${locationDisplay}` : homeownerFirstName;
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-16 items-center px-4">
+        <div className="container mx-auto flex h-16 items-center justify-center px-4">
           <HomeBidsLogo size="20px" />
         </div>
       </header>
@@ -114,11 +125,11 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
       {/* Main Content */}
       <main className="container mx-auto max-w-3xl px-4 py-8">
         {/* Job Title & Meta */}
-        <div className="mb-6 space-y-2">
+        <div className="mb-6 space-y-2 text-center">
           <h1 className="text-balance text-3xl font-bold text-foreground md:text-4xl">
             {job.title}
           </h1>
-          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
             <span>Posted {postedDate}</span>
             {job.urgency && (
               <Badge variant="secondary" className="font-normal">
@@ -150,7 +161,7 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
         )}
 
         {/* Project Details */}
-        <section className="mb-8 space-y-4">
+        <section className="mb-8 space-y-4 text-center">
           <h2 className="text-xl font-semibold text-foreground">Project details</h2>
           <p className="text-pretty whitespace-pre-wrap text-base leading-relaxed text-foreground">
             {job.description}
@@ -159,7 +170,7 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
 
         {/* Facts Row */}
         <section className="mb-8 space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <Badge variant="outline" className="text-sm font-normal">
               {job.category}
             </Badge>
@@ -175,19 +186,34 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
         </section>
 
         {/* CTA Section */}
-        <section className="mb-8 space-y-4" data-cta-section>
+        <section className="mb-8 space-y-4 text-center" data-cta-section>
+          {/* FREE reassurance block */}
+          <div className="rounded-lg bg-accent/10 p-4">
+            <p className="text-sm font-medium text-foreground">
+              100% FREE to bid — no catch, no app to download, no credit card.
+            </p>
+          </div>
+
           {isMobile ? (
-            <a
-              href={smsLink}
-              className="block w-full rounded-lg bg-primary px-6 py-4 text-center text-lg font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-            >
-              Bid on this job — free
-            </a>
+            <div className="space-y-3">
+              <a
+                href={smsLink}
+                className="block w-full rounded-lg bg-primary px-6 py-4 text-lg font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+              >
+                Bid on this job — free
+              </a>
+              <a
+                href={questionLink}
+                className="block w-full rounded-lg border border-input bg-background px-6 py-4 text-lg font-semibold text-foreground transition-colors hover:bg-accent"
+              >
+                Ask {homeownerFirstName} a question first
+              </a>
+            </div>
           ) : (
             <div className="space-y-4 rounded-lg border bg-card p-6">
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <p className="text-sm font-medium text-foreground">Text to bid:</p>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center gap-2">
                   <span className="text-2xl font-semibold text-foreground">{phoneNumber}</span>
                   <Button
                     variant="outline"
@@ -220,11 +246,31 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
                   <QRCode value={smsLink} size={200} level="M" />
                 </div>
               )}
+              <div className="border-t pt-4">
+                <p className="mb-3 text-sm font-medium text-foreground">Or ask a question first:</p>
+                <Button
+                  variant="outline"
+                  asChild
+                  className="w-full"
+                >
+                  <a href={questionLink}>
+                    Ask {homeownerFirstName} a question
+                  </a>
+                </Button>
+              </div>
             </div>
           )}
-          <p className="text-center text-sm text-muted-foreground">
-            Text our Bid Builder and have a professional bid ready in ~90 seconds.
-          </p>
+
+          {/* How it works */}
+          <div className="space-y-3 rounded-lg bg-muted/40 p-6">
+            <h3 className="font-semibold text-foreground">How it works:</h3>
+            <ol className="space-y-2 text-sm text-foreground">
+              <li>1. Tap the button → your Messages app opens</li>
+              <li>2. Send the pre-filled text</li>
+              <li>3. Answer a few quick questions</li>
+              <li>4. Your professional bid is ready in ~90 seconds</li>
+            </ol>
+          </div>
         </section>
       </main>
 
