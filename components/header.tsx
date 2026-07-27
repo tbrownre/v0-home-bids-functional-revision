@@ -338,7 +338,20 @@ export function Header({
                   {contractorNavItems.map((item) => {
                     const tabParam = item.href.split("tab=")[1];
                     const isActive = tabParam ? activeContractorTab === tabParam : pathname.startsWith(item.href.split("?")[0]);
-                    return (
+                    const isSmsLink = item.href.startsWith("sms:");
+                    
+                    return isSmsLink ? (
+                      <a
+                        key={item.label}
+                        href={item.href}
+                        role="menuitem"
+                        className={`${menuItemBase}`}
+                        onClick={closeMenu}
+                      >
+                        {item.label === "Build A Bid" && <Sparkles        className="h-4 w-4 shrink-0" />}
+                        {item.label}
+                      </a>
+                    ) : (
                       <Link
                         key={item.label}
                         href={item.href}
@@ -346,11 +359,10 @@ export function Header({
                         className={`${menuItemBase} ${isActive ? menuItemActive : ""}`}
                         onClick={closeMenu}
                       >
-                        {item.label === "Home"        && <LayoutDashboard className="h-4 w-4 shrink-0" />}
+                        {item.label === "Dashboard"   && <LayoutDashboard className="h-4 w-4 shrink-0" />}
                         {item.label === "Bid Inbox"   && <Users           className="h-4 w-4 shrink-0" />}
-                        {item.label === "Build a Bid" && <Sparkles        className="h-4 w-4 shrink-0" />}
-                        {item.label === "Account"     && <Wrench          className="h-4 w-4 shrink-0" />}
                         {item.label === "Browse Jobs" && <Search          className="h-4 w-4 shrink-0" />}
+                        {item.label === "Account"     && <Wrench          className="h-4 w-4 shrink-0" />}
                         {item.label}
                       </Link>
                     );
