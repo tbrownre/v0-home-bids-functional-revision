@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { checkContractorSubscription } from '@/lib/subscription-check'
 
 interface SubscriptionGateProps {
   children: React.ReactNode
@@ -11,9 +10,9 @@ interface SubscriptionGateProps {
 }
 
 /**
- * Client-side subscription gate for contractor routes.
- * Checks if the user has an active or trialing subscription.
- * Redirects to /subscribe?type=contractor if not.
+ * Client-side access gate for contractor routes (freemium model).
+ * Allows all logged-in contractors to access dashboard pages.
+ * Admin bypass still applies. Redirects only logged-out users to sign-in.
  */
 export function SubscriptionGate({ children, userType }: SubscriptionGateProps) {
   const router = useRouter()
@@ -23,7 +22,6 @@ export function SubscriptionGate({ children, userType }: SubscriptionGateProps) 
 
   useEffect(() => {
     const checkAccess = async () => {
-      let userId: string | null = null
       try {
         const supabase = createClient()
 
@@ -31,38 +29,16 @@ export function SubscriptionGate({ children, userType }: SubscriptionGateProps) 
         const { data: { user }, error: userError } = await supabase.auth.getUser()
 
         if (userError || !user) {
-          // Not signed in — redirect to payment flow
-          router.push('/subscribe?type=contractor')
+          // Not signed in — redirect to sign-in
+          router.push(`/auth/sign-in?redirect=${pathname}`)
           return
         }
 
-        userId = user.id
-
-        // Skip the gate for signup routes — they have their own guards
-        if (pathname?.includes('/contractors/signup')) {
-          setAuthorized(true)
-          setLoading(false)
-          return
-        }
-
-        // Check subscription for all other contractor routes
-        const { hasValidSubscription } = await checkContractorSubscription(user.id)
-
-        if (!hasValidSubscription) {
-          // No valid subscription — redirect to payment with userId
-          router.push(`/subscribe?type=contractor&userId=${user.id}`)
-          return
-        }
-
+        // Logged-in contractors can access all dashboard pages (freemium)
         setAuthorized(true)
       } catch (e) {
         console.error('[subscription-gate] Access check failed:', e)
-        // If we have a userId, include it in the redirect so the webhook can link the subscription
-        if (userId) {
-          router.push(`/subscribe?type=contractor&userId=${userId}`)
-        } else {
-          router.push('/subscribe?type=contractor')
-        }
+        router.push(`/auth/sign-in?redirect=${pathname}`)
       } finally {
         setLoading(false)
       }

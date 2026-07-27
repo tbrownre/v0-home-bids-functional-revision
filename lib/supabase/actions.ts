@@ -981,17 +981,31 @@ export interface CreateProposalInput {
   priceNote?: string;
   addOns?: Array<{ title: string }>;
   timelineCompletion?: string;
+  jobId?: string | null;
 }
 
 /** Create a real proposal in the database from the online Bid Builder. */
 export async function createProposalFromBuilder(
   input: CreateProposalInput,
-): Promise<{ shareToken: string | null; proposalId: string | null; error: string | null }> {
+): Promise<{ shareToken: string | null; proposalId: string | null; error: string | null; limitExceeded?: boolean }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { shareToken: null, proposalId: null, error: "Not authenticated" };
 
   try {
+    // For own-project bids (job_id = null), check the 5 free bid limit
+    if (!input.jobId) {
+      const { canCreate, count } = await checkCanCreateOwnProjectBid(user.id);
+      if (!canCreate) {
+        return {
+          shareToken: null,
+          proposalId: null,
+          error: `Exceeded 5 free bids limit (${count}/5). Subscribe for unlimited own-project bids.`,
+          limitExceeded: true,
+        };
+      }
+    }
+
     // Load contractor branding
     const { data: profile } = await supabase
       .from("profiles")
@@ -1016,6 +1030,7 @@ export async function createProposalFromBuilder(
       .insert({
         share_token: shareToken,
         contractor_id: user.id,
+        job_id: input.jobId || null,
         contractor_company_name: contractorProfile?.business_name || profile?.full_name,
         contractor_phone: profile?.phone,
         contractor_logo_url: contractorProfile?.logo_url,
@@ -1390,5 +1405,73 @@ export async function uploadContractorLogo(
     return { url: publicUrl, error: null };
   } catch (e) {
     return { url: null, error: (e as Error).message || "Failed to upload logo" };
+  }
+}
+
+/**
+ * Count the number of own-project bids (proposals with job_id = null) a contractor has created.
+ * Used to enforce the 5 free bid limit for freemium contractors.
+ */
+export async function countOwnProjectBids(contractorId: string): Promise<{ count: number; error?: string }> {
+  try {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from('proposals')
+      .select('id', { count: 'exact', head: true })
+      .eq('contractor_id', contractorId)
+      .is('job_id', null);
+
+    if (error) {
+      console.error('[countOwnProjectBids] Query error:', error);
+      return { count: 0, error: error.message };
+    }
+
+    return { count: data?.length || 0 };
+  } catch (e) {
+    console.error('[countOwnProjectBids] Error:', e);
+    return { count: 0, error: (e as Error).message };
+  }
+}
+
+/**
+ * Check if a contractor can create another own-project bid.
+ * Returns { canCreate, count, error }.
+ * Subscribed contractors: always true.
+ * Free contractors: limited to 5 own-project bids.
+ */
+export async function checkCanCreateOwnProjectBid(contractorId: string): Promise<{ canCreate: boolean; count: number; error?: string }> {
+  try {
+    const supabase = await createClient();
+
+    // Check if contractor has active/trialing subscription
+    const { data: subscription, error: subError } = await supabase
+      .from('subscriptions')
+      .select('status')
+      .eq('user_id', contractorId)
+      .maybeSingle();
+
+    // Check admin status
+    const { data: profile, error: profileError } = await supabase
+      .from('contractor_profiles')
+      .select('is_admin')
+      .eq('id', contractorId)
+      .maybeSingle();
+
+    // Admins and subscribed contractors have unlimited bids
+    if (profile?.is_admin || subscription?.status === 'active' || subscription?.status === 'trialing') {
+      return { canCreate: true, count: 0 };
+    }
+
+    // Free contractor — count their own-project bids
+    const { count } = await countOwnProjectBids(contractorId);
+
+    return {
+      canCreate: count < 5,
+      count,
+    };
+  } catch (e) {
+    console.error('[checkCanCreateOwnProjectBid] Error:', e);
+    return { canCreate: false, count: 0, error: (e as Error).message };
   }
 }

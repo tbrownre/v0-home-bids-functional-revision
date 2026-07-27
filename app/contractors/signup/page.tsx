@@ -13,7 +13,6 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { signUpContractor } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
-import { checkContractorSubscription } from "@/lib/subscription-check";
 import {
   ArrowRight,
   ArrowLeft,
@@ -61,7 +60,7 @@ export default function ContractorSignupPage() {
   const [currentStep, setCurrentStep] = useState<Step>("info");
   const [checking, setChecking] = useState(true);
 
-  // If a signed-in contractor with no subscription tries to re-signup, send to payment
+  // If a signed-in contractor tries to re-signup, send to dashboard
   useEffect(() => {
     const checkExistingContractor = async () => {
       try {
@@ -85,14 +84,8 @@ export default function ContractorSignupPage() {
             return;
           }
 
-          const { hasValidSubscription } = await checkContractorSubscription(user.id);
-          if (hasValidSubscription) {
-            // Already has a subscription — shouldn't be on signup page
-            router.push("/contractors/dashboard");
-            return;
-          }
-          // No subscription but signed in as contractor — send to payment with userId
-          router.push(`/subscribe?type=contractor&userId=${user.id}`);
+          // Signed in as contractor — send to dashboard
+          router.push("/contractors/dashboard");
           return;
         }
 
@@ -169,12 +162,8 @@ export default function ContractorSignupPage() {
       return;
     }
 
-    // Route to payment with the new userId so checkout links the subscription correctly
-    const params = new URLSearchParams({
-      type: 'contractor',
-      userId: result.userId ?? '',
-    });
-    router.push(`/subscribe?${params.toString()}`);
+    // New contractors go straight to the dashboard — no subscription required
+    router.push("/contractors/dashboard");
   };
 
   if (checking) {
