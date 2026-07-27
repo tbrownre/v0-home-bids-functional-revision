@@ -9,6 +9,8 @@ import { getSmsHref } from "@/lib/sms-config";
 interface ProposalCtaProps {
   shareToken: string;
   contractorPhone: string | null;
+  homeownerName: string | null;
+  projectTitle: string;
   pdfUrl: string | null;
   /** Sticky variant pins the primary actions to the bottom on mobile. */
   variant?: "inline" | "sticky";
@@ -17,17 +19,23 @@ interface ProposalCtaProps {
 export function ProposalCta({
   shareToken,
   contractorPhone,
+  homeownerName,
+  projectTitle,
   pdfUrl,
   variant = "inline",
 }: ProposalCtaProps) {
   // Fire-and-forget tracking, then perform the navigation. We don't block the
   // user action on the network — tracking is best-effort.
-  function track(event: ProposalActionEvent) {
-    void logProposalAction(shareToken, event);
+  function track(event: ProposalActionEvent, proposalData?: any) {
+    void logProposalAction(shareToken, event, proposalData);
   }
 
   function handleAccept() {
-    track("accepted_clicked");
+    track("accepted_clicked", {
+      contractor_phone: contractorPhone,
+      homeowner_name: homeownerName,
+      project_title: projectTitle,
+    });
     if (contractorPhone) window.location.href = getSmsHref(contractorPhone, PROPOSAL_SMS.accept);
   }
 

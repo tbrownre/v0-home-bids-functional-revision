@@ -128,19 +128,88 @@ export async function logProposalView(
   }
 }
 
-/** Record a CTA click (accept / question / call / pdf). Non-blocking. */
+/**
+ * Record a CTA click (accept / question / call / pdf). Non-blocking.
+ * For "accepted_clicked" events, also sends an instant SMS notification
+ * to the contractor (fire-and-forget, never blocks).
+ */
 export async function logProposalAction(
   shareToken: string,
   eventType: ProposalActionEvent,
+  proposalData?: { contractor_phone: string | null; homeowner_name: string | null; project_title: string } | null,
 ): Promise<void> {
   try {
     const supabase = await createClient();
+    
+    // Fetch current approval_clicked_at state to check if this is the first approval
+    let approval_clicked_at_before: string | null = null;
+    if (eventType === "accepted_clicked") {
+      const { data } = await supabase.rpc("get_proposal_by_share_token", { p_token: shareToken }).maybeSingle();
+      if (data) {
+        approval_clicked_at_before = (data as any)?.approval_clicked_at ?? null;
+      }
+    }
+    
+    // Log the action
     await supabase.rpc("log_proposal_action", {
       p_token: shareToken,
       p_event_type: eventType,
     });
+
+    // Send SMS notification on first approval click (fire-and-forget)
+    if (eventType === "accepted_clicked" && !approval_clicked_at_before && proposalData?.contractor_phone) {
+      sendApprovalNotificationSms(shareToken, proposalData).catch(() => {
+        // swallow SMS errors — never block the action
+      });
+    }
   } catch {
     // swallow — tracking is best-effort
+  }
+}
+
+/**
+ * Send SMS notification to contractor when homeowner approves a bid.
+ * Fire-and-forget, never throws or blocks.
+ */
+async function sendApprovalNotificationSms(
+  shareToken: string,
+  proposalData: { contractor_phone: string | null; homeowner_name: string | null; project_title: string },
+): Promise<void> {
+  if (!proposalData.contractor_phone) return;
+
+  try {
+    const keyId = process.env.SENDBLUE_KEY_ID;
+    const keySecret = process.env.SENDBLUE_KEY_SECRET;
+    if (!keyId || !keySecret) {
+      console.warn("[sendApprovalNotificationSms] Missing SENDBLUE credentials");
+      return;
+    }
+
+    const homeownerName = proposalData.homeowner_name || "The homeowner";
+    const projectTitle = proposalData.project_title;
+    const approvalLink = `https://www.homebids.ai/p/${shareToken}`;
+
+    const message = `🎉 ${homeownerName} just approved your bid for "${projectTitle}"! View it: ${approvalLink}`;
+
+    const response = await fetch("https://api.sendblue.co/api/send-message", {
+      method: "POST",
+      headers: {
+        "sb-api-key-id": keyId,
+        "sb-api-secret-key": keySecret,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        number: proposalData.contractor_phone,
+        from_number: "+12832291348",
+        content: message,
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn(`[sendApprovalNotificationSms] SendBlue error: ${response.status}`);
+    }
+  } catch (err) {
+    console.warn("[sendApprovalNotificationSms] Error:", err);
   }
 }
 

@@ -261,6 +261,8 @@ function ProposalDocument({ proposal, shareToken }: { proposal: Proposal; shareT
           <ProposalCta
             shareToken={shareToken}
             contractorPhone={proposal.contractor_phone}
+            homeownerName={proposal.homeowner_name}
+            projectTitle={proposal.project_title}
             pdfUrl={proposal.pdf_url}
             variant="inline"
           />
