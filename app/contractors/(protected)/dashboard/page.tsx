@@ -1053,7 +1053,7 @@ export default function ContractorDashboard() {
         <div>
           <h1 className="text-xl font-bold text-foreground">Build a Bid</h1>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground text-pretty">
-            Create a professional hosted proposal from texts, photos, screenshots, voice notes, or rough job notes.
+            Create a professional hosted proposal from texts, photos, and screenshots.
           </p>
         </div>
 
@@ -1069,7 +1069,7 @@ export default function ContractorDashboard() {
             </div>
             <h3 className="mt-4 text-lg font-bold text-foreground">Start by Text</h3>
             <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">
-              Text job details, photos, screenshots, or voice notes. HomeBids.ai will ask follow-up questions and draft a clean proposal you can review, edit, and send.
+              Text job details, photos, and screenshots. HomeBids.ai will ask follow-up questions and draft a clean proposal you can review, edit, and send.
             </p>
             <div className="mt-5">{startByTextBtn(true)}</div>
             <p className="mt-2 text-center text-xs text-muted-foreground">Best when you&apos;re in the field.</p>
@@ -1097,7 +1097,7 @@ export default function ContractorDashboard() {
 
         {/* Feature chips */}
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {["Text-to-Bid", "Photo & Screenshot Intake", "Voice Notes", "Hosted Proposal Link", "PDF Included"].map((tag) => (
+          {["Text-to-Bid", "Photo & Screenshot Intake", "Hosted Proposal Link", "PDF Included"].map((tag) => (
             <span key={tag} className="shrink-0 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{tag}</span>
           ))}
         </div>

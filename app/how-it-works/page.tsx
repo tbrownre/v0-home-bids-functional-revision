@@ -503,7 +503,7 @@ export default function HowItWorksPage() {
                     </h2>
                   </motion.div>
                   <div className="flex flex-col items-center">
-                    <FlowStep icon={Smartphone} label="Voice Notes & Photos" delay={0} />
+                    <FlowStep icon={Smartphone} label="Photos & Details" delay={0} />
                     <FlowStep icon={Bot} label="AI Processing" delay={0.1} />
                     <FlowStep icon={FileText} label="Professional Proposal" delay={0.2} />
                     <FlowStep icon={Home} label="Happy Homeowner" delay={0.3} />
@@ -527,7 +527,7 @@ export default function HowItWorksPage() {
 
                 <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                   <StepCard number="1" icon={Smartphone} title="Send What You Already Have" delay={0}
-                    desc="No complicated forms. Submit voice notes, photos, rough scope, and pricing the way you already work." />
+                    desc="No complicated forms. Submit photos, rough scope, and pricing the way you already work." />
                   <StepCard number="2" icon={Bot} title="AI Builds the Proposal" delay={0.07}
                     desc="Messy notes transform into a clean scope of work, pricing, exclusions, and optional upgrades — instantly." />
                   <StepCard number="3" icon={FileText} title="Review Before Sending" delay={0.14}

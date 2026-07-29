@@ -11,7 +11,7 @@ const SESSION_KEY = "homebids_demo_popup_seen";
 const DELAY_MS = 7000;
 
 const bullets = [
-  "Text a job description, photo, voice note, or Facebook post screenshot",
+  "Text a job description, photo, or Facebook post screenshot",
   "HomeBids turns it into a professional bid link assigned to your contractor profile",
   "A PDF version is also included for convenience",
   "No setup required — just send the job details and see how it works",
@@ -119,7 +119,7 @@ export function DemoPopup() {
                 id="demo-popup-desc"
                 className="mt-2 text-sm text-muted-foreground"
               >
-                Text us a job description, photo, voice note, or Facebook post screenshot. HomeBids will turn it into a professional bid link assigned to your contractor profile, with a PDF version included.
+                Text us a job description, photo, or Facebook post screenshot. HomeBids will turn it into a professional bid link assigned to your contractor profile, with a PDF version included.
               </p>
 
               {/* Bullets */}

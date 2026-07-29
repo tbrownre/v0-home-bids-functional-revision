@@ -416,15 +416,7 @@ export function HomeLanding({ onOpenForm }: HomeLandingProps) {
               <MessageSquare className="h-5 w-5" />
               {isMobile ? "Text Us Now" : "Copy Number"}
             </Button>
-            <Button
-              variant="ghost"
-              size="lg"
-              className="h-12 w-full gap-1 rounded-full px-6 text-base sm:w-auto"
-              onClick={onOpenForm}
-            >
-              Or fill out a form instead
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+
           </div>
 
           <p className="mt-6 text-sm text-muted-foreground">
