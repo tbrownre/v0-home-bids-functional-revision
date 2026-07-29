@@ -32,33 +32,50 @@ export default function SubscribePage() {
   const [showCheckout, setShowCheckout] = useState(false);
   const [userType, setUserType] = useState<UserTypeFilter>("homeowner");
   const [error, setError] = useState<string | null>(null);
+  const [resolvedUserId, setResolvedUserId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    const type = searchParams.get("type");
-    if (type === "contractor") setUserType("contractor");
-    else if (type === "homeowner") setUserType("homeowner");
+    const setupSubscribePage = async () => {
+      const type = searchParams.get("type");
+      if (type === "contractor") setUserType("contractor");
+      else if (type === "homeowner") setUserType("homeowner");
 
-    // If a plan ID is provided, auto-select it and show checkout
-    const planId = searchParams.get("plan");
-    if (planId) {
-      const plan = [getHomeownerPlan(), ...getContractorPlans()].find(p => p.id === planId);
-      if (plan) {
-        setSelectedPlan(plan);
-        setShowCheckout(true);
-      } else {
-        setError("Please select a contractor plan to continue.");
+      // If a plan ID is provided, auto-select it and show checkout
+      const planId = searchParams.get("plan");
+      if (planId) {
+        const plan = [getHomeownerPlan(), ...getContractorPlans()].find(p => p.id === planId);
+        if (plan) {
+          setSelectedPlan(plan);
+          setShowCheckout(true);
+        } else {
+          setError("Please select a contractor plan to continue.");
+        }
       }
-    }
 
-    // If coming from new contractor signup, auto-select the contractor plan and show checkout
-    const userId = searchParams.get("userId");
-    if (userId && type === "contractor" && !planId) {
-      const plan = getContractorPlans()[0];
-      if (plan) {
-        setSelectedPlan(plan);
-        setShowCheckout(true);
+      // Get userId from params, or fall back to signed-in user's ID as safety net
+      let userId = searchParams.get("userId") ?? undefined;
+      if (!userId && type === "contractor") {
+        // Safety net: if no userId param but a contractor is trying to checkout, use their signed-in ID
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id) {
+          userId = user.id;
+          console.warn('[subscribe] No userId in params but user is signed in, using user ID for checkout');
+        }
       }
-    }
+      setResolvedUserId(userId);
+
+      // If coming from new contractor signup, auto-select the contractor plan and show checkout
+      if (userId && type === "contractor" && !planId) {
+        const plan = getContractorPlans()[0];
+        if (plan) {
+          setSelectedPlan(plan);
+          setShowCheckout(true);
+        }
+      }
+    };
+
+    setupSubscribePage();
   }, [searchParams]);
 
   const homeownerPlan = getHomeownerPlan();
@@ -459,6 +476,7 @@ export default function SubscribePage() {
             {selectedPlan && (
               <SubscriptionCheckout
                 planId={selectedPlan.id}
+                userId={resolvedUserId}
                 onSuccess={handleSuccess}
                 onCancel={() => setShowCheckout(false)}
               />

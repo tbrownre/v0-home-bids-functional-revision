@@ -13,7 +13,6 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { signUpContractor } from "@/lib/supabase/actions";
 import { createClient } from "@/lib/supabase/client";
-import { checkContractorSubscription } from "@/lib/subscription-check";
 import {
   ArrowRight,
   ArrowLeft,
@@ -61,7 +60,7 @@ export default function ContractorSignupPage() {
   const [currentStep, setCurrentStep] = useState<Step>("info");
   const [checking, setChecking] = useState(true);
 
-  // If a signed-in contractor with no subscription tries to re-signup, send to payment
+  // If a signed-in contractor tries to re-signup, send to dashboard
   useEffect(() => {
     const checkExistingContractor = async () => {
       try {
@@ -69,14 +68,24 @@ export default function ContractorSignupPage() {
         const { data: { user } } = await supabase.auth.getUser();
 
         if (user) {
-          const { hasValidSubscription } = await checkContractorSubscription(user.id);
-          if (hasValidSubscription) {
-            // Already has a subscription — shouldn't be on signup page
-            router.push("/contractors/dashboard");
+          // Check the user's profile to see if they're a contractor or homeowner
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('user_type')
+            .eq('id', user.id)
+            .single();
+
+          const userType = profile?.user_type ?? 'homeowner';
+
+          // If this is a signed-in homeowner, show error message instead
+          if (userType === 'homeowner') {
+            setHomeownerError(true);
+            setChecking(false);
             return;
           }
-          // No subscription but signed in — send to payment instead
-          router.push("/subscribe?type=contractor");
+
+          // Signed in as contractor — send to dashboard
+          router.push("/contractors/dashboard");
           return;
         }
 
@@ -91,6 +100,7 @@ export default function ContractorSignupPage() {
     checkExistingContractor();
   }, [router]);
 
+  const [homeownerError, setHomeownerError] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
     phone: "",
@@ -102,7 +112,6 @@ export default function ContractorSignupPage() {
     confirmPassword: "",
     agreeToTerms: false,
   });
-
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -153,18 +162,30 @@ export default function ContractorSignupPage() {
       return;
     }
 
-    // Route to payment with the new userId so checkout links the subscription correctly
-    const params = new URLSearchParams({
-      type: 'contractor',
-      userId: result.userId ?? '',
-    });
-    router.push(`/subscribe?${params.toString()}`);
+    // New contractors go straight to the dashboard — no subscription required
+    router.push("/contractors/dashboard");
   };
 
   if (checking) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-muted-foreground">Checking account status...</div>
+      </div>
+    );
+  }
+
+  if (homeownerError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <h1 className="text-2xl font-bold text-foreground mb-2">Already Signed In</h1>
+          <p className="text-muted-foreground mb-6">You&apos;re signed in as a homeowner. Sign out to create a contractor account.</p>
+          <form action="/auth/sign-out" method="POST">
+            <button type="submit" className="inline-flex h-10 px-6 rounded-full bg-foreground text-background font-semibold hover:opacity-90 transition-opacity">
+              Sign Out
+            </button>
+          </form>
+        </div>
       </div>
     );
   }

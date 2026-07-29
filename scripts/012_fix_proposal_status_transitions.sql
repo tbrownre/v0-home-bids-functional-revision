@@ -1,0 +1,1 @@
+-- SUPERSEDED — log_proposal_action was fixed directly in Supabase on 2026-07-25 with a surgical patch preserving the production RPCs. Do not run this file. The live function definitions are the source of truth (query pg_proc to view them).

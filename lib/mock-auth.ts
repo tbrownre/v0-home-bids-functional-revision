@@ -86,17 +86,33 @@ export function redirectAfterSignIn(role: MockRole) {
 // ── Real Supabase auth bridge ───────────────────────────────────────────
 
 /** Build the app's MockUser shape from a real Supabase user object. */
-function mapSupabaseUser(user: {
+async function mapSupabaseUser(user: {
   id: string;
   email?: string | null;
   user_metadata?: Record<string, unknown> | null;
-}): MockUser {
+}): Promise<MockUser> {
   const meta = (user.user_metadata ?? {}) as Record<string, string | undefined>;
-  const roleRaw = (meta.user_type as MockRole) ?? "homeowner";
-  const role: MockRole = roleRaw === "contractor" || roleRaw === "admin" ? roleRaw : "homeowner";
   const firstName = meta.first_name ?? meta.full_name?.split(" ")[0] ?? "";
   const lastName = meta.last_name ?? meta.full_name?.split(" ").slice(1).join(" ") ?? "";
   const name = (meta.full_name ?? `${firstName} ${lastName}`.trim()) || (user.email ?? "Member");
+  
+  // Get user_type from profiles table (not from user_metadata)
+  let role: MockRole = "homeowner";
+  try {
+    const supabase = createClient();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("user_type")
+      .eq("id", user.id)
+      .maybeSingle();
+    const userType = profile?.user_type;
+    if (userType === "contractor" || userType === "admin") {
+      role = userType;
+    }
+  } catch {
+    // Fallback to homeowner on any error
+  }
+  
   return {
     id: user.id,
     email: user.email ?? "",
@@ -120,7 +136,7 @@ export async function realSignIn(email: string, password: string): Promise<MockS
     if (error || !data.user) {
       return { user: null, error: error?.message ?? "Unable to sign in. Check your email and password." };
     }
-    const mapped = mapSupabaseUser(data.user);
+    const mapped = await mapSupabaseUser(data.user);
     setMockSession(mapped);
     return { user: mapped, error: null };
   } catch {
@@ -137,7 +153,7 @@ export async function syncMirrorFromSupabase(): Promise<MockUser | null> {
     const supabase = createClient();
     const { data } = await supabase.auth.getUser();
     if (data.user) {
-      const mapped = mapSupabaseUser(data.user);
+      const mapped = await mapSupabaseUser(data.user);
       setMockSession(mapped);
       return mapped;
     }

@@ -14,6 +14,7 @@ import {
   logProposalView,
   type Proposal,
 } from "@/lib/supabase/proposals";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { formatPrice, formatDate } from "@/lib/proposal-format";
 import { ProposalCta } from "@/components/proposal/proposal-cta";
 
@@ -60,6 +61,23 @@ export default async function HostedProposalPage({ params }: PageProps) {
     );
   }
 
+  // Fetch contractor profile data for trust badges (bypass RLS with admin client)
+  let contractorProfile: { license_number?: string | null; insurance_details?: string | null } | null = null;
+  if (proposal.contractor_id) {
+    try {
+      const supabase = createAdminClient();
+      const { data } = await supabase
+        .from('contractor_profiles')
+        .select('license_number, insurance_details')
+        .eq('id', proposal.contractor_id)
+        .maybeSingle();
+      contractorProfile = data || null;
+    } catch (e) {
+      // Best-effort — proposal still renders if profile fetch fails
+      console.error('[proposal-page] Contractor profile fetch failed:', e);
+    }
+  }
+
   // Lightweight, best-effort view tracking. Captured server-side so it works
   // even with JS disabled. Never blocks or breaks the render.
   const h = await headers();
@@ -68,14 +86,27 @@ export default async function HostedProposalPage({ params }: PageProps) {
     referrer: h.get("referer"),
   });
 
-  return <ProposalDocument proposal={proposal} shareToken={shareToken} />;
+  return <ProposalDocument proposal={proposal} shareToken={shareToken} contractorProfile={contractorProfile} />;
 }
 
-function ProposalDocument({ proposal, shareToken }: { proposal: Proposal; shareToken: string }) {
+function ProposalDocument({
+  proposal,
+  shareToken,
+  contractorProfile,
+}: {
+  proposal: Proposal;
+  shareToken: string;
+  contractorProfile?: { license_number?: string | null; insurance_details?: string | null } | null;
+}) {
   const preparedDate = formatDate(proposal.created_at);
   const hasAddOns = proposal.add_ons.length > 0;
   const hasPhotos = proposal.photos.length > 0;
   const hasTimeline = Boolean(proposal.timeline_start || proposal.timeline_completion);
+
+  // Determine which trust badges to show
+  const hasLicense = Boolean(contractorProfile?.license_number);
+  const hasInsurance = Boolean(contractorProfile?.insurance_details);
+  const hasTrustBadges = hasLicense || hasInsurance;
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -100,10 +131,23 @@ function ProposalDocument({ proposal, shareToken }: { proposal: Proposal; shareT
               <p className="truncate text-lg font-bold text-foreground">
                 {proposal.contractor_company_name ?? "Your Contractor"}
               </p>
-              <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-                Licensed &amp; insured professional
-              </p>
+              {/* Conditional trust badges — only show if contractor has the data */}
+              {hasTrustBadges && (
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  {hasLicense && (
+                    <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                      <ShieldCheck className="h-3 w-3" />
+                      Licensed{contractorProfile?.license_number && ` #${contractorProfile.license_number.slice(-4)}`}
+                    </span>
+                  )}
+                  {hasInsurance && (
+                    <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                      <ShieldCheck className="h-3 w-3" />
+                      Insured
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -261,6 +305,8 @@ function ProposalDocument({ proposal, shareToken }: { proposal: Proposal; shareT
           <ProposalCta
             shareToken={shareToken}
             contractorPhone={proposal.contractor_phone}
+            homeownerName={proposal.homeowner_name}
+            projectTitle={proposal.project_title}
             pdfUrl={proposal.pdf_url}
             variant="inline"
           />

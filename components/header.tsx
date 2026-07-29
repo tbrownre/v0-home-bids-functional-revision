@@ -8,6 +8,7 @@ import { homeownerNavItems, loggedOutNavItems, contractorNavItems } from "@/lib/
 import { Button } from "@/components/ui/button";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
 import { HomeBidsLogo } from "@/components/homebids-logo";
+import { useContractorLogoHref } from "@/lib/use-contractor-logo-href";
 import {
   subscribeInbox,
   getHomeownerUnreadSnapshot,
@@ -57,6 +58,7 @@ export function Header({
 }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { openSignIn } = useSignInModal();
+  const logoHref = useContractorLogoHref();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -336,7 +338,20 @@ export function Header({
                   {contractorNavItems.map((item) => {
                     const tabParam = item.href.split("tab=")[1];
                     const isActive = tabParam ? activeContractorTab === tabParam : pathname.startsWith(item.href.split("?")[0]);
-                    return (
+                    const isSmsLink = item.href.startsWith("sms:");
+                    
+                    return isSmsLink ? (
+                      <a
+                        key={item.label}
+                        href={item.href}
+                        role="menuitem"
+                        className={`${menuItemBase}`}
+                        onClick={closeMenu}
+                      >
+                        {item.label === "Build A Bid" && <Sparkles        className="h-4 w-4 shrink-0" />}
+                        {item.label}
+                      </a>
+                    ) : (
                       <Link
                         key={item.label}
                         href={item.href}
@@ -344,11 +359,10 @@ export function Header({
                         className={`${menuItemBase} ${isActive ? menuItemActive : ""}`}
                         onClick={closeMenu}
                       >
-                        {item.label === "Home"        && <LayoutDashboard className="h-4 w-4 shrink-0" />}
+                        {item.label === "Dashboard"   && <LayoutDashboard className="h-4 w-4 shrink-0" />}
                         {item.label === "Bid Inbox"   && <Users           className="h-4 w-4 shrink-0" />}
-                        {item.label === "Build a Bid" && <Sparkles        className="h-4 w-4 shrink-0" />}
-                        {item.label === "Account"     && <Wrench          className="h-4 w-4 shrink-0" />}
                         {item.label === "Browse Jobs" && <Search          className="h-4 w-4 shrink-0" />}
+                        {item.label === "Account"     && <Wrench          className="h-4 w-4 shrink-0" />}
                         {item.label}
                       </Link>
                     );
@@ -369,13 +383,13 @@ export function Header({
             (hamburger vs. back link / Log In + Try for Free CTAs). */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="pointer-events-auto">
-            <HomeBidsLogo size="clamp(17px, 2.5vw, 26px)" />
+            <HomeBidsLogo size="clamp(17px, 2.5vw, 26px)" href={logoHref} />
           </div>
         </div>
         {/* Grid placeholder keeps the 3-column structure intact */}
         <div aria-hidden="true" />
 
-        {/* Right: back link | signed-out CTAs | spacer */}
+        {/* Right: back link | signed-out CTAs | return to dashboard | spacer */}
         <div className="flex items-center justify-end gap-1.5">
           {backHref ? (
             <Link
@@ -384,6 +398,14 @@ export function Header({
             >
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">{backLabel || "Back"}</span>
+            </Link>
+          ) : isLoggedIn && isContractor ? (
+            <Link
+              href="/contractors/dashboard"
+              className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <span>Return to dashboard</span>
+              <ArrowLeft className="h-4 w-4 scale-x-[-1]" />
             </Link>
           ) : !isLoggedIn ? (
             // Unauthenticated — show Log In + Try for Free on every public page
@@ -395,12 +417,21 @@ export function Header({
               >
                 Log In
               </button>
-              <Link
-                href="/contractors/signup"
-                className="inline-flex h-8 items-center rounded-full bg-primary px-2.5 sm:px-3.5 text-xs sm:text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-              >
-                Try for Free
-              </Link>
+              {audience === "homeowner" ? (
+                <a
+                  href="sms:+14043952879?&body=Hi%20HomeBids%2C%20I%20need%20help%20with%20a%20home%20project!"
+                  className="inline-flex h-8 items-center rounded-full bg-primary px-2.5 sm:px-3.5 text-xs sm:text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  Try for Free
+                </a>
+              ) : (
+                <Link
+                  href="/contractors/signup"
+                  className="inline-flex h-8 items-center rounded-full bg-primary px-2.5 sm:px-3.5 text-xs sm:text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  Try for Free
+                </Link>
+              )}
             </>
           ) : (
             // Spacer keeps logo centered when signed in and no back link

@@ -441,16 +441,7 @@ export default function NewJobPage() {
             </div>
           </section>
 
-          {/* ── Form fallback — hyperlink only ──────────────────────────────── */}
-          <p className="mt-12 text-center text-xs text-muted-foreground">
-            Prefer to fill out a form instead?{" "}
-            <Link
-              href="/?showForm=true"
-              className="underline underline-offset-2 hover:text-foreground transition-colors"
-            >
-              Click here.
-            </Link>
-          </p>
+
 
         </main>
       </div>

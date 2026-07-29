@@ -10,6 +10,7 @@ import { HomeownerTextModal } from "@/components/homeowner-text-modal";
 import { Button } from "@/components/ui/button";
 import { getSmsLink, HOMEBIDS_SMS, isSmsCapableDevice } from "@/lib/sms-config";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
+import { useContractorLogoHref } from "@/lib/use-contractor-logo-href";
 import {
   Dialog,
   DialogContent,
@@ -109,6 +110,8 @@ function TickerRow({ items, speed, reverse = false }: { items: TickerItem[]; spe
 
 // ── Role picker modal (opened by "Try for free") ──────────────────────────────
 function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const logoHref = useContractorLogoHref();
+
   const handleHomeowner = () => {
     onClose();
     localStorage.setItem("homebids_audience", "homeowner");
@@ -126,7 +129,7 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
   const handlePro = () => {
     onClose();
     localStorage.setItem("homebids_audience", "contractor");
-    window.location.href = HOMEBIDS_SMS.contractor.href;
+    window.location.href = "/contractors/signup";
   };
 
   return (
@@ -146,7 +149,10 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
 
               {/* Logo */}
               <div className="mb-6 flex justify-center">
-                <HomeBidsLogo size="32px" linked={false} />
+                <HomeBidsLogo 
+                  size="32px" 
+                  href={logoHref} 
+                />
               </div>
 
               {/* Question */}
@@ -228,6 +234,7 @@ export function GatewayLanding() {
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
   const [textModalOpen, setTextModalOpen] = useState(false);
   const { openSignIn } = useSignInModal();
+  const logoHref = useContractorLogoHref();
 
   useEffect(() => setMounted(true), []);
 
@@ -268,7 +275,7 @@ export function GatewayLanding() {
 
           {/* Logo — left-aligned, prominent */}
           <div className="shrink-0">
-            <HomeBidsLogo size="clamp(20px, 2.5vw, 26px)" />
+            <HomeBidsLogo size="clamp(20px, 2.5vw, 26px)" href={logoHref} />
           </div>
 
           {/* Nav — right-aligned, noticeably smaller than the logo */}

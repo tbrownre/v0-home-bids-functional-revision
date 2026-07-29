@@ -18,7 +18,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import Link from "next/link";
-import { HOMEBIDS_SMS } from "@/lib/sms-config";
 import { motion, useInView, useMotionValue, useSpring, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
@@ -295,13 +294,13 @@ export default function ContractorsPage() {
               variants={fadeUp}
               className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground"
             >
-              Text us job details, photos, or voice notes. The AI Bid Builder asks follow-up questions,
+              Text us job details and photos. The AI Bid Builder asks follow-up questions,
               organizes the scope, and generates a clean proposal you can review, edit, and send.
             </motion.p>
 
             <motion.div variants={fadeUp} className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <a
-                href={HOMEBIDS_SMS.contractor.href}
+                href="sms:+12832291348?&body=Let%27s%20create%20a%20new%20bid!"
                 className="inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-full bg-primary px-10 text-base font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 active:scale-[0.98] sm:w-auto"
               >
                 <ArrowRight className="h-4 w-4" />
@@ -514,7 +513,7 @@ export default function ContractorsPage() {
                 {
                   icon: FileText,
                   title: "Text, Don't Type",
-                  body: "Send rough notes, a photo, or a voice memo. The AI asks the right follow-up questions and organizes everything into a scope of work.",
+                  body: "Send rough notes and photos. The AI asks the right follow-up questions and organizes everything into a scope of work.",
                 },
                 {
                   icon: Zap,
@@ -590,13 +589,13 @@ export default function ContractorsPage() {
                   ))}
                 </ul>
 
-                <a
-                  href={HOMEBIDS_SMS.contractor.href}
+                <Link
+                  href="/contractors/signup"
                   className="relative mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 active:scale-[0.98]"
                 >
                   <ArrowRight className="h-4 w-4" />
                   Start A Bid By Text
-                </a>
+                </Link>
                 <div className="relative mt-3 text-center">
                   <Link href="/subscribe?type=contractor" className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
                     Prefer to use a form?
@@ -675,14 +674,14 @@ export default function ContractorsPage() {
           <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">You don&apos;t have to.</p>
           <div className="mt-10 flex flex-col items-center gap-4">
             <a
-              href={HOMEBIDS_SMS.contractor.href}
+              href="sms:+12832291348?&body=Let%27s%20create%20a%20new%20bid!"
               className="inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-primary px-10 text-lg font-bold text-primary-foreground shadow-xl transition-colors hover:bg-primary/90 active:scale-[0.98]"
             >
               <ArrowRight className="h-5 w-5" />
               Text Us To Build A Bid
             </a>
-            <Link href="/subscribe?type=contractor" className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
-              Use web form instead
+            <Link href="/contractors/signup" className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
+              Start Free Right Now
             </Link>
           </div>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-5 text-sm text-muted-foreground">

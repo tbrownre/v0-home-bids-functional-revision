@@ -33,7 +33,7 @@ const JOURNEY_STEPS = [
     step: "1",
     icon: MessageSquare,
     title: "Text HomeBids",
-    desc: "Send us your project details, photos, videos, or voice notes.",
+    desc: "Send us your project details and photos.",
   },
   {
     step: "2",

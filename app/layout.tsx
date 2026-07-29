@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Red_Hat_Display } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ScrollRestoration } from '@/components/scroll-restoration'
-import { Footer } from '@/components/footer'
+import { FooterWrapper } from '@/components/footer-wrapper'
 import { ScrollToTop } from '@/components/scroll-to-top'
 import { SignInModalProvider } from '@/components/sign-in-modal-provider'
 import './globals.css'
@@ -73,7 +73,7 @@ export default function RootLayout({
         <SignInModalProvider>
           {children}
         </SignInModalProvider>
-        <Footer />
+        <FooterWrapper />
         <ScrollToTop />
         <Analytics />
       </body>

@@ -12,15 +12,16 @@ export async function checkContractorSubscription(userId: string) {
     const supabase = await createClient()
 
     // First check if the user is an admin — admins bypass the gate
+    // Use maybeSingle() so a missing profile row doesn't block paying subscribers
     const { data: profile, error: profileError } = await supabase
       .from('contractor_profiles')
       .select('is_admin')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
 
     if (profileError) {
       console.error('[subscription-check] Failed to fetch contractor profile:', profileError)
-      return { hasValidSubscription: false, error: 'Failed to verify subscription status' }
+      // Don't deny access on profile fetch errors — continue to subscription check
     }
 
     if (profile?.is_admin) {
