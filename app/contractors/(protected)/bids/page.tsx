@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-// /contractors/bids now lives inside the dashboard Bid Builder tab.
+// /contractors/bids redirects to dashboard
 export default function ContractorBidsRedirect() {
-  redirect("/contractors/dashboard?tab=ai");
+  redirect("/contractors/dashboard");
 }

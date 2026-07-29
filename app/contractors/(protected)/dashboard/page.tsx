@@ -47,8 +47,6 @@ import {
   Archive,
   Search,
 } from "lucide-react";
-import { BidBuilderChat, type BidLeadType, type BidChatLeadContext } from "@/components/bid-builder-chat";
-import { BuildBidChoiceModal } from "@/components/build-bid-choice-modal";
 import { resumeDraftBid, type NeedsActionContext } from "@/lib/bid-resume";
 import { getContractorSmsLink, getSmsHref } from "@/lib/sms-config";
 import { timeAgo } from "@/lib/proposal-format";
@@ -384,12 +382,12 @@ export default function ContractorDashboard() {
   const tabParam = searchParams?.get("tab") ?? "";
 
   const [activeTab, setActiveTab] = useState<Tab>(
-    (tabParam === "leads" || tabParam === "ai" || tabParam === "account") ? tabParam : "home"
+    (tabParam === "leads" || tabParam === "account") ? tabParam : "home"
   );
 
   useEffect(() => {
     const t = searchParams?.get("tab") ?? "";
-    if (t === "leads" || t === "ai" || t === "account") setActiveTab(t);
+    if (t === "leads" || t === "account") setActiveTab(t);
     else if (t === "" || t === "home") setActiveTab("home");
   }, [searchParams]);
 
@@ -500,42 +498,12 @@ export default function ContractorDashboard() {
   // Active AI tool
   const [activeTool, setActiveTool] = useState<AiTool>(null);
 
-  // ── Bid Builder (chat) state ─────────────────────────────────────────────────
-
-  const [bidChatLeadType, setBidChatLeadType] = useState<BidLeadType>("my");
-  const [bidChatLead, setBidChatLead] = useState<BidChatLeadContext | null>(null);
+  // ── SMS-based Bid Builder ───────────────────────────────────────────────────
   // Track HomeBids leads that have become approved (direct messaging unlocked) in this session
   const [unlockedLeadIds, setUnlockedLeadIds] = useState<Set<string>>(new Set());
 
   // Company name for PDF preview — will be updated when profile loads
   const [companyName, setCompanyName] = useState("[Your Company Name]");
-
-  // Open the chat-based Bid Builder. leadType drives messaging/approval rules.
-  function startBidByText(leadType: BidLeadType, lead?: BidChatLeadContext | null) {
-    setBidChatLeadType(leadType);
-    setBidChatLead(lead ?? null);
-    setActiveTool("bid");
-    setActiveTab("ai");
-  }
-
-  // Start from a HomeBids lead
-  function startBidFromHomeBidsLead(lead: HomeBidsLead) {
-    startBidByText("homebids", {
-      id: lead.id,
-      projectTitle: lead.title,
-      category: lead.category,
-      ownerName: lead.homeownerName,
-      ownerPhone: lead.homeownerPhone,
-      address: lead.location,
-      timeline: lead.timeline,
-      scope: lead.scope,
-    });
-  }
-
-  function closeBidBuilder() {
-    setBidChatLead(null);
-    setActiveTool(null);
-  }
 
   function handleHomeownerApproved(leadId: string) {
     setUnlockedLeadIds((prev) => new Set(prev).add(leadId));
@@ -557,33 +525,11 @@ export default function ContractorDashboard() {
     window.location.href = href;
   }
 
-  // ── Build Bid choice modal ───────────────────────────────────────────────────
-  // Every contractor "build/finish/continue bid" CTA routes through this modal,
-  // which offers Continue by Text (SMS) or Continue on Site (existing builder).
-  const [showBuildChoice, setShowBuildChoice] = useState(false);
-  // When set, the choice modal switches into "resume this saved draft" mode.
-  const [buildChoiceContext, setBuildChoiceContext] = useState<NeedsActionContext | null>(null);
-  const pendingOnSiteRef = useRef<(() => void) | null>(null);
-
-  function openBuildChoice(onSite: () => void, context: NeedsActionContext | null = null) {
-    pendingOnSiteRef.current = onSite;
-    setBuildChoiceContext(context);
-    setShowBuildChoice(true);
-  }
-
-  function handleContinueOnSite() {
-    setShowBuildChoice(false);
-    const fn = pendingOnSiteRef.current;
-    pendingOnSiteRef.current = null;
-    fn?.();
-  }
-
   const handleSignOut = () => mockSignOut();
 
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: "home",    label: "Home",     icon: LayoutDashboard },
     { id: "leads",   label: "Bid Inbox", icon: Users },
-    { id: "ai",      label: "Build a Bid", icon: Sparkles },
     { id: "account", label: "Account",  icon: Wrench },
   ];
 
@@ -638,9 +584,11 @@ export default function ContractorDashboard() {
               <MessageCircle className="h-3 w-3" /> Text Homeowner
             </Button>
           ) : lead.status === "new" ? (
-            <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => openBuildChoice(() => startBidFromHomeBidsLead(lead))}>
-              <MessageCircle className="h-3 w-3" /> Start Bid by Text
-            </Button>
+            <a href="sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid">
+              <Button size="sm" className="h-7 gap-1 px-3 text-xs">
+                <MessageCircle className="h-3 w-3" /> Start Bid by Text
+              </Button>
+            </a>
           ) : (
             <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); }}>
               <MessageCircle className="h-3 w-3" /> Send via HomeBids AI
@@ -676,7 +624,7 @@ export default function ContractorDashboard() {
           sub: momentum.copy,
           cta: momentum.ctaLabel,
           icon: Flame as React.ElementType,
-          onClick: () => openBuildChoice(() => startBidByText("my", null)),
+          onClick: () => { window.location.href = "sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid"; },
         };
 
   // Real (mock/demo) context for the in-progress draft. Structured so it can be
@@ -724,8 +672,8 @@ export default function ContractorDashboard() {
                 timeline: proposal.timeline_completion || "",
               },
             };
-            // Open the choice modal WITH the context, and set the on-site action to switch to Build a Bid tab
-            openBuildChoice(() => { setActiveTool("bid"); setActiveTab("ai"); }, ctx);
+            // Draft resume now goes to SMS Bid Builder only
+            window.location.href = "sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid";
           },
         });
       });
@@ -891,9 +839,11 @@ export default function ContractorDashboard() {
             <p className="mt-1 text-xs text-muted-foreground">
               Build a bid by text and your hosted bid link will appear here.
             </p>
-            <Button className="mt-3 gap-2 rounded-full font-semibold" onClick={() => openBuildChoice(() => startBidByText("my", null))}>
-              <Sparkles className="h-4 w-4" /> Build Today&apos;s Bid
-            </Button>
+            <a href="sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid">
+              <Button className="mt-3 gap-2 rounded-full font-semibold">
+                <Sparkles className="h-4 w-4" /> Build Today&apos;s Bid
+              </Button>
+            </a>
           </div>
         ) : (
           <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
@@ -939,12 +889,13 @@ export default function ContractorDashboard() {
             Manage customer requests, proposal drafts, sent bids, and follow-ups.
           </p>
         </div>
-        <Button
-          className="shrink-0 gap-2 rounded-full font-semibold"
-          onClick={() => openBuildChoice(() => startBidByText("my", null))}
-        >
-          <Plus className="h-4 w-4" /> Build New Bid
-        </Button>
+        <a href="sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid">
+          <Button
+            className="shrink-0 gap-2 rounded-full font-semibold"
+          >
+            <Plus className="h-4 w-4" /> Build New Bid
+          </Button>
+        </a>
       </div>
 
       {/* Status filters — horizontally scrollable pills on mobile */}
@@ -1011,17 +962,11 @@ export default function ContractorDashboard() {
                     className="h-7 gap-1 px-3 text-xs"
                     onClick={() => {
                       if (cfg.action === "build") {
-                        openBuildChoice(() => startBidByText("my", {
-                          id: item.id,
-                          projectTitle: item.project,
-                          category: item.project,
-                          ownerName: item.customer,
-                          ownerPhone: item.phone,
-                        }));
+                        window.location.href = "sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid";
                       } else if (cfg.action === "followup") {
                         openSms(item.phone);
                       } else {
-                        window.location.href = "/contractors/bids";
+                        window.location.href = "/contractors/dashboard";
                       }
                     }}
                   >
@@ -1056,9 +1001,11 @@ export default function ContractorDashboard() {
             Start by texting HomeBids.ai project details, photos, screenshots, or rough notes. We&apos;ll help turn them into a professional proposal.
           </p>
           <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
-            <Button className="w-full gap-2 rounded-full font-semibold sm:w-auto" onClick={() => openBuildChoice(() => startBidByText("my", null))}>
-              <Plus className="h-4 w-4" /> Build New Bid
-            </Button>
+            <a href="sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid">
+              <Button className="w-full gap-2 rounded-full font-semibold sm:w-auto">
+                <Plus className="h-4 w-4" /> Build New Bid
+              </Button>
+            </a>
             <Button variant="outline" className="w-full gap-2 rounded-full bg-transparent sm:w-auto" onClick={() => { window.location.href = getContractorSmsLink(); }}>
               <MessageCircle className="h-4 w-4" /> Text HomeBids.ai
             </Button>
@@ -1072,30 +1019,6 @@ export default function ContractorDashboard() {
   // Bid Builder content — picker or active tool
   const aiContent = (() => {
     // Bid Builder is full-screen when active — chat-first experience
-    if (activeTool === "bid") {
-      return (
-        <div className="-mx-4 overflow-hidden rounded-none border-y border-border bg-background lg:-mx-8 lg:rounded-2xl lg:border">
-          <BidBuilderChat
-            leadType={bidChatLeadType}
-            lead={bidChatLead}
-            contractorName={`${contractorName}`}
-            companyName={companyName}
-            onClose={closeBidBuilder}
-            onHomeownerApproved={handleHomeownerApproved}
-            proposalId={buildChoiceContext?.proposalId || undefined}
-            initialData={buildChoiceContext?.proposalData ? {
-              project: buildChoiceContext.proposalData.project,
-              owner: buildChoiceContext.proposalData.owner,
-              scope: buildChoiceContext.proposalData.scope,
-              optional: buildChoiceContext.proposalData.optional,
-              price: buildChoiceContext.proposalData.price,
-              timeline: buildChoiceContext.proposalData.timeline,
-            } : undefined}
-          />
-        </div>
-      );
-    }
-
     // Start screen: choose how to build a bid + unfinished drafts.
     // Real accounts show ONLY their own proposals still in "draft" status (filtered server-side by RLS).
     const allDrafts: DraftItem[] = proposals
@@ -1161,14 +1084,14 @@ export default function ContractorDashboard() {
             <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">
               Enter customer info, scope, pricing, exclusions, photos, and notes in a simple guided builder.
             </p>
-            <Button
-              variant="outline"
-              className="mt-5 w-full justify-center gap-2 rounded-xl bg-transparent py-2.5 text-sm font-semibold"
-              onClick={() => startBidByText("my", null)}
-            >
-              <Calculator className="h-4 w-4" /> Start Online
-            </Button>
-            <p className="mt-2 text-center text-xs text-muted-foreground">Best when you want a more structured workflow.</p>
+            <a href="sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid">
+              <Button
+                variant="outline"
+                className="mt-5 w-full justify-center gap-2 rounded-xl bg-transparent py-2.5 text-sm font-semibold"
+              >
+                <Calculator className="h-4 w-4" /> Build by Text
+              </Button>
+            </a>
           </div>
         </div>
 
@@ -1259,7 +1182,7 @@ export default function ContractorDashboard() {
                           timeline: proposal.timeline_completion || "",
                         },
                       };
-                      openBuildChoice(() => { setActiveTool("bid"); setActiveTab("ai"); }, ctx);
+                      window.location.href = "sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid";
                     }}>
                       Continue
                     </Button>
@@ -1286,9 +1209,6 @@ export default function ContractorDashboard() {
               </p>
               <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
                 {startByTextBtn(false)}
-                <Button variant="outline" className="w-full gap-2 rounded-xl bg-transparent sm:w-auto" onClick={() => startBidByText("my", null)}>
-                  <Calculator className="h-4 w-4" /> Start Online
-                </Button>
               </div>
             </div>
           )}
@@ -1551,9 +1471,11 @@ export default function ContractorDashboard() {
                 </ul>
               </div>
               <div className="flex flex-col gap-2 pt-1">
-              <Button className="w-full gap-2" onClick={() => { setShowLeadDetail(false); openBuildChoice(() => startBidFromHomeBidsLead(selectedLead)); }}>
-                <MessageCircle className="h-4 w-4" /> Start Bid by Text
-              </Button>
+              <a href="sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid">
+                <Button className="w-full gap-2" onClick={() => setShowLeadDetail(false)}>
+                  <MessageCircle className="h-4 w-4" /> Start Bid by Text
+                </Button>
+              </a>
                 {!isMessagingUnlocked(selectedLead) ? (
                   <Button variant="outline" className="w-full gap-2 bg-transparent" onClick={() => { setRelayLead(selectedLead); setRelayMessage(selectedLead.suggestedResponse); setRelaySent(false); setShowLeadDetail(false); setTimeout(() => setShowRelayModal(true), 150); }}>
                     <MessageCircle className="h-4 w-4" /> Message via HomeBids AI
@@ -1569,13 +1491,7 @@ export default function ContractorDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Build Bid choice — Continue by Text (SMS) or Continue on Site */}
-      <BuildBidChoiceModal
-        open={showBuildChoice}
-        onOpenChange={setShowBuildChoice}
-        onContinueOnSite={handleContinueOnSite}
-        context={buildChoiceContext}
-      />
+
     </div>
   );
 }
