@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
-import { Copy, Check, Phone } from 'lucide-react';
+import { Copy, Check, Phone, Gift, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { HomeBidsLogo } from '@/components/homebids-logo';
 import { Badge } from '@/components/ui/badge';
@@ -79,11 +79,23 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const urgencyLabels: Record<string, string> = {
-    asap: 'ASAP',
+  const timelineLabels: Record<string, string> = {
+    asap: 'As soon as possible',
     within_week: 'Within a week',
     within_month: 'Within a month',
-    flexible: 'Flexible timing',
+    flexible: 'Flexible',
+  };
+
+  // Extract category noun (e.g., "Plumber in Gilbert" → "plumber")
+  const getCategoryNoun = (category: string): string => {
+    // Remove common patterns like "in [City]", "service", "professional"
+    let noun = category
+      .replace(/\s+in\s+\w+/gi, '') // Remove "in City"
+      .replace(/\s+service$/gi, '') // Remove trailing "service"
+      .replace(/\s+professional$/gi, '') // Remove trailing "professional"
+      .trim()
+      .toLowerCase();
+    return noun;
   };
 
   const postedDate = new Date(job.created_at).toLocaleDateString('en-US', {
@@ -125,18 +137,12 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
       {/* Main Content */}
       <main className="container mx-auto max-w-3xl px-4 py-8">
         {/* Job Title & Meta */}
-        <div className="mb-6 space-y-2 text-center">
+        <div className="mb-8 space-y-3 text-center">
           <h1 className="text-balance text-3xl font-bold text-foreground md:text-4xl">
-            {job.title}
+            {locationPhrase} needs a{' '}
+            <span className="text-primary">{getCategoryNoun(job.category)}</span>
           </h1>
-          <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
-            <span>Posted {postedDate}</span>
-            {job.urgency && (
-              <Badge variant="secondary" className="font-normal">
-                {urgencyLabels[job.urgency] || job.urgency}
-              </Badge>
-            )}
-          </div>
+          <p className="text-sm text-muted-foreground">Posted {postedDate}</p>
         </div>
 
         {/* Photo Gallery */}
@@ -163,6 +169,11 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
         {/* Project Details */}
         <section className="mb-8 space-y-4 text-center">
           <h2 className="text-xl font-semibold text-foreground">Project details</h2>
+          {job.urgency && (
+            <p className="text-sm text-muted-foreground">
+              Timeline: {timelineLabels[job.urgency] || job.urgency}
+            </p>
+          )}
           <p className="text-pretty whitespace-pre-wrap text-base leading-relaxed text-foreground">
             {job.description}
           </p>
@@ -187,11 +198,13 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
 
         {/* CTA Section */}
         <section className="mb-8 space-y-4 text-center" data-cta-section>
-          {/* FREE reassurance block */}
-          <div className="rounded-lg bg-accent/10 p-4">
-            <p className="text-sm font-medium text-foreground">
-              100% FREE to bid — no catch, no app to download, no credit card.
-            </p>
+          {/* FREE reassurance card */}
+          <div className="flex items-start gap-4 rounded-lg bg-primary/5 border border-primary/10 p-5">
+            <Gift className="h-6 w-6 text-primary shrink-0 mt-0.5" />
+            <div className="text-left">
+              <p className="font-bold text-foreground">100% FREE to bid</p>
+              <p className="text-sm text-muted-foreground">No catch, no app to download, no credit card.</p>
+            </div>
           </div>
 
           {isMobile ? (
@@ -204,8 +217,9 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
               </a>
               <a
                 href={questionLink}
-                className="block w-full rounded-lg border border-input bg-background px-6 py-4 text-lg font-semibold text-foreground transition-colors hover:bg-accent"
+                className="flex items-center justify-center gap-2 w-full rounded-lg border border-input bg-background px-6 py-4 text-lg font-semibold text-foreground transition-colors hover:bg-accent"
               >
+                <MessageCircle className="h-5 w-5" />
                 Ask {homeownerFirstName} a question first
               </a>
             </div>
@@ -266,8 +280,8 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
             <h3 className="font-semibold text-foreground">How it works:</h3>
             <ol className="space-y-2 text-sm text-foreground">
               <li>1. Tap the button → your Messages app opens</li>
-              <li>2. Send the pre-filled text</li>
-              <li>3. Answer a few quick questions</li>
+              <li>2. Send your bid or ask {homeownerFirstName} important questions</li>
+              <li>3. {homeownerFirstName} reviews and replies</li>
               <li>4. Your professional bid is ready in ~90 seconds</li>
             </ol>
           </div>
