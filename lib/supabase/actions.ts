@@ -569,6 +569,7 @@ export async function submitBid(formData: {
   });
 
   revalidatePath(`/jobs/${formData.job_id}/bids`);
+  revalidatePath(`/jobs`); // Update bid count on Browse Jobs page
   return { success: true, bid: data };
 }
 
@@ -1253,7 +1254,7 @@ export async function getNotificationsFeed(): Promise<{
         notifications.push({
           id: `bid-received-${bid.id}`,
           type: "bid_received",
-          title: `New bid on '${job?.title || "your job"}': $${(bid.amount / 100).toLocaleString()}`,
+          title: `New bid on '${job?.title || "your job"}': $${(bid.amount).toLocaleString()}`,
           href: `/jobs/${bid.job_id}/bids`,
           created_at: bid.created_at,
           read: new Date(bid.created_at) <= seenAt,
