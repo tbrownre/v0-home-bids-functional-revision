@@ -455,23 +455,6 @@ export default function ContractorJobsMarketplace() {
     };
     setMessages((prev) => [...prev, newMessage]);
     setMessageInput("");
-
-    // Simulate homeowner auto-reply after a short delay
-    setTimeout(() => {
-      const replies = [
-        "Thanks for reaching out! Let me get back to you on that shortly.",
-        "Good question. I'll check and get back to you within the hour.",
-        "Hi! Yes, I can provide more details. Give me a moment.",
-        "Thanks for asking. I'll send over some photos as well.",
-      ];
-      const reply = {
-        id: (Date.now() + 1).toString(),
-        text: replies[Math.floor(Math.random() * replies.length)],
-        sender: "homeowner" as const,
-        time: new Date(),
-      };
-      setMessages((prev) => [...prev, reply]);
-    }, 1500);
   };
 
   // Stock images per category for demo
