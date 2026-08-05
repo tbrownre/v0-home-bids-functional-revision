@@ -9,7 +9,8 @@ import { loadStripe } from '@stripe/stripe-js'
 import { startSubscriptionCheckout } from '@/app/actions/stripe'
 import { createClient } from '@/lib/supabase/client'
 import { getMockUser } from '@/lib/mock-auth'
-import { CheckCircle2, AlertCircle } from 'lucide-react'
+import { useSignInModal } from '@/components/sign-in-modal-provider'
+import { CheckCircle2, AlertCircle, LogIn } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 // Defer Stripe initialization — only call loadStripe when the publishable key
@@ -27,24 +28,34 @@ interface SubscriptionCheckoutProps {
 }
 
 export function SubscriptionCheckout({ planId, userId: propUserId, onSuccess, onCancel }: SubscriptionCheckoutProps) {
+  const { openSignIn } = useSignInModal()
   const [isComplete, setIsComplete] = useState(false)
   const [userId, setUserId] = useState<string | undefined>(propUserId)
   const [error, setError] = useState<string | null>(null)
+  const [userChecked, setUserChecked] = useState(false)
 
   // Resolve the current user once so the fetchClientSecret callback can
   // include it in the Stripe session metadata for the webhook to use.
   // If userId is provided as a prop, use that; otherwise get from auth.
+  // If no userId found after checking, show sign-in prompt instead of checkout.
   useEffect(() => {
     if (propUserId) {
       setUserId(propUserId)
+      setUserChecked(true)
       return
     }
     const sb = createClient()
     sb.auth.getUser().then(({ data }) => {
-      if (data.user) setUserId(data.user.id)
+      if (data.user) {
+        setUserId(data.user.id)
+      } else {
+        setUserId(undefined)
+      }
+      setUserChecked(true)
     }).catch(err => {
       console.error('[SubscriptionCheckout] Auth check failed:', err)
-      setError("We couldn't verify your account. Please try again.")
+      setUserId(undefined)
+      setUserChecked(true)
     })
   }, [propUserId])
 
@@ -82,6 +93,24 @@ export function SubscriptionCheckout({ planId, userId: propUserId, onSuccess, on
         <p className="mt-2 text-muted-foreground">
           Add your <code className="font-mono text-sm">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> environment variable to enable checkout.
         </p>
+      </div>
+    )
+  }
+
+  // Sign-in required — user is not authenticated
+  if (userChecked && !userId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+          <LogIn className="h-8 w-8 text-blue-600" />
+        </div>
+        <h3 className="mt-4 text-xl font-semibold text-foreground">Create your free account first</h3>
+        <p className="mt-2 text-muted-foreground">
+          Your subscription needs an account so your bids unlock instantly.
+        </p>
+        <Button className="mt-6" onClick={() => openSignIn()}>
+          Sign in / Create account
+        </Button>
       </div>
     )
   }

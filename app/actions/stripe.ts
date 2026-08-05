@@ -6,11 +6,16 @@ import { getPlanById } from '@/lib/products'
 /**
  * Create a Stripe Embedded Checkout session for a subscription plan.
  * Returns the client_secret needed to mount EmbeddedCheckout.
+ * Throws "SIGN_IN_REQUIRED" if userId is missing — the UI should prevent this.
  */
 export async function startSubscriptionCheckout(
   planId: string,
   userId?: string,
 ): Promise<string> {
+  if (!userId) {
+    throw new Error('SIGN_IN_REQUIRED')
+  }
+
   const plan = getPlanById(planId)
   if (!plan) {
     throw new Error(`Plan "${planId}" not found`)
@@ -41,14 +46,14 @@ export async function startSubscriptionCheckout(
       // Pass userId + planId through so the webhook can link the subscription
       // back to the correct Supabase user without relying on the browser session.
       metadata: {
-        userId: userId ?? '',
+        userId,
         planId,
         userType: plan.userType,
       },
     },
     // Also store on the session itself for checkout.session.completed events.
     metadata: {
-      userId: userId ?? '',
+      userId,
       planId,
       userType: plan.userType,
     },
