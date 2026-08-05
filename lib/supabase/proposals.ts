@@ -242,3 +242,46 @@ export async function getContractorProposals(): Promise<{
     error: null,
   };
 }
+
+// ── Marketplace bids (contractor-scoped reads) ────────────────────────────────────
+
+export interface MarketplaceBid {
+  id: string;
+  amount: number | null;
+  message: string | null;
+  timeline: string | null;
+  status: string;
+  created_at: string;
+  jobs: {
+    id: string;
+    title: string;
+    location: string;
+    job_ref: string;
+    share_token: string;
+  } | null;
+}
+
+/** List marketplace bids submitted by the currently authenticated contractor. */
+export async function getContractorMarketplaceBids(): Promise<{
+  bids: MarketplaceBid[];
+  error: string | null;
+}> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { bids: [], error: "Not authenticated" };
+
+  const { data, error } = await supabase
+    .from("bids")
+    .select("id, amount, message, timeline, status, created_at, jobs(id, title, location, job_ref, share_token)")
+    .eq("contractor_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (error) return { bids: [], error: error.message };
+  return {
+    bids: ((data ?? []) as unknown as MarketplaceBid[]),
+    error: null,
+  };
+}

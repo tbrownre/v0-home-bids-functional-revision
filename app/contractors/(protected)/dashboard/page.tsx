@@ -51,7 +51,7 @@ import { resumeDraftBid, type NeedsActionContext } from "@/lib/bid-resume";
 import { getContractorSmsLink, getSmsHref } from "@/lib/sms-config";
 import { timeAgo } from "@/lib/proposal-format";
 import { getMockUser, mockSignOut, syncMirrorFromSupabase } from "@/lib/mock-auth";
-import { getContractorProposals, type Proposal, type ProposalStatus } from "@/lib/supabase/proposals";
+import { getContractorProposals, getContractorMarketplaceBids, type Proposal, type ProposalStatus, type MarketplaceBid } from "@/lib/supabase/proposals";
 import { ContractorProposalCard } from "@/components/proposal/contractor-proposal-card";
 import { ProfileCompletionSection } from "@/components/contractor/profile-completion-section";
 import { createClient } from "@/lib/supabase/client";
@@ -441,11 +441,14 @@ export default function ContractorDashboard() {
   // here — the dashboard only displays and shares them.
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [proposalsLoaded, setProposalsLoaded] = useState(false);
+  const [marketplaceBids, setMarketplaceBids] = useState<MarketplaceBid[]>([]);
+  const [marketplaceBidsLoaded, setMarketplaceBidsLoaded] = useState(false);
   useEffect(() => {
     async function loadProposals() {
       try {
         if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) {
           setProposalsLoaded(true);
+          setMarketplaceBidsLoaded(true);
           return;
         }
         const { proposals: rows } = await getContractorProposals();
@@ -464,7 +467,19 @@ export default function ContractorDashboard() {
       } catch { /* non-fatal */ }
       finally { setProposalsLoaded(true); }
     }
+    async function loadMarketplaceBids() {
+      try {
+        if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) {
+          setMarketplaceBidsLoaded(true);
+          return;
+        }
+        const { bids } = await getContractorMarketplaceBids();
+        setMarketplaceBids(bids);
+      } catch { /* non-fatal */ }
+      finally { setMarketplaceBidsLoaded(true); }
+    }
     loadProposals();
+    loadMarketplaceBids();
   }, []);
 
   // Time-of-day greeting + month progress (computed client-side post-mount to
@@ -833,7 +848,7 @@ export default function ContractorDashboard() {
               <ContractorProposalCard key={p.id} proposal={p} />
             ))}
           </div>
-        ) : proposalsLoaded ? (
+        ) : proposalsLoaded && marketplaceBidsLoaded && proposals.length === 0 && marketplaceBids.length === 0 ? (
           <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center">
             <p className="text-sm font-medium text-foreground">No bids yet.</p>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -845,9 +860,60 @@ export default function ContractorDashboard() {
               </Button>
             </a>
           </div>
-        ) : (
+        ) : proposalsLoaded ? (
           <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
             Loading bids…
+          </div>
+        ) : null}
+
+        {/* Marketplace Job Bids */}
+        {marketplaceBids.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Marketplace Job Bids</div>
+            <div className="space-y-2">
+              {marketplaceBids.slice(0, 4).map((bid) => (
+                <div
+                  key={bid.id}
+                  className="flex items-center justify-between rounded-lg border border-border bg-card/50 px-3 py-2.5 text-xs transition-colors hover:border-primary/30"
+                >
+                  <div className="flex flex-1 flex-col gap-0.5 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="truncate font-medium text-foreground">{bid.jobs?.title || "Job"}</p>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                          bid.status === "pending" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"
+                        }`}
+                      >
+                        {bid.status === "pending" ? "Pending" : bid.status === "accepted" ? "Accepted" : bid.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      {bid.jobs?.location && (
+                        <>
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{bid.jobs.location}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <div className="text-right">
+                        {bid.amount && <p className="font-semibold text-foreground">${bid.amount.toLocaleString()}</p>}
+                        {bid.created_at && (
+                          <p className="text-muted-foreground">{timeAgo(bid.created_at)}</p>
+                        )}
+                      </div>
+                    {bid.jobs?.share_token && (
+                      <Button size="sm" variant="ghost" className="h-6 gap-1 px-2 text-xs" asChild>
+                        <a href={`/j/${bid.jobs.share_token}`}>
+                          View <ChevronRight className="h-3 w-3" />
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </section>
