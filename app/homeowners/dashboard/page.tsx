@@ -15,7 +15,9 @@ import {
   Wrench,
   ChevronRight,
   AlertCircle,
+  RotateCcw,
 } from "lucide-react";
+import { useSignInModal } from "@/components/sign-in-modal-provider";
 import { getJobStatus, getJobStatusLabel, isJobArchived, type JobStatusOwner } from "@/lib/job-store";
 import { getHomeownerJobs } from "@/lib/supabase/actions";
 
@@ -71,15 +73,36 @@ function StatusBadge({ status }: { status: JobStatusOwner }) {
 
 export default function HomeownerDashboardPage() {
   const router = useRouter();
+  const { openSignIn } = useSignInModal();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [authReady, setAuthReady] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const loadJobs = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const result = await getHomeownerJobs();
+      
+      // Handle authentication failure
+      if (result.error === "Not authenticated") {
+        setError("not_authenticated");
+        setJobs([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Handle other errors
+      if (result.error) {
+        setError(result.error);
+        setJobs([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Success — load jobs
       if (result.jobs) {
         setJobs(
           result.jobs
@@ -103,7 +126,7 @@ export default function HomeownerDashboardPage() {
         );
       }
     } catch {
-      // silently fail — show empty state rather than crash
+      setError("unknown_error");
     } finally {
       setLoading(false);
     }
@@ -119,6 +142,19 @@ export default function HomeownerDashboardPage() {
   }, [authReady, loadJobs]);
 
   if (!authReady) return <div className="min-h-screen bg-background" />;
+
+  // Not authenticated — prompt to sign in
+  if (error === "not_authenticated") {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Header isSignedIn={false} isContractor={false} />
+        <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+          <p className="text-muted-foreground">Please sign in to view your jobs.</p>
+          <Button onClick={() => openSignIn()}>Sign In</Button>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -155,8 +191,26 @@ export default function HomeownerDashboardPage() {
           </div>
         )}
 
-        {/* Empty state */}
-        {!loading && jobs.length === 0 && (
+        {/* Error state — retry button */}
+        {!loading && error && error !== "not_authenticated" && (
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+                <div className="text-left">
+                  <p className="text-sm font-medium text-foreground">Couldn't load your jobs — retry</p>
+                </div>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => void loadJobs()} className="gap-1.5">
+                <RotateCcw className="h-3.5 w-3.5" />
+                Retry
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Empty state — only show when authenticated with zero jobs */}
+        {!loading && !error && jobs.length === 0 && (
           <div className="rounded-2xl border border-border bg-card p-12 text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted">
               <FileText className="h-8 w-8 text-muted-foreground" />
@@ -175,7 +229,7 @@ export default function HomeownerDashboardPage() {
         )}
 
         {/* Jobs list */}
-        {!loading && jobs.length > 0 && (
+        {!loading && !error && jobs.length > 0 && (
           <AnimatePresence>
             <div className="space-y-4">
               {jobs.map((job) => (
