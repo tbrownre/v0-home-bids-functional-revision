@@ -51,21 +51,25 @@ async function getJobByToken(token: string) {
   }
 }
 
+function getTradeAndCity(category: string | null, location: string | null, title: string | null) {
+  const source = location || title || '';
+  const cityMatch = source.match(/(?:in|near|of)\s+([A-Za-z][A-Za-z .'-]+?)(?:,\s*[A-Z]{2}|\s+AZ|$)/i);
+  const commaMatch = source.match(/,\s*([^,]+?)(?:,\s*[A-Z]{2}|$)/);
+  const city = cityMatch?.[1]?.trim() || commaMatch?.[1]?.trim() || 'your area';
+
+  return {
+    trade: category?.trim().toLowerCase() || 'a local pro',
+    city,
+  };
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { token } = await params;
   const { job } = await getJobByToken(token);
-
-  if (!job) {
-    return {
-      title: 'Job — HomeBids',
-      description: 'View job details and submit a bid.',
-    };
-  }
-
-  // Extract city from location (if it's a full address, just use zip_code)
-  const cityDisplay = job.zip_code || 'Your area';
-  const title = `${job.title} — ${cityDisplay} · HomeBids`;
-  const description = job.description.slice(0, 140) + (job.description.length > 140 ? '...' : '');
+  const { trade, city } = getTradeAndCity(job?.category ?? null, job?.location ?? null, job?.title ?? null);
+  const title = `Looking for a ${trade} in ${city}?`;
+  const description = `A homeowner in ${city}, AZ is taking bids. Free to bid.`;
+  const image = `/j/${encodeURIComponent(token)}/opengraph-image`;
 
   return {
     title,
@@ -74,13 +78,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title,
       description,
       type: 'website',
-      images: job.images?.[0] ? [{ url: job.images[0] }] : undefined,
+      images: [{ url: image, width: 1200, height: 630, alt: title }],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: job.images?.[0] ? [job.images[0]] : undefined,
+      images: [image],
     },
     robots: { index: true, follow: true },
   };
