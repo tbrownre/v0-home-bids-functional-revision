@@ -1,7 +1,5 @@
 import { ImageResponse } from "next/og";
-import { createAdminClient } from "@/lib/supabase/admin";
 
-export const runtime = "nodejs";
 export const alt = "HomeBids job share";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -9,6 +7,16 @@ export const contentType = "image/png";
 interface ImageProps {
   params: Promise<{ token: string }>;
 }
+
+type JobDetails = {
+  trade: string;
+  city: string;
+};
+
+const fallback: JobDetails = {
+  trade: "a local pro",
+  city: "your area",
+};
 
 function getCity(location: string | null, title: string | null): string {
   const source = location || title || "";
@@ -18,121 +26,144 @@ function getCity(location: string | null, title: string | null): string {
   const commaCity = source.match(/,\s*([^,]+?)(?:,\s*[A-Z]{2}|$)/);
   if (commaCity?.[1]) return commaCity[1].trim();
 
-  return "your area";
+  return fallback.city;
 }
 
-async function getJobDetails(token: string) {
+async function getJobDetails(token: string): Promise<JobDetails> {
   try {
-    const supabase = createAdminClient();
-    const { data } = await supabase
-      .from("jobs")
-      .select("category, location, title")
-      .eq("share_token", token)
-      .maybeSingle();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !anonKey || !token) return fallback;
+
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/jobs?select=category,title,location&share_token=eq.${encodeURIComponent(token)}`,
+      {
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+        },
+      },
+    );
+
+    if (!response.ok) return fallback;
+
+    const rows = (await response.json()) as Array<{
+      category?: string | null;
+      title?: string | null;
+      location?: string | null;
+    }>;
+    const job = rows[0];
+
+    if (!job) return fallback;
 
     return {
-      trade: data?.category?.trim().toLowerCase() || "a local pro",
-      city: getCity(data?.location, data?.title),
+      trade: job.category?.trim().toLowerCase() || fallback.trade,
+      city: getCity(job.location ?? null, job.title ?? null),
     };
   } catch {
-    return { trade: "a local pro", city: "your area" };
+    return fallback;
   }
 }
 
-export default async function Image({ params }: ImageProps) {
-  const { token } = await params;
-  const { trade, city } = await getJobDetails(token);
-
-  return new ImageResponse(
-    (
+function renderCard({ trade, city }: JobDetails) {
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "54px 72px 42px",
+        backgroundColor: "#FAFAFB",
+        color: "#111111",
+        fontFamily: "Arial, Helvetica, sans-serif",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
       <div
         style={{
-          width: "100%",
-          height: "100%",
+          position: "absolute",
+          width: "360px",
+          height: "360px",
+          borderRadius: "0 0 360px 0",
+          backgroundColor: "#E7F0FE",
+          top: 0,
+          left: 0,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          width: "360px",
+          height: "360px",
+          borderRadius: "360px 0 0 0",
+          backgroundColor: "#E7F0FE",
+          bottom: 0,
+          right: 0,
+        }}
+      />
+
+      <div
+        style={{
+          display: "flex",
+          fontSize: "42px",
+          fontWeight: 800,
+          letterSpacing: "7px",
+          zIndex: 1,
+        }}
+      >
+        <span style={{ color: "#0A84FF" }}>HOME</span>
+        <span style={{ color: "#111111" }}>BIDS</span>
+      </div>
+
+      <div
+        style={{
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "space-between",
-          padding: "54px 72px 42px",
-          backgroundColor: "#FAFAFB",
-          color: "#111111",
-          fontFamily: "Arial, Helvetica, sans-serif",
-          position: "relative",
-          overflow: "hidden",
+          textAlign: "center",
+          fontSize: "88px",
+          fontWeight: 800,
+          lineHeight: 1.08,
+          letterSpacing: "-3px",
+          zIndex: 1,
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            width: "360px",
-            height: "360px",
-            borderRadius: "0 0 360px 0",
-            backgroundColor: "#E7F0FE",
-            top: 0,
-            left: 0,
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            width: "360px",
-            height: "360px",
-            borderRadius: "360px 0 0 0",
-            backgroundColor: "#E7F0FE",
-            bottom: 0,
-            right: 0,
-          }}
-        />
-
-        <div
-          style={{
-            display: "flex",
-            fontSize: "42px",
-            fontWeight: 800,
-            letterSpacing: "7px",
-            zIndex: 1,
-          }}
-        >
-          <span style={{ color: "#0A84FF" }}>HOME</span>
-          <span style={{ color: "#111111" }}>BIDS</span>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            textAlign: "center",
-            fontSize: "88px",
-            fontWeight: 800,
-            lineHeight: 1.08,
-            letterSpacing: "-3px",
-            zIndex: 1,
-          }}
-        >
-          <div>Looking for a</div>
-          <div style={{ color: "#0A84FF" }}>{trade} in {city}?</div>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "10px",
-            zIndex: 1,
-          }}
-        >
-          <div style={{ display: "flex", fontSize: "18px", letterSpacing: "5px", fontWeight: 700 }}>
-            <span style={{ color: "#666666" }}>POWERED BY </span>
-            <span style={{ color: "#0A84FF" }}>HOMEBIDS.AI</span>
-          </div>
-          <div style={{ color: "#777777", fontSize: "24px" }}>Better bids. Better homes.</div>
-        </div>
+        <div>Looking for a</div>
+        <div style={{ color: "#0A84FF" }}>{trade} in {city}?</div>
       </div>
-    ),
-    { width: 1200, height: 630 },
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "10px",
+          zIndex: 1,
+        }}
+      >
+        <div style={{ display: "flex", fontSize: "18px", letterSpacing: "5px", fontWeight: 700 }}>
+          <span style={{ color: "#666666" }}>POWERED BY </span>
+          <span style={{ color: "#0A84FF" }}>HOMEBIDS.AI</span>
+        </div>
+        <div style={{ color: "#777777", fontSize: "24px" }}>Better bids. Better homes.</div>
+      </div>
+    </div>
   );
+}
+
+export default async function Image({ params }: ImageProps) {
+  try {
+    const { token } = await params;
+    const details = await getJobDetails(token);
+    return new ImageResponse(renderCard(details), { width: 1200, height: 630 });
+  } catch {
+    return new ImageResponse(renderCard(fallback), { width: 1200, height: 630 });
+  }
 }
 
 export const dynamic = "force-dynamic";
