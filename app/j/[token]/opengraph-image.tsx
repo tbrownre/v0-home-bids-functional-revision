@@ -79,45 +79,49 @@ function renderCard({ trade, city }: JobDetails) {
         padding: "54px 72px 42px",
         backgroundColor: "#FAFAFB",
         color: "#111111",
-        fontFamily: "Arial, Helvetica, sans-serif",
+        fontFamily: "sans-serif",
         position: "relative",
         overflow: "hidden",
       }}
     >
       <div
         style={{
+          display: "flex",
           position: "absolute",
-          width: "360px",
-          height: "360px",
-          borderRadius: "0 0 360px 0",
+          width: "420px",
+          height: "420px",
+          borderRadius: "50%",
           backgroundColor: "#E7F0FE",
-          top: 0,
-          left: 0,
+          top: "-210px",
+          left: "-210px",
         }}
       />
       <div
         style={{
+          display: "flex",
           position: "absolute",
-          width: "360px",
-          height: "360px",
-          borderRadius: "360px 0 0 0",
+          width: "420px",
+          height: "420px",
+          borderRadius: "50%",
           backgroundColor: "#E7F0FE",
-          bottom: 0,
-          right: 0,
+          bottom: "-210px",
+          right: "-210px",
         }}
       />
 
       <div
         style={{
           display: "flex",
-          fontSize: "42px",
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 42,
           fontWeight: 800,
-          letterSpacing: "7px",
           zIndex: 1,
         }}
       >
-        <span style={{ color: "#0A84FF" }}>HOME</span>
-        <span style={{ color: "#111111" }}>BIDS</span>
+        <div style={{ display: "flex", color: "#0A84FF", letterSpacing: 7 }}>HOME</div>
+        <div style={{ display: "flex", color: "#111111", letterSpacing: 7 }}>BIDS</div>
       </div>
 
       <div
@@ -125,32 +129,62 @@ function renderCard({ trade, city }: JobDetails) {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          textAlign: "center",
-          fontSize: "88px",
-          fontWeight: 800,
-          lineHeight: 1.08,
-          letterSpacing: "-3px",
+          justifyContent: "center",
           zIndex: 1,
         }}
       >
-        <div>Looking for a</div>
-        <div style={{ color: "#0A84FF" }}>{trade} in {city}?</div>
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "10px",
-          zIndex: 1,
-        }}
-      >
-        <div style={{ display: "flex", fontSize: "18px", letterSpacing: "5px", fontWeight: 700 }}>
-          <span style={{ color: "#666666" }}>POWERED BY </span>
-          <span style={{ color: "#0A84FF" }}>HOMEBIDS.AI</span>
+        <div
+          style={{
+            display: "flex",
+            color: "#111111",
+            fontSize: 84,
+            fontWeight: 800,
+            lineHeight: 1.08,
+            letterSpacing: -3,
+          }}
+        >
+          Looking for a
         </div>
-        <div style={{ color: "#777777", fontSize: "24px" }}>Better bids. Better homes.</div>
+        <div
+          style={{
+            display: "flex",
+            color: "#0A84FF",
+            fontSize: 84,
+            fontWeight: 800,
+            lineHeight: 1.08,
+            letterSpacing: -3,
+          }}
+        >
+          {trade} in {city}?
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+          zIndex: 1,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 18,
+            fontWeight: 700,
+          }}
+        >
+          <div style={{ display: "flex", color: "#666666", letterSpacing: 5 }}>POWERED BY </div>
+          <div style={{ display: "flex", color: "#0A84FF", letterSpacing: 5 }}>HOMEBIDS.AI</div>
+        </div>
+        <div style={{ display: "flex", color: "#777777", fontSize: 24, fontWeight: 400 }}>
+          Better bids. Better homes.
+        </div>
       </div>
     </div>
   );
