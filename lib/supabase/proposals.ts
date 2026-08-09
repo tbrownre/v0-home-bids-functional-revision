@@ -93,9 +93,9 @@ export async function acceptProposal(token: string): Promise<{
 
     const row = Array.isArray(data) ? data[0] : data;
     return {
-      ok: true,
-      project_title: row?.project_title ?? null,
-      company: row?.company ?? row?.contractor_company_name ?? null,
+      ok: row?.out_ok === true,
+      project_title: row?.out_project_title ?? null,
+      company: row?.out_company ?? null,
     };
   } catch {
     return { ok: false, project_title: null, company: null };
