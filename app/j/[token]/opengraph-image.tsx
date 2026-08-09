@@ -24,15 +24,9 @@ function titleCase(value: string): string {
   return value.replace(/\w\S*/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
 }
 
-function getCity(location: string | null, title: string | null): string {
-  const source = location || title || "";
-  const match = source.match(/(?:in|near|of)\s+([A-Za-z][A-Za-z .'-]+?)(?:,\s*[A-Z]{2}|\s+AZ|$)/i);
-  if (match?.[1]) return match[1].trim();
-
-  const commaCity = source.match(/,\s*([^,]+?)(?:,\s*[A-Z]{2}|$)/);
-  if (commaCity?.[1]) return commaCity[1].trim();
-
-  return fallback.city;
+function getCity(location: string | null, _title: string | null): string {
+  const city = location?.split(",")[0]?.trim();
+  return city || fallback.city;
 }
 
 async function getJobDetails(token: string): Promise<JobDetails> {
@@ -81,6 +75,8 @@ async function getJobDetails(token: string): Promise<JobDetails> {
 }
 
 function renderCard({ firstName, trade, city }: JobDetails) {
+  const firstLine = `${firstName} is looking for`;
+  const firstLineFontSize = firstLine.length > 20 ? 70 : 84;
   const secondLine = `a ${trade} in ${city}`;
   const secondLineFontSize = secondLine.length > 26 ? 70 : 84;
 
@@ -110,7 +106,7 @@ function renderCard({ firstName, trade, city }: JobDetails) {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 1 }}>
-        <div style={{ display: "flex", color: "#111111", fontSize: 84, fontWeight: 800, lineHeight: 1.08 }}>{firstName} is looking for</div>
+        <div style={{ display: "flex", color: "#111111", fontSize: firstLineFontSize, fontWeight: 800, lineHeight: 1.08 }}>{firstLine}</div>
         <div style={{ display: "flex", color: "#0A84FF", fontSize: secondLineFontSize, fontWeight: 800, lineHeight: 1.08 }}>{secondLine}</div>
       </div>
 
