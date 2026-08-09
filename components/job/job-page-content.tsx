@@ -273,10 +273,10 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
           <div className="space-y-3 rounded-lg bg-muted/40 p-6">
             <h3 className="font-semibold text-foreground">How it works:</h3>
             <ol className="space-y-2 text-sm text-foreground">
-              <li>1. Tap the button → your Messages app opens</li>
-              <li>2. Send the pre-filled text</li>
-              <li>3. Answer a few quick questions</li>
-              <li>4. Your professional bid is ready in ~90 seconds</li>
+              <li>Tap the button → your Messages app opens</li>
+              <li>Send the pre-filled text</li>
+              <li>Answer a few quick questions</li>
+              <li>Your professional bid is ready in ~90 seconds</li>
             </ol>
           </div>
         </section>
