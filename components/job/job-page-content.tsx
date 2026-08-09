@@ -213,8 +213,13 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
             <div className="space-y-4 rounded-lg border bg-card p-6">
               <div className="space-y-3">
                 <p className="text-sm font-medium text-foreground">Text to bid:</p>
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-2xl font-semibold text-foreground">{phoneNumber}</span>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={smsLink}
+                    className="flex min-h-14 flex-1 items-center justify-center rounded-lg bg-primary px-4 py-4 text-center text-base font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+                  >
+                    Text +1 (283) 229-1348 to bid
+                  </a>
                   <Button
                     variant="outline"
                     size="sm"
@@ -228,11 +233,14 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
                     ) : (
                       <>
                         <Copy className="mr-1 h-4 w-4" />
-                        Copy
+                        Copy number
                       </>
                     )}
                   </Button>
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  Tap the button - your Messages app opens with the job already filled in.
+                </p>
               </div>
               <Button
                 variant="outline"
