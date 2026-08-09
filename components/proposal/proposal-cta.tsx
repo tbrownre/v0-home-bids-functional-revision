@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { CheckCircle2, MessageCircle, Phone, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { logProposalAction, type ProposalActionEvent } from "@/lib/supabase/proposals";
+import { acceptProposal, logProposalAction, type ProposalActionEvent } from "@/lib/supabase/proposals";
 import { PROPOSAL_SMS } from "@/lib/proposal-format";
 import { getSmsHref } from "@/lib/sms-config";
 
@@ -12,6 +13,8 @@ interface ProposalCtaProps {
   homeownerName: string | null;
   projectTitle: string;
   pdfUrl: string | null;
+  company: string;
+  initiallyAccepted?: boolean;
   /** Sticky variant pins the primary actions to the bottom on mobile. */
   variant?: "inline" | "sticky";
 }
@@ -22,21 +25,68 @@ export function ProposalCta({
   homeownerName,
   projectTitle,
   pdfUrl,
+  company,
+  initiallyAccepted = false,
   variant = "inline",
 }: ProposalCtaProps) {
-  // Fire-and-forget tracking, then perform the navigation. We don't block the
-  // user action on the network — tracking is best-effort.
+  const [accepted, setAccepted] = useState(initiallyAccepted);
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [acceptError, setAcceptError] = useState(false);
+
   function track(event: ProposalActionEvent, proposalData?: any) {
     void logProposalAction(shareToken, event, proposalData);
   }
 
-  function handleAccept() {
-    track("accepted_clicked", {
-      contractor_phone: contractorPhone,
-      homeowner_name: homeownerName,
-      project_title: projectTitle,
-    });
-    if (contractorPhone) window.location.href = getSmsHref(contractorPhone, PROPOSAL_SMS.accept);
+  function celebrate() {
+    const canvas = document.createElement("canvas");
+    canvas.style.position = "fixed";
+    canvas.style.inset = "0";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    canvas.style.pointerEvents = "none";
+    canvas.style.zIndex = "9999";
+    document.body.appendChild(canvas);
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    const width = canvas.width = window.innerWidth * window.devicePixelRatio;
+    const height = canvas.height = window.innerHeight * window.devicePixelRatio;
+    const particles = Array.from({ length: 90 }, (_, index) => ({
+      x: width / 2,
+      y: height * 0.38,
+      vx: (Math.random() - 0.5) * 18,
+      vy: -Math.random() * 16 - 5,
+      gravity: 0.45,
+      size: 5 + (index % 4),
+      color: ["#0A84FF", "#34C759", "#FFCC00", "#FF3B30"][index % 4],
+      life: 70 + index % 30,
+    }));
+    const frame = () => {
+      context.clearRect(0, 0, width, height);
+      particles.forEach((particle) => {
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+        particle.vy += particle.gravity;
+        particle.life -= 1;
+        context.fillStyle = particle.color;
+        context.fillRect(particle.x, particle.y, particle.size, particle.size);
+      });
+      if (particles.some((particle) => particle.life > 0)) requestAnimationFrame(frame);
+      else canvas.remove();
+    };
+    requestAnimationFrame(frame);
+  }
+
+  async function handleAccept() {
+    setIsAccepting(true);
+    setAcceptError(false);
+    const result = await acceptProposal(shareToken);
+    setIsAccepting(false);
+    if (!result.ok) {
+      setAcceptError(true);
+      return;
+    }
+    setAccepted(true);
+    celebrate();
   }
 
   function handleQuestion() {
@@ -58,15 +108,35 @@ export function ProposalCta({
 
   const content = (
     <div className="mx-auto w-full max-w-2xl">
-      <Button
-        size="lg"
-        className="h-14 w-full gap-2 rounded-full text-base font-semibold shadow-sm"
-        onClick={handleAccept}
-        disabled={!hasPhone}
-      >
-        <CheckCircle2 className="h-5 w-5" />
-        Accept This Proposal
-      </Button>
+      {accepted ? (
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 text-center">
+          <h3 className="text-lg font-semibold text-foreground">You&apos;re all set! 🎉</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            We&apos;ve notified {company} - they&apos;ll text you shortly to schedule.
+          </p>
+          <Button size="lg" className="mt-4 h-12 w-full rounded-full" disabled>
+            Approved ✓
+          </Button>
+        </div>
+      ) : (
+        <>
+          <Button
+            size="lg"
+            className="h-14 w-full gap-2 rounded-full text-base font-semibold shadow-sm"
+            onClick={handleAccept}
+            disabled={!hasPhone || isAccepting}
+          >
+            <CheckCircle2 className="h-5 w-5" />
+            {isAccepting ? "Approving…" : "Accept This Proposal"}
+          </Button>
+          {acceptError && (
+            <div className="mt-2 flex items-center justify-center gap-2 text-sm text-destructive">
+              <span>Couldn&apos;t approve - try again</span>
+              <button type="button" className="font-medium underline" onClick={handleAccept}>Retry</button>
+            </div>
+          )}
+        </>
+      )}
 
       <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
         <Button
@@ -76,7 +146,7 @@ export function ProposalCta({
           disabled={!hasPhone}
         >
           <Phone className="h-4 w-4" />
-          Call Contractor
+          Ask a Question
         </Button>
         <Button
           variant="outline"

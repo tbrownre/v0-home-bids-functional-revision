@@ -81,6 +81,27 @@ export type ProposalActionEvent =
   | "call_clicked"
   | "pdf_downloaded";
 
+export async function acceptProposal(token: string): Promise<{
+  ok: boolean;
+  project_title: string | null;
+  company: string | null;
+}> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("accept_proposal", { p_token: token });
+    if (error) return { ok: false, project_title: null, company: null };
+
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+      ok: true,
+      project_title: row?.project_title ?? null,
+      company: row?.company ?? row?.contractor_company_name ?? null,
+    };
+  } catch {
+    return { ok: false, project_title: null, company: null };
+  }
+}
+
 // JSONB columns arrive as `unknown`; coerce defensively so the UI never crashes
 // on a malformed payload written by the external Bid Builder.
 function normalizeProposal(row: Record<string, unknown>): Proposal {

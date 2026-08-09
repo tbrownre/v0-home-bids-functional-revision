@@ -218,7 +218,7 @@ function ProposalDocument({
         {/* ── Optional Add-Ons ── */}
         {hasAddOns && (
           <section className="mt-4 rounded-3xl border border-border bg-card p-6 sm:p-8">
-            <SectionTitle>Optional Add-Ons</SectionTitle>
+            <SectionTitle>WHAT&apos;S INCLUDED</SectionTitle>
             <ul className="divide-y divide-border">
               {proposal.add_ons.map((addon, i) => (
                 <li key={i} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
@@ -308,6 +308,8 @@ function ProposalDocument({
             homeownerName={proposal.homeowner_name}
             projectTitle={proposal.project_title}
             pdfUrl={proposal.pdf_url}
+            company={proposal.contractor_company_name ?? "Your Contractor"}
+            initiallyAccepted={proposal.status === "accepted" || proposal.status === "approval_clicked" || Boolean(proposal.approval_clicked_at)}
             variant="inline"
           />
         </section>
