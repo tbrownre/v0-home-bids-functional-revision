@@ -9,14 +9,20 @@ interface ImageProps {
 }
 
 type JobDetails = {
+  firstName: string;
   trade: string;
   city: string;
 };
 
 const fallback: JobDetails = {
-  trade: "a local pro",
+  firstName: "A homeowner",
+  trade: "local pro",
   city: "your area",
 };
+
+function titleCase(value: string): string {
+  return value.replace(/\w\S*/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
+}
 
 function getCity(location: string | null, title: string | null): string {
   const source = location || title || "";
@@ -32,16 +38,18 @@ function getCity(location: string | null, title: string | null): string {
 async function getJobDetails(token: string): Promise<JobDetails> {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const apiKey = serviceRoleKey || anonKey;
 
-    if (!supabaseUrl || !anonKey || !token) return fallback;
+    if (!supabaseUrl || !apiKey || !token) return fallback;
 
     const response = await fetch(
-      `${supabaseUrl}/rest/v1/jobs?select=category,title,location&share_token=eq.${encodeURIComponent(token)}`,
+      `${supabaseUrl}/rest/v1/jobs?select=category,title,location,homeowner_id,profiles(full_name)&share_token=eq.${encodeURIComponent(token)}`,
       {
         headers: {
-          apikey: anonKey,
-          Authorization: `Bearer ${anonKey}`,
+          apikey: apiKey,
+          Authorization: `Bearer ${apiKey}`,
         },
       },
     );
@@ -52,13 +60,19 @@ async function getJobDetails(token: string): Promise<JobDetails> {
       category?: string | null;
       title?: string | null;
       location?: string | null;
+      profiles?: { full_name?: string | null } | Array<{ full_name?: string | null }> | null;
     }>;
     const job = rows[0];
 
     if (!job) return fallback;
 
+    const profile = Array.isArray(job.profiles) ? job.profiles[0] : job.profiles;
+    const firstName = profile?.full_name?.trim().split(/\s+/)[0] || fallback.firstName;
+    const rawTrade = job.category?.trim();
+
     return {
-      trade: job.category?.trim().toLowerCase() || fallback.trade,
+      firstName,
+      trade: rawTrade ? titleCase(rawTrade) : fallback.trade,
       city: getCity(job.location ?? null, job.title ?? null),
     };
   } catch {
@@ -66,7 +80,10 @@ async function getJobDetails(token: string): Promise<JobDetails> {
   }
 }
 
-function renderCard({ trade, city }: JobDetails) {
+function renderCard({ firstName, trade, city }: JobDetails) {
+  const secondLine = `a ${trade} in ${city}`;
+  const secondLineFontSize = secondLine.length > 26 ? 70 : 84;
+
   return (
     <div
       style={{
@@ -84,107 +101,25 @@ function renderCard({ trade, city }: JobDetails) {
         overflow: "hidden",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          position: "absolute",
-          width: "420px",
-          height: "420px",
-          borderRadius: "50%",
-          backgroundColor: "#E7F0FE",
-          top: "-210px",
-          left: "-210px",
-        }}
-      />
-      <div
-        style={{
-          display: "flex",
-          position: "absolute",
-          width: "420px",
-          height: "420px",
-          borderRadius: "50%",
-          backgroundColor: "#E7F0FE",
-          bottom: "-210px",
-          right: "-210px",
-        }}
-      />
+      <div style={{ display: "flex", position: "absolute", width: "420px", height: "420px", borderRadius: "50%", backgroundColor: "#E7F0FE", top: "-210px", left: "-210px" }} />
+      <div style={{ display: "flex", position: "absolute", width: "420px", height: "420px", borderRadius: "50%", backgroundColor: "#E7F0FE", bottom: "-210px", right: "-210px" }} />
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 42,
-          fontWeight: 800,
-          zIndex: 1,
-        }}
-      >
+      <div style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center", fontSize: 42, fontWeight: 800, zIndex: 1 }}>
         <div style={{ display: "flex", color: "#0A84FF", letterSpacing: 7 }}>HOME</div>
         <div style={{ display: "flex", color: "#111111", letterSpacing: 7 }}>BIDS</div>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            color: "#111111",
-            fontSize: 84,
-            fontWeight: 800,
-            lineHeight: 1.08,
-            letterSpacing: -3,
-          }}
-        >
-          Looking for a
-        </div>
-        <div
-          style={{
-            display: "flex",
-            color: "#0A84FF",
-            fontSize: 84,
-            fontWeight: 800,
-            lineHeight: 1.08,
-            letterSpacing: -3,
-          }}
-        >
-          {trade} in {city}?
-        </div>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 1 }}>
+        <div style={{ display: "flex", color: "#111111", fontSize: 84, fontWeight: 800, lineHeight: 1.08 }}>{firstName} is looking for</div>
+        <div style={{ display: "flex", color: "#0A84FF", fontSize: secondLineFontSize, fontWeight: 800, lineHeight: 1.08 }}>{secondLine}</div>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 10,
-          zIndex: 1,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 18,
-            fontWeight: 700,
-          }}
-        >
-          <div style={{ display: "flex", color: "#666666", letterSpacing: 5 }}>POWERED BY </div>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, zIndex: 1 }}>
+        <div style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12, fontSize: 18, fontWeight: 700 }}>
+          <div style={{ display: "flex", color: "#666666", letterSpacing: 5 }}>POWERED BY</div>
           <div style={{ display: "flex", color: "#0A84FF", letterSpacing: 5 }}>HOMEBIDS.AI</div>
         </div>
-        <div style={{ display: "flex", color: "#777777", fontSize: 24, fontWeight: 400 }}>
-          Better bids. Better homes.
-        </div>
+        <div style={{ display: "flex", color: "#777777", fontSize: 24, fontWeight: 400 }}>Better bids. Better homes.</div>
       </div>
     </div>
   );

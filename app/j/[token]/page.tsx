@@ -56,19 +56,20 @@ function getTradeAndCity(category: string | null, location: string | null, title
   const cityMatch = source.match(/(?:in|near|of)\s+([A-Za-z][A-Za-z .'-]+?)(?:,\s*[A-Z]{2}|\s+AZ|$)/i);
   const commaMatch = source.match(/,\s*([^,]+?)(?:,\s*[A-Z]{2}|$)/);
   const city = cityMatch?.[1]?.trim() || commaMatch?.[1]?.trim() || 'your area';
+  const rawTrade = category?.trim() || 'local pro';
+  const trade = rawTrade.replace(/\w\S*/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
 
-  return {
-    trade: category?.trim().toLowerCase() || 'a local pro',
-    city,
-  };
+  return { trade, city };
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { token } = await params;
-  const { job } = await getJobByToken(token);
+  const { job, homeownerFirstName } = await getJobByToken(token);
   const { trade, city } = getTradeAndCity(job?.category ?? null, job?.location ?? null, job?.title ?? null);
-  const title = `Looking for a ${trade} in ${city}?`;
-  const description = `A homeowner in ${city}, AZ is taking bids. Free to bid.`;
+  const firstName = homeownerFirstName || 'A homeowner';
+  const title = `${firstName} is looking for a ${trade} in ${city}`;
+  const description = `${firstName} is looking for a ${trade} in ${city}.`;
+
   const image = `/j/${encodeURIComponent(token)}/opengraph-image`;
 
   return {
