@@ -105,9 +105,9 @@ function renderCard({ firstName, trade, city }: JobDetails) {
         <div style={{ display: "flex", color: "#111111", letterSpacing: 7 }}>BIDS</div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 1 }}>
-        <div style={{ display: "flex", color: "#111111", fontSize: firstLineFontSize, fontWeight: 800, lineHeight: 1.08 }}>{firstLine}</div>
-        <div style={{ display: "flex", color: "#0A84FF", fontSize: secondLineFontSize, fontWeight: 800, lineHeight: 1.08 }}>{secondLine}</div>
+      <div style={{ display: "flex", width: "100%", maxWidth: "1060px", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", zIndex: 1 }}>
+        <div style={{ display: "flex", width: "100%", justifyContent: "center", textAlign: "center", color: "#111111", fontSize: firstLineFontSize, fontWeight: 800, lineHeight: 1.08 }}>{firstLine}</div>
+        <div style={{ display: "flex", width: "100%", justifyContent: "center", textAlign: "center", color: "#0A84FF", fontSize: secondLineFontSize, fontWeight: 800, lineHeight: 1.08 }}>{secondLine}</div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, zIndex: 1 }}>
