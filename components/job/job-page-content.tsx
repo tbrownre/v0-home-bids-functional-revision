@@ -72,6 +72,8 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
   
   const questionBody = `Hi!%20I%20have%20a%20question%20about%20this%20job%20(Job:%20${jobRefShort}):%20`;
   const questionLink = `sms:${phoneNumber}?&body=${questionBody}`;
+  const estimateBody = encodeURIComponent(`Hi! I'd like to offer a free in-person estimate for this job (Job: ${jobRefShort})`);
+  const estimateLink = `sms:${phoneNumber}?&body=${estimateBody}`;
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -208,6 +210,17 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
               >
                 Ask {homeownerFirstName} a question first
               </a>
+              <div className="space-y-1">
+                <a
+                  href={estimateLink}
+                  className="block w-full rounded-lg border border-input bg-background px-6 py-4 text-lg font-semibold text-foreground transition-colors hover:bg-accent"
+                >
+                  Offer a free in-person estimate
+                </a>
+                <p className="text-sm text-muted-foreground">
+                  Can&apos;t price it without seeing it? Offer a visit — we&apos;ll set it up with {homeownerFirstName}.
+                </p>
+              </div>
             </div>
           ) : (
             <div className="space-y-4 rounded-lg border bg-card p-6">
@@ -265,6 +278,14 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
                     Ask {homeownerFirstName} a question
                   </a>
                 </Button>
+                <div className="mt-3 space-y-1">
+                  <Button variant="outline" asChild className="w-full">
+                    <a href={estimateLink}>Offer a free in-person estimate</a>
+                  </Button>
+                  <p className="text-sm text-muted-foreground">
+                    Can&apos;t price it without seeing it? Offer a visit — we&apos;ll set it up with {homeownerFirstName}.
+                  </p>
+                </div>
               </div>
             </div>
           )}
