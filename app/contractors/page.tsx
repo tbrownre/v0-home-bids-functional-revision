@@ -588,7 +588,7 @@ export default function ContractorsPage() {
                 </ul>
 
                 <Link
-                  href="/contractors/signup"
+                  href="/subscribe?type=contractor"
                   className="relative mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 active:scale-[0.98]"
                 >
                   <ArrowRight className="h-4 w-4" />
@@ -678,7 +678,7 @@ export default function ContractorsPage() {
               <ArrowRight className="h-5 w-5" />
               Text Us To Build A Bid
             </a>
-            <Link href="/contractors/signup" className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
+            <Link href="/subscribe?type=contractor" className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
               Start Free Right Now
             </Link>
           </div>
