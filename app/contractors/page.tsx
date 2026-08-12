@@ -306,8 +306,8 @@ export default function ContractorsPage() {
                 <ArrowRight className="h-4 w-4" />
                 Text Us To Build A Bid
               </a>
-              <Link
-                href="/contractors/signup"
+                <Link
+                href="/subscribe?type=contractor"
                 className="inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-full border border-primary bg-background px-10 text-base font-semibold text-primary shadow-sm transition-colors hover:bg-primary/5 active:scale-[0.98] sm:w-auto"
               >
                 <ChevronRight className="h-4 w-4" />
@@ -315,14 +315,12 @@ export default function ContractorsPage() {
               </Link>
             </motion.div>
             <motion.div variants={fadeUp} className="mt-4 flex justify-center">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-9 rounded-full px-5 text-sm text-muted-foreground hover:text-foreground"
-                onClick={() => setShowLoginModal(true)}
+              <Link
+                href="/auth/sign-in"
+                className="inline-flex h-9 items-center justify-center rounded-full px-5 text-sm text-muted-foreground hover:text-foreground"
               >
                 Already a contractor? Sign in
-              </Button>
+              </Link>
             </motion.div>
 
             <motion.div variants={fadeUp} className="mt-5 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
