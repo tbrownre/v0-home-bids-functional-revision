@@ -80,7 +80,7 @@ export default function BidsHistoryPage() {
               Build a bid by text and it will appear here.
             </p>
             <Button className="mt-4 rounded-full font-semibold" asChild>
-              <a href="sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid">Build a Bid</a>
+              <a href="sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid">Build a Bid</a>
             </Button>
           </div>
         ) : (

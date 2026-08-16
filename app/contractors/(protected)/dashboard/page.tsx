@@ -599,7 +599,7 @@ export default function ContractorDashboard() {
               <MessageCircle className="h-3 w-3" /> Text Homeowner
             </Button>
           ) : lead.status === "new" ? (
-            <a href="sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid">
+            <a href="sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid">
               <Button size="sm" className="h-7 gap-1 px-3 text-xs">
                 <MessageCircle className="h-3 w-3" /> Start Bid by Text
               </Button>
@@ -639,7 +639,7 @@ export default function ContractorDashboard() {
           sub: momentum.copy,
           cta: momentum.ctaLabel,
           icon: Flame as React.ElementType,
-          onClick: () => { window.location.href = "sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid"; },
+          onClick: () => { window.location.href = "sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid"; },
         };
 
   // Real (mock/demo) context for the in-progress draft. Structured so it can be
@@ -688,7 +688,7 @@ export default function ContractorDashboard() {
               },
             };
             // Draft resume now goes to SMS Bid Builder only
-            window.location.href = "sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid";
+            window.location.href = "sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid";
           },
         });
       });
@@ -854,7 +854,7 @@ export default function ContractorDashboard() {
             <p className="mt-1 text-xs text-muted-foreground">
               Build a bid by text and your hosted bid link will appear here.
             </p>
-            <a href="sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid">
+            <a href="sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid">
               <Button className="mt-3 gap-2 rounded-full font-semibold">
                 <Sparkles className="h-4 w-4" /> Build Today&apos;s Bid
               </Button>
@@ -955,7 +955,7 @@ export default function ContractorDashboard() {
             Manage customer requests, proposal drafts, sent bids, and follow-ups.
           </p>
         </div>
-        <a href="sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid">
+        <a href="sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid">
           <Button
             className="shrink-0 gap-2 rounded-full font-semibold"
           >
@@ -1028,7 +1028,7 @@ export default function ContractorDashboard() {
                     className="h-7 gap-1 px-3 text-xs"
                     onClick={() => {
                       if (cfg.action === "build") {
-                        window.location.href = "sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid";
+                        window.location.href = "sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid";
                       } else if (cfg.action === "followup") {
                         openSms(item.phone);
                       } else {
@@ -1067,7 +1067,7 @@ export default function ContractorDashboard() {
             Start by texting HomeBids.ai project details, photos, screenshots, or rough notes. We&apos;ll help turn them into a professional proposal.
           </p>
           <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
-            <a href="sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid">
+            <a href="sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid">
               <Button className="w-full gap-2 rounded-full font-semibold sm:w-auto">
                 <Plus className="h-4 w-4" /> Build New Bid
               </Button>
@@ -1150,7 +1150,7 @@ export default function ContractorDashboard() {
             <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">
               Enter customer info, scope, pricing, exclusions, photos, and notes in a simple guided builder.
             </p>
-            <a href="sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid">
+            <a href="sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid">
               <Button
                 variant="outline"
                 className="mt-5 w-full justify-center gap-2 rounded-xl bg-transparent py-2.5 text-sm font-semibold"
@@ -1248,7 +1248,7 @@ export default function ContractorDashboard() {
                           timeline: proposal.timeline_completion || "",
                         },
                       };
-                      window.location.href = "sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid";
+                      window.location.href = "sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid";
                     }}>
                       Continue
                     </Button>
@@ -1537,7 +1537,7 @@ export default function ContractorDashboard() {
                 </ul>
               </div>
               <div className="flex flex-col gap-2 pt-1">
-              <a href="sms:+12832291348?&body=I%20want%20to%20build%20a%20new%20bid">
+              <a href="sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid">
                 <Button className="w-full gap-2" onClick={() => setShowLeadDetail(false)}>
                   <MessageCircle className="h-4 w-4" /> Start Bid by Text
                 </Button>

@@ -18,23 +18,23 @@ export const HOMEBIDS_SMS = {
   homeowner: {
     phone: SMS_PHONE_NUMBER,
     display: SMS_PHONE_DISPLAY,
-    href: `sms:${SMS_PHONE_NUMBER}?&body=${encodeURIComponent(HOMEOWNER_STARTER_MESSAGE)}`,
+    href: `sms:${SMS_PHONE_NUMBER}?body=${encodeURIComponent(HOMEOWNER_STARTER_MESSAGE)}`,
   },
   contractor: {
     phone: CONTRACTOR_SMS_PHONE_NUMBER,
     display: CONTRACTOR_SMS_PHONE_DISPLAY,
-    href: `sms:${CONTRACTOR_SMS_PHONE_NUMBER}?&body=${encodeURIComponent("Let's create a new bid")}`,
+    href: `sms:${CONTRACTOR_SMS_PHONE_NUMBER}?body=${encodeURIComponent("Let's create a new bid")}`,
   },
 } as const;
 
 export function getSmsLink(body?: string): string {
   const encodedBody = encodeURIComponent(body || SMS_BODY_PREFIX);
-  return `sms:${SMS_PHONE_NUMBER}?&body=${encodedBody}`;
+  return `sms:${SMS_PHONE_NUMBER}?body=${encodedBody}`;
 }
 
 export function getContractorSmsLink(body?: string): string {
   const encodedBody = encodeURIComponent(body || CONTRACTOR_SMS_BODY_PREFIX);
-  return `sms:${CONTRACTOR_SMS_PHONE_NUMBER}?&body=${encodedBody}`;
+  return `sms:${CONTRACTOR_SMS_PHONE_NUMBER}?body=${encodedBody}`;
 }
 
 /**
@@ -57,7 +57,7 @@ export function getSmsHref(phone: string, body?: string): string {
   }
   
   const encodedBody = encodeURIComponent(body);
-  return `sms:${normalized}?&body=${encodedBody}`;
+  return `sms:${normalized}?body=${encodedBody}`;
 }
 
 /**

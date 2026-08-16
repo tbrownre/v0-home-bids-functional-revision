@@ -68,12 +68,12 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
   const jobRefShort = job.job_ref || job.id.slice(0, 8);
   const jobRefEncoded = encodeURIComponent(`Job: ${jobRefShort}`);
   const smsBody = `Hi!%20I%20want%20to%20bid%20on%20this%20job%20(${jobRefEncoded})`;
-  const smsLink = `sms:${phoneNumber}?&body=${smsBody}`;
+  const smsLink = `sms:${phoneNumber}?body=${smsBody}`;
   
   const questionBody = `Hi!%20I%20have%20a%20question%20about%20this%20job%20(Job:%20${jobRefShort}):%20`;
-  const questionLink = `sms:${phoneNumber}?&body=${questionBody}`;
+  const questionLink = `sms:${phoneNumber}?body=${questionBody}`;
   const estimateBody = encodeURIComponent(`Hi! I'd like to offer a free in-person estimate for this job (Job: ${jobRefShort})`);
-  const estimateLink = `sms:${phoneNumber}?&body=${estimateBody}`;
+  const estimateLink = `sms:${phoneNumber}?body=${estimateBody}`;
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);

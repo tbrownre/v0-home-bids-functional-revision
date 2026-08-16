@@ -300,7 +300,7 @@ export default function ContractorsPage() {
 
             <motion.div variants={fadeUp} className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <a
-                href="sms:+12832291348?&body=Let%27s%20create%20a%20new%20bid!"
+                href="sms:+12832291348?body=Let%27s%20create%20a%20new%20bid!"
                 className="inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-full bg-primary px-10 text-base font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 active:scale-[0.98] sm:w-auto"
               >
                 <ArrowRight className="h-4 w-4" />
@@ -672,7 +672,7 @@ export default function ContractorsPage() {
           <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">You don&apos;t have to.</p>
           <div className="mt-10 flex flex-col items-center gap-4">
             <a
-              href="sms:+12832291348?&body=Let%27s%20create%20a%20new%20bid!"
+              href="sms:+12832291348?body=Let%27s%20create%20a%20new%20bid!"
               className="inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-primary px-10 text-lg font-bold text-primary-foreground shadow-xl transition-colors hover:bg-primary/90 active:scale-[0.98]"
             >
               <ArrowRight className="h-5 w-5" />

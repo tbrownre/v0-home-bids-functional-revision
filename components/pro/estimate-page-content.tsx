@@ -73,7 +73,7 @@ export function EstimatePageContent({ page }: { page: LandingPageData }) {
   const textColor = getContrastColor(accentColor);
 
   const smsBody = `Hi Ava! I'd like a bid from ${encodeURIComponent(companyName)} (Ref: ${encodeURIComponent(refParam)})`;
-  const smsLink = `sms:${smsNumber}?&body=${encodeURIComponent(smsBody)}`;
+  const smsLink = `sms:${smsNumber}?body=${encodeURIComponent(smsBody)}`;
 
   const handleCopyPhone = () => {
     navigator.clipboard.writeText(smsNumber);

@@ -45,7 +45,7 @@ function SmartInput({
       const body = trimmed
         ? encodeURIComponent(`Hi, I need help with ${trimmed}`)
         : encodeURIComponent(SMS_BODY_PREFIX + "...");
-      window.location.href = `sms:${SMS_PHONE_NUMBER}?&body=${body}`;
+      window.location.href = `sms:${SMS_PHONE_NUMBER}?body=${body}`;
       onSubmit(trimmed);
     } else {
       // Desktop — copy number and show confirmation
