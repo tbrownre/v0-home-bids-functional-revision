@@ -304,8 +304,6 @@ function ProposalDocument({
         <section className="mt-6">
           <ProposalCta
             shareToken={shareToken}
-            contractorPhone={proposal.contractor_phone}
-            homeownerName={proposal.homeowner_name}
             projectTitle={proposal.project_title}
             pdfUrl={proposal.pdf_url}
             company={proposal.contractor_company_name ?? "Your Contractor"}

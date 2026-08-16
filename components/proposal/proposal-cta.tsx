@@ -1,16 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, MessageCircle, Phone, Download } from "lucide-react";
+import { CheckCircle2, MessageCircle, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { acceptProposal, logProposalAction, type ProposalActionEvent } from "@/lib/supabase/proposals";
-import { PROPOSAL_SMS } from "@/lib/proposal-format";
-import { getSmsHref } from "@/lib/sms-config";
 
 interface ProposalCtaProps {
   shareToken: string;
-  contractorPhone: string | null;
-  homeownerName: string | null;
   projectTitle: string;
   pdfUrl: string | null;
   company: string;
@@ -21,8 +17,6 @@ interface ProposalCtaProps {
 
 export function ProposalCta({
   shareToken,
-  contractorPhone,
-  homeownerName,
   projectTitle,
   pdfUrl,
   company,
@@ -89,22 +83,18 @@ export function ProposalCta({
     celebrate();
   }
 
+  const questionHref = `sms:+14043952879?body=${encodeURIComponent(
+    `Hi! Question about my "${projectTitle}" bid (Bid: ${shareToken}): `,
+  )}`;
+
   function handleQuestion() {
     track("question_clicked");
-    if (contractorPhone) window.location.href = getSmsHref(contractorPhone, PROPOSAL_SMS.question);
-  }
-
-  function handleCall() {
-    track("call_clicked");
-    if (contractorPhone) window.location.href = `tel:${contractorPhone}`;
   }
 
   function handlePdf() {
     track("pdf_downloaded");
     if (pdfUrl) window.open(pdfUrl, "_blank", "noopener,noreferrer");
   }
-
-  const hasPhone = Boolean(contractorPhone);
 
   const content = (
     <div className="mx-auto w-full max-w-2xl">
@@ -124,7 +114,7 @@ export function ProposalCta({
             size="lg"
             className="h-14 w-full gap-2 rounded-full text-base font-semibold shadow-sm"
             onClick={handleAccept}
-            disabled={!hasPhone || isAccepting}
+            disabled={isAccepting}
           >
             <CheckCircle2 className="h-5 w-5" />
             {isAccepting ? "Approving…" : "Accept This Proposal"}
@@ -142,11 +132,12 @@ export function ProposalCta({
         <Button
           variant="outline"
           className="h-11 gap-2 rounded-full bg-transparent"
-          onClick={handleCall}
-          disabled={!hasPhone}
+          asChild
         >
-          <Phone className="h-4 w-4" />
-          Ask a Question
+          <a href={questionHref} onClick={handleQuestion}>
+            <MessageCircle className="h-4 w-4" />
+            Ask a Question
+          </a>
         </Button>
         <Button
           variant="outline"
