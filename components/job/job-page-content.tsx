@@ -42,8 +42,9 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
     const checkDevice = () => {
       const ua = navigator.userAgent.toLowerCase();
       const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      const isIPad = ua.includes('ipad') || (ua.includes('macintosh') && navigator.maxTouchPoints > 1);
       const isSmallScreen = window.innerWidth < 768;
-      setIsMobile(hasTouch && isSmallScreen && !ua.includes('ipad'));
+      setIsMobile(hasTouch && (isSmallScreen || isIPad));
     };
 
     const handleScroll = () => {
