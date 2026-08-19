@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, MessageCircle, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 import { acceptProposal, logProposalAction, type ProposalActionEvent } from "@/lib/supabase/proposals";
 
 interface ProposalCtaProps {
@@ -26,6 +27,19 @@ export function ProposalCta({
   const [accepted, setAccepted] = useState(initiallyAccepted);
   const [isAccepting, setIsAccepting] = useState(false);
   const [acceptError, setAcceptError] = useState(false);
+  const [ownerLink, setOwnerLink] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    createClient()
+      .rpc("get_owner_link", { p_share_token: shareToken })
+      .then(({ data, error }) => {
+        if (active && !error && typeof data === "string" && data) setOwnerLink(data);
+      });
+    return () => {
+      active = false;
+    };
+  }, [shareToken]);
 
   function track(event: ProposalActionEvent, proposalData?: any) {
     void logProposalAction(shareToken, event, proposalData);
@@ -134,7 +148,7 @@ export function ProposalCta({
           className="h-11 gap-2 rounded-full bg-transparent"
           asChild
         >
-          <a href={questionHref} onClick={handleQuestion}>
+          <a href={ownerLink ? `${ownerLink}#messages` : questionHref} onClick={handleQuestion}>
             <MessageCircle className="h-4 w-4" />
             Ask a Question
           </a>
