@@ -7,17 +7,21 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 
 type Contractor = string | { name?: string | null; full_name?: string | null; company?: string | null }
 type Bid = { share_token: string; contractor: Contractor; total_price: number | string; status: string; timeline?: string | null; created_at: string }
 type Question = { id: string; question: string; answer?: string | null; status: string; contractor: Contractor; created_at: string; answered_at?: string | null }
 type Visit = { id: string; status: string; contractor: Contractor; created_at: string }
+type ThreadMessage = { sender: 'homeowner' | 'contractor' | 'system'; kind?: string | null; body: string; meta?: unknown; created_at: string }
+type Thread = { thread_id: string; contractor: Contractor; approved: boolean; messages: ThreadMessage[] }
 type Inbox = {
   job: { title: string; description?: string | null; category?: string | null; location?: string | null; status: string; job_ref: string; share_token: string; created_at: string }
   bids: Bid[]
   questions: Question[]
   visits: Visit[]
+  threads?: Thread[]
 }
 
 function contractorName(contractor: Contractor) {
@@ -37,6 +41,8 @@ export function HomeownerInbox({ token }: { token: string }) {
   const [inbox, setInbox] = useState<Inbox | null | undefined>(undefined)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [answering, setAnswering] = useState<string | null>(null)
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [sending, setSending] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -82,6 +88,23 @@ export function HomeownerInbox({ token }: { token: string }) {
     }
   }
 
+  async function sendThreadMessage(threadId: string) {
+    const body = drafts[threadId]?.trim()
+    if (!body || sending) return
+    setSending(threadId)
+    const { data, error } = await createClient().rpc('send_owner_message', { p_token: token, p_thread_id: threadId, p_body: body })
+    setSending(null)
+    if (!error && data?.ok) {
+      setDrafts((current) => ({ ...current, [threadId]: '' }))
+      setInbox((current) => current ? {
+        ...current,
+        threads: (current.threads ?? []).map((thread) => thread.thread_id === threadId
+          ? { ...thread, messages: [...thread.messages, { sender: 'homeowner', body, created_at: new Date().toISOString() }] }
+          : thread),
+      } : current)
+    }
+  }
+
   if (inbox === undefined) return <main className="mx-auto flex min-h-screen max-w-3xl items-center justify-center p-6 text-muted-foreground">Loading your job inbox…</main>
   if (!inbox) return <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-3 p-6 text-center"><h1 className="text-2xl font-semibold">This link isn&apos;t valid</h1><p className="text-muted-foreground">Check the link and try again.</p></main>
 
@@ -104,6 +127,30 @@ export function HomeownerInbox({ token }: { token: string }) {
         {openBids.map((bid) => <Card key={bid.share_token}><CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex flex-col gap-1"><p className="font-medium">{contractorName(bid.contractor)}</p><p className="text-2xl font-semibold">{formatMoney(bid.total_price)}</p>{bid.timeline && <p className="text-sm text-muted-foreground">{bid.timeline}</p>}</div><Button asChild><Link href={`/p/${bid.share_token}`}>View &amp; approve <ExternalLink data-icon="inline-end" /></Link></Button></CardContent></Card>)}
         {pendingVisits.map((visit) => <Card key={visit.id}><CardContent className="p-5"><p><span className="font-medium">{contractorName(visit.contractor)}</span> offered a free in-person estimate — reply to {homeownerFirstName} by text to pick a time.</p></CardContent></Card>)}
       </section>
+
+      {(inbox.threads?.length ?? 0) > 0 && <section className="flex flex-col gap-4" aria-labelledby="messages-heading">
+        <h2 id="messages-heading" className="text-xl font-semibold">Messages</h2>
+        {inbox.threads!.map((thread) => <Card key={thread.thread_id}>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-base">{contractorName(thread.contractor)}{thread.approved && <Badge className="bg-green-600 text-white hover:bg-green-600">Approved</Badge>}</CardTitle></CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex max-h-[420px] flex-col gap-3 overflow-y-auto rounded-lg border border-border bg-muted/30 p-4">
+              {thread.messages.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No messages yet.</p>}
+              {thread.messages.map((message, index) => {
+                if (message.sender === 'system') return <p key={index} className="mx-auto max-w-[85%] text-balance text-center text-xs text-muted-foreground">{message.body}</p>
+                const mine = message.sender === 'homeowner'
+                return <div key={index} className={cn('max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed', mine ? 'self-end rounded-br-sm bg-primary text-primary-foreground' : 'self-start rounded-bl-sm bg-muted text-foreground')}>
+                  <p className="text-pretty">{message.body}</p>
+                  <p className={cn('mt-1 text-[10px]', mine ? 'text-primary-foreground/70' : 'text-muted-foreground')}>{formatDate(message.created_at)}</p>
+                </div>
+              })}
+            </div>
+            <div className="flex flex-col gap-2">
+              <Textarea placeholder="Write a message…" value={drafts[thread.thread_id] ?? ''} onChange={(event) => setDrafts((current) => ({ ...current, [thread.thread_id]: event.target.value }))} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); void sendThreadMessage(thread.thread_id) } }} />
+              <Button className="self-end" onClick={() => sendThreadMessage(thread.thread_id)} disabled={sending === thread.thread_id || !drafts[thread.thread_id]?.trim()}>{sending === thread.thread_id ? 'Sending…' : 'Send'}</Button>
+            </div>
+          </CardContent>
+        </Card>)}
+      </section>}
 
       <section className="flex flex-col gap-4" aria-labelledby="activity-heading"><h2 id="activity-heading" className="text-xl font-semibold">All activity</h2>{activity.map((group) => <Card key={group.name}><CardHeader><CardTitle className="text-base">{group.name}</CardTitle></CardHeader><CardContent className="flex flex-col gap-4">{group.bids.map((bid) => <p key={`bid-${bid.share_token}`} className="text-sm">{bid.status === 'accepted' && <span className="mr-1">🎉</span>}Sent a {formatMoney(bid.total_price)} bid · <Link className="font-medium underline" href={`/p/${bid.share_token}`}>View bid</Link>{bid.status === 'accepted' && ' · Accepted'}</p>)}{group.questions.map((question) => <div key={`question-${question.id}`} className="flex flex-col gap-1 text-sm"><p>Asked: {question.question}</p>{question.answer && <p className="rounded-lg bg-muted p-3">Your answer: {question.answer}</p>}</div>)}{group.visits.map((visit) => <p key={`visit-${visit.id}`} className="text-sm">Offered a free in-person estimate</p>)}</CardContent></Card>)}</section>
     </div>
