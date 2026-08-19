@@ -45,6 +45,7 @@ export function ContractorThread({ token }: { token: string }) {
   const [thread, setThread] = useState<Thread | null | undefined>(undefined)
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
+  const sendingRef = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -60,15 +61,28 @@ export function ContractorThread({ token }: { token: string }) {
   }, [token])
 
   useEffect(() => {
+    const interval = window.setInterval(async () => {
+      if (document.hidden || sendingRef.current) return
+      const { data, error } = await createClient().rpc('get_contractor_thread', { p_token: token })
+      if (!error && data && !sendingRef.current) {
+        setThread((current) => (current ? (data as Thread) : current))
+      }
+    }, 12000)
+    return () => window.clearInterval(interval)
+  }, [token])
+
+  useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
   }, [thread?.messages.length])
 
   async function sendMessage() {
     const body = draft.trim()
     if (!body || sending) return
+    sendingRef.current = true
     setSending(true)
     const { data, error } = await createClient().rpc('send_thread_message', { p_token: token, p_body: body })
     setSending(false)
+    sendingRef.current = false
     if (!error && data?.ok) {
       setDraft('')
       setThread((current) =>

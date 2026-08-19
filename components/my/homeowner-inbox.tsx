@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Check, Clipboard, ExternalLink, MapPin, Share2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -43,6 +43,7 @@ export function HomeownerInbox({ token }: { token: string }) {
   const [answering, setAnswering] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [sending, setSending] = useState<string | null>(null)
+  const sendingRef = useRef(false)
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -51,6 +52,17 @@ export function HomeownerInbox({ token }: { token: string }) {
       if (active) setInbox(error || !data ? null : data as Inbox)
     })
     return () => { active = false }
+  }, [token])
+
+  useEffect(() => {
+    const interval = window.setInterval(async () => {
+      if (document.hidden || sendingRef.current) return
+      const { data, error } = await createClient().rpc('get_owner_inbox', { p_token: token })
+      if (!error && data && !sendingRef.current) {
+        setInbox((current) => (current ? (data as Inbox) : current))
+      }
+    }, 12000)
+    return () => window.clearInterval(interval)
   }, [token])
 
   const pendingQuestions = inbox?.questions.filter((question) => question.status === 'pending') ?? []
@@ -91,9 +103,11 @@ export function HomeownerInbox({ token }: { token: string }) {
   async function sendThreadMessage(threadId: string) {
     const body = drafts[threadId]?.trim()
     if (!body || sending) return
+    sendingRef.current = true
     setSending(threadId)
     const { data, error } = await createClient().rpc('send_owner_message', { p_token: token, p_thread_id: threadId, p_body: body })
     setSending(null)
+    sendingRef.current = false
     if (!error && data?.ok) {
       setDrafts((current) => ({ ...current, [threadId]: '' }))
       setInbox((current) => current ? {
