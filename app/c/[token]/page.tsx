@@ -10,8 +10,8 @@ export default async function ContractorThreadPage({ params }: PageProps) {
 }
 
 export const metadata = {
-  title: 'Your Job Workspace | HomeBids',
-  description: 'Track your bid, message the homeowner, and follow the job in one place.',
+  title: 'Your HomeBids lead',
+  description: 'Your private HomeBids lead — act on this job, offer estimates, and follow it to close.',
 }
 
 export const dynamic = 'force-dynamic'

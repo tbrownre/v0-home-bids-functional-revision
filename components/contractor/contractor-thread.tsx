@@ -1,72 +1,122 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
-import { ExternalLink, MapPin, Send } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 
-type VisitStatus = 'pending' | 'accepted' | 'declined' | 'countered'
-type VisitMeta = { status?: VisitStatus } | null
+const HB_CSS = `
+:root{--blue:#0A84FF;--blue-press:#0070E0;--blue-tint:#EBF4FF;--blue-line:#CFE5FF;--ink:#17191C;--ink-2:#5C6167;--ink-3:#8A9097;--bg:#F6F5F2;--card:#FFF;--line:#E7E5E0;--green:#16803B;--green-bg:#EAF7EE;--r:22px;--pill:999px;--shadow:0 1px 2px rgba(23,25,28,.04),0 8px 24px rgba(23,25,28,.04)}
+.hbc *{box-sizing:border-box}
+.hbc{margin:0;background:var(--bg);color:var(--ink);font-family:'Red Hat Text',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:17px;line-height:1.55;min-height:100vh}
+.hbc button,.hbc a{font:inherit}.hbc button{cursor:pointer}.hbc a{color:var(--blue);text-decoration:none}
+.hbc .wrap{max-width:640px;margin:0 auto;padding:26px 20px 72px}
+.hbc .logo{font-family:'Red Hat Display',sans-serif;font-weight:800;font-size:20px}.hbc .logo b{color:var(--blue)}
+.hbc .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.hbc .private{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);font-size:13px;font-weight:700}
+.hbc .statusrow{display:flex;gap:9px;align-items:center;margin-top:28px}
+.hbc .badge{display:inline-flex;align-items:center;padding:5px 11px;border-radius:var(--pill);font-size:13px;font-weight:700}
+.hbc .badge-blue{background:var(--blue-tint);color:var(--blue)}.hbc .badge-dark{background:var(--ink);color:#fff}.hbc .badge-gray{background:#ECEAE5;color:var(--ink-2)}.hbc .badge-green{background:var(--green-bg);color:var(--green)}
+.hbc .jobid{font-family:'Red Hat Mono',monospace;color:var(--ink-3);font-size:12px}
+.hbc .title{font-family:'Red Hat Display',sans-serif;font-size:clamp(32px,8vw,42px);line-height:1.08;letter-spacing:-.025em;margin:9px 0 0}
+.hbc .meta{color:var(--ink-2);font-size:15px;margin-top:10px}
+.hbc .scope{margin:10px 0 0;max-width:54ch}
+.hbc .privacy{margin-top:12px;color:var(--ink-3);font-size:13px}
+.hbc .sec{margin-top:30px}
+.hbc .eyebrow{color:var(--blue);font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase}.hbc .eyebrow.green{color:var(--green)}.hbc .eyebrow.gray{color:var(--ink-3)}
+.hbc .card{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:24px}
+.hbc .hero{border-color:var(--blue-line);background:linear-gradient(180deg,#F3F8FF 0%,#FFF 70%)}
+.hbc .hero h2{font-family:'Red Hat Display',sans-serif;font-size:28px;line-height:1.18;margin:6px 0 0;letter-spacing:-.015em}
+.hbc .sub{color:var(--ink-2);font-size:15px;margin-top:7px}
+.hbc .amount{font-family:'Red Hat Display',sans-serif;font-size:44px;font-weight:800;letter-spacing:-.03em;margin-top:16px}
+.hbc .primary{width:100%;min-height:58px;border:0;border-radius:var(--pill);background:var(--blue);color:#fff;font-weight:800;font-size:17px;padding:14px 20px;margin-top:20px;display:flex;align-items:center;justify-content:center}.hbc .primary:hover{background:var(--blue-press)}
+.hbc .secondary{width:100%;min-height:54px;border:1.5px solid var(--line);border-radius:var(--pill);background:#fff;color:var(--ink);font-weight:700;font-size:16px;padding:12px 18px;margin-top:10px;display:flex;align-items:center;justify-content:center}
+.hbc .textbtn{display:block;width:100%;border:0;background:transparent;color:var(--blue);font-weight:700;padding:14px 8px;margin-top:2px;text-align:center}
+.hbc .quiet{margin-top:15px;padding-top:15px;border-top:1px solid var(--line);font-size:14px;color:var(--ink-2)}
+.hbc .keyfacts{margin-top:17px;background:#F8F7F4;border-radius:16px;padding:4px 16px}
+.hbc .fact{display:flex;justify-content:space-between;gap:18px;padding:11px 0;border-bottom:1px solid var(--line);font-size:15px}.hbc .fact:last-child{border-bottom:0}.hbc .fact span{color:var(--ink-2)}
+.hbc .nextbox{margin-top:16px;padding:15px 16px;border-radius:15px;background:#F8F7F4;font-size:15px;color:var(--ink-2)}.hbc .nextbox strong{color:var(--ink)}
+.hbc .statusline{display:flex;align-items:center;gap:8px;margin-top:10px;color:var(--ink-2);font-size:14px}
+.hbc .dot{width:9px;height:9px;border-radius:50%;background:var(--blue)}
+.hbc .quote{font-size:19px;font-weight:700;line-height:1.45;margin-top:18px;padding:16px;border-radius:15px;background:#F8F7F4}
+.hbc .appt{font-family:'Red Hat Display',sans-serif;font-size:30px;font-weight:800;line-height:1.18;margin-top:10px}
+.hbc .addr{font-size:17px;font-weight:700;margin-top:10px}
+.hbc .details{margin-top:18px;border-top:1px solid var(--line);padding-top:4px}
+.hbc .details summary{cursor:pointer;list-style:none;font-weight:700;padding:14px 0}.hbc .details summary::-webkit-details-marker{display:none}
+.hbc .detailrow{display:flex;justify-content:space-between;gap:18px;padding:10px 0;border-top:1px solid var(--line);font-size:15px}.hbc .detailrow span:first-child{color:var(--ink-2)}
+.hbc .panel{display:none;margin-top:16px;padding:16px;background:#F8F7F4;border-radius:16px}.hbc .panel.on{display:block}
+.hbc .slotrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.hbc .slotinput{width:100%;min-height:48px;border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;background:#fff;color:var(--ink);font-size:15px}.hbc .slotinput:focus{outline:none;border-color:var(--blue)}
+.hbc .contactrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}.hbc .contactrow .secondary{margin:0}
+.hbc .footer{margin-top:52px;padding-top:20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:end;color:var(--ink-3);font-size:13px}.hbc .help{color:var(--blue);font-weight:700}
+.hbc .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,8px);background:#17191C;color:#fff;padding:11px 18px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:.18s;z-index:60;max-width:90vw;text-align:center}.hbc .toast.on{opacity:1;transform:translate(-50%,0)}
+@media(max-width:480px){.hbc .wrap{padding:22px 16px 60px}.hbc .card{padding:20px}.hbc .hero h2{font-size:25px}.hbc .amount{font-size:40px}.hbc .footer{align-items:flex-start;flex-direction:column}.hbc .primary,.hbc .secondary{min-height:56px}.hbc .contactrow,.hbc .slotrow{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.hbc *{transition:none!important}}
+`
 
-function visitStatusChip(status?: VisitStatus) {
-  if (!status) return null
-  const styles: Record<VisitStatus, string> = {
-    pending: 'bg-muted text-muted-foreground',
-    accepted: 'bg-green-600 text-white',
-    declined: 'bg-destructive/10 text-destructive',
-    countered: 'bg-amber-500/15 text-amber-700',
-  }
-  return <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium capitalize', styles[status] ?? 'bg-muted text-muted-foreground')}>{status}</span>
-}
+const HB_PHONE = '+12832291348'
 
 type Job = {
   title: string
   job_ref: string
   description?: string | null
+  category?: string | null
   location?: string | null
+  zip?: string | null
+  urgency?: string | null
   status: string
+  photos?: number | null
   homeowner_first: string
 }
-type Bid = { share_token: string; total_price: number | string; status: string; created_at: string }
-type Message = {
-  id?: string
-  sender: 'contractor' | 'homeowner' | 'system'
-  kind?: string | null
-  body: string
-  meta?: VisitMeta
-  created_at: string
+type Bid = { amount: number | string; status: string; share_token: string; created_at: string; first_viewed_at?: string | null } | null
+type Slot = { label: string; sub: string }
+type SlotsMsg = { id: string; status: string; slots: Slot[]; chosen_index?: number | null; chosen_label?: string | null } | null
+type Counter = { id: string; body: string } | null
+type Confirmed = { when: string } | null
+type PageState = {
+  state: 'new' | 'live' | 'estimatewait' | 'confirm' | 'scheduled' | 'finalsent' | 'hired' | 'filled'
+  unlocked: boolean
+  bid: Bid
+  slots_msg: SlotsMsg
+  confirmed: Confirmed
+  counter: Counter
+  visit_address: string | null
 }
-type Thread = { job: Job; approved: boolean; bids: Bid[]; messages: Message[] }
+type Contact = { name: string; phone: string } | null
+type Thread = { job: Job; page_state: PageState; homeowner_contact: Contact; messages?: unknown[] }
 
-function formatMoney(value: number | string) {
+function money(value: number | string) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value) || 0)
 }
 
-function formatTime(value: string) {
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(value))
+function relativeTime(value: string) {
+  const then = new Date(value).getTime()
+  const diff = Date.now() - then
+  const mins = Math.round(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`
+  const hours = Math.round(mins / 60)
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+  const days = Math.round(hours / 24)
+  if (days === 1) return 'yesterday'
+  if (days < 7) return `${days} days ago`
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(value))
 }
 
-function bidStatusBadge(status: string) {
-  if (status === 'accepted') return <Badge className="bg-green-600 text-white hover:bg-green-600">Approved 🎉</Badge>
-  return <Badge variant="secondary">{status}</Badge>
+function sms(body: string) {
+  return `sms:${HB_PHONE}?body=${encodeURIComponent(body)}`
 }
 
 export function ContractorThread({ token }: { token: string }) {
   const [thread, setThread] = useState<Thread | null | undefined>(undefined)
-  const [draft, setDraft] = useState('')
-  const [sending, setSending] = useState(false)
-  const [proposing, setProposing] = useState(false)
-  const [visitWhen, setVisitWhen] = useState('')
-  const [sendingVisit, setSendingVisit] = useState(false)
-  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [composerOpen, setComposerOpen] = useState(false)
+  const [rows, setRows] = useState<Slot[]>([
+    { label: '', sub: '' },
+    { label: '', sub: '' },
+    { label: '', sub: '' },
+  ])
+  const [busy, setBusy] = useState(false)
+  const [toast, setToast] = useState('')
   const sendingRef = useRef(false)
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     let active = true
@@ -84,266 +134,269 @@ export function ContractorThread({ token }: { token: string }) {
     const interval = window.setInterval(async () => {
       if (document.hidden || sendingRef.current) return
       const { data, error } = await createClient().rpc('get_contractor_thread', { p_token: token })
-      if (!error && data && !sendingRef.current) {
-        setThread((current) => (current ? (data as Thread) : current))
-      }
+      if (!error && data && !sendingRef.current) setThread(data as Thread)
     }, 12000)
     return () => window.clearInterval(interval)
   }, [token])
 
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
-  }, [thread?.messages.length])
+  function say(message: string) {
+    setToast(message)
+    if (toastRef.current) clearTimeout(toastRef.current)
+    toastRef.current = setTimeout(() => setToast(''), 1800)
+  }
 
-  async function sendMessage() {
-    const body = draft.trim()
-    if (!body || sending) return
+  async function refetch() {
+    const { data, error } = await createClient().rpc('get_contractor_thread', { p_token: token })
+    if (!error && data) setThread(data as Thread)
+  }
+
+  async function sendSlots() {
+    const filled = rows.filter((row) => row.label.trim() && row.sub.trim())
+    if (!filled.length || busy) return
+    const first = thread?.job.homeowner_first ?? 'the homeowner'
     sendingRef.current = true
-    setSending(true)
-    const { data, error } = await createClient().rpc('send_thread_message', { p_token: token, p_body: body })
-    setSending(false)
+    setBusy(true)
+    const { data, error } = await createClient().rpc('propose_visit_slots', { p_token: token, p_slots: filled.map((row) => ({ label: row.label, sub: row.sub })) })
+    setBusy(false)
     sendingRef.current = false
     if (!error && data?.ok) {
-      setDraft('')
-      setThread((current) =>
-        current
-          ? { ...current, messages: [...current.messages, { sender: 'contractor', body, created_at: new Date().toISOString() }] }
-          : current,
-      )
+      setComposerOpen(false)
+      setRows([{ label: '', sub: '' }, { label: '', sub: '' }, { label: '', sub: '' }])
+      say(`Saved — ${first} has been notified`)
+      await refetch()
     }
   }
 
-  async function sendProposal() {
-    const when = visitWhen.trim()
-    if (!when || sendingVisit) return
+  async function confirmTime() {
+    const ps = thread?.page_state
+    if (!ps || busy) return
     sendingRef.current = true
-    setSendingVisit(true)
-    const { data, error } = await createClient().rpc('propose_visit', { p_token: token, p_when: when })
-    setSendingVisit(false)
-    sendingRef.current = false
-    if (!error && data?.ok) {
-      setVisitWhen('')
-      setProposing(false)
-      setThread((current) =>
-        current
-          ? { ...current, messages: [...current.messages, { sender: 'contractor', kind: 'visit_proposal', body: when, meta: { status: 'pending' }, created_at: new Date().toISOString() }] }
-          : current,
-      )
+    setBusy(true)
+    let result
+    if (ps.slots_msg && ps.slots_msg.status === 'chosen') {
+      result = await createClient().rpc('confirm_visit_slot', { p_token: token, p_message_id: ps.slots_msg.id })
+    } else if (ps.counter) {
+      result = await createClient().rpc('accept_counter', { p_token: token, p_message_id: ps.counter.id })
     }
-  }
-
-  async function confirmCounter(messageId: string, body: string) {
-    if (confirmingId) return
-    sendingRef.current = true
-    setConfirmingId(messageId)
-    const { data, error } = await createClient().rpc('accept_counter', { p_token: token, p_message_id: messageId })
-    setConfirmingId(null)
+    setBusy(false)
     sendingRef.current = false
-    if (!error && data?.ok) {
-      setThread((current) =>
-        current
-          ? {
-              ...current,
-              messages: [
-                ...current.messages.map((message) => (message.id === messageId ? { ...message, meta: { ...(message.meta ?? {}), status: 'accepted' as VisitStatus } } : message)),
-                { sender: 'system', kind: 'visit_confirmed', body: `Visit confirmed: ${body}`, created_at: new Date().toISOString() },
-              ],
-            }
-          : current,
-      )
+    if (result && !result.error && result.data?.ok) {
+      say('Confirmed')
+      await refetch()
     }
   }
 
   if (thread === undefined) {
-    return <main className="mx-auto flex min-h-screen max-w-2xl items-center justify-center p-6 text-muted-foreground">Loading your job workspace…</main>
+    return <main className="hbc"><div className="wrap" style={{ color: 'var(--ink-2)' }}>Loading your job…</div></main>
   }
   if (!thread) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-3 p-6 text-center">
-        <h1 className="text-2xl font-semibold">This link isn&apos;t valid</h1>
-        <p className="text-muted-foreground">Check the link and try again.</p>
+      <main className="hbc">
+        <div className="wrap">
+          <div className="logo"><b>HOME</b>BIDS</div>
+          <h1 className="title" style={{ fontSize: 30 }}>This link isn&apos;t valid</h1>
+          <p className="meta">Check the link and try again.</p>
+        </div>
       </main>
     )
   }
 
-  const { job, approved, bids, messages } = thread
-  const latestConfirmed = [...messages].reverse().find((message) => message.kind === 'visit_confirmed')
-  const newestBid = bids.length ? [...bids].sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))[0] : null
-  const bidLink = `sms:+12832291348?body=${encodeURIComponent(`Hi! I want to bid on this job (Job: ${job.job_ref})`)}`
+  const { job, page_state: ps, homeowner_contact: contact } = thread
+  const state = ps.state
+  const first = job.homeowner_first
+  const badgeMap: Record<PageState['state'], [string, string]> = {
+    new: ['New lead', 'badge badge-blue'],
+    live: ['Bid live', 'badge badge-blue'],
+    estimatewait: [`Waiting on ${first}`, 'badge badge-blue'],
+    confirm: ['Reply needed', 'badge badge-blue'],
+    scheduled: ['Estimate scheduled', 'badge badge-dark'],
+    finalsent: ['Final bid sent', 'badge badge-blue'],
+    hired: ['Hired', 'badge badge-green'],
+    filled: ['Filled', 'badge badge-gray'],
+  }
+  const [badgeText, badgeClass] = badgeMap[state]
+  const locWithZip = `${job.location ?? ''}${job.zip ? ` · ${job.zip}` : ''}`
+  const metaText = ps.unlocked && ps.visit_address ? ps.visit_address : locWithZip
+  const amount = ps.bid ? money(ps.bid.amount) : ''
+  const slotsText = ps.slots_msg?.slots?.map((slot) => `${slot.label} ${slot.sub}`).join(' and ') ?? ''
+
+  const composer = (
+    <div className={`panel${composerOpen ? ' on' : ''}`}>
+      <div style={{ fontWeight: 800, fontSize: 18 }}>Offer a free estimate</div>
+      <div className="sub">Choose one to three times. {first} will see only these options.</div>
+      {rows.map((row, index) => (
+        <div className="slotrow" key={index}>
+          <input
+            className="slotinput"
+            placeholder="Tuesday, Aug 18"
+            value={row.label}
+            onChange={(event) => setRows((current) => current.map((r, i) => (i === index ? { ...r, label: event.target.value } : r)))}
+          />
+          <input
+            className="slotinput"
+            placeholder="12:00–2:00 PM"
+            value={row.sub}
+            onChange={(event) => setRows((current) => current.map((r, i) => (i === index ? { ...r, sub: event.target.value } : r)))}
+          />
+        </div>
+      ))}
+      <button className="primary" onClick={sendSlots} disabled={busy}>{busy ? 'Sending…' : `Send times to ${first}`}</button>
+    </div>
+  )
 
   return (
-    <main className="min-h-screen bg-background px-4 py-8 text-foreground sm:px-6 lg:py-12">
-      <div className="mx-auto flex max-w-2xl flex-col gap-8">
-        <header className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">{job.job_ref}</span>
-            <Badge variant="secondary">{job.status}</Badge>
+    <main className="hbc">
+      <style>{HB_CSS}</style>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@600;700;800&family=Red+Hat+Text:wght@400;500;600;700&family=Red+Hat+Mono:wght@500;600&display=swap"
+        rel="stylesheet"
+      />
+      <div className="wrap">
+        <header>
+          <div className="top">
+            <div className="logo"><b>HOME</b>BIDS</div>
+            <div className="private">🔒 Private lead</div>
           </div>
-          <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">{job.title}</h1>
-          <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>For {job.homeowner_first}&apos;s job</span>
-            {job.location && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span className="flex items-center gap-1">
-                  <MapPin data-icon="inline-start" />
-                  {job.location}
-                </span>
-              </>
-            )}
-          </p>
-          {job.description && <p className="text-pretty leading-6 text-muted-foreground">{job.description}</p>}
+          <div className="statusrow">
+            <span className={badgeClass}>{badgeText}</span>
+            <span className="jobid">{job.job_ref}</span>
+          </div>
+          <h1 className="title">{job.title}</h1>
+          <div className="meta">{metaText}</div>
+          {job.description && <p className="scope">{job.description}</p>}
+          <div className="privacy">Keep this link private. It lets you act on this job.</div>
         </header>
 
-        <section aria-label="Your bid">
-          {!newestBid ? (
-            <a
-              href={bidLink}
-              className="flex min-h-14 w-full items-center justify-center rounded-lg bg-primary px-6 py-4 text-center text-base font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-            >
-              Finish &amp; send your bid
-            </a>
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-col gap-2">
-                  <p className="text-2xl font-semibold">{formatMoney(newestBid.total_price)}</p>
-                  {bidStatusBadge(newestBid.status)}
-                </div>
-                <Button variant="outline" asChild>
-                  <Link href={`/p/${newestBid.share_token}`}>
-                    View bid page <ExternalLink data-icon="inline-end" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </section>
-
-        {approved && (
-          <div className="rounded-lg border border-green-600/40 bg-green-600/10 px-4 py-3 text-sm font-medium text-green-700">
-            Approved — you&apos;re connected with {job.homeowner_first} directly.
-          </div>
+        {state === 'new' && (
+          <div className="sec"><div className="card hero">
+            <div className="eyebrow">Next action</div>
+            <h2>Send your bid by text</h2>
+            <div className="sub">Review the basics here, then tap below. Bid Builder stays in Messages and HomeBids delivers the finished bid to {first}.</div>
+            <div className="keyfacts">
+              <div className="fact"><span>Job</span><strong>{job.category}</strong></div>
+              <div className="fact"><span>Timing</span><strong>{job.urgency}</strong></div>
+              <div className="fact"><span>Photos</span><strong>{job.photos ?? 0} available</strong></div>
+              <div className="fact"><span>Location</span><strong>{job.location}</strong></div>
+            </div>
+            <a className="primary" href={sms(`Hi! I want to bid on this job (Job: ${job.job_ref})`)}>Build bid in Messages</a>
+            <a className="textbtn" href={sms(`Hi! I have a question about this job (Job: ${job.job_ref}): `)}>Ask {first} a question first</a>
+            <div className="quiet">No dashboard to learn. Build the bid by text like normal.</div>
+          </div></div>
         )}
 
-        <section className="flex flex-col gap-4" aria-labelledby="messages-heading">
-          <h2 id="messages-heading" className="text-xl font-semibold">
-            Messages with {job.homeowner_first}
-          </h2>
-          {latestConfirmed && (
-            <div className="rounded-lg border border-green-600/40 bg-green-600/10 px-4 py-3 text-sm font-medium text-green-700">
-              ✓ {latestConfirmed.body}
-            </div>
-          )}
-          <div ref={scrollRef} className="flex max-h-[420px] flex-col gap-3 overflow-y-auto rounded-lg border border-border bg-muted/30 p-4">
-            {messages.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No messages yet. Say hello 👋</p>}
-            {messages.map((message, index) => {
-              const key = message.id ?? index
-              if (message.kind === 'visit_confirmed') {
-                return (
-                  <p key={key} className="mx-auto max-w-[85%] text-balance text-center text-sm font-medium text-green-700">
-                    ✓ {message.body}
-                  </p>
-                )
-              }
-              if (message.kind === 'visit_proposal') {
-                return (
-                  <div key={key} className="max-w-[80%] self-end rounded-2xl border border-border bg-background px-4 py-3 text-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">📅 Proposed visit</span>
-                      {visitStatusChip(message.meta?.status)}
-                    </div>
-                    <p className="mt-1 text-pretty">{message.body}</p>
-                  </div>
-                )
-              }
-              if (message.kind === 'visit_counter') {
-                const status = message.meta?.status
-                return (
-                  <div key={key} className="max-w-[80%] self-start rounded-2xl border border-border bg-background px-4 py-3 text-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">📅 Suggested time</span>
-                      {visitStatusChip(status)}
-                    </div>
-                    <p className="mt-1 text-pretty">{message.body}</p>
-                    {status === 'pending' && message.id && (
-                      <Button size="sm" className="mt-2" onClick={() => confirmCounter(message.id!, message.body)} disabled={confirmingId === message.id}>
-                        {confirmingId === message.id ? 'Confirming…' : 'Confirm this time'}
-                      </Button>
-                    )}
-                  </div>
-                )
-              }
-              if (message.sender === 'system') {
-                return (
-                  <p key={key} className="mx-auto max-w-[85%] text-balance text-center text-xs text-muted-foreground">
-                    {message.body}
-                  </p>
-                )
-              }
-              const mine = message.sender === 'contractor'
-              return (
-                <div
-                  key={key}
-                  className={cn(
-                    'max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
-                    mine
-                      ? 'self-end rounded-br-sm bg-primary text-primary-foreground'
-                      : 'self-start rounded-bl-sm bg-muted text-foreground',
-                  )}
-                >
-                  <p className="text-pretty">{message.body}</p>
-                  <p className={cn('mt-1 text-[10px]', mine ? 'text-primary-foreground/70' : 'text-muted-foreground')}>{formatTime(message.created_at)}</p>
-                </div>
-              )
-            })}
-          </div>
+        {state === 'live' && (
+          <div className="sec"><div className="card hero">
+            <div className="eyebrow">Bid delivered</div>
+            <h2>{first} has your {amount} bid</h2>
+            <div className="amount">{amount}</div>
+            <div className="statusline"><span className="dot" />{ps.bid?.first_viewed_at ? `Viewed by ${first} ${relativeTime(ps.bid.first_viewed_at)}` : 'Delivered — not viewed yet'}</div>
+            <div className="nextbox"><strong>You&apos;re all set.</strong> HomeBids will text you when {first} accepts, asks a question, or responds to an estimate offer.</div>
+            <button className="secondary" onClick={() => setComposerOpen((value) => !value)}>Offer a free in-person estimate</button>
+            <a className="textbtn" href={sms(`I want to update my bid for (Job: ${job.job_ref})`)}>Modify bid in Messages</a>
+            {composer}
+          </div></div>
+        )}
 
-          <div className="flex flex-col gap-2">
-            <Textarea
-              placeholder={`Message ${job.homeowner_first}…`}
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && event.keyCode !== 229) {
-                  event.preventDefault()
-                  void sendMessage()
-                }
-              }}
-            />
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button variant="outline" onClick={() => setProposing((value) => !value)}>
-                📅 Propose visit time
-              </Button>
-              <Button className="gap-2" onClick={sendMessage} disabled={sending || !draft.trim()}>
-                <Send data-icon="inline-start" />
-                {sending ? 'Sending…' : 'Send'}
-              </Button>
-            </div>
-            {proposing && (
-              <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
-                <Input
-                  placeholder="e.g. Tomorrow 12–2pm"
-                  value={visitWhen}
-                  onChange={(event) => setVisitWhen(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) {
-                      event.preventDefault()
-                      void sendProposal()
-                    }
-                  }}
-                />
-                <Button className="self-end" onClick={sendProposal} disabled={sendingVisit || !visitWhen.trim()}>
-                  {sendingVisit ? 'Sending…' : 'Send proposal'}
-                </Button>
+        {state === 'estimatewait' && (
+          <div className="sec"><div className="card hero">
+            <div className="eyebrow">Estimate offered</div>
+            <h2>Waiting for {first} to pick a time</h2>
+            <div className="sub">You offered {slotsText}.</div>
+            <div className="nextbox"><strong>Nothing else to do.</strong> HomeBids will text you as soon as {first} picks a time or suggests another one.</div>
+            <button className="textbtn" onClick={() => setComposerOpen((value) => !value)}>Change offered times</button>
+            {composer}
+          </div></div>
+        )}
+
+        {state === 'confirm' && (
+          <div className="sec"><div className="card hero">
+            <div className="eyebrow">{first} replied</div>
+            <h2>{first} replied</h2>
+            <div className="quote">{ps.counter ? ps.counter.body : ps.slots_msg?.chosen_label}</div>
+            <button className="primary" onClick={confirmTime} disabled={busy}>{busy ? 'Confirming…' : 'Yes — confirm'}</button>
+            <button className="secondary" onClick={() => setComposerOpen((value) => !value)}>Suggest another time</button>
+            <div className="quiet">Once you confirm, HomeBids sends {first} the confirmation and unlocks the service address for you.</div>
+            {composer}
+          </div></div>
+        )}
+
+        {state === 'scheduled' && (
+          <div className="sec"><div className="card hero">
+            <div className="eyebrow green">Estimate scheduled</div>
+            <h2>You&apos;re meeting {first}</h2>
+            <div className="appt">{ps.confirmed?.when}</div>
+            <div className="addr">{ps.visit_address ? ps.visit_address : `${job.location} — exact address appears here once shared`}</div>
+            {ps.visit_address && <a className="primary" href={`https://maps.apple.com/?q=${encodeURIComponent(ps.visit_address)}`}>Get directions</a>}
+            {contact && (
+              <div className="contactrow">
+                <a className="secondary" href={`sms:${contact.phone}`}>Text {first}</a>
+                <a className="secondary" href={`tel:${contact.phone}`}>Call {first}</a>
               </div>
             )}
-            {!approved && (
-              <p className="text-sm text-muted-foreground">Contact details stay private until the homeowner approves a bid.</p>
+            <a className="secondary" href={sms(`I'm ready to confirm the final bid for (Job: ${job.job_ref})`)}>Confirm final bid in Messages</a>
+            <button className="textbtn" onClick={() => setComposerOpen((value) => !value)}>Need to change the time?</button>
+            <div className="nextbox"><strong>After the visit:</strong> confirm the final quote in Messages. HomeBids will send it back to {first} for approval.</div>
+            {composer}
+          </div></div>
+        )}
+
+        {state === 'finalsent' && (
+          <div className="sec"><div className="card hero">
+            <div className="eyebrow">Final bid delivered</div>
+            <h2>{first} has your final {amount} quote</h2>
+            <div className="amount">{amount}</div>
+            <div className="nextbox"><strong>You&apos;re all set.</strong> HomeBids will text you if {first} has a question or hires you.</div>
+            <a className="textbtn" href={sms(`I need to update my final bid for (Job: ${job.job_ref})`)}>Need to change it?</a>
+          </div></div>
+        )}
+
+        {state === 'hired' && (
+          <div className="sec"><div className="card hero">
+            <div className="eyebrow green">You got the job</div>
+            <h2>{first} hired you</h2>
+            <div className="amount">{amount}</div>
+            <div className="sub">The bid is accepted. Coordinate the work directly with {first}.</div>
+            {contact && (
+              <div className="contactrow">
+                <a className="secondary" href={`sms:${contact.phone}`}>Text {first}</a>
+                <a className="secondary" href={`tel:${contact.phone}`}>Call {first}</a>
+              </div>
             )}
+            <div className="nextbox"><strong>Your accepted bid stays saved here</strong> so both sides have the same project record.</div>
+          </div></div>
+        )}
+
+        {state === 'filled' && (
+          <div className="sec"><div className="card">
+            <div className="eyebrow gray">Job filled</div>
+            <h2 style={{ fontFamily: "'Red Hat Display',sans-serif", fontSize: 28, lineHeight: 1.18, margin: '6px 0 0' }}>{first} chose another pro</h2>
+            <div className="sub">No action needed. Your bid stays saved, and this job is now closed.</div>
+          </div></div>
+        )}
+
+        <div className="sec"><details className="card details" open>
+          <summary>Job details</summary>
+          <div className="detailrow"><span>Service</span><strong>{job.category}</strong></div>
+          <div className="detailrow"><span>Details</span><strong>{job.description}</strong></div>
+          <div className="detailrow"><span>Timeline</span><strong>{job.urgency}</strong></div>
+          <div className="detailrow"><span>Location</span><strong>{locWithZip}</strong></div>
+          <div className="detailrow"><span>Photos</span><strong>{job.photos ?? 0}</strong></div>
+        </details></div>
+
+        <footer className="footer">
+          <div>
+            <div className="logo"><b>HOME</b>BIDS</div>
+            <div>Better bids. Better homes.</div>
           </div>
-        </section>
+          <div>
+            <a className="help" href={`sms:${HB_PHONE}`}>Need help? Text HomeBids.</a>
+            <div>© 2026 HomeBids.ai</div>
+          </div>
+        </footer>
       </div>
+      <div className={`toast${toast ? ' on' : ''}`} role="status" aria-live="polite">{toast}</div>
     </main>
   )
 }
