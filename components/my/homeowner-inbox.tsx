@@ -349,7 +349,14 @@ export function HomeownerInbox({ token }: { token: string }) {
           </div></div>
         )}
 
-        {threads.map((thread) => {
+        {[...threads]
+          .map((thread, index) => ({ thread, index }))
+          .sort((a, b) => {
+            const rank = (state: string) => (state === 'hired' ? 0 : state === 'closed' ? 2 : 1)
+            const diff = rank(a.thread.page_state.state) - rank(b.thread.page_state.state)
+            return diff !== 0 ? diff : a.index - b.index
+          })
+          .map(({ thread }) => {
           const ps = thread.page_state
           const name = contractorName(thread.contractor)
           const contact = thread.contractor_contact
