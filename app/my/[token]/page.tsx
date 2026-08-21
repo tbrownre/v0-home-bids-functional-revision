@@ -10,8 +10,8 @@ export default async function HomeownerInboxPage({ params }: PageProps) {
 }
 
 export const metadata = {
-  title: 'Job Inbox | HomeBids',
-  description: 'Review bids, questions, and visit offers for your HomeBids job.',
+  title: 'Your HomeBids project',
+  description: 'Your private HomeBids project — review bids, schedule estimates, and hire a pro.',
 }
 
 export const dynamic = 'force-dynamic'

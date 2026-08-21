@@ -1,249 +1,478 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
-import { Check, Clipboard, ExternalLink, MapPin, Share2 } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { cn } from '@/lib/utils'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-type VisitStatus = 'pending' | 'accepted' | 'declined' | 'countered'
-type VisitMeta = { status?: VisitStatus } | null
+const HB_CSS = `
+:root{--blue:#0A84FF;--blue-press:#0070E0;--blue-tint:#EBF4FF;--blue-line:#CFE5FF;--ink:#17191C;--ink-2:#5C6167;--ink-3:#8A9097;--bg:#F6F5F2;--card:#FFF;--line:#E7E5E0;--green:#16803B;--green-bg:#EAF7EE;--amber:#8A6200;--amber-bg:#FFF4D8;--r:22px;--pill:999px;--shadow:0 1px 2px rgba(23,25,28,.04),0 8px 24px rgba(23,25,28,.04)}
+.hbo *{box-sizing:border-box}
+.hbo{margin:0;background:var(--bg);color:var(--ink);font-family:'Red Hat Text',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:17px;line-height:1.55;min-height:100vh}
+.hbo button,.hbo a{font:inherit}.hbo button{cursor:pointer}.hbo a{color:var(--blue);text-decoration:none}
+.hbo .wrap{max-width:640px;margin:0 auto;padding:26px 20px 72px}
+.hbo .logo{font-family:'Red Hat Display',sans-serif;font-weight:800;font-size:20px}.hbo .logo b{color:var(--blue)}
+.hbo .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.hbo .private{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);font-size:13px;font-weight:700}
+.hbo .statusrow{display:flex;gap:9px;align-items:center;margin-top:28px}
+.hbo .badge{display:inline-flex;align-items:center;padding:5px 11px;border-radius:var(--pill);font-size:13px;font-weight:700}
+.hbo .badge-blue{background:var(--blue-tint);color:var(--blue)}.hbo .badge-dark{background:var(--ink);color:#fff}.hbo .badge-gray{background:#ECEAE5;color:var(--ink-2)}.hbo .badge-green{background:var(--green-bg);color:var(--green)}
+.hbo .jobid{font-family:'Red Hat Mono',monospace;color:var(--ink-3);font-size:12px}
+.hbo .title{font-family:'Red Hat Display',sans-serif;font-size:clamp(32px,8vw,42px);line-height:1.08;letter-spacing:-.025em;margin:9px 0 0}
+.hbo .meta{color:var(--ink-2);font-size:15px;margin-top:10px}
+.hbo .scope{margin:10px 0 0;max-width:54ch}
+.hbo .privacy{margin-top:12px;color:var(--ink-3);font-size:13px}
+.hbo .sec{margin-top:30px}
+.hbo .eyebrow{color:var(--blue);font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase}.hbo .eyebrow.green{color:var(--green)}.hbo .eyebrow.gray{color:var(--ink-3)}
+.hbo .card{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:24px}
+.hbo .hero{border-color:var(--blue-line);background:linear-gradient(180deg,#F3F8FF 0%,#FFF 70%)}
+.hbo .hero h2{font-family:'Red Hat Display',sans-serif;font-size:28px;line-height:1.18;margin:6px 0 0;letter-spacing:-.015em}
+.hbo .sub{color:var(--ink-2);font-size:15px;margin-top:7px}
+.hbo .amount{font-family:'Red Hat Display',sans-serif;font-size:44px;font-weight:800;letter-spacing:-.03em;margin-top:16px}
+.hbo .old{font-family:'Red Hat Text';font-size:17px;font-weight:600;color:var(--ink-3);text-decoration:line-through;margin-left:8px}
+.hbo .person{display:flex;align-items:center;gap:12px;margin-top:14px}
+.hbo .avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--blue-tint);color:var(--blue);font-weight:800;flex:none}
+.hbo .person strong{display:block}.hbo .trust{font-size:14px;color:var(--ink-2);margin-top:1px}
+.hbo .primary{width:100%;min-height:58px;border:0;border-radius:var(--pill);background:var(--blue);color:#fff;font-weight:800;font-size:17px;padding:14px 20px;margin-top:20px;display:flex;align-items:center;justify-content:center}.hbo .primary:hover{background:var(--blue-press)}.hbo .primary:disabled{opacity:.6}
+.hbo .secondary{width:100%;min-height:54px;border:1.5px solid var(--line);border-radius:var(--pill);background:#fff;color:var(--ink);font-weight:700;font-size:16px;padding:12px 18px;margin-top:10px;display:flex;align-items:center;justify-content:center}
+.hbo .textbtn{display:block;width:100%;border:0;background:transparent;color:var(--blue);font-weight:700;padding:14px 8px;margin-top:2px;text-align:center}
+.hbo .quiet{margin-top:15px;padding-top:15px;border-top:1px solid var(--line);font-size:14px;color:var(--ink-2)}
+.hbo .nextbox{margin-top:16px;padding:15px 16px;border-radius:15px;background:#F8F7F4;font-size:15px;color:var(--ink-2)}.hbo .nextbox strong{color:var(--ink)}
+.hbo .details{margin-top:18px;border-top:1px solid var(--line);padding-top:4px}
+.hbo .details summary{cursor:pointer;list-style:none;font-weight:700;padding:14px 0}.hbo .details summary::-webkit-details-marker{display:none}
+.hbo .detailrow{display:flex;justify-content:space-between;gap:18px;padding:10px 0;border-top:1px solid var(--line);font-size:15px}.hbo .detailrow span:first-child{color:var(--ink-2)}
+.hbo .panel{display:none;margin-top:16px;padding:16px;background:#F8F7F4;border-radius:16px}.hbo .panel.on{display:block}
+.hbo .bidline{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:15px}.hbo .bidline:last-child{border-bottom:0;font-weight:800}
+.hbo .choice{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:15px 17px;margin-top:10px;font-weight:800;font-size:16px}.hbo .choice small{display:block;color:var(--ink-2);font-weight:600;margin-top:2px}.hbo .choice:hover,.hbo .choice.sel{border-color:var(--blue);background:var(--blue-tint);color:var(--blue)}.hbo .choice.sel small{color:var(--blue)}
+.hbo .quote{font-size:18px;font-weight:700;line-height:1.45;margin-top:16px;padding:16px;border-radius:15px;background:#F8F7F4}
+.hbo .appt{font-family:'Red Hat Display',sans-serif;font-size:30px;font-weight:800;line-height:1.18;margin-top:10px}
+.hbo .slotinput{width:100%;min-height:48px;border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;margin-top:10px;background:#fff;color:var(--ink);font-size:15px}.hbo .slotinput:focus{outline:none;border-color:var(--blue)}
+.hbo .fieldlabel{font-size:14px;font-weight:700;color:var(--ink-2);margin-top:14px}
+.hbo .contactrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}.hbo .contactrow .secondary{margin:0}
+.hbo .footer{margin-top:52px;padding-top:20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:end;color:var(--ink-3);font-size:13px}.hbo .help{color:var(--blue);font-weight:700}
+.hbo .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,8px);background:#17191C;color:#fff;padding:11px 18px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:.18s;z-index:60;max-width:90vw;text-align:center}.hbo .toast.on{opacity:1;transform:translate(-50%,0)}
+@media(max-width:480px){.hbo .wrap{padding:22px 16px 60px}.hbo .card{padding:20px}.hbo .hero h2{font-size:25px}.hbo .amount{font-size:40px}.hbo .footer{align-items:flex-start;flex-direction:column}.hbo .primary,.hbo .secondary{min-height:56px}.hbo .contactrow{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.hbo *{transition:none!important}}
+`
 
-function visitStatusChip(status?: VisitStatus) {
-  if (!status) return null
-  const styles: Record<VisitStatus, string> = {
-    pending: 'bg-muted text-muted-foreground',
-    accepted: 'bg-green-600 text-white',
-    declined: 'bg-destructive/10 text-destructive',
-    countered: 'bg-amber-500/15 text-amber-700',
-  }
-  return <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium capitalize', styles[status] ?? 'bg-muted text-muted-foreground')}>{status}</span>
-}
+const HB_PHONE = '+12832291348'
+const SHARE_BASE = 'https://www.homebids.ai/j/'
 
 type Contractor = string | { name?: string | null; full_name?: string | null; company?: string | null }
-type Bid = { share_token: string; contractor: Contractor; total_price: number | string; status: string; timeline?: string | null; created_at: string }
-type Question = { id: string; question: string; answer?: string | null; status: string; contractor: Contractor; created_at: string; answered_at?: string | null }
-type Visit = { id: string; status: string; contractor: Contractor; created_at: string }
-type ThreadMessage = { id?: string; sender: 'homeowner' | 'contractor' | 'system'; kind?: string | null; body: string; meta?: VisitMeta; created_at: string }
-type Thread = { thread_id: string; contractor: Contractor; approved: boolean; messages: ThreadMessage[] }
+type Job = {
+  title: string
+  description?: string | null
+  category?: string | null
+  location?: string | null
+  status: string
+  job_ref: string
+  urgency?: string | null
+  share_token: string
+  created_at: string
+}
+type Bid = { amount: number | string; share_token: string } | null
+type Slot = { label: string; sub: string }
+type SlotsMsg = { id: string; slots: Slot[]; chosen_label?: string | null } | null
+type Counter = { id: string; body: string } | null
+type Confirmed = { when: string } | null
+type OwnerState = 'bid' | 'estimate' | 'waiting' | 'scheduled' | 'finalbid' | 'hired' | 'closed'
+type PageState = {
+  state: OwnerState
+  unlocked: boolean
+  bid: Bid
+  slots_msg: SlotsMsg
+  confirmed: Confirmed
+  counter: Counter
+  visit_address: string | null
+}
+type Contact = { name: string; phone: string } | null
+type Thread = {
+  thread_id: string
+  contractor: Contractor
+  page_state: PageState
+  contractor_contact: Contact
+  messages?: unknown[]
+}
 type Inbox = {
-  job: { title: string; description?: string | null; category?: string | null; location?: string | null; status: string; job_ref: string; share_token: string; created_at: string }
-  bids: Bid[]
-  questions: Question[]
-  visits: Visit[]
-  threads?: Thread[]
+  job: Job
+  any_bids: boolean
+  threads: Thread[]
 }
 
 function contractorName(contractor: Contractor) {
-  if (typeof contractor === 'string') return contractor
+  if (typeof contractor === 'string') return contractor || 'A contractor'
   return contractor?.company || contractor?.name || contractor?.full_name || 'A contractor'
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(value))
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return '?'
+  return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase()
 }
 
-function formatMoney(value: number | string) {
+function money(value: number | string) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value) || 0)
+}
+
+function postedDate(value: string) {
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(value))
+}
+
+const HEADER_PRIORITY: OwnerState[] = ['hired', 'scheduled', 'finalbid', 'waiting', 'estimate', 'bid', 'closed']
+const BADGE: Record<OwnerState | 'collecting', [string, string]> = {
+  collecting: ['Getting bids', 'badge badge-blue'],
+  bid: ['Bid ready', 'badge badge-blue'],
+  estimate: ['Estimate offered', 'badge badge-blue'],
+  waiting: ['Waiting on a pro', 'badge badge-blue'],
+  scheduled: ['Estimate scheduled', 'badge badge-dark'],
+  finalbid: ['Final bid ready', 'badge badge-blue'],
+  hired: ['Pro hired', 'badge badge-green'],
+  closed: ['Closed', 'badge badge-gray'],
 }
 
 export function HomeownerInbox({ token }: { token: string }) {
   const [inbox, setInbox] = useState<Inbox | null | undefined>(undefined)
-  const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [answering, setAnswering] = useState<string | null>(null)
-  const [drafts, setDrafts] = useState<Record<string, string>>({})
-  const [sending, setSending] = useState<string | null>(null)
-  const [counterOpen, setCounterOpen] = useState<Record<string, boolean>>({})
-  const [counterText, setCounterText] = useState<Record<string, string>>({})
-  const [visitActing, setVisitActing] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [toast, setToast] = useState('')
+  const [panelOpen, setPanelOpen] = useState<Record<string, boolean>>({})
+  const [askOpen, setAskOpen] = useState<Record<string, boolean>>({})
+  const [askText, setAskText] = useState<Record<string, string>>({})
+  const [selectedSlot, setSelectedSlot] = useState<Record<string, number>>({})
+  const [addressText, setAddressText] = useState<Record<string, string>>({})
+  const [suggestOpen, setSuggestOpen] = useState<Record<string, boolean>>({})
+  const [suggestText, setSuggestText] = useState<Record<string, string>>({})
   const sendingRef = useRef(false)
-  const [copied, setCopied] = useState(false)
+  const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     let active = true
-    createClient().rpc('get_owner_inbox', { p_token: token }).then(({ data, error }) => {
-      if (active) setInbox(error || !data ? null : data as Inbox)
-    })
-    return () => { active = false }
+    createClient()
+      .rpc('get_owner_inbox', { p_token: token })
+      .then(({ data, error }) => {
+        if (active) setInbox(error || !data ? null : (data as Inbox))
+      })
+    return () => {
+      active = false
+    }
   }, [token])
 
   useEffect(() => {
     const interval = window.setInterval(async () => {
       if (document.hidden || sendingRef.current) return
       const { data, error } = await createClient().rpc('get_owner_inbox', { p_token: token })
-      if (!error && data && !sendingRef.current) {
-        setInbox((current) => (current ? (data as Inbox) : current))
-      }
+      if (!error && data && !sendingRef.current) setInbox(data as Inbox)
     }, 12000)
     return () => window.clearInterval(interval)
   }, [token])
 
-  const pendingQuestions = inbox?.questions.filter((question) => question.status === 'pending') ?? []
-  const openBids = inbox?.bids.filter((bid) => bid.status !== 'accepted' && bid.status !== 'declined') ?? []
-  const pendingVisits = inbox?.visits.filter((visit) => visit.status === 'pending') ?? []
-  const attentionCount = pendingQuestions.length + openBids.length + pendingVisits.length
-  const activity = useMemo(() => {
-    if (!inbox) return []
-    const names = new Set<string>()
-    inbox.bids.forEach((item) => names.add(contractorName(item.contractor)))
-    inbox.questions.forEach((item) => names.add(contractorName(item.contractor)))
-    inbox.visits.forEach((item) => names.add(contractorName(item.contractor)))
-    return [...names].map((name) => ({
-      name,
-      bids: inbox.bids.filter((item) => contractorName(item.contractor) === name).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at)),
-      questions: inbox.questions.filter((item) => contractorName(item.contractor) === name).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at)),
-      visits: inbox.visits.filter((item) => contractorName(item.contractor) === name).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at)),
-    }))
-  }, [inbox])
-
-  async function shareJob() {
-    await navigator.clipboard.writeText(`${window.location.origin}/j/${inbox?.job.share_token}`)
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1800)
+  function say(message: string) {
+    setToast(message)
+    if (toastRef.current) clearTimeout(toastRef.current)
+    toastRef.current = setTimeout(() => setToast(''), 1800)
   }
 
-  async function answerQuestion(id: string) {
-    const answer = answers[id]?.trim()
-    if (!answer) return
-    setAnswering(id)
-    const { data, error } = await createClient().rpc('answer_question_via_inbox', { p_token: token, p_question_id: id, p_answer: answer })
-    setAnswering(null)
-    if (!error && data?.ok) {
-      setInbox((current) => current ? { ...current, questions: current.questions.map((question) => question.id === id ? { ...question, answer, status: 'answered', answered_at: new Date().toISOString() } : question) } : current)
+  async function refetch() {
+    const { data, error } = await createClient().rpc('get_owner_inbox', { p_token: token })
+    if (!error && data) setInbox(data as Inbox)
+  }
+
+  async function shareWithPro(shareToken: string) {
+    try {
+      await navigator.clipboard.writeText(`${SHARE_BASE}${shareToken}`)
+      say('Link copied — share it with any pro')
+    } catch {
+      say('Could not copy the link')
     }
   }
 
-  async function sendThreadMessage(threadId: string) {
-    const body = drafts[threadId]?.trim()
-    if (!body || sending) return
+  async function acceptBid(bid: Bid) {
+    if (!bid || busy) return
     sendingRef.current = true
-    setSending(threadId)
+    setBusy(true)
+    const { data, error } = await createClient().rpc('accept_proposal', { p_token: bid.share_token })
+    setBusy(false)
+    sendingRef.current = false
+    if (!error && data?.ok) {
+      say('Accepted — the pro has been notified')
+      await refetch()
+    }
+  }
+
+  async function askQuestion(threadId: string) {
+    const body = askText[threadId]?.trim()
+    if (!body || busy) return
+    sendingRef.current = true
+    setBusy(true)
     const { data, error } = await createClient().rpc('send_owner_message', { p_token: token, p_thread_id: threadId, p_body: body })
-    setSending(null)
+    setBusy(false)
     sendingRef.current = false
     if (!error && data?.ok) {
-      setDrafts((current) => ({ ...current, [threadId]: '' }))
-      setInbox((current) => current ? {
-        ...current,
-        threads: (current.threads ?? []).map((thread) => thread.thread_id === threadId
-          ? { ...thread, messages: [...thread.messages, { sender: 'homeowner', body, created_at: new Date().toISOString() }] }
-          : thread),
-      } : current)
+      setAskText((current) => ({ ...current, [threadId]: '' }))
+      setAskOpen((current) => ({ ...current, [threadId]: false }))
+      say('Question sent')
     }
   }
 
-  async function respondVisit(threadId: string, messageId: string, action: 'accept' | 'counter' | 'decline', body: string, note?: string) {
-    if (visitActing) return
-    if (action === 'counter' && !note) return
+  async function confirmSlot(threadId: string, slotsMsgId: string) {
+    const index = selectedSlot[threadId]
+    if (index == null || index < 0 || busy) return
     sendingRef.current = true
-    setVisitActing(messageId)
-    const payload: Record<string, string> = { p_token: token, p_message_id: messageId, p_action: action }
-    if (action === 'counter' && note) payload.p_note = note
-    const { data, error } = await createClient().rpc('respond_visit', payload)
-    setVisitActing(null)
+    setBusy(true)
+    const { data, error } = await createClient().rpc('choose_visit_slot', {
+      p_token: token,
+      p_message_id: slotsMsgId,
+      p_slot_index: index,
+      p_address: addressText[threadId]?.trim() || null,
+    })
+    setBusy(false)
     sendingRef.current = false
     if (!error && data?.ok) {
-      const newStatus: VisitStatus = action === 'accept' ? 'accepted' : action === 'counter' ? 'countered' : 'declined'
-      setInbox((current) => current ? {
-        ...current,
-        threads: (current.threads ?? []).map((thread) => {
-          if (thread.thread_id !== threadId) return thread
-          const messages = thread.messages.map((message) => message.id === messageId ? { ...message, meta: { ...(message.meta ?? {}), status: newStatus } } : message)
-          const appended: ThreadMessage[] =
-            action === 'accept' ? [{ sender: 'system', kind: 'visit_confirmed', body: `Visit confirmed: ${body}`, created_at: new Date().toISOString() }]
-            : action === 'counter' ? [{ sender: 'homeowner', kind: 'visit_counter', body: note ?? '', meta: { status: 'pending' }, created_at: new Date().toISOString() }]
-            : [{ sender: 'system', kind: 'text', body: 'Visit time declined.', created_at: new Date().toISOString() }]
-          return { ...thread, messages: [...messages, ...appended] }
-        }),
-      } : current)
-      if (action === 'counter') {
-        setCounterOpen((current) => ({ ...current, [messageId]: false }))
-        setCounterText((current) => ({ ...current, [messageId]: '' }))
-      }
+      say('Time sent to the pro')
+      await refetch()
     }
   }
 
-  if (inbox === undefined) return <main className="mx-auto flex min-h-screen max-w-3xl items-center justify-center p-6 text-muted-foreground">Loading your job inbox…</main>
-  if (!inbox) return <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-3 p-6 text-center"><h1 className="text-2xl font-semibold">This link isn&apos;t valid</h1><p className="text-muted-foreground">Check the link and try again.</p></main>
+  async function suggestOther(threadId: string, slotsMsgId: string) {
+    const note = suggestText[threadId]?.trim()
+    if (!note || busy) return
+    sendingRef.current = true
+    setBusy(true)
+    const { data, error } = await createClient().rpc('suggest_other_slot', { p_token: token, p_message_id: slotsMsgId, p_note: note })
+    setBusy(false)
+    sendingRef.current = false
+    if (!error && data?.ok) {
+      setSuggestText((current) => ({ ...current, [threadId]: '' }))
+      setSuggestOpen((current) => ({ ...current, [threadId]: false }))
+      say('Suggestion sent to the pro')
+      await refetch()
+    }
+  }
 
-  const { job } = inbox
-  const homeownerFirstName = 'you'
-
-  return <main className="min-h-screen bg-background px-4 py-8 text-foreground sm:px-6 lg:py-12">
-    <div className="mx-auto flex max-w-3xl flex-col gap-8">
-      <header className="flex flex-col gap-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex flex-col gap-2"><div className="flex items-center gap-2"><Badge variant="secondary">{job.status}</Badge><span className="text-sm text-muted-foreground">{job.job_ref}</span></div><h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">{job.title}</h1></div>
-          <Button variant="outline" size="sm" onClick={shareJob}><Share2 data-icon="inline-start" />{copied ? 'Copied' : 'Share your job with more pros'}</Button>
+  if (inbox === undefined) {
+    return <main className="hbo"><div className="wrap" style={{ color: 'var(--ink-2)' }}>Loading your project…</div></main>
+  }
+  if (!inbox) {
+    return (
+      <main className="hbo">
+        <div className="wrap">
+          <div className="logo"><b>HOME</b>BIDS</div>
+          <h1 className="title" style={{ fontSize: 30 }}>This link isn&apos;t valid</h1>
+          <p className="meta">Check the link and try again.</p>
         </div>
-        <p className="flex items-center gap-2 text-sm text-muted-foreground"><span>Posted {formatDate(job.created_at)}</span><span aria-hidden="true">·</span><span className="flex items-center gap-1"><MapPin data-icon="inline-start" />{job.location}</span></p>
-        {job.description && <p className="max-w-2xl text-pretty leading-6 text-muted-foreground">{job.description}</p>}
-      </header>
+      </main>
+    )
+  }
 
-      <section className="flex flex-col gap-4" aria-labelledby="attention-heading"><div className="flex items-center justify-between"><h2 id="attention-heading" className="text-xl font-semibold">Needs your attention</h2>{attentionCount === 0 && <span className="text-sm text-muted-foreground">Nothing needs you right now ✓</span>}</div>
-        {pendingQuestions.map((question) => <Card key={question.id}><CardHeader><CardTitle className="text-base">{contractorName(question.contractor)}</CardTitle><CardDescription className="text-base text-foreground">{question.question}</CardDescription></CardHeader><CardContent className="flex flex-col gap-3"><Textarea placeholder="Write your answer…" value={answers[question.id] ?? ''} onChange={(event) => setAnswers((current) => ({ ...current, [question.id]: event.target.value }))} /><Button className="self-start" onClick={() => answerQuestion(question.id)} disabled={answering === question.id || !answers[question.id]?.trim()}>{answering === question.id ? 'Sending…' : 'Send answer'}</Button></CardContent></Card>)}
-        {openBids.map((bid) => <Card key={bid.share_token}><CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex flex-col gap-1"><p className="font-medium">{contractorName(bid.contractor)}</p><p className="text-2xl font-semibold">{formatMoney(bid.total_price)}</p>{bid.timeline && <p className="text-sm text-muted-foreground">{bid.timeline}</p>}</div><Button asChild><Link href={`/p/${bid.share_token}`}>View &amp; approve <ExternalLink data-icon="inline-end" /></Link></Button></CardContent></Card>)}
-        {pendingVisits.map((visit) => <Card key={visit.id}><CardContent className="p-5"><p><span className="font-medium">{contractorName(visit.contractor)}</span> offered a free in-person estimate — reply to {homeownerFirstName} by text to pick a time.</p></CardContent></Card>)}
-      </section>
+  const { job, any_bids: anyBids, threads } = inbox
+  const collecting = threads.length === 0 && !anyBids
+  const headerState: OwnerState | 'collecting' = collecting
+    ? 'collecting'
+    : HEADER_PRIORITY.find((state) => threads.some((thread) => thread.page_state.state === state)) ?? 'bid'
+  const [badgeText, badgeClass] = BADGE[headerState]
 
-      {(inbox.threads?.length ?? 0) > 0 && <section className="flex flex-col gap-4" aria-labelledby="messages-heading">
-        <h2 id="messages-heading" className="text-xl font-semibold">Messages</h2>
-        {inbox.threads!.map((thread) => {
-          const confirmed = [...thread.messages].reverse().find((message) => message.kind === 'visit_confirmed')
-          return <Card key={thread.thread_id}>
-          <CardHeader><CardTitle className="flex items-center gap-2 text-base">{contractorName(thread.contractor)}{thread.approved && <Badge className="bg-green-600 text-white hover:bg-green-600">Approved</Badge>}</CardTitle></CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            {confirmed && <div className="rounded-lg border border-green-600/40 bg-green-600/10 px-4 py-3 text-sm font-medium text-green-700">✓ {confirmed.body}</div>}
-            <div className="flex max-h-[420px] flex-col gap-3 overflow-y-auto rounded-lg border border-border bg-muted/30 p-4">
-              {thread.messages.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No messages yet.</p>}
-              {thread.messages.map((message, index) => {
-                const key = message.id ?? index
-                if (message.kind === 'visit_confirmed') return <p key={key} className="mx-auto max-w-[85%] text-balance text-center text-sm font-medium text-green-700">✓ {message.body}</p>
-                if (message.kind === 'visit_proposal') {
-                  const status = message.meta?.status
-                  return <div key={key} className="max-w-[85%] self-start rounded-2xl border border-border bg-background px-4 py-3 text-sm">
-                    <div className="flex items-center justify-between gap-2"><span className="font-medium">📅 {contractorName(thread.contractor)} proposed a visit</span>{visitStatusChip(status)}</div>
-                    <p className="mt-1 text-pretty">{message.body}</p>
-                    {status === 'pending' && message.id && <div className="mt-3 flex flex-col gap-2">
-                      <div className="flex flex-wrap gap-2">
-                        <Button size="sm" onClick={() => respondVisit(thread.thread_id, message.id!, 'accept', message.body)} disabled={visitActing === message.id}>Yes, that works</Button>
-                        <Button size="sm" variant="outline" onClick={() => setCounterOpen((current) => ({ ...current, [message.id!]: !current[message.id!] }))}>Suggest another time</Button>
-                      </div>
-                      {counterOpen[message.id] && <div className="flex flex-col gap-2">
-                        <Input placeholder="e.g. Thursday after 3pm" value={counterText[message.id] ?? ''} onChange={(event) => setCounterText((current) => ({ ...current, [message.id!]: event.target.value }))} onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); void respondVisit(thread.thread_id, message.id!, 'counter', message.body, counterText[message.id!]?.trim()) } }} />
-                        <Button size="sm" className="self-start" onClick={() => respondVisit(thread.thread_id, message.id!, 'counter', message.body, counterText[message.id!]?.trim())} disabled={visitActing === message.id || !counterText[message.id!]?.trim()}>Send</Button>
-                      </div>}
-                      <button type="button" className="self-start text-xs text-muted-foreground underline disabled:opacity-50" onClick={() => respondVisit(thread.thread_id, message.id!, 'decline', message.body)} disabled={visitActing === message.id}>Decline</button>
-                    </div>}
+  return (
+    <main className="hbo">
+      <style>{HB_CSS}</style>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@600;700;800&family=Red+Hat+Text:wght@400;500;600;700&family=Red+Hat+Mono:wght@500;600&display=swap"
+        rel="stylesheet"
+      />
+      <div className="wrap">
+        <header>
+          <div className="top">
+            <div className="logo"><b>HOME</b>BIDS</div>
+            <div className="private">🔒 Private project</div>
+          </div>
+          <div className="statusrow">
+            <span className={badgeClass}>{badgeText}</span>
+            <span className="jobid">{job.job_ref}</span>
+          </div>
+          <h1 className="title">{job.title}</h1>
+          <div className="meta">{job.location} · Posted {postedDate(job.created_at)}</div>
+          {job.description && <p className="scope">{job.description}</p>}
+          <div className="privacy">Keep this link private. Anyone with it can act on your project.</div>
+        </header>
+
+        {collecting && (
+          <div className="sec"><div className="card hero">
+            <div className="eyebrow">Getting bids</div>
+            <h2>We&apos;re finding pros for you</h2>
+            <div className="sub">Local pros have been notified. HomeBids will text you as soon as a bid or question arrives.</div>
+            <div className="nextbox"><strong>Nothing to do right now.</strong> You can close this page and come back from the same private link anytime.</div>
+            <button className="secondary" onClick={() => shareWithPro(job.share_token)}>Share with another pro</button>
+          </div></div>
+        )}
+
+        {threads.map((thread) => {
+          const ps = thread.page_state
+          const name = contractorName(thread.contractor)
+          const contact = thread.contractor_contact
+          const amount = ps.bid ? money(ps.bid.amount) : ''
+
+          const person = (trust: string) => (
+            <div className="person">
+              <div className="avatar">{initials(name)}</div>
+              <div><strong>{name}</strong><div className="trust">{trust}</div></div>
+            </div>
+          )
+
+          if (ps.state === 'bid') {
+            return (
+              <div className="sec" key={thread.thread_id}><div className="card hero">
+                <div className="eyebrow">New bid</div>
+                <h2>{name} sent you a {amount} bid</h2>
+                <div className="amount">{amount}</div>
+                {person('Verified HomeBids pro')}
+                <button className="primary" onClick={() => setPanelOpen((current) => ({ ...current, [thread.thread_id]: !current[thread.thread_id] }))}>Review the bid</button>
+                <button className="textbtn" onClick={() => setAskOpen((current) => ({ ...current, [thread.thread_id]: !current[thread.thread_id] }))}>Ask {name} a question</button>
+                {askOpen[thread.thread_id] && (
+                  <div>
+                    <input className="slotinput" placeholder={`Ask ${name} a question…`} value={askText[thread.thread_id] ?? ''} onChange={(event) => setAskText((current) => ({ ...current, [thread.thread_id]: event.target.value }))} onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); void askQuestion(thread.thread_id) } }} />
+                    <button className="secondary" onClick={() => askQuestion(thread.thread_id)} disabled={busy || !askText[thread.thread_id]?.trim()}>Send question</button>
                   </div>
-                }
-                if (message.kind === 'visit_counter') return <div key={key} className="max-w-[85%] self-end rounded-2xl border border-border bg-background px-4 py-3 text-sm">
-                  <div className="flex items-center justify-between gap-2"><span className="font-medium">📅 Suggested time</span>{visitStatusChip(message.meta?.status)}</div>
-                  <p className="mt-1 text-pretty">{message.body}</p>
+                )}
+                <div className={`panel${panelOpen[thread.thread_id] ? ' on' : ''}`}>
+                  <button className="primary" style={{ marginTop: 0 }} onClick={() => acceptBid(ps.bid)} disabled={busy}>{busy ? 'Working…' : `Accept ${amount} bid`}</button>
+                  {ps.bid && <a className="secondary" href={`/p/${ps.bid.share_token}`}>View full bid</a>}
                 </div>
-                if (message.sender === 'system') return <p key={key} className="mx-auto max-w-[85%] text-balance text-center text-xs text-muted-foreground">{message.body}</p>
-                const mine = message.sender === 'homeowner'
-                return <div key={key} className={cn('max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed', mine ? 'self-end rounded-br-sm bg-primary text-primary-foreground' : 'self-start rounded-bl-sm bg-muted text-foreground')}>
-                  <p className="text-pretty">{message.body}</p>
-                  <p className={cn('mt-1 text-[10px]', mine ? 'text-primary-foreground/70' : 'text-muted-foreground')}>{formatDate(message.created_at)}</p>
-                </div>
-              })}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Textarea placeholder="Write a message…" value={drafts[thread.thread_id] ?? ''} onChange={(event) => setDrafts((current) => ({ ...current, [thread.thread_id]: event.target.value }))} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); void sendThreadMessage(thread.thread_id) } }} />
-              <Button className="self-end" onClick={() => sendThreadMessage(thread.thread_id)} disabled={sending === thread.thread_id || !drafts[thread.thread_id]?.trim()}>{sending === thread.thread_id ? 'Sending…' : 'Send'}</Button>
-            </div>
-          </CardContent>
-        </Card>
-        })}
-      </section>}
+                <div className="quiet">You don&apos;t have to decide now. We&apos;ll text you if {name} updates the bid or offers a visit.</div>
+              </div></div>
+            )
+          }
 
-      <section className="flex flex-col gap-4" aria-labelledby="activity-heading"><h2 id="activity-heading" className="text-xl font-semibold">All activity</h2>{activity.map((group) => <Card key={group.name}><CardHeader><CardTitle className="text-base">{group.name}</CardTitle></CardHeader><CardContent className="flex flex-col gap-4">{group.bids.map((bid) => <p key={`bid-${bid.share_token}`} className="text-sm">{bid.status === 'accepted' && <span className="mr-1">🎉</span>}Sent a {formatMoney(bid.total_price)} bid · <Link className="font-medium underline" href={`/p/${bid.share_token}`}>View bid</Link>{bid.status === 'accepted' && ' · Accepted'}</p>)}{group.questions.map((question) => <div key={`question-${question.id}`} className="flex flex-col gap-1 text-sm"><p>Asked: {question.question}</p>{question.answer && <p className="rounded-lg bg-muted p-3">Your answer: {question.answer}</p>}</div>)}{group.visits.map((visit) => <p key={`visit-${visit.id}`} className="text-sm">Offered a free in-person estimate</p>)}</CardContent></Card>)}</section>
-    </div>
-  </main>
+          if (ps.state === 'estimate') {
+            const selected = selectedSlot[thread.thread_id]
+            const slotsMsgId = ps.slots_msg?.id
+            return (
+              <div className="sec" key={thread.thread_id}><div className="card hero">
+                <div className="eyebrow">{name} offered a free estimate</div>
+                <h2>Pick a time that works for you</h2>
+                <div className="sub">{name} offered these times to see the space before you decide.</div>
+                {ps.slots_msg?.slots?.map((slot, index) => (
+                  <button
+                    key={index}
+                    className={`choice${selected === index ? ' sel' : ''}`}
+                    onClick={() => setSelectedSlot((current) => ({ ...current, [thread.thread_id]: index }))}
+                  >
+                    {slot.label}<small>{slot.sub}</small>
+                  </button>
+                ))}
+                {selected != null && selected >= 0 && slotsMsgId && (
+                  <div>
+                    <div className="fieldlabel">Address for the visit (shared once confirmed)</div>
+                    <input className="slotinput" style={{ marginTop: 6 }} placeholder="123 Main St, Gilbert, AZ" value={addressText[thread.thread_id] ?? ''} onChange={(event) => setAddressText((current) => ({ ...current, [thread.thread_id]: event.target.value }))} />
+                    <button className="primary" onClick={() => confirmSlot(thread.thread_id, slotsMsgId)} disabled={busy}>{busy ? 'Confirming…' : 'Confirm this time'}</button>
+                  </div>
+                )}
+                <button className="textbtn" onClick={() => setSuggestOpen((current) => ({ ...current, [thread.thread_id]: !current[thread.thread_id] }))}>Neither works — suggest another time</button>
+                {suggestOpen[thread.thread_id] && slotsMsgId && (
+                  <div>
+                    <input className="slotinput" placeholder="e.g. Thursday after 3 PM" value={suggestText[thread.thread_id] ?? ''} onChange={(event) => setSuggestText((current) => ({ ...current, [thread.thread_id]: event.target.value }))} onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); void suggestOther(thread.thread_id, slotsMsgId) } }} />
+                    <button className="secondary" onClick={() => suggestOther(thread.thread_id, slotsMsgId)} disabled={busy || !suggestText[thread.thread_id]?.trim()}>Send suggestion</button>
+                  </div>
+                )}
+                <div className="quiet">Choosing a time does <strong>not</strong> hire {name}. You&apos;re only scheduling the free estimate.</div>
+              </div></div>
+            )
+          }
+
+          if (ps.state === 'waiting') {
+            const suggested = Boolean(ps.counter)
+            return (
+              <div className="sec" key={thread.thread_id}><div className="card hero">
+                <div className="eyebrow">Waiting on {name}</div>
+                <h2>{suggested ? 'You suggested a time' : 'You picked a time'}</h2>
+                <div className="quote">{ps.counter?.body || ps.slots_msg?.chosen_label}</div>
+                <div className="nextbox"><strong>You&apos;re done for now.</strong> HomeBids texted {name}. We&apos;ll text you the moment they confirm or suggest another time.</div>
+              </div></div>
+            )
+          }
+
+          if (ps.state === 'scheduled') {
+            return (
+              <div className="sec" key={thread.thread_id}><div className="card hero">
+                <div className="eyebrow green">Estimate scheduled</div>
+                <h2>{name} is coming</h2>
+                <div className="appt">{ps.confirmed?.when}</div>
+                <div className="sub">Free in-person estimate at your home.</div>
+                {contact && (
+                  <div className="contactrow">
+                    <a className="secondary" href={`sms:${contact.phone}`}>Text {name}</a>
+                    <a className="secondary" href={`tel:${contact.phone}`}>Call {name}</a>
+                  </div>
+                )}
+                <div className="nextbox"><strong>That&apos;s it for now.</strong> After the visit, HomeBids will bring you back here for {name}&apos;s final quote.</div>
+              </div></div>
+            )
+          }
+
+          if (ps.state === 'finalbid') {
+            return (
+              <div className="sec" key={thread.thread_id}><div className="card hero">
+                <div className="eyebrow">Final bid ready</div>
+                <h2>{name} confirmed the final price</h2>
+                <div className="amount">{amount}</div>
+                {person('Final quote after the in-person estimate')}
+                <button className="primary" onClick={() => setPanelOpen((current) => ({ ...current, [thread.thread_id]: !current[thread.thread_id] }))}>Review final bid</button>
+                <div className={`panel${panelOpen[thread.thread_id] ? ' on' : ''}`}>
+                  <button className="primary" style={{ marginTop: 0 }} onClick={() => acceptBid(ps.bid)} disabled={busy}>{busy ? 'Working…' : `Hire ${name} for ${amount}`}</button>
+                  {ps.bid && <a className="secondary" href={`/p/${ps.bid.share_token}`}>View full bid</a>}
+                </div>
+              </div></div>
+            )
+          }
+
+          if (ps.state === 'hired') {
+            return (
+              <div className="sec" key={thread.thread_id}><div className="card hero">
+                <div className="eyebrow green">It&apos;s official</div>
+                <h2>You hired {name}</h2>
+                <div className="amount">{amount}</div>
+                <div className="sub">Bidding is closed. You and {name} can now coordinate the work directly.</div>
+                {contact && (
+                  <div className="contactrow">
+                    <a className="secondary" href={`sms:${contact.phone}`}>Text {name}</a>
+                    <a className="secondary" href={`tel:${contact.phone}`}>Call {name}</a>
+                  </div>
+                )}
+                <div className="nextbox"><strong>HomeBids will keep this page available</strong> so you always have the accepted bid and project details in one place.</div>
+              </div></div>
+            )
+          }
+
+          if (ps.state === 'closed') {
+            return (
+              <div className="sec" key={thread.thread_id}><div className="card">
+                <div className="eyebrow gray">Project closed</div>
+                <h2 style={{ fontFamily: "'Red Hat Display',sans-serif", fontSize: 28, lineHeight: 1.18, margin: '6px 0 0' }}>You chose another pro</h2>
+                <div className="sub">{name}&apos;s bid has been closed. No further action is needed with {name}.</div>
+              </div></div>
+            )
+          }
+
+          return null
+        })}
+
+        <div className="sec"><details className="card details" open>
+          <summary>Project details</summary>
+          {job.description && <div className="detailrow"><span>Details</span><strong>{job.description}</strong></div>}
+          {job.urgency && <div className="detailrow"><span>Timeline</span><strong>{job.urgency}</strong></div>}
+          {job.location && <div className="detailrow"><span>Location</span><strong>{job.location}</strong></div>}
+          {job.category && <div className="detailrow"><span>Category</span><strong>{job.category}</strong></div>}
+        </details></div>
+
+        <footer className="footer">
+          <div>
+            <div className="logo"><b>HOME</b>BIDS</div>
+            <div>Better bids. Better homes.</div>
+          </div>
+          <div>
+            <a className="help" href={`sms:${HB_PHONE}`}>Need help? Reply to our text.</a>
+            <div>© 2026 HomeBids.ai</div>
+          </div>
+        </footer>
+      </div>
+      <div className={`toast${toast ? ' on' : ''}`} role="status" aria-live="polite">{toast}</div>
+    </main>
+  )
 }
