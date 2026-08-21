@@ -105,6 +105,34 @@ function sms(body: string) {
   return `sms:${HB_PHONE}?body=${encodeURIComponent(body)}`
 }
 
+const URGENCY_MAP: Record<string, string> = {
+  asap: 'As soon as possible',
+  within_week: 'Within a week',
+  within_month: 'Within a month',
+  flexible: 'Flexible',
+}
+
+function humanizeUrgency(value?: string | null) {
+  if (!value) return ''
+  const key = value.trim().toLowerCase()
+  if (URGENCY_MAP[key]) return URGENCY_MAP[key]
+  const spaced = value.replace(/_/g, ' ').trim()
+  return spaced ? spaced.charAt(0).toUpperCase() + spaced.slice(1) : ''
+}
+
+type ChatMessage = { sender?: string; kind?: string; body?: string; created_at?: string }
+
+function latestUnanswered(messages: unknown[] | undefined, otherSender: string, viewerSender: string): ChatMessage | null {
+  if (!Array.isArray(messages)) return null
+  const texts = (messages as ChatMessage[]).filter((message) => message && message.kind === 'text')
+  const time = (message?: ChatMessage) => (message?.created_at ? +new Date(message.created_at) : 0)
+  const latestOther = texts.filter((message) => message.sender === otherSender).sort((a, b) => time(b) - time(a))[0]
+  if (!latestOther) return null
+  const latestViewer = texts.filter((message) => message.sender === viewerSender).sort((a, b) => time(b) - time(a))[0]
+  if (latestViewer && time(latestViewer) >= time(latestOther)) return null
+  return latestOther
+}
+
 export function ContractorThread({ token }: { token: string }) {
   const [thread, setThread] = useState<Thread | null | undefined>(undefined)
   const [composerOpen, setComposerOpen] = useState(false)
@@ -115,6 +143,8 @@ export function ContractorThread({ token }: { token: string }) {
   ])
   const [busy, setBusy] = useState(false)
   const [toast, setToast] = useState('')
+  const [replyText, setReplyText] = useState('')
+  const [replySent, setReplySent] = useState(false)
   const sendingRef = useRef(false)
   const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -186,6 +216,22 @@ export function ContractorThread({ token }: { token: string }) {
     }
   }
 
+  async function sendReply() {
+    const body = replyText.trim()
+    if (!body || busy) return
+    sendingRef.current = true
+    setBusy(true)
+    const { data, error } = await createClient().rpc('send_thread_message', { p_token: token, p_body: body })
+    setBusy(false)
+    sendingRef.current = false
+    if (!error && data?.ok) {
+      setReplyText('')
+      setReplySent(true)
+      say('Reply sent')
+      await refetch()
+    }
+  }
+
   if (thread === undefined) {
     return <main className="hbc"><div className="wrap" style={{ color: 'var(--ink-2)' }}>Loading your job…</div></main>
   }
@@ -219,6 +265,8 @@ export function ContractorThread({ token }: { token: string }) {
   const metaText = ps.unlocked && ps.visit_address ? ps.visit_address : locWithZip
   const amount = ps.bid ? money(ps.bid.amount) : ''
   const slotsText = ps.slots_msg?.slots?.map((slot) => `${slot.label} ${slot.sub}`).join(' and ') ?? ''
+  const unanswered = latestUnanswered(thread.messages, 'homeowner', 'contractor')
+  const showReply = Boolean(unanswered) && !replySent && !['hired', 'filled', 'closed'].includes(state)
 
   const composer = (
     <div className={`panel${composerOpen ? ' on' : ''}`}>
@@ -276,7 +324,7 @@ export function ContractorThread({ token }: { token: string }) {
             <div className="sub">Review the basics here, then tap below. Bid Builder stays in Messages and HomeBids delivers the finished bid to {first}.</div>
             <div className="keyfacts">
               <div className="fact"><span>Job</span><strong>{job.category}</strong></div>
-              <div className="fact"><span>Timing</span><strong>{job.urgency}</strong></div>
+              <div className="fact"><span>Timing</span><strong>{humanizeUrgency(job.urgency)}</strong></div>
               <div className="fact"><span>Photos</span><strong>{job.photos ?? 0} available</strong></div>
               <div className="fact"><span>Location</span><strong>{job.location}</strong></div>
             </div>
@@ -376,11 +424,27 @@ export function ContractorThread({ token }: { token: string }) {
           </div></div>
         )}
 
+        {showReply && (
+          <div className="sec"><div className="card">
+            <div className="eyebrow">{first} asked</div>
+            <div className="quote">{unanswered?.body}</div>
+            <input
+              className="slotinput"
+              style={{ marginTop: 14 }}
+              placeholder={`Reply to ${first}…`}
+              value={replyText}
+              onChange={(event) => setReplyText(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); void sendReply() } }}
+            />
+            <button className="primary" onClick={sendReply} disabled={busy || !replyText.trim()}>{busy ? 'Sending…' : 'Send reply'}</button>
+          </div></div>
+        )}
+
         <div className="sec"><details className="card details" open>
           <summary>Job details</summary>
           <div className="detailrow"><span>Service</span><strong>{job.category}</strong></div>
           <div className="detailrow"><span>Details</span><strong>{job.description}</strong></div>
-          <div className="detailrow"><span>Timeline</span><strong>{job.urgency}</strong></div>
+          <div className="detailrow"><span>Timeline</span><strong>{humanizeUrgency(job.urgency)}</strong></div>
           <div className="detailrow"><span>Location</span><strong>{locWithZip}</strong></div>
           <div className="detailrow"><span>Photos</span><strong>{job.photos ?? 0}</strong></div>
         </details></div>

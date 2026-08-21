@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 const HB_CSS = `
@@ -116,6 +116,34 @@ function postedDate(value: string) {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(value))
 }
 
+const URGENCY_MAP: Record<string, string> = {
+  asap: 'As soon as possible',
+  within_week: 'Within a week',
+  within_month: 'Within a month',
+  flexible: 'Flexible',
+}
+
+function humanizeUrgency(value?: string | null) {
+  if (!value) return ''
+  const key = value.trim().toLowerCase()
+  if (URGENCY_MAP[key]) return URGENCY_MAP[key]
+  const spaced = value.replace(/_/g, ' ').trim()
+  return spaced ? spaced.charAt(0).toUpperCase() + spaced.slice(1) : ''
+}
+
+type ChatMessage = { sender?: string; kind?: string; body?: string; created_at?: string }
+
+function latestUnanswered(messages: unknown[] | undefined, otherSender: string, viewerSender: string): ChatMessage | null {
+  if (!Array.isArray(messages)) return null
+  const texts = (messages as ChatMessage[]).filter((message) => message && message.kind === 'text')
+  const time = (message?: ChatMessage) => (message?.created_at ? +new Date(message.created_at) : 0)
+  const latestOther = texts.filter((message) => message.sender === otherSender).sort((a, b) => time(b) - time(a))[0]
+  if (!latestOther) return null
+  const latestViewer = texts.filter((message) => message.sender === viewerSender).sort((a, b) => time(b) - time(a))[0]
+  if (latestViewer && time(latestViewer) >= time(latestOther)) return null
+  return latestOther
+}
+
 const HEADER_PRIORITY: OwnerState[] = ['hired', 'scheduled', 'finalbid', 'waiting', 'estimate', 'bid', 'closed']
 const BADGE: Record<OwnerState | 'collecting', [string, string]> = {
   collecting: ['Getting bids', 'badge badge-blue'],
@@ -139,6 +167,8 @@ export function HomeownerInbox({ token }: { token: string }) {
   const [addressText, setAddressText] = useState<Record<string, string>>({})
   const [suggestOpen, setSuggestOpen] = useState<Record<string, boolean>>({})
   const [suggestText, setSuggestText] = useState<Record<string, string>>({})
+  const [replyText, setReplyText] = useState<Record<string, string>>({})
+  const [repliedThreads, setRepliedThreads] = useState<Record<string, boolean>>({})
   const sendingRef = useRef(false)
   const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -246,6 +276,22 @@ export function HomeownerInbox({ token }: { token: string }) {
     }
   }
 
+  async function sendReply(threadId: string) {
+    const body = replyText[threadId]?.trim()
+    if (!body || busy) return
+    sendingRef.current = true
+    setBusy(true)
+    const { data, error } = await createClient().rpc('send_owner_message', { p_token: token, p_thread_id: threadId, p_body: body })
+    setBusy(false)
+    sendingRef.current = false
+    if (!error && data?.ok) {
+      setReplyText((current) => ({ ...current, [threadId]: '' }))
+      setRepliedThreads((current) => ({ ...current, [threadId]: true }))
+      say('Reply sent')
+      await refetch()
+    }
+  }
+
   if (inbox === undefined) {
     return <main className="hbo"><div className="wrap" style={{ color: 'var(--ink-2)' }}>Loading your project…</div></main>
   }
@@ -316,6 +362,7 @@ export function HomeownerInbox({ token }: { token: string }) {
             </div>
           )
 
+          const hero = (() => {
           if (ps.state === 'bid') {
             return (
               <div className="sec" key={thread.thread_id}><div className="card hero">
@@ -451,12 +498,36 @@ export function HomeownerInbox({ token }: { token: string }) {
           }
 
           return null
+          })()
+
+          const unanswered = latestUnanswered(thread.messages, 'contractor', 'homeowner')
+          const showReply = Boolean(unanswered) && !repliedThreads[thread.thread_id] && !['hired', 'filled', 'closed'].includes(ps.state)
+
+          return (
+            <Fragment key={thread.thread_id}>
+              {hero}
+              {showReply && (
+                <div className="sec"><div className="card">
+                  <div className="eyebrow">{name} asked</div>
+                  <div className="quote">{unanswered?.body}</div>
+                  <input
+                    className="slotinput"
+                    placeholder={`Reply to ${name}…`}
+                    value={replyText[thread.thread_id] ?? ''}
+                    onChange={(event) => setReplyText((current) => ({ ...current, [thread.thread_id]: event.target.value }))}
+                    onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); void sendReply(thread.thread_id) } }}
+                  />
+                  <button className="primary" onClick={() => sendReply(thread.thread_id)} disabled={busy || !replyText[thread.thread_id]?.trim()}>{busy ? 'Sending…' : 'Send reply'}</button>
+                </div></div>
+              )}
+            </Fragment>
+          )
         })}
 
         <div className="sec"><details className="card details" open>
           <summary>Project details</summary>
           {job.description && <div className="detailrow"><span>Details</span><strong>{job.description}</strong></div>}
-          {job.urgency && <div className="detailrow"><span>Timeline</span><strong>{job.urgency}</strong></div>}
+          {job.urgency && <div className="detailrow"><span>Timeline</span><strong>{humanizeUrgency(job.urgency)}</strong></div>}
           {job.location && <div className="detailrow"><span>Location</span><strong>{job.location}</strong></div>}
           {job.category && <div className="detailrow"><span>Category</span><strong>{job.category}</strong></div>}
         </details></div>
