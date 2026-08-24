@@ -32,7 +32,7 @@ const HB_CSS = `
 .hbc .textbtn{display:block;width:100%;border:0;background:transparent;color:var(--blue);font-weight:700;padding:14px 8px;margin-top:2px;text-align:center}
 .hbc .quiet{margin-top:15px;padding-top:15px;border-top:1px solid var(--line);font-size:14px;color:var(--ink-2)}
 .hbc .keyfacts{margin-top:17px;background:#F8F7F4;border-radius:16px;padding:4px 16px}
-.hbc .fact{display:flex;justify-content:space-between;gap:18px;padding:11px 0;border-bottom:1px solid var(--line);font-size:15px}.hbc .fact:last-child{border-bottom:0}.hbc .fact span{color:var(--ink-2)}
+.hbc .fact{display:grid;grid-template-columns:110px 1fr;gap:18px;padding:11px 0;border-bottom:1px solid var(--line);font-size:15px;text-align:left}.hbc .fact:last-child{border-bottom:0}.hbc .fact span{color:var(--ink-2)}
 .hbc .nextbox{margin-top:16px;padding:15px 16px;border-radius:15px;background:#F8F7F4;font-size:15px;color:var(--ink-2)}.hbc .nextbox strong{color:var(--ink)}
 .hbc .statusline{display:flex;align-items:center;gap:8px;margin-top:10px;color:var(--ink-2);font-size:14px}
 .hbc .dot{width:9px;height:9px;border-radius:50%;background:var(--blue)}
@@ -41,7 +41,12 @@ const HB_CSS = `
 .hbc .addr{font-size:17px;font-weight:700;margin-top:10px}
 .hbc .details{margin-top:18px;border-top:1px solid var(--line);padding-top:4px}
 .hbc .details summary{cursor:pointer;list-style:none;font-weight:700;padding:14px 0}.hbc .details summary::-webkit-details-marker{display:none}
-.hbc .detailrow{display:flex;justify-content:space-between;gap:18px;padding:10px 0;border-top:1px solid var(--line);font-size:15px}.hbc .detailrow span:first-child{color:var(--ink-2)}
+.hbc .detailrow{display:grid;grid-template-columns:110px 1fr;gap:18px;padding:10px 0;border-top:1px solid var(--line);font-size:15px;text-align:left}.hbc .detailrow span:first-child{color:var(--ink-2)}
+.hbc .convo{display:flex;flex-direction:column;gap:14px;margin-top:16px}
+.hbc .msg{display:flex;flex-direction:column;gap:4px;max-width:85%}.hbc .msg.mine{align-self:flex-end;align-items:flex-end}
+.hbc .msgmeta{font-size:12px;color:var(--ink-3)}
+.hbc .msgbubble{padding:12px 16px;border-radius:15px;background:#F8F7F4;font-size:16px;font-weight:600;line-height:1.45}.hbc .msg.mine .msgbubble{background:var(--blue-tint)}
+.hbc .sentline{margin-top:8px;font-size:13px;color:var(--green);font-weight:700}
 .hbc .panel{display:none;margin-top:16px;padding:16px;background:#F8F7F4;border-radius:16px}.hbc .panel.on{display:block}
 .hbc .slotrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 .hbc .slotinput{width:100%;min-height:48px;border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;background:#fff;color:var(--ink);font-size:15px}.hbc .slotinput:focus{outline:none;border-color:var(--blue)}
@@ -81,7 +86,7 @@ type PageState = {
   visit_address: string | null
 }
 type Contact = { name: string; phone: string } | null
-type Thread = { job: Job; page_state: PageState; homeowner_contact: Contact; messages?: unknown[] }
+type Thread = { job: Job; page_state: PageState; homeowner_contact: Contact; messages?: unknown[]; my_name?: string | null }
 
 function money(value: number | string) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value) || 0)
@@ -144,7 +149,9 @@ export function ContractorThread({ token }: { token: string }) {
   const [busy, setBusy] = useState(false)
   const [toast, setToast] = useState('')
   const [replyText, setReplyText] = useState('')
-  const [replySent, setReplySent] = useState(false)
+  const [justSent, setJustSent] = useState(false)
+  const [nameInput, setNameInput] = useState('')
+  const [nameSaved, setNameSaved] = useState(false)
   const sendingRef = useRef(false)
   const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -226,8 +233,28 @@ export function ContractorThread({ token }: { token: string }) {
     sendingRef.current = false
     if (!error && data?.ok) {
       setReplyText('')
-      setReplySent(true)
+      setThread((current) =>
+        current
+          ? { ...current, messages: [...(current.messages ?? []), { sender: 'contractor', kind: 'text', body, created_at: new Date().toISOString() }] }
+          : current,
+      )
+      setJustSent(true)
       say('Reply sent')
+      await refetch()
+    }
+  }
+
+  async function saveName() {
+    const name = nameInput.trim()
+    if (!name || busy) return
+    sendingRef.current = true
+    setBusy(true)
+    const { data, error } = await createClient().rpc('set_contractor_name', { p_token: token, p_name: name })
+    setBusy(false)
+    sendingRef.current = false
+    if (!error && data?.ok) {
+      setNameSaved(true)
+      say('Saved')
       await refetch()
     }
   }
@@ -265,8 +292,12 @@ export function ContractorThread({ token }: { token: string }) {
   const metaText = ps.unlocked && ps.visit_address ? ps.visit_address : locWithZip
   const amount = ps.bid ? money(ps.bid.amount) : ''
   const slotsText = ps.slots_msg?.slots?.map((slot) => `${slot.label} ${slot.sub}`).join(' and ') ?? ''
+  const textMessages = (Array.isArray(thread.messages) ? (thread.messages as ChatMessage[]) : [])
+    .filter((message) => message && message.kind === 'text')
+    .sort((a, b) => (a.created_at ? +new Date(a.created_at) : 0) - (b.created_at ? +new Date(b.created_at) : 0))
   const unanswered = latestUnanswered(thread.messages, 'homeowner', 'contractor')
-  const showReply = Boolean(unanswered) && !replySent && !['hired', 'filled', 'closed'].includes(state)
+  const showConvo = !(textMessages.length === 0 && state === 'filled')
+  const needsName = nameSaved ? false : thread.my_name == null
 
   const composer = (
     <div className={`panel${composerOpen ? ' on' : ''}`}>
@@ -317,6 +348,22 @@ export function ContractorThread({ token }: { token: string }) {
           <div className="privacy">Keep this link private. It lets you act on this job.</div>
         </header>
 
+        {needsName && (
+          <div className="sec"><div className="card">
+            <div className="eyebrow">One quick thing</div>
+            <div style={{ fontWeight: 700, marginTop: 8 }}>What&apos;s your name or company? {first} sees this on their page.</div>
+            <input
+              className="slotinput"
+              style={{ marginTop: 14 }}
+              placeholder="e.g. Alex Rivera or Rivera Plumbing"
+              value={nameInput}
+              onChange={(event) => setNameInput(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); void saveName() } }}
+            />
+            <button className="primary" onClick={saveName} disabled={busy || !nameInput.trim()}>{busy ? 'Saving…' : 'Save'}</button>
+          </div></div>
+        )}
+
         {state === 'new' && (
           <div className="sec"><div className="card hero">
             <div className="eyebrow">Next action</div>
@@ -329,8 +376,10 @@ export function ContractorThread({ token }: { token: string }) {
               <div className="fact"><span>Location</span><strong>{job.location}</strong></div>
             </div>
             <a className="primary" href={sms(`Hi! I want to bid on this job (Job: ${job.job_ref})`)}>Build bid in Messages</a>
+            <button className="secondary" onClick={() => setComposerOpen((value) => !value)}>Offer a free in-person estimate</button>
             <a className="textbtn" href={sms(`Hi! I have a question about this job (Job: ${job.job_ref}): `)}>Ask {first} a question first</a>
             <div className="quiet">No dashboard to learn. Build the bid by text like normal.</div>
+            {composer}
           </div></div>
         )}
 
@@ -424,19 +473,33 @@ export function ContractorThread({ token }: { token: string }) {
           </div></div>
         )}
 
-        {showReply && (
+        {showConvo && (
           <div className="sec"><div className="card">
-            <div className="eyebrow">{first} asked</div>
-            <div className="quote">{unanswered?.body}</div>
+            {unanswered && <div className="eyebrow">Message from {first}</div>}
+            <div style={{ fontWeight: 800, fontSize: 18, marginTop: unanswered ? 8 : 0 }}>Messages with {first}</div>
+            {textMessages.length > 0 && (
+              <div className="convo">
+                {textMessages.map((message, index) => {
+                  const mine = message.sender === 'contractor'
+                  return (
+                    <div className={`msg${mine ? ' mine' : ''}`} key={index}>
+                      <div className="msgmeta">{mine ? 'You' : first}{message.created_at ? ` · ${relativeTime(message.created_at)}` : ''}</div>
+                      <div className="msgbubble">{message.body}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
             <input
               className="slotinput"
-              style={{ marginTop: 14 }}
-              placeholder={`Reply to ${first}…`}
+              style={{ marginTop: 16 }}
+              placeholder={`Message ${first}…`}
               value={replyText}
-              onChange={(event) => setReplyText(event.target.value)}
+              onChange={(event) => { setReplyText(event.target.value); setJustSent(false) }}
               onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); void sendReply() } }}
             />
-            <button className="primary" onClick={sendReply} disabled={busy || !replyText.trim()}>{busy ? 'Sending…' : 'Send reply'}</button>
+            <button className="primary" onClick={sendReply} disabled={busy || !replyText.trim()}>{busy ? 'Sending…' : 'Send'}</button>
+            {justSent && <div className="sentline">Sent ✓</div>}
           </div></div>
         )}
 
@@ -450,10 +513,7 @@ export function ContractorThread({ token }: { token: string }) {
         </details></div>
 
         <footer className="footer">
-          <div>
-            <div className="logo"><b>HOME</b>BIDS</div>
-            <div>Better bids. Better homes.</div>
-          </div>
+          <div className="logo"><b>HOME</b>BIDS</div>
           <div>
             <a className="help" href={`sms:${HB_PHONE}`}>Need help? Text HomeBids.</a>
             <div>© 2026 HomeBids.ai</div>
