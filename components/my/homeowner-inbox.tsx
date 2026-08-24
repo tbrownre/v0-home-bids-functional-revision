@@ -38,7 +38,12 @@ const HB_CSS = `
 .hbo .nextbox{margin-top:16px;padding:15px 16px;border-radius:15px;background:#F8F7F4;font-size:15px;color:var(--ink-2)}.hbo .nextbox strong{color:var(--ink)}
 .hbo .details{margin-top:18px;border-top:1px solid var(--line);padding-top:4px}
 .hbo .details summary{cursor:pointer;list-style:none;font-weight:700;padding:14px 0}.hbo .details summary::-webkit-details-marker{display:none}
-.hbo .detailrow{display:flex;justify-content:space-between;gap:18px;padding:10px 0;border-top:1px solid var(--line);font-size:15px}.hbo .detailrow span:first-child{color:var(--ink-2)}
+.hbo .detailrow{display:grid;grid-template-columns:110px 1fr;gap:18px;padding:10px 0;border-top:1px solid var(--line);font-size:15px;text-align:left}.hbo .detailrow span:first-child{color:var(--ink-2)}
+.hbo .convo{display:flex;flex-direction:column;gap:14px;margin-top:16px}
+.hbo .msg{display:flex;flex-direction:column;gap:4px;max-width:85%}.hbo .msg.mine{align-self:flex-end;align-items:flex-end}
+.hbo .msgmeta{font-size:12px;color:var(--ink-3)}
+.hbo .msgbubble{padding:12px 16px;border-radius:15px;background:#F8F7F4;font-size:16px;font-weight:600;line-height:1.45}.hbo .msg.mine .msgbubble{background:var(--blue-tint)}
+.hbo .sentline{margin-top:8px;font-size:13px;color:var(--green);font-weight:700}
 .hbo .panel{display:none;margin-top:16px;padding:16px;background:#F8F7F4;border-radius:16px}.hbo .panel.on{display:block}
 .hbo .bidline{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:15px}.hbo .bidline:last-child{border-bottom:0;font-weight:800}
 .hbo .choice{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:15px 17px;margin-top:10px;font-weight:800;font-size:16px}.hbo .choice small{display:block;color:var(--ink-2);font-weight:600;margin-top:2px}.hbo .choice:hover,.hbo .choice.sel{border-color:var(--blue);background:var(--blue-tint);color:var(--blue)}.hbo .choice.sel small{color:var(--blue)}
@@ -90,6 +95,8 @@ type Thread = {
   page_state: PageState
   contractor_contact: Contact
   messages?: unknown[]
+  handoff_needed?: boolean
+  accepted_share_token?: string | null
 }
 type Inbox = {
   job: Job
@@ -113,6 +120,20 @@ function money(value: number | string) {
 }
 
 function postedDate(value: string) {
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(value))
+}
+
+function relativeTime(value: string) {
+  const then = new Date(value).getTime()
+  const diff = Date.now() - then
+  const mins = Math.round(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`
+  const hours = Math.round(mins / 60)
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+  const days = Math.round(hours / 24)
+  if (days === 1) return 'yesterday'
+  if (days < 7) return `${days} days ago`
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(value))
 }
 
@@ -168,7 +189,10 @@ export function HomeownerInbox({ token }: { token: string }) {
   const [suggestOpen, setSuggestOpen] = useState<Record<string, boolean>>({})
   const [suggestText, setSuggestText] = useState<Record<string, string>>({})
   const [replyText, setReplyText] = useState<Record<string, string>>({})
-  const [repliedThreads, setRepliedThreads] = useState<Record<string, boolean>>({})
+  const [justSent, setJustSent] = useState<Record<string, boolean>>({})
+  const [handoff, setHandoff] = useState<Record<string, { name: string; address: string; email: string; phone: string }>>({})
+  const [handoffDone, setHandoffDone] = useState<Record<string, boolean>>({})
+  const [handoffError, setHandoffError] = useState<Record<string, string>>({})
   const sendingRef = useRef(false)
   const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -286,9 +310,46 @@ export function HomeownerInbox({ token }: { token: string }) {
     sendingRef.current = false
     if (!error && data?.ok) {
       setReplyText((current) => ({ ...current, [threadId]: '' }))
-      setRepliedThreads((current) => ({ ...current, [threadId]: true }))
+      setInbox((current) =>
+        current
+          ? {
+              ...current,
+              threads: current.threads.map((thread) =>
+                thread.thread_id === threadId
+                  ? { ...thread, messages: [...(thread.messages ?? []), { sender: 'homeowner', kind: 'text', body, created_at: new Date().toISOString() }] }
+                  : thread,
+              ),
+            }
+          : current,
+      )
+      setJustSent((current) => ({ ...current, [threadId]: true }))
       say('Reply sent')
       await refetch()
+    }
+  }
+
+  async function submitHandoff(thread: Thread) {
+    const values = handoff[thread.thread_id]
+    if (!values?.name?.trim() || !values?.address?.trim() || !values?.email?.trim() || busy) return
+    sendingRef.current = true
+    setBusy(true)
+    setHandoffError((current) => ({ ...current, [thread.thread_id]: '' }))
+    const { data, error } = await createClient().rpc('submit_handoff_details', {
+      p_owner_token: token,
+      p_share_token: thread.accepted_share_token,
+      p_name: values.name.trim(),
+      p_address: values.address.trim(),
+      p_email: values.email.trim(),
+      p_phone: values.phone?.trim() || null,
+    })
+    setBusy(false)
+    sendingRef.current = false
+    if (!error && data?.ok) {
+      setHandoffDone((current) => ({ ...current, [thread.thread_id]: true }))
+      say("Sent — you're connected 🎉")
+      await refetch()
+    } else {
+      setHandoffError((current) => ({ ...current, [thread.thread_id]: (data?.error as string) || 'Something went wrong. Please try again.' }))
     }
   }
 
@@ -508,23 +569,62 @@ export function HomeownerInbox({ token }: { token: string }) {
           })()
 
           const unanswered = latestUnanswered(thread.messages, 'contractor', 'homeowner')
-          const showReply = Boolean(unanswered) && !repliedThreads[thread.thread_id] && !['hired', 'filled', 'closed'].includes(ps.state)
+          const textMessages = (Array.isArray(thread.messages) ? (thread.messages as ChatMessage[]) : [])
+            .filter((message) => message && message.kind === 'text')
+            .sort((a, b) => (a.created_at ? +new Date(a.created_at) : 0) - (b.created_at ? +new Date(b.created_at) : 0))
+          const showConvo = !(textMessages.length === 0 && ps.state === 'closed')
+          const showHandoff = Boolean(thread.handoff_needed) && !handoffDone[thread.thread_id]
+          const form = handoff[thread.thread_id] ?? { name: '', address: '', email: '', phone: '' }
+          const setForm = (patch: Partial<typeof form>) =>
+            setHandoff((current) => ({ ...current, [thread.thread_id]: { ...form, ...patch } }))
 
           return (
             <Fragment key={thread.thread_id}>
+              {showHandoff && (
+                <div className="sec"><div className="card hero">
+                  <div className="eyebrow green">Last step</div>
+                  <h2>Finish connecting with {name}</h2>
+                  <div className="sub">Share your details once and we&apos;ll send everything over — then you two take it from there.</div>
+                  <div className="fieldlabel">Full name</div>
+                  <input className="slotinput" placeholder="Your full name" value={form.name} onChange={(event) => setForm({ name: event.target.value })} />
+                  <div className="fieldlabel">Service address</div>
+                  <input className="slotinput" placeholder="Where the work will happen" value={form.address} onChange={(event) => setForm({ address: event.target.value })} />
+                  <div className="fieldlabel">Email</div>
+                  <input className="slotinput" type="email" placeholder="you@email.com" value={form.email} onChange={(event) => setForm({ email: event.target.value })} />
+                  <div className="fieldlabel">Phone (optional)</div>
+                  <input className="slotinput" type="tel" placeholder="(555) 555-5555" value={form.phone} onChange={(event) => setForm({ phone: event.target.value })} />
+                  <button className="primary" onClick={() => submitHandoff(thread)} disabled={busy || !form.name.trim() || !form.address.trim() || !form.email.trim()}>{busy ? 'Sending…' : 'Send my details'}</button>
+                  {handoffError[thread.thread_id] && <div style={{ marginTop: 12, color: '#B42318', fontSize: 14, fontWeight: 700 }}>{handoffError[thread.thread_id]}</div>}
+                </div></div>
+              )}
               {hero}
-              {showReply && (
+              {showConvo && (
                 <div className="sec"><div className="card">
-                  <div className="eyebrow">{name} asked</div>
-                  <div className="quote">{unanswered?.body}</div>
+                  {unanswered && <div className="eyebrow">Message from {name}</div>}
+                  <div style={{ fontWeight: 800, fontSize: 18, marginTop: unanswered ? 8 : 0 }}>Messages with {name}</div>
+                  {textMessages.length > 0 && (
+                    <div className="convo">
+                      {textMessages.map((message, index) => {
+                        const mine = message.sender === 'homeowner'
+                        return (
+                          <div className={`msg${mine ? ' mine' : ''}`} key={index}>
+                            <div className="msgmeta">{mine ? 'You' : name}{message.created_at ? ` · ${relativeTime(message.created_at)}` : ''}</div>
+                            <div className="msgbubble">{message.body}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                   <input
                     className="slotinput"
-                    placeholder={`Reply to ${name}…`}
+                    style={{ marginTop: 16 }}
+                    placeholder={`Message ${name}…`}
                     value={replyText[thread.thread_id] ?? ''}
-                    onChange={(event) => setReplyText((current) => ({ ...current, [thread.thread_id]: event.target.value }))}
+                    onChange={(event) => { setReplyText((current) => ({ ...current, [thread.thread_id]: event.target.value })); setJustSent((current) => ({ ...current, [thread.thread_id]: false })) }}
                     onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); void sendReply(thread.thread_id) } }}
                   />
-                  <button className="primary" onClick={() => sendReply(thread.thread_id)} disabled={busy || !replyText[thread.thread_id]?.trim()}>{busy ? 'Sending…' : 'Send reply'}</button>
+                  <button className="primary" onClick={() => sendReply(thread.thread_id)} disabled={busy || !replyText[thread.thread_id]?.trim()}>{busy ? 'Sending…' : 'Send'}</button>
+                  {justSent[thread.thread_id] && <div className="sentline">Sent ✓</div>}
                 </div></div>
               )}
             </Fragment>
@@ -540,10 +640,7 @@ export function HomeownerInbox({ token }: { token: string }) {
         </details></div>
 
         <footer className="footer">
-          <div>
-            <div className="logo"><b>HOME</b>BIDS</div>
-            <div>Better bids. Better homes.</div>
-          </div>
+          <div className="logo"><b>HOME</b>BIDS</div>
           <div>
             <a className="help" href={`sms:${HB_PHONE}`}>Need help? Reply to our text.</a>
             <div>© 2026 HomeBids.ai</div>
