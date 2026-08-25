@@ -152,7 +152,7 @@ function humanizeUrgency(value?: string | null) {
   return spaced ? spaced.charAt(0).toUpperCase() + spaced.slice(1) : ''
 }
 
-type ChatMessage = { sender?: string; kind?: string; body?: string; created_at?: string }
+  type ChatMessage = { sender?: string; kind?: string; body?: string; created_at?: string; meta?: { url?: string } | null }
 
 function latestUnanswered(messages: unknown[] | undefined, otherSender: string, viewerSender: string): ChatMessage | null {
   if (!Array.isArray(messages)) return null
@@ -193,6 +193,9 @@ export function HomeownerInbox({ token }: { token: string }) {
   const [handoff, setHandoff] = useState<Record<string, { name: string; address: string; email: string; phone: string }>>({})
   const [handoffDone, setHandoffDone] = useState<Record<string, boolean>>({})
   const [handoffError, setHandoffError] = useState<Record<string, string>>({})
+  const [uploadingThread, setUploadingThread] = useState<string | null>(null)
+  const [photoError, setPhotoError] = useState<Record<string, string>>({})
+  const fileRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const sendingRef = useRef(false)
   const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -325,6 +328,46 @@ export function HomeownerInbox({ token }: { token: string }) {
       setJustSent((current) => ({ ...current, [threadId]: true }))
       say('Reply sent')
       await refetch()
+    }
+  }
+
+  async function uploadPhoto(threadId: string, file: File) {
+    if (uploadingThread) return
+    setPhotoError((current) => ({ ...current, [threadId]: '' }))
+    setUploadingThread(threadId)
+    sendingRef.current = true
+    try {
+      const body = new FormData()
+      body.append('side', 'homeowner')
+      body.append('token', token)
+      body.append('thread_id', threadId)
+      body.append('file', file)
+      const response = await fetch('/api/thread-photo', { method: 'POST', body })
+      const result = await response.json()
+      if (response.ok && result?.ok) {
+        setInbox((current) =>
+          current
+            ? {
+                ...current,
+                threads: current.threads.map((thread) =>
+                  thread.thread_id === threadId
+                    ? { ...thread, messages: [...(thread.messages ?? []), { sender: 'homeowner', kind: 'photo', body: '', meta: { url: result.url }, created_at: new Date().toISOString() }] }
+                    : thread,
+                ),
+              }
+            : current,
+        )
+        setJustSent((current) => ({ ...current, [threadId]: true }))
+        say('Photo sent')
+        await refetch()
+      } else {
+        setPhotoError((current) => ({ ...current, [threadId]: (result?.error as string) || 'Upload failed. Please try again.' }))
+      }
+    } catch {
+      setPhotoError((current) => ({ ...current, [threadId]: 'Upload failed. Please try again.' }))
+    } finally {
+      setUploadingThread(null)
+      sendingRef.current = false
     }
   }
 
@@ -570,7 +613,7 @@ export function HomeownerInbox({ token }: { token: string }) {
 
           const unanswered = latestUnanswered(thread.messages, 'contractor', 'homeowner')
           const textMessages = (Array.isArray(thread.messages) ? (thread.messages as ChatMessage[]) : [])
-            .filter((message) => message && message.kind === 'text')
+            .filter((message) => message && (message.kind === 'text' || message.kind === 'photo'))
             .sort((a, b) => (a.created_at ? +new Date(a.created_at) : 0) - (b.created_at ? +new Date(b.created_at) : 0))
           const showConvo = !(textMessages.length === 0 && ps.state === 'closed')
           const showHandoff = Boolean(thread.handoff_needed) && !handoffDone[thread.thread_id]
@@ -609,7 +652,16 @@ export function HomeownerInbox({ token }: { token: string }) {
                         return (
                           <div className={`msg${mine ? ' mine' : ''}`} key={index}>
                             <div className="msgmeta">{mine ? 'You' : name}{message.created_at ? ` · ${relativeTime(message.created_at)}` : ''}</div>
-                            <div className="msgbubble">{message.body}</div>
+                            {message.kind === 'photo' && message.meta?.url ? (
+                              <img
+                                src={message.meta.url || "/placeholder.svg"}
+                                alt={`Photo from ${mine ? 'you' : name}`}
+                                style={{ maxWidth: 240, borderRadius: 15, cursor: 'pointer', display: 'block' }}
+                                onClick={() => window.open(message.meta!.url, '_blank', 'noopener,noreferrer')}
+                              />
+                            ) : (
+                              <div className="msgbubble">{message.body}</div>
+                            )}
                           </div>
                         )
                       })}
@@ -624,6 +676,15 @@ export function HomeownerInbox({ token }: { token: string }) {
                     onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); void sendReply(thread.thread_id) } }}
                   />
                   <button className="primary" onClick={() => sendReply(thread.thread_id)} disabled={busy || !replyText[thread.thread_id]?.trim()}>{busy ? 'Sending…' : 'Send'}</button>
+                  <button className="secondary" onClick={() => fileRefs.current[thread.thread_id]?.click()} disabled={uploadingThread === thread.thread_id}>{uploadingThread === thread.thread_id ? 'Uploading…' : '📷 Add photo'}</button>
+                  <input
+                    ref={(element) => { fileRefs.current[thread.thread_id] = element }}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadPhoto(thread.thread_id, file); event.target.value = '' }}
+                  />
+                  {photoError[thread.thread_id] && <div style={{ marginTop: 8, color: '#B42318', fontSize: 13, fontWeight: 700 }}>{photoError[thread.thread_id]}</div>}
                   {justSent[thread.thread_id] && <div className="sentline">Sent ✓</div>}
                 </div></div>
               )}

@@ -125,7 +125,7 @@ function humanizeUrgency(value?: string | null) {
   return spaced ? spaced.charAt(0).toUpperCase() + spaced.slice(1) : ''
 }
 
-type ChatMessage = { sender?: string; kind?: string; body?: string; created_at?: string }
+  type ChatMessage = { sender?: string; kind?: string; body?: string; created_at?: string; meta?: { url?: string } | null }
 
 function latestUnanswered(messages: unknown[] | undefined, otherSender: string, viewerSender: string): ChatMessage | null {
   if (!Array.isArray(messages)) return null
@@ -152,6 +152,9 @@ export function ContractorThread({ token }: { token: string }) {
   const [justSent, setJustSent] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [nameSaved, setNameSaved] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [photoError, setPhotoError] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
   const sendingRef = useRef(false)
   const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -244,6 +247,38 @@ export function ContractorThread({ token }: { token: string }) {
     }
   }
 
+  async function uploadPhoto(file: File) {
+    if (uploading) return
+    setPhotoError('')
+    setUploading(true)
+    sendingRef.current = true
+    try {
+      const body = new FormData()
+      body.append('side', 'contractor')
+      body.append('token', token)
+      body.append('file', file)
+      const response = await fetch('/api/thread-photo', { method: 'POST', body })
+      const result = await response.json()
+      if (response.ok && result?.ok) {
+        setThread((current) =>
+          current
+            ? { ...current, messages: [...(current.messages ?? []), { sender: 'contractor', kind: 'photo', body: '', meta: { url: result.url }, created_at: new Date().toISOString() }] }
+            : current,
+        )
+        setJustSent(true)
+        say('Photo sent')
+        await refetch()
+      } else {
+        setPhotoError((result?.error as string) || 'Upload failed. Please try again.')
+      }
+    } catch {
+      setPhotoError('Upload failed. Please try again.')
+    } finally {
+      setUploading(false)
+      sendingRef.current = false
+    }
+  }
+
   async function saveName() {
     const name = nameInput.trim()
     if (!name || busy) return
@@ -293,7 +328,7 @@ export function ContractorThread({ token }: { token: string }) {
   const amount = ps.bid ? money(ps.bid.amount) : ''
   const slotsText = ps.slots_msg?.slots?.map((slot) => `${slot.label} ${slot.sub}`).join(' and ') ?? ''
   const textMessages = (Array.isArray(thread.messages) ? (thread.messages as ChatMessage[]) : [])
-    .filter((message) => message && message.kind === 'text')
+    .filter((message) => message && (message.kind === 'text' || message.kind === 'photo'))
     .sort((a, b) => (a.created_at ? +new Date(a.created_at) : 0) - (b.created_at ? +new Date(b.created_at) : 0))
   const unanswered = latestUnanswered(thread.messages, 'homeowner', 'contractor')
   const showConvo = !(textMessages.length === 0 && state === 'filled')
@@ -484,7 +519,16 @@ export function ContractorThread({ token }: { token: string }) {
                   return (
                     <div className={`msg${mine ? ' mine' : ''}`} key={index}>
                       <div className="msgmeta">{mine ? 'You' : first}{message.created_at ? ` · ${relativeTime(message.created_at)}` : ''}</div>
-                      <div className="msgbubble">{message.body}</div>
+                      {message.kind === 'photo' && message.meta?.url ? (
+                        <img
+                          src={message.meta.url || "/placeholder.svg"}
+                          alt={`Photo from ${mine ? 'you' : first}`}
+                          style={{ maxWidth: 240, borderRadius: 15, cursor: 'pointer', display: 'block' }}
+                          onClick={() => window.open(message.meta!.url, '_blank', 'noopener,noreferrer')}
+                        />
+                      ) : (
+                        <div className="msgbubble">{message.body}</div>
+                      )}
                     </div>
                   )
                 })}
@@ -499,6 +543,15 @@ export function ContractorThread({ token }: { token: string }) {
               onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); void sendReply() } }}
             />
             <button className="primary" onClick={sendReply} disabled={busy || !replyText.trim()}>{busy ? 'Sending…' : 'Send'}</button>
+            <button className="secondary" onClick={() => fileRef.current?.click()} disabled={uploading}>{uploading ? 'Uploading…' : '📷 Add photo'}</button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadPhoto(file); event.target.value = '' }}
+            />
+            {photoError && <div style={{ marginTop: 8, color: '#B42318', fontSize: 13, fontWeight: 700 }}>{photoError}</div>}
             {justSent && <div className="sentline">Sent ✓</div>}
           </div></div>
         )}
