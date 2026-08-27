@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { HomeBidsLogo } from '@/components/homebids-logo'
 
 const HB_CSS = `
 :root{--blue:#0A84FF;--blue-press:#0070E0;--blue-tint:#EBF4FF;--blue-line:#CFE5FF;--ink:#17191C;--ink-2:#5C6167;--ink-3:#8A9097;--bg:#F6F5F2;--card:#FFF;--line:#E7E5E0;--green:#16803B;--green-bg:#EAF7EE;--amber:#8A6200;--amber-bg:#FFF4D8;--r:22px;--pill:999px;--shadow:0 1px 2px rgba(23,25,28,.04),0 8px 24px rgba(23,25,28,.04)}
@@ -403,7 +404,7 @@ export function HomeownerInbox({ token }: { token: string }) {
     return (
       <main className="hbo">
         <div className="wrap">
-          <div className="logo"><b>HOME</b>BIDS</div>
+          <HomeBidsLogo size="20px" />
           <h1 className="title" style={{ fontSize: 30 }}>This link isn&apos;t valid</h1>
           <p className="meta">Check the link and try again.</p>
         </div>
@@ -430,7 +431,7 @@ export function HomeownerInbox({ token }: { token: string }) {
       <div className="wrap">
         <header>
           <div className="top">
-            <div className="logo"><b>HOME</b>BIDS</div>
+            <HomeBidsLogo size="20px" />
             <div className="private">🔒 Private project</div>
           </div>
           <div className="statusrow">
@@ -453,6 +454,7 @@ export function HomeownerInbox({ token }: { token: string }) {
           </div></div>
         )}
 
+        <div id="messages" style={{ scrollMarginTop: 16 }}>
         {[...threads]
           .map((thread, index) => ({ thread, index }))
           .sort((a, b) => {
@@ -691,6 +693,7 @@ export function HomeownerInbox({ token }: { token: string }) {
             </Fragment>
           )
         })}
+        </div>
 
         <div className="sec"><details className="card details" open>
           <summary>Project details</summary>
@@ -701,7 +704,7 @@ export function HomeownerInbox({ token }: { token: string }) {
         </details></div>
 
         <footer className="footer">
-          <div className="logo"><b>HOME</b>BIDS</div>
+          <HomeBidsLogo size="20px" />
           <div>
             <a className="help" href={`sms:${HB_PHONE}`}>Need help? Reply to our text.</a>
             <div>© 2026 HomeBids.ai</div>
