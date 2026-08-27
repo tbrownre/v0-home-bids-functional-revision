@@ -199,6 +199,17 @@ export function HomeownerInbox({ token }: { token: string }) {
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const sendingRef = useRef(false)
   const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scrolledToMessagesRef = useRef(false)
+
+  useEffect(() => {
+    if (scrolledToMessagesRef.current) return
+    if (inbox === undefined || inbox === null) return
+    if (typeof window === 'undefined' || window.location.hash !== '#messages') return
+    scrolledToMessagesRef.current = true
+    requestAnimationFrame(() => {
+      document.getElementById('messages')?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    })
+  }, [inbox])
 
   useEffect(() => {
     let active = true
