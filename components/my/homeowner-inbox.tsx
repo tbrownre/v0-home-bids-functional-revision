@@ -206,9 +206,9 @@ export function HomeownerInbox({ token }: { token: string }) {
     if (inbox === undefined || inbox === null) return
     if (typeof window === 'undefined' || window.location.hash !== '#messages') return
     scrolledToMessagesRef.current = true
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       document.getElementById('messages')?.scrollIntoView({ block: 'start', behavior: 'smooth' })
-    })
+    }, 600)
   }, [inbox])
 
   useEffect(() => {
