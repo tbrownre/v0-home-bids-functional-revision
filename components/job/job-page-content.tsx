@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
-import { Copy, Check, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { HomeBidsLogo } from '@/components/homebids-logo';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +32,6 @@ interface JobPageContentProps {
 }
 
 export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps) {
-  const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [isMobile, setIsMobile] = useState(true);
   const [scrolledPastCTA, setScrolledPastCTA] = useState(false);
@@ -75,12 +73,6 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
   const questionLink = `sms:${phoneNumber}?body=${questionBody}`;
   const estimateBody = encodeURIComponent(`Hi! I'd like to offer a free in-person estimate for this job (Job: ${jobRefShort})`);
   const estimateLink = `sms:${phoneNumber}?body=${estimateBody}`;
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   const urgencyLabels: Record<string, string> = {
     asap: 'ASAP',
@@ -227,31 +219,12 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
             <div className="space-y-4 rounded-lg border bg-card p-6">
               <div className="space-y-3">
                 <p className="text-sm font-medium text-foreground">Text to bid:</p>
-                <div className="flex items-center gap-2">
-                  <a
-                    href={smsLink}
-                    className="flex min-h-14 flex-1 items-center justify-center rounded-lg bg-primary px-4 py-4 text-center text-base font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-                  >
-                    Text +1 (283) 229-1348 to bid
-                  </a>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => copyToClipboard(phoneNumber)}
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="mr-1 h-4 w-4" />
-                        Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="mr-1 h-4 w-4" />
-                        Copy number
-                      </>
-                    )}
-                  </Button>
-                </div>
+                <a
+                  href={smsLink}
+                  className="flex min-h-14 w-full items-center justify-center rounded-lg bg-primary px-4 py-4 text-center text-base font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+                >
+                  Text +1 (283) 229-1348 to bid
+                </a>
                 <p className="text-sm text-muted-foreground">
                   Tap the button - your Messages app opens with the job already filled in.
                 </p>

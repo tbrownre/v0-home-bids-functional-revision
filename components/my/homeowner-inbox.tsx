@@ -491,7 +491,7 @@ export function HomeownerInbox({ token }: { token: string }) {
             return (
               <div className="sec" key={thread.thread_id}><div className="card hero">
                 <div className="eyebrow">New bid</div>
-                <h2>{name} sent you a {amount} bid</h2>
+                <h2>{name} sent you a bid</h2>
                 <div className="amount">{amount}</div>
                 {person('Verified HomeBids pro')}
                 <button className="primary" onClick={() => setPanelOpen((current) => ({ ...current, [thread.thread_id]: !current[thread.thread_id] }))}>Review the bid</button>

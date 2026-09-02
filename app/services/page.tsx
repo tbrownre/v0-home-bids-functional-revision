@@ -4,7 +4,16 @@ import { HeaderWithEarlyAccess } from "@/components/header-with-early-access";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { getSmsLink } from "@/lib/sms-config";
+import { getSmsLink, SMS_BODY_PREFIX } from "@/lib/sms-config";
+
+/** Lowercase a service name naturally for use mid-sentence, keeping acronyms like HVAC or TV intact. */
+function serviceSmsLink(service: string) {
+  const natural = service
+    .split(" ")
+    .map((word) => (/^[A-Z0-9&/-]{2,}$/.test(word) ? word : word.toLowerCase()))
+    .join(" ");
+  return getSmsLink(`${SMS_BODY_PREFIX} ${natural}`);
+}
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Search } from "lucide-react";
@@ -444,7 +453,7 @@ export default function ServicesPage() {
                   {category.services.map((service) => (
                     <li key={service}>
                       <Link
-                        href={getSmsLink()}
+                        href={serviceSmsLink(service)}
                         className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                       >
                         {service}

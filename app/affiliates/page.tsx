@@ -984,7 +984,7 @@ export default function AffiliatesPage() {
               className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center"
             >
               <Button size="lg" className="h-12 gap-2 px-10 text-base" asChild>
-                <a href="mailto:affiliates@homebids.ai">
+                <a href={`mailto:affiliates@homebids.ai?subject=${encodeURIComponent("Affiliate Link Request")}&body=${encodeURIComponent("Hi HomeBids team,\n\nI'd like to get my affiliate link. Here's a bit about me and my network:\n\n")}`}>
                   Get Your Affiliate Link <ArrowRight className="h-4 w-4" />
                 </a>
               </Button>
@@ -994,7 +994,7 @@ export default function AffiliatesPage() {
                 className="h-12 gap-2 bg-transparent px-10 text-base"
                 asChild
               >
-                <a href="mailto:affiliates@homebids.ai?subject=Founding Affiliate Application">
+                <a href={`mailto:affiliates@homebids.ai?subject=${encodeURIComponent("Founding Affiliate Application")}&body=${encodeURIComponent("Hi HomeBids team,\n\nI'd like to apply as a founding affiliate. Here's a bit about me and my network:\n\n")}`}>
                   Join as a Founding Affiliate
                 </a>
               </Button>
