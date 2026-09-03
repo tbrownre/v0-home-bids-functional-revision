@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
 import { HomeBidsLogo } from "@/components/homebids-logo";
 import { useContractorLogoHref } from "@/lib/use-contractor-logo-href";
+import { RolePickerModal } from "@/components/role-picker-modal";
 import {
   subscribeInbox,
   getHomeownerUnreadSnapshot,
@@ -57,6 +58,7 @@ export function Header({
   onSignIn,
 }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [rolePickerOpen, setRolePickerOpen] = useState(false);
   const { openSignIn } = useSignInModal();
   const logoHref = useContractorLogoHref();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -167,20 +169,7 @@ export function Header({
     mockSignOut();
   };
 
-  // Audience preference — for switching between homeowner and contractor experiences
-  const [audience, setAudience] = useState<"homeowner" | "contractor" | null>(null);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("homebids_audience") as "homeowner" | "contractor" | null;
-    setAudience(stored);
-  }, [pathname]);
-
-  const handleAudienceSwitch = (next: "homeowner" | "contractor") => {
-    localStorage.setItem("homebids_audience", next);
-    setAudience(next);
-    closeMenu();
-    window.location.href = next === "homeowner" ? "/homeowners" : "/contractors";
-  };
 
   // Determine active contractor tab from search param so only one item highlights
   const activeContractorTab = searchParams?.get("tab") ?? "home";
@@ -254,33 +243,6 @@ export function Header({
                     <LogIn className="h-4 w-4 shrink-0" />
                     Contractor Sign In
                   </button>
-                  {/* Audience switcher — only shown after a selection has been made */}
-                  {mounted && audience && (
-                    <>
-                      <div className={separator} />
-                      {audience === "homeowner" ? (
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => handleAudienceSwitch("contractor")}
-                          className={menuItemBase}
-                        >
-                          <Wrench className="h-4 w-4 shrink-0 text-muted-foreground" />
-                          <span className="text-muted-foreground">Switch to Contractor</span>
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => handleAudienceSwitch("homeowner")}
-                          className={menuItemBase}
-                        >
-                          <Home className="h-4 w-4 shrink-0 text-muted-foreground" />
-                          <span className="text-muted-foreground">Switch to Homeowner</span>
-                        </button>
-                      )}
-                    </>
-                  )}
                 </>
               )}
 
@@ -417,21 +379,13 @@ export function Header({
               >
                 Log In
               </button>
-              {audience === "homeowner" ? (
-                <a
-                  href="sms:+14043952879?&body=Hi%20HomeBids%2C%20I%20need%20help%20with%20a%20home%20project!"
-                  className="inline-flex h-8 items-center rounded-full bg-primary px-2.5 sm:px-3.5 text-xs sm:text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  Try for Free
-                </a>
-              ) : (
-                <Link
-                  href="/contractors/signup"
-                  className="inline-flex h-8 items-center rounded-full bg-primary px-2.5 sm:px-3.5 text-xs sm:text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  Try for Free
-                </Link>
-              )}
+              <button
+                type="button"
+                onClick={() => setRolePickerOpen(true)}
+                className="inline-flex h-8 items-center rounded-full bg-primary px-2.5 sm:px-3.5 text-xs sm:text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                Try for Free
+              </button>
             </>
           ) : (
             // Spacer keeps logo centered when signed in and no back link
@@ -439,6 +393,12 @@ export function Header({
           )}
         </div>
       </div>
+
+      {/* RolePickerModal — opened by "Try for Free" button */}
+      <RolePickerModal 
+        open={rolePickerOpen} 
+        onClose={() => setRolePickerOpen(false)} 
+      />
 
       {/* SignInModal is rendered globally via SignInModalProvider in the root layout */}
     </header>
