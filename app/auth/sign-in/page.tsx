@@ -10,7 +10,7 @@ import { HomeBidsLogo } from "@/components/homebids-logo";
 import { createClient } from "@/lib/supabase/client";
 import {
   realSignIn,
-  getMockUser,
+  syncMirrorFromSupabase,
   redirectAfterSignIn,
 } from "@/lib/mock-auth";
 import { phoneSignIn } from "@/lib/supabase/actions";
@@ -49,12 +49,21 @@ export default function SignInPage() {
       }
     }
 
-    const user = getMockUser();
-    if (user) {
-      redirectAfterSignIn(user.role);
-      return;
-    }
-    setCheckingSession(false);
+    let cancelled = false;
+    (async () => {
+      // Verify the REAL Supabase session — not the possibly-stale local mirror.
+      // syncMirrorFromSupabase clears the mirror when the real session is gone,
+      // so a ghost mirror can't bounce us into the server-guarded dashboard and
+      // create a sign-in ⇄ dashboard redirect loop.
+      const user = await syncMirrorFromSupabase();
+      if (cancelled) return;
+      if (user) {
+        redirectAfterSignIn(user.role);
+        return;
+      }
+      setCheckingSession(false);
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   async function handleForgotSubmit(e: React.FormEvent) {
