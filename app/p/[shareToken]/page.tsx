@@ -17,6 +17,7 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatPrice, formatDate } from "@/lib/proposal-format";
 import { ProposalCta } from "@/components/proposal/proposal-cta";
+import { ContractorAvatar } from "@/components/proposal/contractor-avatar";
 
 interface PageProps {
   params: Promise<{ shareToken: string }>;
@@ -114,19 +115,10 @@ function ProposalDocument({
         {/* ── Header — contractor is the hero ── */}
         <header className="rounded-3xl border border-border bg-card p-6 sm:p-8">
           <div className="flex items-center gap-4">
-            {proposal.contractor_logo_url ? (
-              <Image
-                src={proposal.contractor_logo_url || "/placeholder.svg"}
-                alt={`${proposal.contractor_company_name ?? "Contractor"} logo`}
-                width={56}
-                height={56}
-                className="h-14 w-14 rounded-2xl object-cover"
-              />
-            ) : (
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-lg font-bold text-primary">
-                {(proposal.contractor_company_name ?? "HB").slice(0, 2).toUpperCase()}
-              </div>
-            )}
+            <ContractorAvatar
+              logoUrl={proposal.contractor_logo_url}
+              companyName={proposal.contractor_company_name}
+            />
             <div className="min-w-0">
               <p className="truncate text-lg font-bold text-foreground">
                 {proposal.contractor_company_name ?? "Your Contractor"}

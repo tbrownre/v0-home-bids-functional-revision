@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Mail, Phone, Upload, LogOut, Check } from "lucide-react";
+import { Mail, Phone, Upload, LogOut, Check, Pencil } from "lucide-react";
 import { ContractorTopbar } from "@/components/contractor/contractor-topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,6 +75,19 @@ export default function ContractorProfilePage() {
   const [approvalAlerts, setApprovalAlerts] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Inline display-name editing (top Profile card).
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [savingName, setSavingName] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showToast(message: string) {
+    setToast(message);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 3500);
+  }
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -128,6 +141,41 @@ export default function ContractorProfilePage() {
   function set<K extends keyof FormState>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
     setSaved(false);
+  }
+
+  // Re-pull the contractor profile so the display name and Business Name field
+  // reflect what the server (and the set_my_contractor_name RPC) actually stored.
+  async function refetchProfile() {
+    if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
+    try {
+      const { getContractorProfile } = await import("@/lib/supabase/actions");
+      const { profile } = await getContractorProfile();
+      if (profile) {
+        const p = profile as ContractorProfile;
+        setForm((f) => ({ ...f, business_name: p.business_name ?? "" }));
+      }
+    } catch { /* non-fatal */ }
+  }
+
+  async function saveName() {
+    const value = nameDraft.trim();
+    if (!value) return;
+    setSavingName(true);
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { data, error } = await supabase.rpc("set_my_contractor_name", { p_name: value });
+      if (!error && data?.ok) {
+        setAccount((a) => ({ ...a, name: value }));
+        setEditingName(false);
+        await refetchProfile();
+        showToast(`Saved — homeowners now see ${value}`);
+      }
+    } catch (e) {
+      console.error("[Profile] set name failed:", e);
+    } finally {
+      setSavingName(false);
+    }
   }
 
   // Live completion — derive a profile-shaped object from the current form.
@@ -196,6 +244,15 @@ export default function ContractorProfilePage() {
 
   return (
     <div className="min-h-screen bg-muted/30">
+      {toast && (
+        <div
+          role="status"
+          className="fixed left-1/2 top-5 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-foreground px-4 py-2.5 text-sm font-semibold text-background shadow-lg"
+        >
+          <Check className="h-4 w-4 shrink-0" />
+          {toast}
+        </div>
+      )}
       <ContractorTopbar />
       <main className="mx-auto w-full max-w-[1180px] px-4 pb-16 pt-8 sm:px-6">
         <h1 className="mb-5 text-4xl font-extrabold tracking-tight text-foreground">Account</h1>
@@ -213,8 +270,41 @@ export default function ContractorProfilePage() {
                   {initial}
                 </span>
               )}
-              <div className="min-w-0">
-                <p className="truncate text-base font-extrabold text-foreground">{account.name}</p>
+              <div className="min-w-0 flex-1">
+                {editingName ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      autoFocus
+                      value={nameDraft}
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+                        if (e.key === "Enter") { e.preventDefault(); saveName(); }
+                        if (e.key === "Escape") setEditingName(false);
+                      }}
+                      className="h-9 max-w-[220px]"
+                      placeholder="Your name"
+                    />
+                    <Button size="sm" className="h-9 rounded-lg font-semibold" onClick={saveName} disabled={savingName || !nameDraft.trim()}>
+                      {savingName ? "Saving…" : "Save"}
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-9 rounded-lg" onClick={() => setEditingName(false)} disabled={savingName}>
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate text-base font-extrabold text-foreground">{account.name}</p>
+                    <button
+                      type="button"
+                      onClick={() => { setNameDraft(account.name); setEditingName(true); }}
+                      className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      aria-label="Edit display name"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
                 {form.business_name && <p className="truncate text-sm text-foreground">{form.business_name}</p>}
                 <p className="text-sm text-muted-foreground">Contractor</p>
               </div>
