@@ -9,10 +9,13 @@ export interface ContractorThread {
   job_ref: string;
   title: string;
   location: string;
+  c_token: string;
   workspace: string;
   state: string;
+  homeowner_first: string;
   display_name: string;
   last_message: string;
+  last_sender: string;
   last_at: string;
 }
 
@@ -168,5 +171,6 @@ export function useContractorSignals(): ContractorSignals {
 
 /** Threads whose most recent message is from the homeowner (awaiting a reply). */
 export function unansweredThreads(threads: ContractorThread[]): ContractorThread[] {
-  return threads.filter((t) => t.last_message && t.last_message.trim().length > 0);
+  // A thread needs a reply when the homeowner sent the most recent message.
+  return threads.filter((t) => t.last_sender === "homeowner");
 }
