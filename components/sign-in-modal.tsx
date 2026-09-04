@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Home, Hammer, AlertCircle, Loader2, MailCheck, Eye, EyeOff } from "lucide-react";
+import { AlertCircle, Loader2, Eye, EyeOff, Info } from "lucide-react";
 import Link from "next/link";
 import {
   Dialog,
@@ -13,7 +13,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { createClient } from "@/lib/supabase/client";
 import {
   realSignIn,
   redirectAfterSignIn,
@@ -27,10 +26,7 @@ interface SignInModalProps {
   onSignIn?: (type: "homeowner" | "contractor") => void;
 }
 
-type ModalView = "signin" | "forgot" | "forgot-sent";
 type UserType = "contractor" | "homeowner";
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const SIGNIN_ROLE_KEY = "homebids_signin_role";
 
@@ -46,7 +42,6 @@ function getSavedRole(): UserType {
 
 export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) {
   const router = useRouter();
-  const [view, setView] = useState<ModalView>("signin");
   const [userType, setUserType] = useState<UserType>(() => getSavedRole());
   const [usePhoneForHomeowner, setUsePhoneForHomeowner] = useState(() => getSavedRole() === "homeowner");
   const [email, setEmail] = useState("");
@@ -56,15 +51,9 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Forgot-password sub-form state
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetError, setResetError] = useState("");
-  const [resetLoading, setResetLoading] = useState(false);
-
   function handleClose() {
     onOpenChange(false);
     setTimeout(() => {
-      setView("signin");
       const savedRole = getSavedRole();
       setUserType(savedRole);
       setUsePhoneForHomeowner(savedRole === "homeowner");
@@ -74,53 +63,14 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
       setError("");
       setLoading(false);
       setShowPassword(false);
-      setResetEmail("");
-      setResetError("");
-      setResetLoading(false);
     }, 200);
   }
 
+  // Forgot Password now lives on its own page with Contractor / Homeowner tabs.
+  // Close the modal and route there, pre-selecting the current tab.
   function openForgot() {
-    setResetEmail(email.trim());
-    setResetError("");
-    setView("forgot");
-  }
-
-  function backToSignIn() {
-    setResetError("");
-    setError("");
-    setView("signin");
-  }
-
-  async function handleForgotSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmed = resetEmail.trim();
-    if (!trimmed) {
-      setResetError("Please enter your email address.");
-      return;
-    }
-    if (!EMAIL_REGEX.test(trimmed)) {
-      setResetError("Please enter a valid email address.");
-      return;
-    }
-    setResetLoading(true);
-    setResetError("");
-    try {
-      const supabase = createClient();
-      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(trimmed, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      // Always show the generic success state — never reveal whether the email
-      // is registered. Only log genuine transport failures.
-      if (resetErr) {
-        console.error("[v0] resetPasswordForEmail error:", resetErr.message);
-      }
-      setView("forgot-sent");
-    } catch {
-      setResetError("Something went wrong. Please try again.");
-    } finally {
-      setResetLoading(false);
-    }
+    handleClose();
+    router.push(`/auth/forgot-password?type=${userType}`);
   }
 
   function finishSignIn(role: MockRole) {
@@ -133,7 +83,8 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
     e.preventDefault();
 
     if (userType === "homeowner" && usePhoneForHomeowner) {
-      // Homeowner phone sign-in
+      // Homeowner phone sign-in maps {last-10-digits} → {1XXXXXXXXXX}@sms.homebids.ai
+      // under the hood (resolved server-side in phoneSignIn).
       if (!phone.trim() || !password) {
         setError("Please enter your phone and password.");
         return;
@@ -171,8 +122,6 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
     <Dialog open={open} onOpenChange={(val) => { if (!val) handleClose(); }}>
       <DialogContent className="sm:max-w-sm gap-0 p-6">
         <div className="space-y-5">
-          {view === "signin" && (
-          <>
           {/* User Type Toggle */}
           <div
             role="radiogroup"
@@ -186,6 +135,7 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
               onClick={() => {
                 setUserType("contractor");
                 setUsePhoneForHomeowner(false);
+                setError("");
                 if (typeof window !== "undefined") {
                   window.localStorage.setItem(SIGNIN_ROLE_KEY, "contractor");
                 }
@@ -205,6 +155,7 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
               onClick={() => {
                 setUserType("homeowner");
                 setUsePhoneForHomeowner(true);
+                setError("");
                 if (typeof window !== "undefined") {
                   window.localStorage.setItem(SIGNIN_ROLE_KEY, "homeowner");
                 }
@@ -227,6 +178,16 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
                 : "Sign in to view your project and bids."}
             </DialogDescription>
           </DialogHeader>
+
+          {userType === "homeowner" && (
+            <div className="flex items-start gap-2.5 rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-left">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Homeowners: no password needed — your private project link (texted to you) is your
+                login. Want dashboard access? Use &quot;Forgot Password&quot; to get a reset link by text.
+              </p>
+            </div>
+          )}
 
           {error && (
             <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -317,15 +278,13 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
                 <label htmlFor="modal-password" className="text-sm font-medium text-foreground">
                   Password
                 </label>
-                {userType === "contractor" && (
-                  <button
-                    type="button"
-                    onClick={openForgot}
-                    className="text-sm font-medium text-primary hover:underline"
-                  >
-                    Forgot Password?
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={openForgot}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Forgot Password?
+                </button>
               </div>
               <div className="relative">
                 <Input
@@ -375,76 +334,6 @@ export function SignInModal({ open, onOpenChange, onSignIn }: SignInModalProps) 
                 Create an account
               </Link>
             </p>
-          )}
-          </>
-          )}
-
-          {view === "forgot" && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold">Reset your password</DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground">
-                  Enter the email connected to your HomeBids account and we&apos;ll send you a reset link.
-                </DialogDescription>
-              </DialogHeader>
-
-              {resetError && (
-                <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  {resetError}
-                </div>
-              )}
-
-              <form onSubmit={handleForgotSubmit} className="space-y-3">
-                <div className="space-y-1.5">
-                  <label htmlFor="modal-reset-email" className="text-sm font-medium text-foreground">
-                    Email
-                  </label>
-                  <Input
-                    id="modal-reset-email"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="you@example.com"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    className="h-11"
-                    disabled={resetLoading}
-                    autoFocus
-                  />
-                </div>
-                <Button type="submit" className="w-full h-10 cursor-pointer" disabled={resetLoading}>
-                  {resetLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Send Reset Link
-                </Button>
-              </form>
-
-              <p className="text-center text-sm text-muted-foreground">
-                <button type="button" onClick={backToSignIn} className="font-medium text-primary hover:underline">
-                  Back to Sign In
-                </button>
-              </p>
-            </>
-          )}
-
-          {view === "forgot-sent" && (
-            <div className="space-y-5 text-center">
-              <DialogHeader className="sr-only">
-                <DialogTitle>Check your email</DialogTitle>
-                <DialogDescription>Password reset link sent.</DialogDescription>
-              </DialogHeader>
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <MailCheck className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-foreground">Check your email</h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  If an account exists for that email, we&apos;ll send a password reset link.
-                </p>
-              </div>
-              <Button onClick={backToSignIn} className="w-full h-10 cursor-pointer">
-                Back to Sign In
-              </Button>
-            </div>
           )}
         </div>
       </DialogContent>
