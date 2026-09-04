@@ -359,10 +359,10 @@ export function Header({
                         className={`${menuItemBase} ${isActive ? menuItemActive : ""}`}
                         onClick={closeMenu}
                       >
-                        {item.label === "Dashboard"   && <LayoutDashboard className="h-4 w-4 shrink-0" />}
-                        {item.label === "Bid Inbox"   && <Users           className="h-4 w-4 shrink-0" />}
-                        {item.label === "Browse Jobs" && <Search          className="h-4 w-4 shrink-0" />}
-                        {item.label === "Account"     && <Wrench          className="h-4 w-4 shrink-0" />}
+                        {item.label === "Dashboard" && <LayoutDashboard className="h-4 w-4 shrink-0" />}
+                        {item.label === "Bids"      && <FileText        className="h-4 w-4 shrink-0" />}
+                        {item.label === "Profile"   && <Wrench          className="h-4 w-4 shrink-0" />}
+                        {item.label === "Messages"  && <MessageCircle   className="h-4 w-4 shrink-0" />}
                         {item.label}
                       </Link>
                     );

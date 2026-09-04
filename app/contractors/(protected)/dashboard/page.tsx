@@ -1,406 +1,56 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useRef, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
-import { Header } from "@/components/header";
-import { ScrollToTop } from "@/components/scroll-to-top";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { copyToClipboard } from "@/lib/utils";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  MapPin,
-  Clock,
-  MessageCircle,
-  Eye,
-  CheckCircle2,
-  Users,
-  Send,
-  Calculator,
   Sparkles,
-  Lock,
-  Unlock,
-  Wrench,
-  LayoutDashboard,
-  LogOut,
-  User,
-  Phone,
-  Mail,
-  Bell,
-  Copy,
-  ChevronRight,
-  ArrowLeft,
-  ExternalLink,
-  Flame,
+  ArrowRight,
+  Play,
+  Check,
   FileText,
-  Plus,
-  Archive,
-  Search,
+  Pencil,
+  MessageSquareText,
+  ExternalLink,
 } from "lucide-react";
-import { resumeDraftBid, type NeedsActionContext } from "@/lib/bid-resume";
-import { getContractorSmsLink, getSmsHref } from "@/lib/sms-config";
-import { timeAgo } from "@/lib/proposal-format";
-import { getMockUser, mockSignOut, syncMirrorFromSupabase } from "@/lib/mock-auth";
-import { getContractorProposals, type Proposal, type ProposalStatus } from "@/lib/supabase/proposals";
-import { ContractorProposalCard } from "@/components/proposal/contractor-proposal-card";
-import { ProfileCompletionSection } from "@/components/contractor/profile-completion-section";
-import { createClient } from "@/lib/supabase/client";
+import { ContractorTopbar } from "@/components/contractor/contractor-topbar";
+import { BuildBidModal } from "@/components/contractor/build-bid-modal";
+import { EditGoalModal } from "@/components/contractor/edit-goal-modal";
+import { Button } from "@/components/ui/button";
+import { getMockUser, syncMirrorFromSupabase } from "@/lib/mock-auth";
+import { getContractorSmsLink } from "@/lib/sms-config";
+import { formatPrice, statusMeta } from "@/lib/proposal-format";
+import { getMonthGoal } from "@/lib/contractor-goal";
+import {
+  useContractorSignals,
+  unansweredThreads,
+  profileCompletion,
+  isProfileFieldFilled,
+  PROFILE_FIELD_LABELS,
+  type ContractorProfile,
+} from "@/lib/use-contractor-signals";
+import type { Proposal, ProposalStatus } from "@/lib/supabase/proposals";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+const CARD = "rounded-[22px] border border-border bg-card shadow-[0_10px_30px_rgba(16,17,20,0.06)]";
+const SENT_STATUSES: ProposalStatus[] = ["sent", "viewed", "question_asked", "approval_clicked", "accepted", "changes_requested"];
 
-interface HomeBidsLead {
-  id: string;
-  title: string;
-  category: string;
-  location: string;
-  estimatedValue: string;
-  timeline: string;
-  status: "new" | "bid_submitted" | "homeowner_reviewing";
-  directMessagingUnlocked: boolean;
-  homeownerName: string;
-  homeownerGoals: string;
-  scope: string;
-  budgetRange: string;
-  aiNotes: string;
-  suggestedStrategy: string;
-  recommendedPrice: string;
-  suggestedResponse: string;
-  objections: string[];
-  nextAction: string;
-  homeownerPhone?: string;
-  zip?: string;
-  photos?: number;
-  missingInfo?: string[];
-  aiConfidence?: string;
+function shortDate(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const today = new Date();
+  const isSameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (isSameDay(d, today)) return "Today";
+  if (isSameDay(d, yesterday)) return "Yesterday";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
-
-
-// ── Mock data ─────────────────────────────────────────────────────────────────
-
-const DEMO_HOMEBIDS_LEADS: HomeBidsLead[] = [
-  {
-    id: "hbl-1",
-    title: "Kitchen Cabinet Repaint",
-    category: "Interior Painting",
-    location: "Gilbert, AZ 85296",
-    zip: "85296",
-    estimatedValue: "$1,200–$1,800",
-    timeline: "1–2 weeks",
-    status: "new",
-    directMessagingUnlocked: false,
-    homeownerName: "Jennifer T.",
-    homeownerGoals: "Wants fresh, modern look — considering white or greige. Has kids so wants low-VOC paint.",
-    scope: "Upper and lower cabinets (32 doors), light sanding, primer, 2 coats. No hardware replacement.",
-    budgetRange: "$1,000–$2,000",
-    aiNotes: "Comparable Gilbert jobs this month averaged $1,450. Homeowner mentioned urgency — reply fast.",
-    suggestedStrategy: "Lead with low-VOC eco angle. Offer a free color consult to differentiate.",
-    recommendedPrice: "$1,350–$1,600",
-    suggestedResponse: "Hi Jennifer, I'd love to help refresh your cabinets with a low-VOC finish that's safe for your kids. I specialize in cabinet repaints in the Gilbert area and can get started within the week.",
-    objections: ["Too expensive — counter with longevity vs. full replacement cost", "Timeline concern — offer flexible scheduling"],
-    nextAction: "Generate Bid",
-    photos: 2,
-    missingInfo: ["Exact measurements", "Hardware replacement preference"],
-    aiConfidence: "High",
-  },
-  {
-    id: "hbl-2",
-    title: "Backyard Turf Install",
-    category: "Landscaping",
-    location: "Chandler, AZ 85226",
-    zip: "85226",
-    estimatedValue: "$6,500–$9,000",
-    timeline: "2–3 weeks",
-    status: "bid_submitted",
-    directMessagingUnlocked: false,
-    homeownerName: "Marcus D.",
-    homeownerGoals: "Replace dead grass with low-maintenance turf. Has two dogs.",
-    scope: "Approx 800 sqft, existing sod removal, base prep, pet-friendly turf install, border edging.",
-    budgetRange: "$6,000–$10,000",
-    aiNotes: "Bid already submitted at $7,800. Homeowner viewed bid twice but hasn't responded. Consider follow-up.",
-    suggestedStrategy: "Highlight pet-friendly turf warranty and drainage. Follow up within 24h.",
-    recommendedPrice: "$7,500–$8,200",
-    suggestedResponse: "Hi Marcus, following up on my turf proposal. Happy to answer any questions about the pet-safe material or drainage setup.",
-    objections: ["HOA approval needed — offer to provide product spec sheet", "Price — emphasize 10-year lifespan vs. annual lawn care costs"],
-    nextAction: "Message via HomeBids AI",
-    photos: 3,
-    missingInfo: ["HOA restrictions"],
-    aiConfidence: "Medium",
-  },
-  {
-    id: "hbl-3",
-    title: "Bathroom Vanity Replacement",
-    category: "Plumbing / Remodel",
-    location: "Mesa, AZ 85201",
-    zip: "85201",
-    estimatedValue: "$850–$1,400",
-    timeline: "1 week",
-    status: "homeowner_reviewing",
-    directMessagingUnlocked: true,
-    homeownerName: "Rachel S.",
-    homeownerGoals: "Upgrade dated single vanity to double. Wants modern farmhouse style.",
-    scope: "Remove existing vanity, install customer-supplied 60\" double vanity, reconnect plumbing, patch drywall.",
-    budgetRange: "$700–$1,500",
-    aiNotes: "Homeowner approved direct contact. Follow up by phone or text today.",
-    suggestedStrategy: "She's close to deciding. Text directly and confirm availability this week.",
-    recommendedPrice: "$950–$1,200",
-    suggestedResponse: "Hi Rachel, just checking in on the vanity project — I have availability this week and can get started right away.",
-    objections: ["Scheduling — she wants it done before a family visit"],
-    nextAction: "Text Homeowner",
-    homeownerPhone: "",
-    photos: 1,
-    missingInfo: [],
-    aiConfidence: "High",
-  },
-];
-
-// ── AI helper functions ───────────��───────────────────────��───────��────────────
-
-function _getBidDefenderResponse(projectType: string, bidAmount: string, objection: string) {
-  const objectionLower = objection.toLowerCase();
-  const isPrice = objectionLower.includes("expens") || objectionLower.includes("price") || objectionLower.includes("cost") || objectionLower.includes("cheap");
-  const isMoreBids = objectionLower.includes("bid") || objectionLower.includes("quot") || objectionLower.includes("compar");
-
-  let response = "";
-  if (isPrice) {
-    response = `I completely understand — ${bidAmount} is a real investment and you deserve to feel confident about it. Here's what separates my bid from a cheaper option: [Your unique value here].\n\nEither way, I appreciate the opportunity and want you to feel great about whoever you choose.`;
-  } else if (isMoreBids) {
-    response = `That's completely reasonable — smart homeowners get multiple quotes.\n\nIf another contractor ends up being a better fit, no hard feelings. I just want the job done right for you.`;
-  } else {
-    response = `I understand the hesitation. I want you to feel 100% confident before you commit to anything.\n\nIf you have any specific concerns I haven't addressed, I'm happy to talk through them directly.`;
-  }
-
-  return {
-    response,
-    earnings: { potentialPerReferral: "$45–$120", jobsReferred: 7, affiliateEarned: "$490" },
-  };
-}
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-type Tab = "home" | "leads" | "ai" | "account";
-type AiTool = "bid" | null;
-
-// ── Bid Momentum ────────────────────────────────────────────────────────────
-// A flexible, monthly pace system (not a punitive daily streak). Goal: 30 bids
-// per calendar month, with a daily nudge to build 1 bid today.
-
-const MONTH_GOAL = 30;
-
-interface BidMomentum {
-  state: "start" | "onpace" | "ahead" | "slightly" | "far" | "complete";
-  title: string;
-  statusLabel: string;
-  copy: string;
-  ctaLabel: string;
-  progressText: string;
-  percent: number;
-}
-
-function computeBidMomentum(count: number, goal: number, monthFraction: number | null): BidMomentum {
-  const percent = Math.max(0, Math.min(100, Math.round((count / goal) * 100)));
-  const progressText = `${count} / ${goal} bids this month`;
-
-  if (count >= goal) {
-    return {
-      state: "complete",
-      title: "Monthly Goal Complete",
-      statusLabel: "Goal Complete",
-      copy: "You hit your 30-bid goal this month. Every extra bid creates another chance to win work.",
-      ctaLabel: "Build Another Bid",
-      progressText,
-      percent,
-    };
-  }
-  if (count === 0) {
-    return {
-      state: "start",
-      title: "Start Your Bid Momentum",
-      statusLabel: "Ready to start",
-      copy: "Build your first professional bid this month and start moving your pipeline forward.",
-      ctaLabel: "Build Today's Bid",
-      progressText,
-      percent,
-    };
-  }
-
-  // Pace relative to expected progress for this point in the month.
-  // Fallback (pre-mount, fraction unknown): treat as on pace to avoid a flash.
-  const expected = monthFraction != null ? goal * monthFraction : count;
-  const ratio = expected > 0 ? count / expected : 1;
-
-  if (ratio >= 1.15) {
-    return {
-      state: "ahead",
-      title: "Bid Momentum: Ahead of Pace",
-      statusLabel: "Ahead of Pace",
-      copy: "You're ahead of your monthly goal. Keep building while the momentum is strong.",
-      ctaLabel: "Build Another Bid",
-      progressText,
-      percent,
-    };
-  }
-  if (ratio >= 0.9) {
-    return {
-      state: "onpace",
-      title: "Bid Momentum: On Pace",
-      statusLabel: "On Pace",
-      copy: `You're ${count} ${count === 1 ? "bid" : "bids"} into your 30-bid monthly goal. Build 1 bid today to keep your pipeline moving.`,
-      ctaLabel: "Build Today's Bid",
-      progressText,
-      percent,
-    };
-  }
-  if (ratio >= 0.6) {
-    return {
-      state: "slightly",
-      title: "Bid Momentum: Slightly Behind",
-      statusLabel: "Slightly Behind",
-      copy: "You're a few bids behind pace. Build 1 bid today to get back on track.",
-      ctaLabel: "Get Back on Track",
-      progressText,
-      percent,
-    };
-  }
-  return {
-    state: "far",
-    title: "Rebuild Your Momentum",
-    statusLabel: "Behind Pace",
-    copy: "You still have time to make progress this month. Start with 1 professional bid today.",
-    ctaLabel: "Build Today's Bid",
-    progressText,
-    percent,
-  };
-}
-
-// ── Bid Inbox model ─────────────────────────────────────────────────────────
-// The contractor's own customers/bids/proposals — created through HomeBids.ai,
-// never a marketplace lead feed. Statuses drive the badge + primary CTA.
-type InboxStatusKey =
-  | "new_request" | "draft_ready" | "missing_details" | "proposal_sent"
-  | "waiting_customer" | "follow_up_ready" | "changes_requested" | "accepted" | "archived";
-
-type InboxFilter = "all" | "needs_action" | "drafts" | "sent" | "accepted" | "archived";
-
-interface BidInboxItem {
-  id: string;
-  customer: string;
-  project: string;
-  status: InboxStatusKey;
-  value: number | null;
-  lastActivity: string;
-  source: string;
-  phone: string;
-  secondary: "text" | "view";
-}
-
-const INBOX_STATUS: Record<InboxStatusKey, { label: string; cls: string; primary: string; action: "build" | "followup" | "view" }> = {
-  new_request:       { label: "New Request",        cls: "bg-blue-100 text-blue-700",     primary: "Start Bid",                action: "build" },
-  draft_ready:       { label: "Draft Ready",        cls: "bg-indigo-100 text-indigo-700", primary: "Review Bid",               action: "build" },
-  missing_details:   { label: "Missing Details",    cls: "bg-amber-100 text-amber-700",   primary: "Continue Bid",             action: "build" },
-  proposal_sent:     { label: "Bid Sent",           cls: "bg-sky-100 text-sky-700",       primary: "View Bid",                 action: "view"  },
-  waiting_customer:  { label: "Waiting on Customer", cls: "bg-amber-100 text-amber-700",  primary: "Send Follow-Up",           action: "followup" },
-  follow_up_ready:   { label: "Follow-Up Ready",    cls: "bg-purple-100 text-purple-700", primary: "Send Follow-Up",           action: "followup" },
-  changes_requested: { label: "Changes Requested",  cls: "bg-orange-100 text-orange-700", primary: "Edit Bid",                 action: "build" },
-  accepted:          { label: "Accepted",           cls: "bg-emerald-100 text-emerald-700", primary: "View Accepted Bid",     action: "view"  },
-  archived:          { label: "Archived",           cls: "bg-muted text-muted-foreground", primary: "View Details",            action: "view"  },
-};
-
-const INBOX_FILTERS: { id: InboxFilter; label: string }[] = [
-  { id: "all",          label: "All" },
-  { id: "needs_action", label: "Needs Action" },
-  { id: "drafts",       label: "Drafts" },
-  { id: "sent",         label: "Sent" },
-  { id: "accepted",     label: "Accepted" },
-  { id: "archived",     label: "Archived" },
-];
-
-const INBOX_FILTER_GROUPS: Record<Exclude<InboxFilter, "all" | "archived">, InboxStatusKey[]> = {
-  needs_action: ["new_request", "draft_ready", "missing_details", "changes_requested", "follow_up_ready"],
-  drafts:       ["draft_ready", "missing_details"],
-  sent:         ["proposal_sent", "waiting_customer"],
-  accepted:     ["accepted"],
-};
-
-// Maps a real proposal's lifecycle status onto an inbox status + the right
-// secondary action. Used only for real (non-demo) contractor accounts.
-const PROPOSAL_STATUS_TO_INBOX: Record<ProposalStatus, { status: InboxStatusKey; secondary: "text" | "view" }> = {
-  draft:             { status: "draft_ready",       secondary: "text" },
-  sent:              { status: "proposal_sent",     secondary: "view" },
-  viewed:            { status: "waiting_customer",  secondary: "text" },
-  question_asked:    { status: "follow_up_ready",   secondary: "text" },
-  approval_clicked:  { status: "waiting_customer",  secondary: "view" },
-  accepted:          { status: "accepted",          secondary: "view" },
-  changes_requested: { status: "changes_requested", secondary: "text" },
-};
-
-const BID_INBOX_ITEMS: BidInboxItem[] = [
-  { id: "inbox-1", customer: "Sarah M.", project: "Interior Paint Estimate", status: "draft_ready",      value: 2400,  lastActivity: "Updated 12 min ago",     source: "Created from text",             phone: "+15125550142", secondary: "text" },
-  { id: "inbox-2", customer: "Mike R.",  project: "Drywall Repair",          status: "waiting_customer", value: 380,   lastActivity: "Proposal sent yesterday", source: "Added by you",                  phone: "+15125550178", secondary: "view" },
-  { id: "inbox-3", customer: "Janet B.", project: "Bathroom Remodel",        status: "follow_up_ready",  value: 12000, lastActivity: "Follow-up draft ready",   source: "Created from notes",            phone: "+15125550199", secondary: "text" },
-  { id: "inbox-4", customer: "David K.", project: "Fence Installation",      status: "new_request",      value: null,  lastActivity: "Request received 1 hour ago", source: "Imported from SMS",         phone: "+15125550123", secondary: "text" },
-  { id: "inbox-5", customer: "Lauren P.", project: "Kitchen Backsplash",     status: "accepted",         value: 3200,  lastActivity: "Accepted 3 days ago",     source: "Created from customer message", phone: "+15125550155", secondary: "view" },
-  { id: "inbox-6", customer: "Tom H.",   project: "Gutter Cleaning",         status: "archived",         value: 250,   lastActivity: "Archived last week",      source: "Added by you",                  phone: "+15125550167", secondary: "view" },
-];
-
-// ── Drafts (unfinished bids) ──────────────────────────────────────────────────
-// A draft is a bid started (by text or online) but not yet completed/approved
-// into a hosted proposal. Real accounts derive drafts from their own proposals
-// (status === "draft"); demo accounts show the sample set below.
-type DraftSource = "text" | "online";
-
-interface DraftItem {
-  id: string;
-  customer: string | null;
-  project: string;
-  status: string;
-  statusCls: string;
-  value: number | null;
-  lastUpdated: string;
-  source: DraftSource;
-}
-
-const DEMO_DRAFTS: DraftItem[] = [
-  { id: "draft-1", customer: "Sarah M.", project: "Interior Paint Estimate", status: "Ready for review",     statusCls: "bg-emerald-100 text-emerald-700", value: 2400,  lastUpdated: "12 min ago", source: "text"   },
-  { id: "draft-2", customer: "Mike R.",  project: "Drywall Repair",          status: "Needs pricing",        statusCls: "bg-amber-100 text-amber-700",     value: null,  lastUpdated: "1 hour ago", source: "text"   },
-  { id: "draft-3", customer: "Janet B.", project: "Bathroom Remodel",        status: "AI questions pending", statusCls: "bg-purple-100 text-purple-700",   value: 12000, lastUpdated: "Yesterday",  source: "online" },
-];
-
-// ── Main component ────────────────────────────────────────────────────────────
 
 export default function ContractorDashboard() {
-  const searchParams = useSearchParams();
-  const tabParam = searchParams?.get("tab") ?? "";
-
-  const [activeTab, setActiveTab] = useState<Tab>(
-    (tabParam === "leads" || tabParam === "account") ? tabParam : "home"
-  );
-
-  useEffect(() => {
-    const t = searchParams?.get("tab") ?? "";
-    // Any missing/unknown tab (including the "overview" alias) resolves to home.
-    if (t === "leads" || t === "account") setActiveTab(t);
-    else setActiveTab("home");
-  }, [searchParams]);
-
+  // ── Auth guard (unchanged behavior) ─────────────────────────────────────────
   const [contractorName, setContractorName] = useState("there");
-  // Demo mode — always false for production. Shows only real contractor data.
-  const [isDemoMode, setIsDemoMode] = useState(false);
-  // Locally-hidden (archived) drafts for this session.
-  const [dismissedDraftIds, setDismissedDraftIds] = useState<Set<string>>(new Set());
   useEffect(() => {
-    // Auth guard. Middleware already protects this route server-side; here we
-    // read the session mirror for instant paint and reconcile with the real
-    // Supabase session if the mirror is empty (e.g. direct navigation).
     let cancelled = false;
     (async () => {
       let user = getMockUser();
@@ -415,1084 +65,510 @@ export default function ContractorDashboard() {
         return;
       }
       if (user.firstName) setContractorName(user.firstName);
-      setIsDemoMode(false);
     })();
     return () => { cancelled = true; };
   }, []);
 
-  const [bidsCount, setBidsCount] = useState(0);
+  const signals = useContractorSignals();
 
-  // Profile completion computed from Supabase contractor_profiles data
-  const [contractorProfile, setContractorProfile] = useState<{
-    business_name?: string;
-    logo_url?: string;
-    bio?: string;
-    website?: string;
-    business_address?: string;
-    license_number?: string;
-    insurance_details?: string;
-    years_experience?: number;
-    google_review_link?: string;
-    specialties?: string[];
-    social_links?: Record<string, string>;
-  } | null>(null);
-  const [profileCompletion, setProfileCompletion] = useState<{ completed: number; total: number; percent: number; isComplete: boolean } | null>(null);
-
-  // Hosted proposals (written by the external Bid Builder workflow). Read-only
-  // here — the dashboard only displays and shares them.
-  const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [proposalsLoaded, setProposalsLoaded] = useState(false);
-  useEffect(() => {
-    async function loadProposals() {
-      try {
-        if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) {
-          setProposalsLoaded(true);
-          return;
-        }
-        const { proposals: rows } = await getContractorProposals();
-        setProposals(rows);
-
-        // Count proposals created in the current calendar month for BID MOMENTUM
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        const currentMonth = now.getMonth();
-        const monthProposals = (rows ?? []).filter((p) => {
-          if (!p.created_at) return false;
-          const pDate = new Date(p.created_at);
-          return pDate.getFullYear() === currentYear && pDate.getMonth() === currentMonth;
-        });
-        setBidsCount(monthProposals.length);
-      } catch { /* non-fatal */ }
-      finally { setProposalsLoaded(true); }
-    }
-    loadProposals();
-  }, []);
-
-  // Time-of-day greeting + month progress (computed client-side post-mount to
-  // avoid hydration mismatches; both default to neutral values on first render).
+  // ── Greeting (client-only to avoid hydration mismatch) ──────────────────────
   const [greeting, setGreeting] = useState("Welcome");
-  const [monthFraction, setMonthFraction] = useState<number | null>(null);
   useEffect(() => {
-    const d = new Date();
-    const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    setMonthFraction(d.getDate() / daysInMonth);
-    const h = d.getHours();
+    const h = new Date().getHours();
     setGreeting(h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening");
   }, []);
 
-  const momentum = useMemo(
-    () => computeBidMomentum(bidsCount, MONTH_GOAL, monthFraction),
-    [bidsCount, monthFraction],
-  );
+  // ── Monthly goal ────────────────────────────────────────────────────────────
+  const [goal, setGoal] = useState(30);
+  useEffect(() => {
+    setGoal(getMonthGoal());
+    const onChange = () => setGoal(getMonthGoal());
+    window.addEventListener("hb:goal-changed", onChange);
+    return () => window.removeEventListener("hb:goal-changed", onChange);
+  }, []);
 
-  // Leads segment — "myleads" is the default
-  const [inboxFilter, setInboxFilter] = useState<InboxFilter>("needs_action");
-  const [showRelayModal, setShowRelayModal] = useState(false);
-  const [relayLead, setRelayLead] = useState<HomeBidsLead | null>(null);
-  const [relayMessage, setRelayMessage] = useState("");
-  const [relaySent, setRelaySent] = useState(false);
+  const [showBuild, setShowBuild] = useState(false);
+  const [showGoal, setShowGoal] = useState(false);
 
-  // Lead detail modal
-  const [showLeadDetail, setShowLeadDetail] = useState(false);
-  const [selectedLead, setSelectedLead] = useState<HomeBidsLead | null>(null);
+  const bidsCount = signals.monthBidsCount;
+  const percent = Math.max(0, Math.min(100, Math.round((bidsCount / goal) * 100)));
+  const remaining = Math.max(0, goal - bidsCount);
 
-  // Active AI tool
-  const [activeTool, setActiveTool] = useState<AiTool>(null);
+  const hasBids = signals.proposals.length > 0;
 
-  // ── SMS-based Bid Builder ───────────────────────────────────────────────────
-  // Track HomeBids leads that have become approved (direct messaging unlocked) in this session
-  const [unlockedLeadIds, setUnlockedLeadIds] = useState<Set<string>>(new Set());
-
-  // Company name for PDF preview — will be updated when profile loads
-  const [companyName, setCompanyName] = useState("[Your Company Name]");
-
-  function handleHomeownerApproved(leadId: string) {
-    setUnlockedLeadIds((prev) => new Set(prev).add(leadId));
-  }
-
-  // A HomeBids lead's direct messaging is unlocked if it started unlocked OR was approved this session
-  function isMessagingUnlocked(lead: HomeBidsLead) {
-    return lead.directMessagingUnlocked || unlockedLeadIds.has(lead.id);
-  }
-
-  function openSms(phone: string | undefined, body?: string) {
-    // phone is required for direct-contact leads; body-only SMS uses an empty recipient
-    const target = phone ?? "";
-    if (!phone && !body) {
-      alert("Phone number not available. Contact has not been unlocked yet.");
-      return;
-    }
-    const href = getSmsHref(target, body);
-    window.location.href = href;
-  }
-
-  const handleSignOut = () => mockSignOut();
-
-  const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "home",    label: "Home",     icon: LayoutDashboard },
-    { id: "leads",   label: "Bid Inbox", icon: Users },
-    { id: "account", label: "Account",  icon: Wrench },
-  ];
-
-  // Browse Jobs link (separate page, not a tab)
-  const browseJobsLink = { label: "Browse Jobs", href: "/contractors/jobs", icon: "Search" };
-
-  function handleTabChange(id: Tab) {
-    setActiveTab(id);
-    if (id !== "ai") setActiveTool(null);
-  }
-
-  // ── Lead card ──────────────────────────────────────────────────────────────
-
-  function renderHomeBidsLeadCard(lead: HomeBidsLead) {
-    const statusBadge =
-      lead.status === "new" ? { label: "New", cls: "bg-blue-100 text-blue-700" }
-      : lead.status === "bid_submitted" ? { label: "Bid Submitted", cls: "bg-amber-100 text-amber-700" }
-      : { label: "Reviewing", cls: "bg-purple-100 text-purple-700" };
-
+  if (!signals.loaded) {
     return (
-      <div key={lead.id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/30">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadge.cls}`}>{statusBadge.label}</span>
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{lead.category}</span>
-          </div>
-          <span className="text-sm font-semibold text-foreground shrink-0">{lead.estimatedValue}</span>
-        </div>
-        <p className="mt-1.5 font-semibold text-foreground">{lead.title}</p>
-        <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><MapPin className="h-3 w-3 shrink-0" />{lead.location}</span>
-          <span className="flex items-center gap-1"><Clock className="h-3 w-3 shrink-0" />{lead.timeline}</span>
-        </div>
-        <p className="mt-2 text-[11px] italic text-primary/80">{lead.aiNotes}</p>
-        <div className="mt-2">
-          {isMessagingUnlocked(lead) ? (
-            <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700 w-fit">
-              <Unlock className="h-3 w-3" /> Direct texting unlocked
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground w-fit">
-              <Lock className="h-3 w-3" /> Contact locked
-            </span>
-          )}
-        </div>
-        <div className="mt-3 flex gap-2">
-          <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-xs text-muted-foreground" onClick={() => { setSelectedLead(lead); setShowLeadDetail(true); }}>
-            <Eye className="h-3.5 w-3.5" /> Details
-          </Button>
-          {isMessagingUnlocked(lead) ? (
-            <Button size="sm" className="h-7 gap-1 px-3 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => openSms(lead.homeownerPhone)}>
-              <MessageCircle className="h-3 w-3" /> Text Homeowner
-            </Button>
-          ) : lead.status === "new" ? (
-            <a href="sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid">
-              <Button size="sm" className="h-7 gap-1 px-3 text-xs">
-                <MessageCircle className="h-3 w-3" /> Start Bid by Text
-              </Button>
-            </a>
-          ) : (
-            <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={() => { setRelayLead(lead); setRelayMessage(lead.suggestedResponse); setRelaySent(false); setShowRelayModal(true); }}>
-              <MessageCircle className="h-3 w-3" /> Send via HomeBids AI
-            </Button>
-          )}
-        </div>
+      <div className="min-h-screen bg-muted/30">
+        <ContractorTopbar />
+        <main className="mx-auto w-full max-w-[1180px] px-4 py-8 sm:px-6">
+          <div className={`${CARD} h-64 animate-pulse`} />
+        </main>
       </div>
     );
   }
 
-  // ── HOME tab ─────────────────────────────────��────���────────────────────────
+  return (
+    <div className="min-h-screen bg-muted/30">
+      <ContractorTopbar />
+      <main className="mx-auto w-full max-w-[1180px] px-4 pb-16 pt-8 sm:px-6">
+        {hasBids ? (
+          <SeasonedDashboard
+            name={contractorName}
+            greeting={greeting}
+            proposals={signals.proposals}
+            profile={signals.profile}
+            threads={signals.threads}
+            bidsCount={bidsCount}
+            goal={goal}
+            percent={percent}
+            remaining={remaining}
+            onBuild={() => setShowBuild(true)}
+            onEditGoal={() => setShowGoal(true)}
+          />
+        ) : (
+          <NewUserDashboard
+            name={contractorName}
+            greeting={greeting}
+            profile={signals.profile}
+            proposals={signals.proposals}
+            bidsCount={bidsCount}
+            goal={goal}
+            percent={percent}
+            onBuild={() => setShowBuild(true)}
+            onEditGoal={() => setShowGoal(true)}
+          />
+        )}
+      </main>
 
-  // ─��� Bid status config (full set) ─────────────��────────────────────���─────────
-  const BID_STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
-    draft:          { label: "Draft",           cls: "bg-muted text-muted-foreground"         },
-    ready_to_send:  { label: "Ready to Send",   cls: "bg-blue-50 text-blue-700"               },
-    sent:           { label: "Sent",            cls: "bg-amber-50 text-amber-700"             },
-    pending:        { label: "Awaiting Review", cls: "bg-amber-50 text-amber-700"             },
-    question_asked: { label: "Question Asked",  cls: "bg-purple-50 text-purple-700"           },
-    approved:       { label: "Approved",        cls: "bg-green-50 text-green-700"             },
-    accepted:       { label: "Approved",        cls: "bg-green-50 text-green-700"             },
-    declined:       { label: "Declined",        cls: "bg-red-50 text-red-700"                 },
-    rejected:       { label: "Not Selected",    cls: "bg-muted text-muted-foreground"         },
-    in_progress:    { label: "In Progress",     cls: "bg-blue-50 text-blue-700"               },
-    completed:      { label: "Completed",       cls: "bg-green-50 text-green-700"             },
-  };
+      <BuildBidModal open={showBuild} onClose={() => setShowBuild(false)} />
+      <EditGoalModal open={showGoal} currentGoal={goal} onClose={() => setShowGoal(false)} onSaved={setGoal} />
+    </div>
+  );
+}
 
-  // Up to 3 action items. The third card adapts: when behind pace it nudges
-  // momentum; when on/ahead/complete it surfaces a fresh homeowner lead.
-  const thirdCard = {
-          id: "na-momentum",
-          title: "Monthly Bid Momentum",
-          sub: momentum.copy,
-          cta: momentum.ctaLabel,
-          icon: Flame as React.ElementType,
-          onClick: () => { window.location.href = "sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid"; },
-        };
+// ── New-user dashboard (0 bids) ───────────────────────────────────────────────
 
-  // Real (mock/demo) context for the in-progress draft. Structured so it can be
-  // swapped for a Supabase row later without touching the card UI.
-  // Derive NEEDS ACTION items from fetched proposals
-  const needsAction: { id: string; title: string; sub: string; cta: string; icon: React.ElementType; onClick: () => void; context?: NeedsActionContext }[] = (() => {
-    const items: { id: string; title: string; sub: string; cta: string; icon: React.ElementType; onClick: () => void; context?: NeedsActionContext }[] = [];
+function NewUserDashboard({
+  name,
+  greeting,
+  profile,
+  proposals,
+  bidsCount,
+  goal,
+  percent,
+  onBuild,
+  onEditGoal,
+}: {
+  name: string;
+  greeting: string;
+  profile: ContractorProfile | null;
+  proposals: Proposal[];
+  bidsCount: number;
+  goal: number;
+  percent: number;
+  onBuild: () => void;
+  onEditGoal: () => void;
+}) {
+  const profileDone = isProfileFieldFilled(profile, "business_name");
+  const firstBidDone = proposals.length > 0;
+  const sentDone = proposals.some((p) => SENT_STATUSES.includes(p.status));
 
-    // Add draft proposals (status "draft")
-    proposals
-      .filter((p) => p.status === "draft")
-      .forEach((p) => {
-        items.push({
-          id: `na-draft-${p.id}`,
-          title: p.project_title || "Draft Bid",
-          sub: "Draft started — finish and send it.",
-          cta: "Finish Bid",
-          icon: FileText,
-          onClick: async () => {
-            const user = getMockUser();
-            // Load the real proposal data first
-            const { getProposalById } = await import("@/lib/supabase/actions");
-            const { proposal } = await getProposalById(p.id || "");
-            if (!proposal) return;
+  const steps = [
+    { n: 1, title: "Finish your profile", sub: "Add your business info and services", done: profileDone, next: false },
+    { n: 2, title: "Build your first bid", sub: "Create and preview a professional bid", done: firstBidDone, next: profileDone && !firstBidDone },
+    { n: 3, title: "Send to a homeowner", sub: "Share your bid and win the job", done: sentDone, next: firstBidDone && !sentDone },
+  ];
 
-            // Build the full context with loaded data
-            const ctx: NeedsActionContext = {
-              needsActionId: p.id || "",
-              actionType: "finish_draft",
-              contractorId: user?.id || "",
-              jobId: null,
-              draftBidId: p.id || "",
-              bidId: null,
-              title: proposal.project_title || "Draft",
-              status: "draft",
-              sourceType: "needs_action",
-              proposalId: proposal.id,
-              shareToken: proposal.share_token,
-              proposalData: {
-                project: proposal.project_title || "",
-                owner: proposal.homeowner_name || "",
-                scope: (proposal.scope_items || []).map((item: any) => item.title || ""),
-                optional: (proposal.add_ons || []).map((item: any) => item.title || ""),
-                price: proposal.total_price ? `$${proposal.total_price}` : "",
-                timeline: proposal.timeline_completion || "",
-              },
-            };
-            // Draft resume now goes to SMS Bid Builder only
-            window.location.href = "sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid";
-          },
-        });
-      });
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-balance text-4xl font-extrabold tracking-tight text-foreground">{greeting}, {name}</h1>
+        <p className="mt-2 text-lg text-muted-foreground">Let&apos;s get your first bid out today.</p>
+      </div>
 
-    // Add sent proposals that are older than 48 hours
-    const now = new Date();
-    const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
-    proposals
-      .filter((p) => p.status === "sent" && p.updated_at && new Date(p.updated_at) < fortyEightHoursAgo)
-      .slice(0, 3 - items.length) // Cap total at 3
-      .forEach((p) => {
-        items.push({
-          id: `na-followup-${p.id}`,
-          title: p.project_title || "Sent Proposal",
-          sub: `Sent ${timeAgo(p.updated_at)} — check on your bid.`,
-          cta: "Follow Up",
-          icon: Send,
-          onClick: () => {
-            // Link to the proposal in the proposals list
-            window.location.hash = `proposal-${p.id}`;
-          },
-        });
-      });
-
-    // If fewer than 3 items, add the Bid Momentum card as third item
-    if (items.length < 3) {
-      items.push(thirdCard);
-    }
-
-    return items.slice(0, 3);
-  })();
-
-  // If no real items, show empty state
-  const showNeedsActionEmpty = needsAction.length === 0;
-
-  const homeContent = (
-    <div className="space-y-6">
-      {/* Hero — greeting + Bid Momentum + daily nudge */}
-      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-        <h1 className="text-2xl font-bold text-foreground text-balance">{greeting}, {contractorName}.</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {!proposalsLoaded
-            ? "Loading your bid momentum..."
-            : momentum.state === "complete"
-              ? "You've hit your 30-bid goal this month."
-              : bidsCount > 0
-                ? `You're ${bidsCount} ${bidsCount === 1 ? "bid" : "bids"} into your 30-bid monthly goal.`
-                : "Let's start building your pipeline this month."}
-        </p>
-
-        <div className="mt-4 rounded-xl border border-border bg-background p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                <Flame className="h-4 w-4 text-primary" />
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-foreground">{momentum.title}</p>
-                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{momentum.statusLabel}</p>
-              </div>
+      {/* Hero */}
+      <section className={`${CARD} relative overflow-hidden p-8 sm:p-10`}>
+        <div className="grid items-center gap-8 md:grid-cols-[1.4fr_1fr]">
+          <div>
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
+              <Sparkles className="h-6 w-6 text-primary" />
             </div>
-            <span className="shrink-0 text-sm font-semibold text-foreground">{momentum.progressText}</span>
+            <p className="text-xs font-extrabold uppercase tracking-[0.08em] text-primary">Your next step</p>
+            <h2 className="mt-1 text-4xl font-extrabold tracking-tight text-foreground">Build your first bid</h2>
+            <p className="mt-3 max-w-md text-lg leading-relaxed text-muted-foreground">
+              Create a professional bid in minutes and start winning more jobs.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <Button onClick={onBuild} className="h-12 gap-2 rounded-xl px-6 text-base font-semibold">
+                <Sparkles className="h-[18px] w-[18px]" />
+                Build My First Bid
+                <ArrowRight className="h-[18px] w-[18px]" />
+              </Button>
+              <Button asChild variant="outline" className="h-12 gap-2 rounded-full px-5 text-sm font-semibold">
+                <Link href="/how-it-works">
+                  <Play className="h-4 w-4" />
+                  Watch 60-second demo
+                </Link>
+              </Button>
+            </div>
           </div>
 
-          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={momentum.percent} aria-valuemin={0} aria-valuemax={100}>
-            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${momentum.percent}%` }} />
+          <BidDocumentArt />
+        </div>
+        <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-primary/5" />
+      </section>
+
+      {/* Progress + This month */}
+      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <section className={`${CARD} p-6 sm:p-7`}>
+          <h3 className="text-lg font-bold text-foreground">Your progress</h3>
+          <div className="mt-4 flex flex-col">
+            {steps.map((s, i) => (
+              <div
+                key={s.n}
+                className={`flex items-center gap-4 py-4 ${i > 0 ? "border-t border-border" : ""}`}
+              >
+                <span
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                    s.done
+                      ? "bg-green-100 text-green-600"
+                      : s.next
+                        ? "border-2 border-primary text-primary"
+                        : "border-2 border-border text-muted-foreground"
+                  }`}
+                >
+                  {s.done ? <Check className="h-4 w-4" /> : s.n}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-foreground">{s.n}. {s.title}</p>
+                  <p className="text-sm text-muted-foreground">{s.sub}</p>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
+                    s.done
+                      ? "bg-green-100 text-green-700"
+                      : s.next
+                        ? "bg-primary/10 text-primary"
+                        : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {s.done ? "Complete" : s.next ? "Next up" : "Not started"}
+                </span>
+              </div>
+            ))}
           </div>
+        </section>
 
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{momentum.copy}</p>
+        <section className={`${CARD} p-6 sm:p-7`}>
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-lg font-bold text-foreground">This month</h3>
+            <button
+              type="button"
+              onClick={onEditGoal}
+              className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3 py-1.5 text-sm font-bold text-primary transition-colors hover:bg-primary/10"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit goal
+            </button>
+          </div>
+          <div className="mt-4 flex items-baseline gap-2">
+            <span className="text-5xl font-extrabold tracking-tight text-primary">{bidsCount}</span>
+            <span className="text-2xl font-bold text-foreground">/ {goal}</span>
+          </div>
+          <p className="text-sm font-medium text-muted-foreground">bids created</p>
+          <div className="mt-4 h-3 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${percent}%` }} />
+          </div>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            You&apos;re just getting started. Let&apos;s build some bids and grow your business.
+          </p>
+        </section>
+      </div>
 
-  <a
-    href={getContractorSmsLink("I want to build a new bid")}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 cursor-pointer mt-4 sm:w-auto w-full justify-center sm:justify-start"
-          >
-            <Sparkles className="h-4 w-4" />
-            {momentum.ctaLabel}
-          </a>
+      {/* Empty bids */}
+      <section className={`${CARD} p-8 text-center`}>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-foreground">Your bids</h3>
+          <Button asChild variant="outline" className="rounded-full text-sm font-semibold">
+            <Link href="/contractors/bids-history">View all bids</Link>
+          </Button>
+        </div>
+        <div className="flex flex-col items-center py-8">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+            <FileText className="h-7 w-7 text-primary" />
+          </div>
+          <p className="font-bold text-foreground">You haven&apos;t built any bids yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">Build your first bid and it will appear here.</p>
+          <Button onClick={onBuild} className="mt-5 h-11 gap-2 rounded-xl px-6 font-semibold">
+            <Sparkles className="h-[18px] w-[18px]" />
+            Build My First Bid
+          </Button>
         </div>
       </section>
 
-      {/* Profile completion — secondary nudge, only when incomplete */}
-      {profileCompletion && !profileCompletion.isComplete && (
-        <section className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-              <User className="h-4 w-4 text-primary" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-semibold text-foreground">Complete your contractor profile</p>
-                <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-[11px] font-medium text-yellow-800">
-                  {profileCompletion.completed} of {profileCompletion.total} complete
-                </span>
+      <NeedHelpBar />
+    </div>
+  );
+}
+
+// ── Seasoned dashboard (>=1 bid) ──────────────────────────────────────────────
+
+function SeasonedDashboard({
+  name,
+  greeting,
+  proposals,
+  profile,
+  threads,
+  bidsCount,
+  goal,
+  percent,
+  remaining,
+  onBuild,
+  onEditGoal,
+}: {
+  name: string;
+  greeting: string;
+  proposals: Proposal[];
+  profile: ContractorProfile | null;
+  threads: import("@/lib/use-contractor-signals").ContractorThread[];
+  bidsCount: number;
+  goal: number;
+  percent: number;
+  remaining: number;
+  onBuild: () => void;
+  onEditGoal: () => void;
+}) {
+  const recent = useMemo(
+    () =>
+      [...proposals]
+        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+        .slice(0, 5),
+    [proposals],
+  );
+
+  const messageItems = unansweredThreads(threads).slice(0, 2);
+  const { missing, isComplete } = profileCompletion(profile);
+  const attentionCount = messageItems.length + (isComplete ? 0 : 1);
+
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Welcome */}
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <h1 className="text-balance text-4xl font-extrabold tracking-tight text-foreground">{greeting}, {name}</h1>
+          <p className="mt-2 text-lg text-muted-foreground">Keep the momentum going. Your next bid is one click away.</p>
+        </div>
+        <div className="flex flex-wrap gap-2.5">
+          <Button asChild variant="outline" className="h-12 gap-2 rounded-xl px-5 font-semibold">
+            <Link href="/contractors/messages">
+              <MessageSquareText className="h-[18px] w-[18px]" />
+              Messages
+            </Link>
+          </Button>
+          <Button onClick={onBuild} className="h-12 gap-2 rounded-xl px-5 font-semibold">
+            <Sparkles className="h-[18px] w-[18px]" />
+            Build Today&apos;s Bid
+          </Button>
+        </div>
+      </div>
+
+      {/* Tracker */}
+      <section className={`${CARD} relative grid gap-8 overflow-hidden p-7 md:grid-cols-[1.45fr_0.55fr]`}>
+        <div>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-extrabold uppercase tracking-[0.08em] text-primary">Monthly bid goal</p>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-5xl font-extrabold tracking-tight text-primary">{bidsCount}</span>
+                <span className="text-3xl font-bold text-foreground">/ {goal}</span>
+                <span className="ml-1 text-sm font-medium text-muted-foreground">bids created</span>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Add your logo, license, services, and business details when you&apos;re ready. Your account is already active.
-              </p>
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${profileCompletion.percent}%` }} />
-              </div>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 shrink-0 rounded-full px-3 text-xs font-semibold bg-transparent"
-              onClick={() => handleTabChange("account")}
+            <button
+              type="button"
+              onClick={onEditGoal}
+              className="flex shrink-0 items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3 py-2 text-sm font-bold text-primary transition-colors hover:bg-primary/10"
             >
-              Finish Profile
+              <Pencil className="h-3.5 w-3.5" />
+              Edit goal
+            </button>
+          </div>
+          <div className="mt-5 h-3 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${percent}%` }} />
+          </div>
+          <div className="mt-2.5 flex flex-wrap justify-between gap-3 text-sm text-muted-foreground">
+            <span><strong className="text-foreground">{percent}%</strong> of your goal</span>
+            <span><strong className="text-foreground">{remaining} bid{remaining === 1 ? "" : "s"}</strong> to go</span>
+          </div>
+        </div>
+        <div className="flex flex-col justify-center border-t border-border pt-5 md:border-l md:border-t-0 md:pl-7 md:pt-0">
+          <p className="text-xs font-extrabold uppercase tracking-[0.07em] text-muted-foreground">Today&apos;s focus</p>
+          <p className="mt-1.5 text-2xl font-extrabold tracking-tight text-foreground">Send one more bid.</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">Small daily wins keep your pipeline moving.</p>
+          <Button onClick={onBuild} className="mt-4 gap-2 self-start rounded-xl font-semibold">
+            Build a Bid
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="pointer-events-none absolute -right-28 -top-28 h-80 w-80 rounded-full bg-primary/5" />
+      </section>
+
+      <div className="grid gap-5 lg:grid-cols-[1.7fr_0.7fr]">
+        {/* Your bids */}
+        <section className={`${CARD} p-6`}>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h2 className="text-xl font-bold tracking-tight text-foreground">Your bids</h2>
+              <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">{bidsCount} this month</span>
+            </div>
+            <Button asChild variant="outline" size="sm" className="rounded-full text-sm font-semibold">
+              <Link href="/contractors/bids-history">View all</Link>
             </Button>
           </div>
-        </section>
-      )}
 
-      {/* Needs Action — max 3 priority cards */}
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Needs Action</h2>
-        {needsAction.length > 0 ? (
-          <div className="space-y-2">
-            {needsAction.map((card) => {
-              const Icon = card.icon;
+          <div className="flex flex-col">
+            {recent.map((p, i) => {
+              const meta = statusMeta(p.status);
               return (
-                <div key={card.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                    <Icon className="h-4 w-4 text-primary" />
+                <div
+                  key={p.id}
+                  className={`grid grid-cols-[1fr_auto] items-center gap-3 py-4 sm:grid-cols-[minmax(0,1.4fr)_120px_120px_100px_36px] ${
+                    i > 0 ? "border-t border-border" : ""
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-foreground">{p.project_title}</p>
+                    <p className="mt-0.5 truncate text-sm text-muted-foreground">{p.homeowner_name || "Homeowner"}</p>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground">{card.title}</p>
-                    <p className="truncate text-xs text-muted-foreground">{card.sub}</p>
+                  <div className="hidden font-bold text-foreground sm:block">{formatPrice(p.total_price)}</div>
+                  <div>
+                    <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-bold ${meta.className}`}>{meta.label}</span>
                   </div>
-                  <Button size="sm" className="h-8 shrink-0 rounded-full px-3 text-xs font-semibold" onClick={card.onClick}>
-                    {card.cta}
-                  </Button>
+                  <div className="hidden text-sm text-muted-foreground sm:block">{shortDate(p.created_at)}</div>
+                  <a
+                    href={`/p/${p.share_token}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted"
+                    aria-label={`View ${p.project_title}`}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
                 </div>
               );
             })}
           </div>
-        ) : (
-          <p className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-            You&apos;re all caught up. Build a bid to keep your momentum going.
-          </p>
-        )}
-      </section>
 
-      {/* Your Bids — hosted proposal links (max 3 on home) */}
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Your Bids</h2>
-          {proposals.length > 3 && (
-            <Button size="sm" variant="ghost" className="h-7 gap-1 rounded-full px-3 text-xs" asChild>
-              <a href="/contractors/bids-history">View all <ChevronRight className="h-3 w-3" /></a>
-            </Button>
-          )}
-        </div>
-        {proposals.length > 0 ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {proposals.slice(0, 4).map((p) => (
-              <ContractorProposalCard key={p.id} proposal={p} />
-            ))}
-          </div>
-        ) : proposalsLoaded && proposals.length === 0 ? (
-          <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center">
-            <p className="text-sm font-medium text-foreground">No bids yet.</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Build a bid by text and your hosted bid link will appear here.
-            </p>
-            <a href="sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid">
-              <Button className="mt-3 gap-2 rounded-full font-semibold">
-                <Sparkles className="h-4 w-4" /> Build Today&apos;s Bid
-              </Button>
-            </a>
-          </div>
-        ) : proposalsLoaded ? (
-          <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
-            Loading bids…
-          </div>
-        ) : null}
-      </section>
-    </div>
-  );
-
-  // ── LEADS tab ──���───────────────────────────────────────────────────────────
-
-  // ── Bid Inbox ────────────────────────��──────────────────────────────────────
-  // Contractor-owned customers, bid drafts, sent proposals, and follow-ups
-  // created through HomeBids.ai. This is NOT a marketplace/lead-source feed.
-  const inboxSource: BidInboxItem[] = proposals.map((p) => {
-        const mapped = PROPOSAL_STATUS_TO_INBOX[p.status] ?? { status: "proposal_sent" as InboxStatusKey, secondary: "view" as const };
-        return {
-          id: p.id,
-          customer: p.homeowner_name ?? "Customer",
-          project: p.project_title,
-          status: mapped.status,
-          value: p.total_price != null ? Number(p.total_price) : null,
-          lastActivity: `Updated ${timeAgo(p.updated_at) ?? "recently"}`,
-          source: "From HomeBids.ai",
-          phone: p.homeowner_phone ?? "",
-          secondary: mapped.secondary,
-        };
-      });
-  const visibleInbox = inboxSource.filter((item) => {
-    if (inboxFilter === "all") return item.status !== "archived";
-    if (inboxFilter === "archived") return item.status === "archived";
-    return INBOX_FILTER_GROUPS[inboxFilter].includes(item.status);
-  });
-
-  const leadsContent = (
-    <div className="space-y-5">
-      {/* Title + primary CTA (stacks on mobile) */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Bid Inbox</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage customer requests, proposal drafts, sent bids, and follow-ups.
-          </p>
-        </div>
-        <a href="sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid">
-          <Button
-            className="shrink-0 gap-2 rounded-full font-semibold"
-          >
-            <Plus className="h-4 w-4" /> Build New Bid
-          </Button>
-        </a>
-      </div>
-
-      {/* Status filters — horizontally scrollable pills on mobile */}
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {INBOX_FILTERS.map((f) => (
-          <button
-            key={f.id}
-            type="button"
-            onClick={() => setInboxFilter(f.id)}
-            className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
-              inboxFilter === f.id
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-card text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Cards */}
-      {!isDemoMode && !proposalsLoaded ? (
-        <div className="space-y-3" aria-busy="true" aria-label="Loading bids">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="animate-pulse rounded-xl border border-border bg-card p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 shrink-0 rounded-full bg-muted" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 w-1/3 rounded bg-muted" />
-                  <div className="h-2.5 w-1/2 rounded bg-muted" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : visibleInbox.length > 0 ? (
-        <div className="space-y-3">
-          {visibleInbox.map((item) => {
-            const cfg = INBOX_STATUS[item.status];
-            return (
-              <div key={item.id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/20">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                    {item.customer.charAt(0)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-foreground">{item.customer}</p>
-                    <p className="truncate text-xs text-muted-foreground">{item.project}</p>
-                  </div>
-                  {item.value != null && (
-                    <span className="shrink-0 text-sm font-semibold text-foreground">${item.value.toLocaleString()}</span>
-                  )}
-                </div>
-
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${cfg.cls}`}>{cfg.label}</span>
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{item.source}</span>
-                  <span className="text-[11px] text-muted-foreground">· {item.lastActivity}</span>
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    className="h-7 gap-1 px-3 text-xs"
-                    onClick={() => {
-                      if (cfg.action === "build") {
-                        window.location.href = "sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid";
-                      } else if (cfg.action === "followup") {
-                        openSms(item.phone);
-                      } else {
-                        window.location.href = "/contractors/dashboard";
-                      }
-                    }}
-                  >
-                    {cfg.action === "build" ? <FileText className="h-3 w-3" />
-                      : cfg.action === "followup" ? <Send className="h-3 w-3" />
-                      : <Eye className="h-3 w-3" />}
-                    {cfg.primary}
-                  </Button>
-
-                  {item.secondary === "text" ? (
-                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => openSms(item.phone)}>
-                      <MessageCircle className="h-3 w-3" /> Message Customer
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs bg-transparent" onClick={() => { window.location.href = "/contractors/bids-history"; }}>
-                      <ExternalLink className="h-3 w-3" /> View Bid
-                    </Button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        // Empty state
-        <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <Archive className="h-6 w-6 text-primary" />
-          </div>
-          <p className="mt-3 text-base font-semibold text-foreground">No bids yet</p>
-          <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
-            Start by texting HomeBids.ai project details, photos, screenshots, or rough notes. We&apos;ll help turn them into a professional proposal.
-          </p>
-          <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
-            <a href="sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid">
-              <Button className="w-full gap-2 rounded-full font-semibold sm:w-auto">
-                <Plus className="h-4 w-4" /> Build New Bid
-              </Button>
-            </a>
-            <Button variant="outline" className="w-full gap-2 rounded-full bg-transparent sm:w-auto" onClick={() => { window.location.href = getContractorSmsLink(); }}>
-              <MessageCircle className="h-4 w-4" /> Text HomeBids.ai
+          <div className="mt-2 flex justify-center">
+            <Button asChild variant="ghost" className="gap-1.5 text-sm font-semibold text-primary">
+              <Link href="/contractors/bids-history">
+                See all bids
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </Button>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        </section>
 
-
-  // Bid Builder content — picker or active tool
-  const aiContent = (() => {
-    // Bid Builder is full-screen when active — chat-first experience
-    // Start screen: choose how to build a bid + unfinished drafts.
-    // Real accounts show ONLY their own proposals still in "draft" status (filtered server-side by RLS).
-    const allDrafts: DraftItem[] = proposals
-          .filter((p) => p.status === "draft")
-          .map((p) => ({
-            id: p.id,
-            customer: p.homeowner_name,
-            project: p.project_title,
-            status: "Draft",
-            statusCls: "bg-muted text-muted-foreground",
-            value: p.total_price != null ? Number(p.total_price) : null,
-            lastUpdated: timeAgo(p.updated_at) ?? "recently",
-            source: "online" as DraftSource,
-          }));
-    const drafts = allDrafts.filter((d) => !dismissedDraftIds.has(d.id));
-
-    // Canonical contractor SMS link (number + prefilled body live in sms-config).
-    const textBidHref = getContractorSmsLink();
-
-    const startByTextBtn = (full = false) => (
-      <a
-        href={textBidHref}
-        className={`inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 ${full ? "w-full" : ""}`}
-      >
-        <MessageCircle className="h-4 w-4" /> Start by Text
-      </a>
-    );
-
-    return (
-      <div className="space-y-8">
-        {/* Title */}
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Build a Bid</h1>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground text-pretty">
-            Create a professional hosted proposal from texts, photos, and screenshots.
-          </p>
-        </div>
-
-        {/* Two start options — stack on mobile, side-by-side on desktop */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {/* Start by Text (primary) */}
-          <div className="flex flex-col rounded-2xl border-2 border-primary bg-card p-6 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                <MessageCircle className="h-6 w-6 text-primary" />
-              </div>
-              <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary">Recommended</span>
+        {/* Side stack */}
+        <aside className="flex flex-col gap-5">
+          <section className={`${CARD} p-6`}>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-xl font-bold tracking-tight text-foreground">Needs attention</h2>
+              <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">{attentionCount}</span>
             </div>
-            <h3 className="mt-4 text-lg font-bold text-foreground">Start by Text</h3>
-            <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">
-              Text job details, photos, and screenshots. HomeBids.ai will ask follow-up questions and draft a clean proposal you can review, edit, and send.
-            </p>
-            <div className="mt-5">{startByTextBtn(true)}</div>
-            <p className="mt-2 text-center text-xs text-muted-foreground">Best when you&apos;re in the field.</p>
-          </div>
 
-          {/* Build Online (secondary) */}
-          <div className="flex flex-col rounded-2xl border border-border bg-card p-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
-              <Calculator className="h-6 w-6 text-foreground" />
-            </div>
-            <h3 className="mt-4 text-lg font-bold text-foreground">Build Online</h3>
-            <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">
-              Enter customer info, scope, pricing, exclusions, photos, and notes in a simple guided builder.
-            </p>
-            <a href="sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid">
-              <Button
-                variant="outline"
-                className="mt-5 w-full justify-center gap-2 rounded-xl bg-transparent py-2.5 text-sm font-semibold"
-              >
-                <Calculator className="h-4 w-4" /> Build by Text
-              </Button>
-            </a>
-          </div>
-        </div>
-
-        {/* Feature chips */}
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {["Text-to-Bid", "Photo & Screenshot Intake", "Hosted Proposal Link", "PDF Included"].map((tag) => (
-            <span key={tag} className="shrink-0 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{tag}</span>
-          ))}
-        </div>
-
-        {/* What happens next */}
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">What happens next</p>
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
-              { n: 1, label: "Send job details" },
-              { n: 2, label: "AI asks follow-ups" },
-              { n: 3, label: "Review proposal" },
-              { n: 4, label: "Send link or PDF" },
-            ].map((step) => (
-              <div key={step.n} className="flex items-center gap-2">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{step.n}</span>
-                <span className="text-sm font-medium text-foreground">{step.label}</span>
+            {messageItems.map((t, i) => (
+              <div key={t.job_ref} className={`py-3 ${i > 0 ? "border-t border-border" : ""}`}>
+                <p className="font-semibold text-foreground">
+                  {t.display_name ? `${t.display_name} replied to your bid` : "New homeowner message"}
+                </p>
+                {t.last_message && <p className="mb-2 mt-1 line-clamp-2 text-sm text-muted-foreground">&ldquo;{t.last_message}&rdquo;</p>}
+                <Link href="/contractors/messages" className="text-sm font-bold text-primary hover:underline">Reply now →</Link>
               </div>
             ))}
-          </div>
-        </div>
 
-        {/* Drafts — unfinished bids belonging to this contractor */}
-        <div>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Drafts</h2>
-          {!isDemoMode && !proposalsLoaded ? (
-            <div className="space-y-2" aria-busy="true" aria-label="Loading drafts">
-              {[0, 1].map((i) => (
-                <div key={i} className="animate-pulse rounded-xl border border-border bg-card p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 shrink-0 rounded-full bg-muted" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-3 w-1/3 rounded bg-muted" />
-                      <div className="h-2.5 w-1/2 rounded bg-muted" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : drafts.length > 0 ? (
-            <div className="space-y-2">
-              {drafts.map((d) => (
-                <div key={d.id} className="rounded-xl border border-border bg-card p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                      {(d.customer ?? d.project).charAt(0)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-foreground">{d.customer ?? d.project}</p>
-                      <p className="truncate text-xs text-muted-foreground">{d.customer ? d.project : "Unfinished bid"}</p>
-                    </div>
-                    {d.value != null && <span className="shrink-0 text-sm font-semibold text-foreground">${d.value.toLocaleString()}</span>}
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${d.statusCls}`}>{d.status}</span>
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{d.source === "text" ? "Started by text" : "Started online"}</span>
-                    <span className="text-[11px] text-muted-foreground">· Updated {d.lastUpdated}</span>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button size="sm" className="h-7 gap-1 px-3 text-xs" onClick={async () => {
-                      const proposal = proposals.find(p => p.id === d.id);
-                      if (!proposal) return;
-                      const user = getMockUser();
-                      const ctx: NeedsActionContext = {
-                        needsActionId: proposal.id || "",
-                        actionType: "finish_draft",
-                        contractorId: user?.id || "",
-                        jobId: null,
-                        draftBidId: proposal.id || "",
-                        bidId: null,
-                        title: proposal.project_title || "Draft",
-                        status: "draft",
-                        sourceType: "needs_action",
-                        proposalId: proposal.id,
-                        shareToken: proposal.share_token,
-                        proposalData: {
-                          project: proposal.project_title || "",
-                          owner: proposal.homeowner_name || "",
-                          scope: (proposal.scope_items || []).map((item: any) => item.title || ""),
-                          optional: (proposal.add_ons || []).map((item: any) => item.title || ""),
-                          price: proposal.total_price ? `$${proposal.total_price}` : "",
-                          timeline: proposal.timeline_completion || "",
-                        },
-                      };
-                      window.location.href = "sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid";
-                    }}>
-                      Continue
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 gap-1 px-2.5 text-xs text-muted-foreground"
-                      onClick={() => setDismissedDraftIds((prev) => new Set(prev).add(d.id))}
-                    >
-                      <Archive className="h-3 w-3" /> Archive
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <FileText className="h-6 w-6 text-primary" />
+            {!isComplete && (
+              <div className={`py-3 ${messageItems.length > 0 ? "border-t border-border" : ""}`}>
+                <p className="font-semibold text-foreground">Profile is almost complete</p>
+                <p className="mb-2 mt-1 text-sm text-muted-foreground">
+                  Add {missing.slice(0, 2).map((k) => PROFILE_FIELD_LABELS[k]).join(" and ")}.
+                </p>
+                <Link href="/contractors/profile" className="text-sm font-bold text-primary hover:underline">Finish profile →</Link>
               </div>
-              <p className="mt-3 text-base font-semibold text-foreground">No drafts yet</p>
-              <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
-                Start your first bid by text or online. HomeBids.ai will help organize the scope and create a proposal you can send.
-              </p>
-              <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
-                {startByTextBtn(false)}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  })();
+            )}
 
-  // ── ACCOUNT tab ─────────────────────────────────────────────��────────────��─
+            {attentionCount === 0 && (
+              <p className="py-3 text-sm text-muted-foreground">Nothing needs your attention right now.</p>
+            )}
+          </section>
 
-  const [userProfile, setUserProfile] = useState<{ full_name?: string; email?: string; phone?: string } | null>(null);
-  const [profileLoaded, setProfileLoaded] = useState(false);
-  useEffect(() => {
-    async function loadProfiles() {
-      try {
-        const { getUserProfile, getContractorProfile } = await import("@/lib/supabase/actions");
-        const userRes = await getUserProfile();
-        if (userRes.profile) {
-          setUserProfile(userRes.profile);
-        }
-        const contractorRes = await getContractorProfile();
-        if (contractorRes.profile) {
-          setContractorProfile(contractorRes.profile);
-          // Update company name with real business name
-          if (contractorRes.profile.business_name) {
-            setCompanyName(contractorRes.profile.business_name);
-          } else if (userRes.profile?.full_name) {
-            setCompanyName(userRes.profile.full_name);
-          }
-        } else if (userRes.profile?.full_name) {
-          // Fallback to user name if contractor profile not found
-          setCompanyName(userRes.profile.full_name);
-        }
-      } catch { /* non-fatal */ }
-      finally { setProfileLoaded(true); }
-    }
-    loadProfiles();
-  }, []);
-
-  // Profile completion computed from Supabase contractor_profiles data
-  useEffect(() => {
-    if (!contractorProfile) {
-      setProfileCompletion(null);
-      return;
-    }
-
-    // Count non-empty fields from contractorProfile (11 fields total)
-    const fields = [
-      contractorProfile.business_name,
-      contractorProfile.logo_url,
-      contractorProfile.bio,
-      contractorProfile.website,
-      contractorProfile.business_address,
-      contractorProfile.license_number,
-      contractorProfile.insurance_details,
-      contractorProfile.years_experience,
-      contractorProfile.google_review_link,
-      // specialties: non-empty array
-      Array.isArray(contractorProfile.specialties) && contractorProfile.specialties.length > 0 ? "filled" : null,
-      // social_links: non-empty object
-      contractorProfile.social_links && Object.keys(contractorProfile.social_links).length > 0 ? "filled" : null,
-    ];
-
-    const completed = fields.filter((f) => f != null && f !== "").length;
-    const total = 11;
-    const percent = Math.round((completed / total) * 100);
-
-    setProfileCompletion({
-      completed,
-      total,
-      percent,
-      isComplete: completed === total,
-    });
-  }, [contractorProfile]);
-
-  const accountContent = (
-    <div className="space-y-5">
-      <h1 className="text-xl font-bold text-foreground">Account</h1>
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-start">
-        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-          <h2 className="text-sm font-semibold text-foreground">Profile</h2>
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary">
-              {(userProfile?.full_name ?? contractorName).charAt(0)}
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">{userProfile?.full_name ?? contractorName}</p>
-              {contractorProfile?.business_name && (
-                <p className="text-sm font-medium text-foreground">{contractorProfile.business_name}</p>
-              )}
-              <p className="text-xs text-muted-foreground">Contractor</p>
-            </div>
-          </div>
-          <div className="space-y-2 pt-1">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-4 w-4 shrink-0" />{userProfile?.email ?? "loading..."}</div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Phone className="h-4 w-4 shrink-0" />{userProfile?.phone ?? "—"}</div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-2">
-          <h2 className="text-sm font-semibold text-primary">Your Plan</h2>
-          <p className="text-2xl font-bold text-foreground">$99 / month</p>
-          <ul className="space-y-1.5 pt-1">
-            {[
-              "Unlimited AI-generated bids",
-              "No bid fees — ever",
-              "HomeBids AI lead matching",
-              "Direct homeowner contact after approval",
-              "Bid Builder — shareable link + PDF included",
-            ].map((item) => (
-              <li key={item} className="flex items-start gap-2 text-sm text-foreground">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="rounded-xl border border-border bg-card p-4 space-y-3 lg:col-span-2">
-          <h2 className="text-sm font-semibold text-foreground">Notifications</h2>
-          <label className="flex cursor-pointer items-center justify-between">
-            <span className="flex items-center gap-2 text-sm text-foreground"><Bell className="h-4 w-4 text-muted-foreground" />New lead alerts</span>
-            <input type="checkbox" defaultChecked className="h-4 w-4 accent-primary" />
-          </label>
-          <label className="flex cursor-pointer items-center justify-between">
-            <span className="flex items-center gap-2 text-sm text-foreground"><User className="h-4 w-4 text-muted-foreground" />Homeowner approval alerts</span>
-            <input type="checkbox" defaultChecked className="h-4 w-4 accent-primary" />
-          </label>
-        </div>
+          <section className="rounded-[22px] border-0 bg-gradient-to-br from-primary to-sky-400 p-6 text-primary-foreground shadow-[0_10px_30px_rgba(16,17,20,0.06)]">
+            <h2 className="text-xl font-bold tracking-tight">Nice work</h2>
+            <p className="mt-1.5 leading-relaxed opacity-90">
+              You&apos;ve created {bidsCount} bid{bidsCount === 1 ? "" : "s"} this month. Keep your pace and you&apos;ll hit {goal}.
+            </p>
+            <Button
+              onClick={onBuild}
+              variant="secondary"
+              className="mt-4 rounded-xl bg-white font-semibold text-primary hover:bg-white/90"
+            >
+              Build another bid
+            </Button>
+          </section>
+        </aside>
       </div>
 
-      {/* Optional profile completion — never blocks bid building */}
-      <ProfileCompletionSection />
-
-      <Button variant="outline" className="gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-600 bg-transparent" onClick={handleSignOut}>
-        <LogOut className="h-4 w-4" />
-        Sign Out
-      </Button>
+      <NeedHelpBar />
     </div>
   );
+}
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+// ── Shared pieces ─────────────────────────────────────────────────────────────
 
-  const tabContent: Record<Tab, React.ReactNode> = {
-    home: homeContent,
-    leads: leadsContent,
-    ai: aiContent,
-    account: accountContent,
-  };
-
+function NeedHelpBar() {
   return (
-    <div className="flex min-h-screen flex-col bg-background overflow-x-hidden">
-      <Header isContractor isSignedIn />
-      <ScrollToTop />
-
-      <main className="flex-1 min-w-0">
-        <div className="mx-auto w-full max-w-2xl px-4 pb-8 pt-6 lg:max-w-4xl lg:px-8 lg:pb-12 lg:pt-8">
-          {isDemoMode && (
-            <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-              <span className="inline-flex items-center rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-900">
-                Demo data
-              </span>
-              <span>The bids, customers, and metrics below are sample data for demonstration.</span>
-            </div>
-          )}
-          {tabContent[activeTab]}
+    <section className={`${CARD} flex flex-col items-start justify-between gap-4 p-5 sm:flex-row sm:items-center`}>
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+          <MessageSquareText className="h-5 w-5 text-primary" />
         </div>
-      </main>
+        <div>
+          <p className="font-bold text-foreground">Need help?</p>
+          <p className="text-sm text-muted-foreground">Text our support team. We&apos;re here 7 days a week.</p>
+        </div>
+      </div>
+      <Button asChild variant="outline" className="gap-2 rounded-full font-semibold">
+        <a href={getContractorSmsLink("I need help with HomeBids")}>
+          <MessageSquareText className="h-4 w-4" />
+          Text Support
+        </a>
+      </Button>
+    </section>
+  );
+}
 
-      {/* Relay Modal */}
-      <Dialog open={showRelayModal} onOpenChange={(open) => { if (!open) setShowRelayModal(false); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Message via HomeBids AI</DialogTitle>
-            <DialogDescription>
-              Your message will be relayed through HomeBids AI. The homeowner&apos;s contact info stays private until they approve direct messaging.
-            </DialogDescription>
-          </DialogHeader>
-          {relaySent ? (
-            <div className="flex flex-col items-center gap-3 py-6 text-center">
-              <CheckCircle2 className="h-10 w-10 text-green-600" />
-              <p className="font-semibold text-foreground">Message sent via HomeBids AI</p>
-              <p className="text-sm text-muted-foreground">You&apos;ll be notified when the homeowner responds or approves direct contact.</p>
-              <Button className="mt-2 w-full" onClick={() => setShowRelayModal(false)}>Done</Button>
-            </div>
-          ) : (
-            <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label htmlFor="relay-message">Your message</Label>
-                <Textarea id="relay-message" value={relayMessage} onChange={(e) => setRelayMessage(e.target.value)} rows={4} placeholder={relayLead?.suggestedResponse ?? "Hi, I wanted to follow up on your project..."} />
-              </div>
-              <p className="text-xs text-muted-foreground">Once the homeowner approves, direct SMS access will be unlocked.</p>
-              <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setShowRelayModal(false)} className="bg-transparent">Cancel</Button>
-                <Button disabled={!relayMessage.trim()} onClick={() => setRelaySent(true)}>
-                  <Send className="mr-2 h-4 w-4" /> Send via AI Relay
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Lead Detail Modal */}
-      <Dialog open={showLeadDetail} onOpenChange={setShowLeadDetail}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              {selectedLead?.title}
-            </DialogTitle>
-            <DialogDescription>{selectedLead?.category} — {selectedLead?.location}</DialogDescription>
-          </DialogHeader>
-          {selectedLead && (
-            <div className="space-y-4 pt-1">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg bg-green-50 p-3">
-                  <p className="text-[10px] font-medium text-green-600">Estimated Value</p>
-                  <p className="mt-1 text-lg font-bold text-green-700">{selectedLead.estimatedValue}</p>
-                </div>
-                <div className="rounded-lg bg-blue-50 p-3">
-                  <p className="text-[10px] font-medium text-blue-600">Timeline</p>
-                  <p className="mt-1 text-lg font-bold text-blue-700">{selectedLead.timeline}</p>
-                </div>
-              </div>
-              <div className="rounded-lg border border-border p-3">
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Homeowner Goals</p>
-                <p className="text-sm text-foreground">{selectedLead.homeownerGoals}</p>
-              </div>
-              <div className="rounded-lg border border-border p-3">
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Scope of Work</p>
-                <p className="text-sm text-foreground">{selectedLead.scope}</p>
-              </div>
-              <div className="rounded-lg bg-primary/5 border border-primary/20 p-3">
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-primary/70">AI Notes</p>
-                <p className="text-sm text-foreground">{selectedLead.aiNotes}</p>
-              </div>
-              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-amber-700">Suggested Strategy</p>
-                <p className="text-sm text-amber-900">{selectedLead.suggestedStrategy}</p>
-              </div>
-              <div className="rounded-lg bg-green-50 border border-green-200 p-3">
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-green-700">Recommended Price</p>
-                <p className="text-lg font-bold text-green-700">{selectedLead.recommendedPrice}</p>
-              </div>
-              <div className="rounded-lg border border-border p-3">
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Suggested Response</p>
-                <p className="text-sm italic text-foreground">&quot;{selectedLead.suggestedResponse}&quot;</p>
-              </div>
-              <div className="rounded-lg border border-border p-3">
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Objection Handling</p>
-                <ul className="space-y-1">
-                  {selectedLead.objections.map((obj, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-foreground">
-                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" />
-                      {obj}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="flex flex-col gap-2 pt-1">
-              <a href="sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid">
-                <Button className="w-full gap-2" onClick={() => setShowLeadDetail(false)}>
-                  <MessageCircle className="h-4 w-4" /> Start Bid by Text
-                </Button>
-              </a>
-                {!isMessagingUnlocked(selectedLead) ? (
-                  <Button variant="outline" className="w-full gap-2 bg-transparent" onClick={() => { setRelayLead(selectedLead); setRelayMessage(selectedLead.suggestedResponse); setRelaySent(false); setShowLeadDetail(false); setTimeout(() => setShowRelayModal(true), 150); }}>
-                    <MessageCircle className="h-4 w-4" /> Message via HomeBids AI
-                  </Button>
-                ) : (
-                  <Button className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white" onClick={() => openSms(selectedLead.homeownerPhone)}>
-                    <MessageCircle className="h-4 w-4" /> Text Homeowner
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-
+/** Lightweight faux "Project Bid" document used in the new-user hero. */
+function BidDocumentArt() {
+  return (
+    <div className="relative mx-auto hidden w-full max-w-[260px] md:block" aria-hidden="true">
+      <div className="rotate-3 rounded-2xl border border-border bg-card p-5 shadow-[0_20px_40px_rgba(16,17,20,0.10)]">
+        <p className="text-sm font-bold italic text-foreground">Project Bid</p>
+        <div className="mt-4 space-y-2.5">
+          <div className="h-2.5 w-3/4 rounded-full bg-muted" />
+          <div className="h-2.5 w-full rounded-full bg-muted" />
+          <div className="h-2.5 w-2/3 rounded-full bg-muted" />
+        </div>
+        <div className="mt-6 space-y-2.5">
+          <div className="h-2.5 w-1/2 rounded-full bg-muted" />
+          <div className="h-2.5 w-5/6 rounded-full bg-muted" />
+        </div>
+        <div className="mt-6 flex items-center justify-end">
+          <span className="text-2xl font-extrabold text-primary">$</span>
+        </div>
+      </div>
+      <div className="absolute -bottom-3 -right-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg">
+        <Check className="h-7 w-7" />
+      </div>
     </div>
   );
 }
