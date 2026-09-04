@@ -401,7 +401,7 @@ export function Header({
             </Link>
           ) : isLoggedIn && isContractor ? (
             <Link
-              href="/contractors/dashboard"
+              href="/contractors/dashboard?tab=overview"
               className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               <span>Return to dashboard</span>

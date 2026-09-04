@@ -67,7 +67,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { job, homeownerFirstName } = await getJobByToken(token);
   const { trade, city } = getTradeAndCity(job?.category ?? null, job?.location ?? null, job?.title ?? null);
   const firstName = homeownerFirstName || 'A homeowner';
-  const title = `${firstName} is looking for a ${trade} in ${city}`;
+  const jobTitle = job?.title?.trim() || 'New job';
+  const jobLocation = job?.location?.trim();
+  const title = jobLocation
+    ? `${jobTitle} — ${jobLocation} · HomeBids`
+    : `${jobTitle} · HomeBids`;
   const description = `${firstName} is looking for a ${trade} in ${city}.`;
 
   const image = `/j/${encodeURIComponent(token)}/opengraph-image`;

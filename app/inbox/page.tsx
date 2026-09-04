@@ -226,7 +226,7 @@ export default function InboxPage() {
           {/* Page Header */}
           <div className="mb-6">
             <Link
-              href={isContractor ? "/contractors/dashboard" : "/?showJobs=true"}
+              href={isContractor ? "/contractors/dashboard?tab=overview" : "/?showJobs=true"}
               className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />

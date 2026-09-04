@@ -32,7 +32,7 @@ export const contractorNavItems: NavItem[] = [
   { label: "Dashboard",   href: "/contractors/dashboard",             match: ["/contractors/dashboard"] },
   { label: "Build A Bid", href: "sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid", match: [] },
   { label: "Bid Inbox",   href: "/contractors/dashboard?tab=leads",   match: [] },
-  { label: "Browse Jobs", href: "/contractors/jobs",                  match: ["/contractors/jobs"] },
+  { label: "Messages",    href: "/contractors/messages",              match: ["/contractors/messages"] },
   { label: "Account",     href: "/contractors/dashboard?tab=account", match: [] },
 ];
 

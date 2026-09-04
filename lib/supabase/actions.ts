@@ -993,14 +993,14 @@ export async function createProposalFromBuilder(
   if (!user) return { shareToken: null, proposalId: null, error: "Not authenticated" };
 
   try {
-    // For own-project bids (job_id = null), check the 5 free bid limit
+    // For own-project bids (job_id = null), check the 3 free bid limit
     if (!input.jobId) {
       const { canCreate, count } = await checkCanCreateOwnProjectBid(user.id);
       if (!canCreate) {
         return {
           shareToken: null,
           proposalId: null,
-          error: `Exceeded 5 free bids limit (${count}/5). Subscribe for unlimited own-project bids.`,
+          error: `Exceeded 3 free bids limit (${count}/3). Subscribe for unlimited own-project bids.`,
           limitExceeded: true,
         };
       }
@@ -1410,7 +1410,7 @@ export async function uploadContractorLogo(
 
 /**
  * Count the number of own-project bids (proposals with job_id = null) a contractor has created.
- * Used to enforce the 5 free bid limit for freemium contractors.
+ * Used to enforce the 3 free bid limit for freemium contractors.
  */
 export async function countOwnProjectBids(contractorId: string): Promise<{ count: number; error?: string }> {
   try {
@@ -1467,7 +1467,7 @@ export async function checkCanCreateOwnProjectBid(contractorId: string): Promise
     const { count } = await countOwnProjectBids(contractorId);
 
     return {
-      canCreate: count < 5,
+      canCreate: count < 3,
       count,
     };
   } catch (e) {

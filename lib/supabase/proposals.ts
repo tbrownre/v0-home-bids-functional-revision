@@ -247,13 +247,27 @@ export async function getContractorProposals(): Promise<{
   } = await supabase.auth.getUser();
   if (!user) return { proposals: [], error: "Not authenticated" };
 
+  // Once per dashboard load, attach any bids that were created by phone match
+  // (e.g. before the contractor signed in) to this account. Ignore the result.
+  await supabase.rpc("claim_my_bids");
+
+  // Match bids both by the authenticated contractor id and by the phone number
+  // on their profile, so bids created via SMS before account linkage still show.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("phone")
+    .eq("id", user.id)
+    .maybeSingle();
+  const phone = (profile?.phone as string | null) ?? null;
+
   // Cap the result set so a contractor with thousands of proposals never
   // triggers an unbounded fetch. The dashboard shows recent activity; older
   // proposals can be paginated in a dedicated view later if needed.
-  const { data, error } = await supabase
-    .from("proposals")
-    .select("*")
-    .eq("contractor_id", user.id)
+  let query = supabase.from("proposals").select("*");
+  query = phone
+    ? query.or(`contractor_id.eq.${user.id},contractor_phone.eq.${phone}`)
+    : query.eq("contractor_id", user.id);
+  const { data, error } = await query
     .order("updated_at", { ascending: false })
     .limit(100);
 

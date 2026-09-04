@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 /**
- * Screen shown when a free-tier contractor exceeds their 5 free bids for own projects.
+ * Screen shown when a free-tier contractor exceeds their 3 free bids for own projects.
  * Marketplace/homeowner job bids are unlimited and free forever.
  */
 export function BidLimitUpgrade() {
@@ -20,7 +20,7 @@ export function BidLimitUpgrade() {
               <AlertTriangle className="h-6 w-6 text-amber-600" />
             </div>
             <h2 className="text-center text-2xl font-bold text-foreground">
-              You&apos;ve Used Your 5 Free Bids
+              You&apos;ve Used Your 3 Free Bids
             </h2>
           </div>
 
@@ -37,7 +37,7 @@ export function BidLimitUpgrade() {
               </div>
               <div>
                 <p className="font-medium text-foreground">Own Project Bids</p>
-                <p className="text-sm text-muted-foreground">5 free, unlimited with subscription</p>
+                <p className="text-sm text-muted-foreground">3 free, unlimited with subscription</p>
               </div>
             </div>
             <div className="flex items-start gap-3">

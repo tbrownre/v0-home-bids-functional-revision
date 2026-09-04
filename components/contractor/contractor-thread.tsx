@@ -422,7 +422,7 @@ export function ContractorThread({ token }: { token: string }) {
         {state === 'live' && (
           <div className="sec"><div className="card hero">
             <div className="eyebrow">Bid delivered</div>
-            <h2>{first} has your {amount} bid</h2>
+                <h2>{first} has your bid</h2>
             <div className="amount">{amount}</div>
             <div className="statusline"><span className="dot" />{ps.bid?.first_viewed_at ? `Viewed by ${first} ${relativeTime(ps.bid.first_viewed_at)}` : 'Delivered — not viewed yet'}</div>
             <div className="nextbox"><strong>You&apos;re all set.</strong> HomeBids will text you when {first} accepts, asks a question, or responds to an estimate offer.</div>
@@ -478,7 +478,7 @@ export function ContractorThread({ token }: { token: string }) {
         {state === 'finalsent' && (
           <div className="sec"><div className="card hero">
             <div className="eyebrow">Final bid delivered</div>
-            <h2>{first} has your final {amount} quote</h2>
+                <h2>{first} has your final quote</h2>
             <div className="amount">{amount}</div>
             <div className="nextbox"><strong>You&apos;re all set.</strong> HomeBids will text you if {first} has a question or hires you.</div>
             <a className="textbtn" href={sms(`I need to update my final bid for (Job: ${job.job_ref})`)}>Need to change it?</a>
