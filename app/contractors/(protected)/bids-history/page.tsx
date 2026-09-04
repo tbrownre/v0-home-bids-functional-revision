@@ -70,12 +70,10 @@ export default function BidsPage() {
           return;
         }
         const { proposals: rows } = await getContractorProposals();
-        const sorted = [...(rows ?? [])].sort((a, b) => {
-          const av = a.last_viewed_at ? new Date(a.last_viewed_at).getTime() : -1;
-          const bv = b.last_viewed_at ? new Date(b.last_viewed_at).getTime() : -1;
-          if (av !== bv) return bv - av;
-          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-        });
+        // Default order: newest first by created_at, before any search/filter.
+        const sorted = [...(rows ?? [])].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
         setProposals(sorted);
       } catch (e) {
         console.error("[Bids] Failed to load proposals:", e);
