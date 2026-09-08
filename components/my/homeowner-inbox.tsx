@@ -59,7 +59,6 @@ const HB_CSS = `
 @media(prefers-reduced-motion:reduce){.hbo *{transition:none!important}}
 `
 
-const HB_PHONE = '+12832291348'
 const SHARE_BASE = 'https://www.homebids.ai/j/'
 
 type Contractor = string | { name?: string | null; full_name?: string | null; company?: string | null }
@@ -713,14 +712,6 @@ export function HomeownerInbox({ token }: { token: string }) {
           {job.location && <div className="detailrow"><span>Location</span><strong>{job.location}</strong></div>}
           {job.category && <div className="detailrow"><span>Category</span><strong>{job.category}</strong></div>}
         </details></div>
-
-        <footer className="footer">
-          <HomeBidsLogo size="20px" />
-          <div>
-            <a className="help" href={`sms:${HB_PHONE}`}>Need help? Reply to our text.</a>
-            <div>© 2026 HomeBids.ai</div>
-          </div>
-        </footer>
       </div>
       <div className={`toast${toast ? ' on' : ''}`} role="status" aria-live="polite">{toast}</div>
     </main>

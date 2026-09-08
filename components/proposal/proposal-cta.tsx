@@ -28,6 +28,12 @@ export function ProposalCta({
   const [isAccepting, setIsAccepting] = useState(false);
   const [acceptError, setAcceptError] = useState(false);
   const [ownerLink, setOwnerLink] = useState<string | null>(null);
+  // Inline question fallback — used when there is no owner inbox link.
+  const [askOpen, setAskOpen] = useState(false);
+  const [askText, setAskText] = useState("");
+  const [askSending, setAskSending] = useState(false);
+  const [askSent, setAskSent] = useState(false);
+  const [askError, setAskError] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -97,12 +103,27 @@ export function ProposalCta({
     celebrate();
   }
 
-  const questionHref = `sms:+14043952879?body=${encodeURIComponent(
-    `Hi! Question about my "${projectTitle}" bid (Bid: ${shareToken}): `,
-  )}`;
-
   function handleQuestion() {
     track("question_clicked");
+  }
+
+  async function submitQuestion() {
+    const question = askText.trim();
+    if (!question || askSending) return;
+    setAskSending(true);
+    setAskError(false);
+    const { data, error } = await createClient().rpc("ask_from_proposal", {
+      p_share_token: shareToken,
+      p_question: question,
+    });
+    setAskSending(false);
+    if (!error && (data as { ok?: boolean } | null)?.ok) {
+      track("question_clicked");
+      setAskSent(true);
+      setAskText("");
+    } else {
+      setAskError(true);
+    }
   }
 
   function handlePdf() {
@@ -143,16 +164,28 @@ export function ProposalCta({
       )}
 
       <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <Button
-          variant="outline"
-          className="h-11 gap-2 rounded-full bg-transparent"
-          asChild
-        >
-          <a href={ownerLink ? `${ownerLink}#messages` : questionHref} onClick={handleQuestion}>
+        {ownerLink ? (
+          <Button
+            variant="outline"
+            className="h-11 gap-2 rounded-full bg-transparent"
+            asChild
+          >
+            <a href={`${ownerLink}#messages`} onClick={handleQuestion}>
+              <MessageCircle className="h-4 w-4" />
+              Ask a Question
+            </a>
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            className="h-11 gap-2 rounded-full bg-transparent"
+            onClick={() => setAskOpen((open) => !open)}
+            aria-expanded={askOpen}
+          >
             <MessageCircle className="h-4 w-4" />
             Ask a Question
-          </a>
-        </Button>
+          </Button>
+        )}
         <Button
           variant="outline"
           className="h-11 gap-2 rounded-full bg-transparent"
@@ -163,6 +196,40 @@ export function ProposalCta({
           Download PDF
         </Button>
       </div>
+
+      {!ownerLink && askOpen && (
+        <div className="mt-3 rounded-2xl border border-border bg-muted/40 p-4">
+          {askSent ? (
+            <p className="text-center text-sm font-semibold text-foreground">
+              Sent to {company}
+            </p>
+          ) : (
+            <>
+              <label htmlFor="proposal-question" className="text-sm font-medium text-foreground">
+                Ask {company} a question
+              </label>
+              <textarea
+                id="proposal-question"
+                rows={3}
+                value={askText}
+                onChange={(event) => setAskText(event.target.value)}
+                placeholder={`Question about "${projectTitle}"…`}
+                className="mt-2 w-full resize-none rounded-xl border border-border bg-background p-3 text-sm text-foreground outline-none focus:border-primary"
+              />
+              {askError && (
+                <p className="mt-1 text-sm text-destructive">Couldn&apos;t send - try again.</p>
+              )}
+              <Button
+                onClick={submitQuestion}
+                disabled={askSending || !askText.trim()}
+                className="mt-2 h-11 w-full rounded-full font-semibold"
+              >
+                {askSending ? "Sending…" : "Send question"}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
 
       <p className="mt-3 text-center text-xs leading-relaxed text-muted-foreground">
         Accepting sends a text to your contractor to confirm intent. It is not a binding contract.

@@ -430,30 +430,41 @@ function SeasonedDashboard({
             {recent.map((p, i) => {
               const meta = statusMeta(p.status);
               return (
-                <div
-                  key={p.id}
-                  className={`grid grid-cols-[1fr_auto] items-center gap-3 py-4 sm:grid-cols-[minmax(0,1.4fr)_120px_120px_100px_36px] ${
-                    i > 0 ? "border-t border-border" : ""
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-foreground">{p.project_title}</p>
-                    <p className="mt-0.5 truncate text-sm text-muted-foreground">{p.homeowner_name || "Homeowner"}</p>
-                  </div>
-                  <div className="hidden font-bold text-foreground sm:block">{formatPrice(p.total_price)}</div>
-                  <div>
-                    <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-bold ${meta.className}`}>{meta.label}</span>
-                  </div>
-                  <div className="hidden text-sm text-muted-foreground sm:block">{shortDate(p.created_at)}</div>
+                <div key={p.id} className={i > 0 ? "border-t border-border" : ""}>
+                  {/* Mobile: Project + Amount + status pill; row opens the bid in a new tab */}
                   <a
                     href={`/p/${p.share_token}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted"
-                    aria-label={`View ${p.project_title}`}
+                    className="flex items-center gap-3 py-4 md:hidden"
                   >
-                    <ExternalLink className="h-4 w-4" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-foreground">{p.project_title}</p>
+                      <p className="mt-0.5 font-bold text-foreground">{formatPrice(p.total_price)}</p>
+                    </div>
+                    <span className={`inline-block shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${meta.className}`}>{meta.label}</span>
                   </a>
+                  {/* Desktop (unchanged) */}
+                  <div className="hidden items-center gap-3 py-4 md:grid md:grid-cols-[minmax(0,1.4fr)_120px_120px_100px_36px]">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-foreground">{p.project_title}</p>
+                      <p className="mt-0.5 truncate text-sm text-muted-foreground">{p.homeowner_name || "Homeowner"}</p>
+                    </div>
+                    <div className="font-bold text-foreground">{formatPrice(p.total_price)}</div>
+                    <div>
+                      <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-bold ${meta.className}`}>{meta.label}</span>
+                    </div>
+                    <div className="text-sm text-muted-foreground">{shortDate(p.created_at)}</div>
+                    <a
+                      href={`/p/${p.share_token}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted"
+                      aria-label={`View ${p.project_title}`}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </div>
                 </div>
               );
             })}

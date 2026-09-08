@@ -152,12 +152,15 @@ export function ContractorThread({ token }: { token: string }) {
   const [replyText, setReplyText] = useState('')
   const [justSent, setJustSent] = useState(false)
   const [nameInput, setNameInput] = useState('')
+  const [companyInput, setCompanyInput] = useState('')
   const [nameSaved, setNameSaved] = useState(false)
+  const [offerMode, setOfferMode] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [photoError, setPhotoError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const sendingRef = useRef(false)
   const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const offerHandledRef = useRef(false)
 
   useEffect(() => {
     let active = true
@@ -179,6 +182,24 @@ export function ContractorThread({ token }: { token: string }) {
     }, 12000)
     return () => window.clearInterval(interval)
   }, [token])
+
+  // Deep-link: ?offer=1 auto-opens the slot composer (and scrolls to it) for
+  // states where offering an estimate is possible. If the pro has no name yet,
+  // the name card renders first (above the composer) with offer-specific copy.
+  useEffect(() => {
+    if (offerHandledRef.current) return
+    if (!thread || typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('offer') !== '1') return
+    const s = thread.page_state.state
+    if (s !== 'new' && s !== 'live' && s !== 'estimatewait') return
+    offerHandledRef.current = true
+    setOfferMode(true)
+    setComposerOpen(true)
+    setTimeout(() => {
+      document.getElementById('slot-composer')?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    }, 500)
+  }, [thread])
 
   function say(message: string) {
     setToast(message)
@@ -282,10 +303,13 @@ export function ContractorThread({ token }: { token: string }) {
 
   async function saveName() {
     const name = nameInput.trim()
-    if (!name || busy) return
+    const company = companyInput.trim()
+    // Company is what the homeowner sees when present; otherwise the rep name.
+    const value = company || name
+    if (!value || busy) return
     sendingRef.current = true
     setBusy(true)
-    const { data, error } = await createClient().rpc('set_contractor_name', { p_token: token, p_name: name })
+    const { data, error } = await createClient().rpc('set_contractor_name', { p_token: token, p_name: value })
     setBusy(false)
     sendingRef.current = false
     if (!error && data?.ok) {
@@ -336,7 +360,7 @@ export function ContractorThread({ token }: { token: string }) {
   const needsName = nameSaved ? false : thread.my_name == null
 
   const composer = (
-    <div className={`panel${composerOpen ? ' on' : ''}`}>
+    <div className={`panel${composerOpen ? ' on' : ''}`} id="slot-composer">
       <div style={{ fontWeight: 800, fontSize: 18 }}>Offer a free estimate</div>
       <div className="sub">Choose one to three times. {first} will see only these options.</div>
       {rows.map((row, index) => (
@@ -387,16 +411,30 @@ export function ContractorThread({ token }: { token: string }) {
         {needsName && (
           <div className="sec"><div className="card">
             <div className="eyebrow">One quick thing</div>
-            <div style={{ fontWeight: 700, marginTop: 8 }}>What&apos;s your name or company? {first} sees this on their page.</div>
+            <div style={{ fontWeight: 700, marginTop: 8 }}>
+              {offerMode
+                ? `${first} needs to know who's coming — add your name or company, then pick your times.`
+                : `What's your name or company? ${first} sees this on their page.`}
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink-2)', marginTop: 14 }}>Your name</div>
             <input
               className="slotinput"
-              style={{ marginTop: 14 }}
-              placeholder="e.g. Alex Rivera or Rivera Plumbing"
+              style={{ marginTop: 6 }}
+              placeholder="e.g. Alex Rivera"
               value={nameInput}
               onChange={(event) => setNameInput(event.target.value)}
               onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); void saveName() } }}
             />
-            <button className="primary" onClick={saveName} disabled={busy || !nameInput.trim()}>{busy ? 'Saving…' : 'Save'}</button>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink-2)', marginTop: 12 }}>Company (optional)</div>
+            <input
+              className="slotinput"
+              style={{ marginTop: 6 }}
+              placeholder="e.g. Rivera Plumbing"
+              value={companyInput}
+              onChange={(event) => setCompanyInput(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); void saveName() } }}
+            />
+            <button className="primary" onClick={saveName} disabled={busy || (!nameInput.trim() && !companyInput.trim())}>{busy ? 'Saving…' : 'Save'}</button>
           </div></div>
         )}
 
@@ -445,7 +483,7 @@ export function ContractorThread({ token }: { token: string }) {
 
         {state === 'confirm' && (
           <div className="sec"><div className="card hero">
-            <div className="eyebrow">{first} replied</div>
+            <div className="eyebrow">Reply needed</div>
             <h2>{first} replied</h2>
             <div className="quote">{ps.counter ? ps.counter.body : ps.slots_msg?.chosen_label}</div>
             <button className="primary" onClick={confirmTime} disabled={busy}>{busy ? 'Confirming…' : 'Yes — confirm'}</button>

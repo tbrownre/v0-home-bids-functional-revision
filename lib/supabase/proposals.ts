@@ -48,6 +48,7 @@ export interface Proposal {
   share_token: string;
   contractor_id: string | null;
   contractor_company_name: string | null;
+  contractor_rep_name: string | null;
   contractor_logo_url: string | null;
   contractor_phone: string | null;
   homeowner_name: string | null;

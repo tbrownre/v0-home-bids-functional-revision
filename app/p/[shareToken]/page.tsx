@@ -28,9 +28,40 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { proposal } = await getProposalByShareToken(shareToken);
   if (!proposal) return { title: "Proposal — HomeBids" };
   const company = proposal.contractor_company_name ?? "Your Contractor";
+
+  const totalStr =
+    proposal.total_price != null
+      ? `$${Math.round(proposal.total_price).toLocaleString("en-US")}`
+      : "";
+  const title = totalStr
+    ? `${proposal.project_title} — ${totalStr} bid · HomeBids`
+    : `${proposal.project_title} · HomeBids`;
+
+  const rawDescription =
+    proposal.project_summary ||
+    proposal.scope_items?.[0]?.description ||
+    proposal.scope_items?.[0]?.title ||
+    `A bid from ${company}.`;
+  const description =
+    rawDescription.length > 160 ? `${rawDescription.slice(0, 157)}…` : rawDescription;
+
+  const image = proposal.contractor_logo_url || "/apple-icon.png";
+
   return {
-    title: `${proposal.project_title} · ${company}`,
-    description: proposal.project_summary ?? `A proposal from ${company}.`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      images: [{ url: image, alt: title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [image],
+    },
     robots: { index: false, follow: false },
   };
 }
@@ -120,9 +151,20 @@ function ProposalDocument({
               companyName={proposal.contractor_company_name}
             />
             <div className="min-w-0">
-              <p className="truncate text-lg font-bold text-foreground">
-                {proposal.contractor_company_name ?? "Your Contractor"}
-              </p>
+              {proposal.contractor_rep_name ? (
+                <>
+                  <p className="truncate text-lg font-bold text-foreground">
+                    {proposal.contractor_rep_name}
+                  </p>
+                  <p className="truncate text-sm text-muted-foreground">
+                    {proposal.contractor_company_name ?? "Your Contractor"}
+                  </p>
+                </>
+              ) : (
+                <p className="truncate text-lg font-bold text-foreground">
+                  {proposal.contractor_company_name ?? "Your Contractor"}
+                </p>
+              )}
               {/* Conditional trust badges — only show if contractor has the data */}
               {hasTrustBadges && (
                 <div className="mt-1 flex flex-wrap items-center gap-2">

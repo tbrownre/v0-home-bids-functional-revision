@@ -171,7 +171,30 @@ export default function BidsPage() {
               )}
             </div>
           ) : (
-            <div className="min-w-[760px]" ref={menuWrapRef}>
+            <div ref={menuWrapRef}>
+              {/* Mobile: Project + Amount + status pill; row opens the bid in a new tab */}
+              <div className="md:hidden">
+                {filtered.map((p) => {
+                  const meta = statusMeta(p.status);
+                  return (
+                    <a
+                      key={p.id}
+                      href={`/p/${p.share_token}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 border-t border-border px-1 py-4 first:border-t-0"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-foreground">{p.project_title}</p>
+                        <p className="mt-0.5 font-bold text-foreground">{formatPrice(p.total_price)}</p>
+                      </div>
+                      <span className={`inline-block shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${meta.className}`}>{meta.label}</span>
+                    </a>
+                  );
+                })}
+              </div>
+              {/* Desktop table (unchanged) */}
+              <div className="hidden min-w-[760px] md:block">
               <div className="grid grid-cols-[minmax(200px,1.4fr)_120px_130px_150px_120px_44px] gap-3 px-1 py-3 text-xs font-extrabold uppercase tracking-[0.06em] text-muted-foreground">
                 <div>Project</div>
                 <div>Amount</div>
@@ -254,6 +277,7 @@ export default function BidsPage() {
                   </div>
                 );
               })}
+              </div>
             </div>
           )}
         </section>

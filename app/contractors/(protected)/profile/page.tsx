@@ -78,6 +78,7 @@ export default function ContractorProfilePage() {
   // Inline display-name editing (top Profile card).
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
+  const [companyDraft, setCompanyDraft] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -157,22 +158,27 @@ export default function ContractorProfilePage() {
     } catch { /* non-fatal */ }
   }
 
-  async function saveName() {
-    const value = nameDraft.trim();
-    if (!value) return;
+  async function saveIdentity() {
+    const rep = nameDraft.trim();
+    const company = companyDraft.trim();
+    if (!rep && !company) return;
     setSavingName(true);
     try {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
-      const { data, error } = await supabase.rpc("set_my_contractor_name", { p_name: value });
+      const { data, error } = await supabase.rpc("set_my_contractor_identity", {
+        p_rep_name: rep || null,
+        p_company: company || null,
+      });
       if (!error && data?.ok) {
-        setAccount((a) => ({ ...a, name: value }));
+        if (rep) setAccount((a) => ({ ...a, name: rep }));
+        if (company) setForm((f) => ({ ...f, business_name: company }));
         setEditingName(false);
         await refetchProfile();
-        showToast(`Saved — homeowners now see ${value}`);
+        showToast("Saved — your profile is updated");
       }
     } catch (e) {
-      console.error("[Profile] set name failed:", e);
+      console.error("[Profile] set identity failed:", e);
     } finally {
       setSavingName(false);
     }
@@ -272,40 +278,57 @@ export default function ContractorProfilePage() {
               )}
               <div className="min-w-0 flex-1">
                 {editingName ? (
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-col gap-2">
                     <Input
                       autoFocus
                       value={nameDraft}
                       onChange={(e) => setNameDraft(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.nativeEvent.isComposing || e.keyCode === 229) return;
-                        if (e.key === "Enter") { e.preventDefault(); saveName(); }
+                        if (e.key === "Enter") { e.preventDefault(); saveIdentity(); }
                         if (e.key === "Escape") setEditingName(false);
                       }}
-                      className="h-9 max-w-[220px]"
+                      className="h-9 max-w-[260px]"
                       placeholder="Your name"
                     />
-                    <Button size="sm" className="h-9 rounded-lg font-semibold" onClick={saveName} disabled={savingName || !nameDraft.trim()}>
-                      {savingName ? "Saving…" : "Save"}
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-9 rounded-lg" onClick={() => setEditingName(false)} disabled={savingName}>
-                      Cancel
-                    </Button>
+                    <Input
+                      value={companyDraft}
+                      onChange={(e) => setCompanyDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+                        if (e.key === "Enter") { e.preventDefault(); saveIdentity(); }
+                        if (e.key === "Escape") setEditingName(false);
+                      }}
+                      className="h-9 max-w-[260px]"
+                      placeholder="Company"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" className="h-9 rounded-lg font-semibold" onClick={saveIdentity} disabled={savingName || (!nameDraft.trim() && !companyDraft.trim())}>
+                        {savingName ? "Saving…" : "Save"}
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-9 rounded-lg" onClick={() => setEditingName(false)} disabled={savingName}>
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5">
                     <p className="truncate text-base font-extrabold text-foreground">{account.name}</p>
                     <button
                       type="button"
-                      onClick={() => { setNameDraft(account.name); setEditingName(true); }}
+                      onClick={() => { setNameDraft(account.name); setCompanyDraft(form.business_name); setEditingName(true); }}
                       className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                      aria-label="Edit display name"
+                      aria-label="Edit name and company"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 )}
-                {form.business_name && <p className="truncate text-sm text-foreground">{form.business_name}</p>}
+                {!editingName && (
+                  <p className="truncate text-sm text-foreground">
+                    {form.business_name || <span className="text-muted-foreground">Add your company</span>}
+                  </p>
+                )}
                 <p className="text-sm text-muted-foreground">Contractor</p>
               </div>
             </div>
