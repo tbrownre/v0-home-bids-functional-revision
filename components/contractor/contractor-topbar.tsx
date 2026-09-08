@@ -32,11 +32,16 @@ export function ContractorTopbar() {
 
   const [name, setName] = useState("there");
   useEffect(() => {
+    let cancelled = false;
     (async () => {
-      let user = getMockUser();
-      if (!user) user = await syncMirrorFromSupabase();
-      if (user?.firstName) setName(user.firstName);
+      // Show the cached name immediately, then reconcile against the real
+      // profile so an edited name (profiles.full_name) is never stale.
+      const cached = getMockUser();
+      if (cached?.firstName) setName(cached.firstName);
+      const fresh = await syncMirrorFromSupabase();
+      if (!cancelled && fresh?.firstName) setName(fresh.firstName);
     })();
+    return () => { cancelled = true; };
   }, []);
 
   const initial = name.charAt(0).toUpperCase() || "T";

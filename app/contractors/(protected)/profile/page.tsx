@@ -171,9 +171,17 @@ export default function ContractorProfilePage() {
         p_company: company || null,
       });
       if (!error && data?.ok) {
-        if (rep) setAccount((a) => ({ ...a, name: rep }));
         if (company) setForm((f) => ({ ...f, business_name: company }));
         setEditingName(false);
+        // Refresh the auth mirror so the rep name (profiles.full_name) is fresh
+        // everywhere it renders — this card, the topbar, and the greeting.
+        const refreshed = await syncMirrorFromSupabase();
+        const nextName =
+          [refreshed?.firstName, refreshed?.lastName].filter(Boolean).join(" ") ||
+          rep ||
+          refreshed?.email ||
+          "Contractor";
+        setAccount((a) => ({ ...a, name: nextName }));
         await refetchProfile();
         showToast("Saved — your profile is updated");
       }

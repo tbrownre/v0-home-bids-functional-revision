@@ -65,6 +65,10 @@ export default function ContractorDashboard() {
         return;
       }
       if (user.firstName) setContractorName(user.firstName);
+      // Reconcile against the real profile (profiles.full_name) so an edited
+      // name is never stale in the greeting.
+      const fresh = await syncMirrorFromSupabase();
+      if (!cancelled && fresh?.firstName) setContractorName(fresh.firstName);
     })();
     return () => { cancelled = true; };
   }, []);

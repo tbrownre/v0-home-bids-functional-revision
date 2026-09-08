@@ -92,27 +92,33 @@ async function mapSupabaseUser(user: {
   user_metadata?: Record<string, unknown> | null;
 }): Promise<MockUser> {
   const meta = (user.user_metadata ?? {}) as Record<string, string | undefined>;
-  const firstName = meta.first_name ?? meta.full_name?.split(" ")[0] ?? "";
-  const lastName = meta.last_name ?? meta.full_name?.split(" ").slice(1).join(" ") ?? "";
-  const name = (meta.full_name ?? `${firstName} ${lastName}`.trim()) || (user.email ?? "Member");
-  
-  // Get user_type from profiles table (not from user_metadata)
+
+  // profiles.full_name is the source of truth for the display name (updated by
+  // set_my_contractor_identity); auth user_metadata is only a fallback.
+  let fullName: string | undefined;
   let role: MockRole = "homeowner";
   try {
     const supabase = createClient();
     const { data: profile } = await supabase
       .from("profiles")
-      .select("user_type")
+      .select("user_type, full_name")
       .eq("id", user.id)
       .maybeSingle();
     const userType = profile?.user_type;
     if (userType === "contractor" || userType === "admin") {
       role = userType;
     }
+    fullName = profile?.full_name ?? undefined;
   } catch {
-    // Fallback to homeowner on any error
+    // Fallback to homeowner / metadata name on any error
   }
-  
+
+  const resolvedFull = fullName ?? meta.full_name;
+  const firstName = resolvedFull?.split(" ")[0] ?? meta.first_name ?? "";
+  const lastName =
+    resolvedFull?.split(" ").slice(1).join(" ") ?? meta.last_name ?? "";
+  const name = resolvedFull || `${firstName} ${lastName}`.trim() || (user.email ?? "Member");
+
   return {
     id: user.id,
     email: user.email ?? "",
