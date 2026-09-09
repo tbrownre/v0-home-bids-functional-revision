@@ -412,8 +412,23 @@ export async function getHomeownerJobs() {
     .eq("homeowner_id", user.id)
     .order("created_at", { ascending: false });
 
-  if (error) return { error: error.message, jobs: [] };
-  return { jobs: data ?? [] };
+  if (error) return { error: error.message, jobs: [], proposals: [] };
+
+  const jobs = data ?? [];
+
+  // Fetch proposals separately (no nested embed) so bid counts and status
+  // reflect proposals in addition to bids.
+  let proposals: { job_id: string; status: string }[] = [];
+  const jobIds = jobs.map((j) => j.id);
+  if (jobIds.length > 0) {
+    const { data: proposalRows } = await supabase
+      .from("proposals")
+      .select("job_id,status")
+      .in("job_id", jobIds);
+    proposals = proposalRows ?? [];
+  }
+
+  return { jobs, proposals };
 }
 
 export async function getOpenJobs() {

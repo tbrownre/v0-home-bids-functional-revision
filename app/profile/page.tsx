@@ -21,7 +21,6 @@ import {
   User,
   MapPin,
   Bell,
-  CreditCard,
   Shield,
   Trash2,
   Camera,
@@ -152,7 +151,6 @@ export default function ProfilePage() {
   // Modals
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showAddCardModal, setShowAddCardModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -540,40 +538,6 @@ export default function ProfilePage() {
             </Button>
           </Section>
 
-          {/* 5. Payment Methods */}
-          <Section icon={CreditCard} title="Payment Methods">
-            <div className="rounded-xl border border-border bg-muted/40 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Visa ending in 4242</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Expires 12/27 &bull; Billing ZIP: 91101</p>
-                </div>
-                <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                  Default
-                </span>
-              </div>
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Payment methods are mocked for demo testing.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowAddCardModal(true)}>
-                Add Payment Method
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => showToast("Card updated (demo).")}>
-                Update Card
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground hover:text-destructive"
-                onClick={() => showToast("Card removed (demo).")}
-              >
-                Remove Card
-              </Button>
-            </div>
-          </Section>
-
           {/* 6. Subscription */}
           <Section icon={ChevronRight} title="Subscription">
             <div className="rounded-xl border border-border bg-muted/40 p-4">
@@ -687,47 +651,6 @@ export default function ProfilePage() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteAccount}>
               Delete Account
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Add card modal (mock) ───────────────────────────────────────────── */}
-      <Dialog open={showAddCardModal} onOpenChange={setShowAddCardModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Payment Method</DialogTitle>
-            <DialogDescription>
-              Payment processing is mocked for demo testing. No real card data is stored.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label>Card Number</Label>
-              <Input placeholder="4242 4242 4242 4242" disabled />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Expiry</Label>
-                <Input placeholder="MM/YY" disabled />
-              </div>
-              <div className="space-y-1.5">
-                <Label>CVC</Label>
-                <Input placeholder="123" disabled />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddCardModal(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                setShowAddCardModal(false);
-                showToast("Payment method added (demo).");
-              }}
-            >
-              Add Card (Demo)
             </Button>
           </DialogFooter>
         </DialogContent>

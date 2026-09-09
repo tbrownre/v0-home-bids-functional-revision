@@ -15,7 +15,7 @@ import { HomeownerTopbar } from "@/components/homeowner/homeowner-topbar";
 import { StartProjectModal } from "@/components/homeowner/start-project-modal";
 import { Button } from "@/components/ui/button";
 import { getMockUser, syncMirrorFromSupabase } from "@/lib/mock-auth";
-import { getJobStatus, getJobStatusLabel, isJobArchived, type JobStatusOwner } from "@/lib/job-store";
+import { getJobStatusLabel, type JobStatusOwner } from "@/lib/job-store";
 import { getHomeownerJobs } from "@/lib/supabase/actions";
 
 const CARD = "rounded-[22px] border border-border bg-card shadow-[0_10px_30px_rgba(16,17,20,0.06)]";
@@ -108,22 +108,40 @@ export default function HomeownerDashboardPage() {
         return;
       }
       if (result.jobs) {
+        const proposals = result.proposals ?? [];
         setJobs(
           result.jobs
-            .map((j) => ({
-              id: j.id,
-              ownerToken: (j as { owner_token?: string | null }).owner_token ?? null,
-              title: j.title ?? "",
-              description: j.description ?? "",
-              location: j.location ?? "",
-              status:
-                ((getJobStatus(j.id) as JobStatusOwner) ||
-                  (j.status === "open" ? "receiving_bids" : (j.status as JobStatusOwner))) ??
-                "receiving_bids",
-              createdAt: new Date(j.created_at),
-              bidsCount: j.bids?.[0]?.count ?? 0,
-            }))
-            .filter((j) => !isJobArchived(j.id)),
+            .map((j) => {
+              const jobProposals = proposals.filter((p) => p.job_id === j.id);
+              const bidsCount = (j.bids?.[0]?.count ?? 0) + jobProposals.length;
+
+              // Status comes only from the database (no in-memory override).
+              // An accepted proposal wins; otherwise map the job's own status.
+              // "cancelled" jobs are treated as archived and filtered out below.
+              const hasAccepted = jobProposals.some((p) => p.status === "accepted");
+              const dbStatusMap: Record<string, JobStatusOwner> = {
+                open: "receiving_bids",
+                in_progress: "in_progress",
+                completed: "completed",
+              };
+              const status: JobStatusOwner = hasAccepted
+                ? "contractor_selected"
+                : dbStatusMap[j.status ?? "open"] ?? "receiving_bids";
+
+              return {
+                id: j.id,
+                ownerToken: (j as { owner_token?: string | null }).owner_token ?? null,
+                title: j.title ?? "",
+                description: j.description ?? "",
+                location: j.location ?? "",
+                status,
+                createdAt: new Date(j.created_at),
+                bidsCount,
+                archived: j.status === "cancelled",
+              };
+            })
+            .filter((j) => !j.archived)
+            .map(({ archived: _archived, ...j }) => j),
         );
       }
     } catch {

@@ -7,7 +7,12 @@ export function FooterWrapper() {
   const pathname = usePathname();
   
   // Don't render Footer on public share pages
-  if (pathname.startsWith('/j/') || pathname.startsWith('/pro/')) {
+  if (
+    pathname.startsWith('/j/') ||
+    pathname.startsWith('/pro/') ||
+    pathname.startsWith('/c/') ||
+    pathname.startsWith('/my/')
+  ) {
     return null;
   }
   
