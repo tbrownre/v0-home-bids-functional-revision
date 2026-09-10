@@ -11,6 +11,10 @@ interface ProposalCtaProps {
   projectTitle: string;
   pdfUrl: string | null;
   company: string;
+  /** Null for bids the contractor shared themselves (no marketplace job). */
+  jobId?: string | null;
+  homeownerName?: string | null;
+  homeownerPhone?: string | null;
   initiallyAccepted?: boolean;
   /** Sticky variant pins the primary actions to the bottom on mobile. */
   variant?: "inline" | "sticky";
@@ -21,6 +25,9 @@ export function ProposalCta({
   projectTitle,
   pdfUrl,
   company,
+  jobId = null,
+  homeownerName = null,
+  homeownerPhone = null,
   initiallyAccepted = false,
   variant = "inline",
 }: ProposalCtaProps) {
@@ -34,6 +41,35 @@ export function ProposalCta({
   const [askSending, setAskSending] = useState(false);
   const [askSent, setAskSent] = useState(false);
   const [askError, setAskError] = useState(false);
+
+  // Own-customer contact capture — only for job_id-null bids that don't yet
+  // have a homeowner phone on file.
+  const needsContact = jobId === null && !homeownerPhone;
+  const [contactSaved, setContactSaved] = useState(false);
+  const [contactName, setContactName] = useState(homeownerName ?? "");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactSaving, setContactSaving] = useState(false);
+  const [contactBadPhone, setContactBadPhone] = useState(false);
+
+  async function saveContact(): Promise<boolean> {
+    const name = contactName.trim();
+    const phone = contactPhone.trim();
+    setContactSaving(true);
+    setContactBadPhone(false);
+    const { data, error } = await createClient().rpc("submit_proposal_contact", {
+      p_share_token: shareToken,
+      p_name: name || null,
+      p_phone: phone,
+    });
+    setContactSaving(false);
+    const result = data as { ok?: boolean; error?: string } | null;
+    if (!error && result?.ok) {
+      setContactSaved(true);
+      return true;
+    }
+    if (result?.error === "bad_phone") setContactBadPhone(true);
+    return false;
+  }
 
   useEffect(() => {
     let active = true;
@@ -112,6 +148,17 @@ export function ProposalCta({
     if (!question || askSending) return;
     setAskSending(true);
     setAskError(false);
+
+    // For own-customer bids, capture the homeowner's contact before the
+    // question so the contractor can reply. Abort if the phone is invalid.
+    if (needsContact && !contactSaved) {
+      const saved = await saveContact();
+      if (!saved) {
+        setAskSending(false);
+        return;
+      }
+    }
+
     const { data, error } = await createClient().rpc("ask_from_proposal", {
       p_share_token: shareToken,
       p_question: question,
@@ -134,15 +181,53 @@ export function ProposalCta({
   const content = (
     <div className="mx-auto w-full max-w-2xl">
       {accepted ? (
-        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 text-center">
-          <h3 className="text-lg font-semibold text-foreground">You&apos;re all set! 🎉</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            We&apos;ve notified {company} - they&apos;ll text you shortly to schedule.
-          </p>
-          <Button size="lg" className="mt-4 h-12 w-full rounded-full" disabled>
-            Approved ✓
-          </Button>
-        </div>
+        needsContact && !contactSaved ? (
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
+            <h3 className="text-center text-lg font-semibold text-foreground">
+              You approved {company}&apos;s bid 🎉 — where should they reach you?
+            </h3>
+            <div className="mt-4 space-y-3">
+              <input
+                type="text"
+                value={contactName}
+                onChange={(event) => setContactName(event.target.value)}
+                placeholder="Your name"
+                className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground outline-none focus:border-primary"
+              />
+              <input
+                type="tel"
+                required
+                value={contactPhone}
+                onChange={(event) => setContactPhone(event.target.value)}
+                placeholder="Phone number"
+                className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground outline-none focus:border-primary"
+              />
+              {contactBadPhone && (
+                <p className="text-sm text-destructive">Please enter a valid phone number.</p>
+              )}
+              <Button
+                size="lg"
+                className="h-12 w-full rounded-full font-semibold"
+                onClick={saveContact}
+                disabled={contactSaving || !contactPhone.trim()}
+              >
+                {contactSaving ? "Sending…" : "Share my contact"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 text-center">
+            <h3 className="text-lg font-semibold text-foreground">You&apos;re all set! 🎉</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {jobId === null
+                ? `We've sent your contact to ${company} - they'll reach out shortly.`
+                : `We've notified ${company} - they'll text you shortly to schedule.`}
+            </p>
+            <Button size="lg" className="mt-4 h-12 w-full rounded-full" disabled>
+              Approved ✓
+            </Button>
+          </div>
+        )
       ) : (
         <>
           <Button
@@ -208,6 +293,28 @@ export function ProposalCta({
               <label htmlFor="proposal-question" className="text-sm font-medium text-foreground">
                 Ask {company} a question
               </label>
+              {needsContact && !contactSaved && (
+                <div className="mt-2 space-y-2">
+                  <input
+                    type="text"
+                    value={contactName}
+                    onChange={(event) => setContactName(event.target.value)}
+                    placeholder="Your name"
+                    className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground outline-none focus:border-primary"
+                  />
+                  <input
+                    type="tel"
+                    required
+                    value={contactPhone}
+                    onChange={(event) => setContactPhone(event.target.value)}
+                    placeholder="Phone number"
+                    className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground outline-none focus:border-primary"
+                  />
+                  {contactBadPhone && (
+                    <p className="text-sm text-destructive">Please enter a valid phone number.</p>
+                  )}
+                </div>
+              )}
               <textarea
                 id="proposal-question"
                 rows={3}
@@ -221,7 +328,7 @@ export function ProposalCta({
               )}
               <Button
                 onClick={submitQuestion}
-                disabled={askSending || !askText.trim()}
+                disabled={askSending || !askText.trim() || (needsContact && !contactSaved && !contactPhone.trim())}
                 className="mt-2 h-11 w-full rounded-full font-semibold"
               >
                 {askSending ? "Sending…" : "Send question"}

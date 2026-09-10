@@ -46,6 +46,7 @@ export type ProposalStatus =
 export interface Proposal {
   id: string;
   share_token: string;
+  job_id: string | null;
   contractor_id: string | null;
   contractor_company_name: string | null;
   contractor_rep_name: string | null;

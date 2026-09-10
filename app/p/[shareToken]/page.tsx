@@ -45,8 +45,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const description =
     rawDescription.length > 160 ? `${rawDescription.slice(0, 157)}…` : rawDescription;
 
-  const image = proposal.contractor_logo_url || "/apple-icon.png";
-
   return {
     title,
     description,
@@ -54,13 +52,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title,
       description,
       type: "website",
-      images: [{ url: image, alt: title }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [image],
     },
     robots: { index: false, follow: false },
   };
@@ -337,12 +333,15 @@ function ProposalDocument({
         {/* ── Inline CTA (full set) ── */}
         <section className="mt-6">
           <ProposalCta
-            shareToken={shareToken}
-            projectTitle={proposal.project_title}
-            pdfUrl={proposal.pdf_url}
-            company={proposal.contractor_company_name ?? "Your Contractor"}
-            initiallyAccepted={proposal.status === "accepted" || proposal.status === "approval_clicked" || Boolean(proposal.approval_clicked_at)}
-            variant="inline"
+                shareToken={shareToken}
+                projectTitle={proposal.project_title}
+                pdfUrl={proposal.pdf_url}
+                company={proposal.contractor_company_name ?? "Your Contractor"}
+                jobId={proposal.job_id}
+                homeownerName={proposal.homeowner_name}
+                homeownerPhone={proposal.homeowner_phone}
+                initiallyAccepted={proposal.status === "accepted" || proposal.status === "approval_clicked" || Boolean(proposal.approval_clicked_at)}
+                variant="inline"
           />
         </section>
 
