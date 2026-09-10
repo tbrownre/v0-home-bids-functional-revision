@@ -74,56 +74,131 @@ export default async function Image({ params }: ImageProps) {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
-          background: "#0B0F1A",
-          padding: "72px",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#FFFFFF",
+          padding: "56px 72px",
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          <div
-            style={{
-              fontSize: 34,
-              fontWeight: 800,
-              letterSpacing: "0.14em",
-              color: "#FFFFFF",
-            }}
-          >
-            HOMEBIDS
-          </div>
+        {/* 1. Wordmark */}
+        <div style={{ display: "flex", alignItems: "flex-start", fontSize: 54, fontWeight: 800, lineHeight: 1 }}>
+          <span style={{ color: "#0A84FF" }}>HOME</span>
+          <span style={{ color: "#111111" }}>BIDS</span>
+          <span style={{ color: "#111111", fontSize: 22, marginTop: "4px", marginLeft: "4px" }}>™</span>
+        </div>
+
+        {/* 2. Pill */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "14px",
+            background: "#E7F0FE",
+            borderRadius: "999px",
+            padding: "10px 28px",
+            marginTop: "40px",
+          }}
+        >
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              background: "#0A84FF",
-              color: "#FFFFFF",
-              fontSize: 22,
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              padding: "8px 18px",
+              justifyContent: "center",
+              width: "36px",
+              height: "36px",
               borderRadius: "999px",
+              background: "#0A84FF",
             }}
           >
-            NEW BID
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+          <div style={{ display: "flex", color: "#0A84FF", fontWeight: 800, letterSpacing: "0.14em", fontSize: 24 }}>
+            NEW BID RECEIVED
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <div style={{ fontSize: 68, fontWeight: 800, color: "#FFFFFF", lineHeight: 1.05 }}>
-            {company}
+        {/* 3. Company name */}
+        <div
+          style={{
+            display: "flex",
+            textAlign: "center",
+            color: "#111111",
+            fontWeight: 800,
+            fontSize: 80,
+            lineHeight: 1.05,
+            maxWidth: "1000px",
+            marginTop: "40px",
+          }}
+        >
+          {company}
+        </div>
+
+        {/* 4. Subline */}
+        <div style={{ display: "flex", color: "#6B7280", fontSize: 44, fontWeight: 500, marginTop: "16px" }}>
+          sent you a bid.
+        </div>
+
+        {/* 5. Info box */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "28px",
+            background: "#F3F4F6",
+            borderRadius: "24px",
+            padding: "26px 36px",
+            marginTop: "40px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "90px",
+              height: "90px",
+              borderRadius: "18px",
+              background: "#E5E7EB",
+            }}
+          >
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m14.5 5.5-2 2" />
+              <path d="M12.5 7.5 4 16a2.12 2.12 0 0 0 3 3l8.5-8.5" />
+              <path d="M17.64 15 22 10.64" />
+              <path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h.86c.85 0 1.65.34 2.25.93l1.25 1.25" />
+            </svg>
           </div>
-          <div style={{ fontSize: 40, color: "#A7B0C0", lineHeight: 1.15 }}>
-            {projectTitle}
+          <div style={{ display: "flex", width: "2px", height: "80px", background: "#D1D5DB" }} />
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div style={{ display: "flex", color: "#111111", fontWeight: 700, fontSize: 38 }}>{projectTitle}</div>
+            {price ? (
+              <div style={{ display: "flex", color: "#6B7280", fontWeight: 700, fontSize: 32, marginTop: "8px" }}>{price}</div>
+            ) : null}
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
-          {price ? (
-            <div style={{ fontSize: 56, fontWeight: 800, color: "#34C759" }}>{price}</div>
-          ) : (
-            <div />
-          )}
-          <div style={{ fontSize: 26, color: "#6B7688" }}>homebids.ai</div>
+        {/* 6. Button look */}
+        <div
+          style={{
+            display: "flex",
+            background: "#0A84FF",
+            color: "#FFFFFF",
+            borderRadius: "999px",
+            padding: "22px 70px",
+            fontWeight: 700,
+            fontSize: 36,
+            marginTop: "40px",
+          }}
+        >
+          View Your Bid →
+        </div>
+
+        {/* 7. Footer */}
+        <div style={{ display: "flex", color: "#9CA3AF", fontSize: 22, marginTop: "28px" }}>
+          Powered by HomeBids
         </div>
       </div>
     ),
