@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { getSmsLink } from "@/lib/sms-config";
 import { Header } from "@/components/header";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
-import { getMockUser, mockSignOut, type MockUser } from "@/lib/mock-auth";
+import { getMockUser, mockSignOut, syncMirrorFromSupabase, type MockUser } from "@/lib/mock-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -153,12 +153,19 @@ export default function ProfilePage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   // Load user + profile from auth and Supabase
   useEffect(() => {
     async function loadUserData() {
-      const u = getMockUser();
+      // Prefer the local mirror; fall back to the real Supabase session so a
+      // stale/absent mirror doesn't strand a signed-in user on the sign-in prompt.
+      let u = getMockUser();
+      if (!u) {
+        u = await syncMirrorFromSupabase();
+      }
       setUser(u);
+      setAuthChecked(true);
       if (u?.role === "homeowner") {
         try {
           const { getUserProfile } = await import("@/lib/supabase/actions");
@@ -186,7 +193,20 @@ export default function ProfilePage() {
 
   const showToast = (msg: string) => setToast(msg);
 
-  if (!user || !profile) {
+  // (a) Auth not yet resolved — neutral loading state, never the sign-in prompt.
+  if (!authChecked) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Header isSignedIn={!!user} isContractor={false} />
+        <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+          <p className="text-muted-foreground">Loading your profile…</p>
+        </main>
+      </div>
+    );
+  }
+
+  // (b) Auth resolved and truly signed out — sign-in prompt.
+  if (!user) {
     return (
       <div className="flex min-h-screen flex-col">
         <Header isSignedIn={false} isContractor={false} />
@@ -198,12 +218,25 @@ export default function ProfilePage() {
     );
   }
 
+  // (c) Signed in but not a homeowner — must come before any check on `profile`.
   if (user.role !== "homeowner") {
     return (
       <div className="flex min-h-screen flex-col">
         <Header isSignedIn isContractor={user.role === "contractor"} />
         <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
           <p className="text-muted-foreground">This profile page is for homeowners only.</p>
+        </main>
+      </div>
+    );
+  }
+
+  // (d) Homeowner, profile still loading — same neutral loading state as (a).
+  if (!profile) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Header isSignedIn isContractor={false} />
+        <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+          <p className="text-muted-foreground">Loading your profile…</p>
         </main>
       </div>
     );
