@@ -1,19 +1,69 @@
 import { ImageResponse } from "next/og";
-import { getProposalByShareToken } from "@/lib/supabase/proposals";
 
 export const runtime = "nodejs";
 export const alt = "New bid on HomeBids";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default async function Image({ params }: { params: { shareToken: string } }) {
-  const { proposal } = await getProposalByShareToken(params.shareToken);
+interface ImageProps {
+  params: Promise<{ shareToken: string }>;
+}
 
-  const company = proposal?.contractor_company_name ?? "Your Contractor";
-  const projectTitle = proposal?.project_title ?? "Project bid";
+type ProposalDetails = {
+  company: string | null;
+  projectTitle: string | null;
+  totalPrice: number | null;
+};
+
+// Direct keyed REST fetch to the token-based RPC — no cookie client, so this
+// works inside the OG route without a request scope. Mirrors app/j/[token].
+async function getProposalDetails(shareToken: string): Promise<ProposalDetails | null> {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const apiKey = serviceRoleKey || anonKey;
+
+    if (!supabaseUrl || !apiKey || !shareToken) return null;
+
+    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/get_proposal_by_share_token`, {
+      method: "POST",
+      headers: {
+        apikey: apiKey,
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ p_token: shareToken }),
+    });
+
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as
+      | { contractor_company_name?: string | null; project_title?: string | null; total_price?: number | null }
+      | Array<{ contractor_company_name?: string | null; project_title?: string | null; total_price?: number | null }>
+      | null;
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) return null;
+
+    return {
+      company: row.contractor_company_name ?? null,
+      projectTitle: row.project_title ?? null,
+      totalPrice: row.total_price ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export default async function Image({ params }: ImageProps) {
+  const { shareToken } = await params;
+  const proposal = await getProposalDetails(shareToken);
+
+  const company = proposal?.company ?? "Your Contractor";
+  const projectTitle = proposal?.projectTitle ?? "Project bid";
   const price =
-    proposal?.total_price != null
-      ? `$${Math.round(proposal.total_price).toLocaleString("en-US")}`
+    proposal?.totalPrice != null
+      ? `$${Math.round(proposal.totalPrice).toLocaleString("en-US")}`
       : "";
 
   return new ImageResponse(
@@ -80,3 +130,6 @@ export default async function Image({ params }: { params: { shareToken: string }
     { ...size },
   );
 }
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;

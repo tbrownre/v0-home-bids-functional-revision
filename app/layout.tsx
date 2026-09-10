@@ -19,7 +19,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'HomeBids - Better bids. Better homes.',
   description: 'HomeBids connects homeowners with trusted local pros through competitive job bidding. Contractors only pay when they win work.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://homebids.ai'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.homebids.ai'),
   openGraph: {
     title: 'HomeBids - Better bids. Better homes.',
     description: 'HomeBids connects homeowners with trusted local pros through competitive job bidding. Contractors only pay when they win work.',
