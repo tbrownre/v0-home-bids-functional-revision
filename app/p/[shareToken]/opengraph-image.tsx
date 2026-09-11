@@ -59,7 +59,9 @@ export default async function Image({ params }: ImageProps) {
   const { shareToken } = await params;
   const proposal = await getProposalDetails(shareToken);
 
-  const company = proposal?.company ?? "Your Contractor";
+  const companyRaw = proposal?.company ?? "Your Contractor";
+  // Keep the name on a single line — truncate very long names.
+  const company = companyRaw.length > 24 ? `${companyRaw.slice(0, 24)}...` : companyRaw;
   const projectTitle = proposal?.projectTitle ?? "Project bid";
   const price =
     proposal?.totalPrice != null
@@ -75,17 +77,17 @@ export default async function Image({ params }: ImageProps) {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
+          justifyContent: "flex-start",
+          gap: "22px",
           background: "#FFFFFF",
-          padding: "56px 72px",
+          padding: "40px 72px",
           fontFamily: "sans-serif",
         }}
       >
         {/* 1. Wordmark */}
-        <div style={{ display: "flex", alignItems: "flex-start", fontSize: 54, fontWeight: 800, lineHeight: 1 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", fontSize: 44, fontWeight: 800, lineHeight: 1 }}>
           <span style={{ color: "#0A84FF" }}>HOME</span>
           <span style={{ color: "#111111" }}>BIDS</span>
-          <span style={{ color: "#111111", fontSize: 22, marginTop: "4px", marginLeft: "4px" }}>™</span>
         </div>
 
         {/* 2. Pill */}
@@ -96,8 +98,7 @@ export default async function Image({ params }: ImageProps) {
             gap: "14px",
             background: "#E7F0FE",
             borderRadius: "999px",
-            padding: "10px 28px",
-            marginTop: "40px",
+            padding: "8px 22px",
           }}
         >
           <div
@@ -105,17 +106,17 @@ export default async function Image({ params }: ImageProps) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: "36px",
-              height: "36px",
+              width: "30px",
+              height: "30px",
               borderRadius: "999px",
               background: "#0A84FF",
             }}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
           </div>
-          <div style={{ display: "flex", color: "#0A84FF", fontWeight: 800, letterSpacing: "0.14em", fontSize: 24 }}>
+          <div style={{ display: "flex", color: "#0A84FF", fontWeight: 800, letterSpacing: "0.14em", fontSize: 20 }}>
             NEW BID RECEIVED
           </div>
         </div>
@@ -127,17 +128,17 @@ export default async function Image({ params }: ImageProps) {
             textAlign: "center",
             color: "#111111",
             fontWeight: 800,
-            fontSize: 80,
+            fontSize: 60,
             lineHeight: 1.05,
             maxWidth: "1000px",
-            marginTop: "40px",
+            whiteSpace: "nowrap",
           }}
         >
           {company}
         </div>
 
         {/* 4. Subline */}
-        <div style={{ display: "flex", color: "#6B7280", fontSize: 44, fontWeight: 500, marginTop: "16px" }}>
+        <div style={{ display: "flex", color: "#6B7280", fontSize: 32, fontWeight: 500 }}>
           sent you a bid.
         </div>
 
@@ -149,8 +150,7 @@ export default async function Image({ params }: ImageProps) {
             gap: "28px",
             background: "#F3F4F6",
             borderRadius: "24px",
-            padding: "26px 36px",
-            marginTop: "40px",
+            padding: "20px 32px",
           }}
         >
           <div
@@ -158,24 +158,24 @@ export default async function Image({ params }: ImageProps) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: "90px",
-              height: "90px",
+              width: "72px",
+              height: "72px",
               borderRadius: "18px",
               background: "#E5E7EB",
             }}
           >
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="m14.5 5.5-2 2" />
               <path d="M12.5 7.5 4 16a2.12 2.12 0 0 0 3 3l8.5-8.5" />
               <path d="M17.64 15 22 10.64" />
               <path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h.86c.85 0 1.65.34 2.25.93l1.25 1.25" />
             </svg>
           </div>
-          <div style={{ display: "flex", width: "2px", height: "80px", background: "#D1D5DB" }} />
+          <div style={{ display: "flex", width: "2px", height: "64px", background: "#D1D5DB" }} />
           <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <div style={{ display: "flex", color: "#111111", fontWeight: 700, fontSize: 38 }}>{projectTitle}</div>
+            <div style={{ display: "flex", color: "#111111", fontWeight: 700, fontSize: 32 }}>{projectTitle}</div>
             {price ? (
-              <div style={{ display: "flex", color: "#6B7280", fontWeight: 700, fontSize: 32, marginTop: "8px" }}>{price}</div>
+              <div style={{ display: "flex", color: "#6B7280", fontWeight: 700, fontSize: 26, marginTop: "8px" }}>{price}</div>
             ) : null}
           </div>
         </div>
@@ -184,20 +184,25 @@ export default async function Image({ params }: ImageProps) {
         <div
           style={{
             display: "flex",
+            alignItems: "center",
+            gap: "14px",
             background: "#0A84FF",
             color: "#FFFFFF",
             borderRadius: "999px",
-            padding: "22px 70px",
+            padding: "16px 56px",
             fontWeight: 700,
-            fontSize: 36,
-            marginTop: "40px",
+            fontSize: 30,
           }}
         >
-          View Your Bid →
+          View Your Bid
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="12" x2="20" y2="12" />
+            <polyline points="13 5 20 12 13 19" />
+          </svg>
         </div>
 
         {/* 7. Footer */}
-        <div style={{ display: "flex", color: "#9CA3AF", fontSize: 22, marginTop: "28px" }}>
+        <div style={{ display: "flex", color: "#9CA3AF", fontSize: 20 }}>
           Powered by HomeBids
         </div>
       </div>
