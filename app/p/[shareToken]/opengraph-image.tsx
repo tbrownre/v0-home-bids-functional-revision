@@ -75,11 +75,11 @@ const loadFonts = (async (): Promise<FontEntry[]> => {
       }
     } catch {}
   };
-  await grab(
-    "https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;600;700;800;900",
-    "Red Hat Display",
-    [500, 600, 700, 800, 900],
-  );
+  // One request per weight — a combined URL sometimes returns only a subset of
+  // faces, so grabbing each weight on its own makes loading bulletproof.
+  for (const w of [500, 600, 700, 800, 900] as const) {
+    await grab(`https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@${w}`, "Red Hat Display", [w]);
+  }
   await grab("https://fonts.googleapis.com/css2?family=Caveat:wght@700", "Caveat", [700]);
   return out;
 })();
@@ -92,7 +92,7 @@ export default async function Image({ params }: ImageProps) {
   // Allow wrapping to two lines; truncate very long names.
   const company = companyRaw.length > 44 ? `${companyRaw.slice(0, 44)}...` : companyRaw;
   // Scale the name down as it gets longer so it never overflows the column.
-  const nameSize = company.length <= 20 ? 68 : company.length <= 30 ? 52 : 44;
+  const nameSize = company.length <= 20 ? 72 : company.length <= 30 ? 54 : 44;
   const projectTitle = proposal?.projectTitle ?? "Project bid";
   // Price is masked in the share card — never expose the numeric amount.
   const hasPrice = proposal?.totalPrice != null;
@@ -169,7 +169,7 @@ export default async function Image({ params }: ImageProps) {
                 color: "#05070A",
                 fontWeight: 900,
                 fontSize: nameSize,
-                letterSpacing: "-0.03em",
+                letterSpacing: "-0.04em",
                 lineHeight: 1.0,
                 maxWidth: "720px",
               }}
