@@ -29,21 +29,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!proposal) return { title: "Proposal — HomeBids" };
   const company = proposal.contractor_company_name ?? "Your Contractor";
 
-  const totalStr =
-    proposal.total_price != null
-      ? `$${Math.round(proposal.total_price).toLocaleString("en-US")}`
-      : "";
-  const title = totalStr
-    ? `${proposal.project_title} — ${totalStr} bid · HomeBids`
-    : `${proposal.project_title} · HomeBids`;
-
-  const rawDescription =
-    proposal.project_summary ||
-    proposal.scope_items?.[0]?.description ||
-    proposal.scope_items?.[0]?.title ||
-    `A bid from ${company}.`;
+  // Never leak the project title or dollar amount into shareable metadata.
+  const title = `Bid from ${company} | HomeBids`;
   const description =
-    rawDescription.length > 160 ? `${rawDescription.slice(0, 157)}…` : rawDescription;
+    "View the full proposal, pricing, scope of work, and message your contractor.";
 
   return {
     title,

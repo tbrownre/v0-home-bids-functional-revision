@@ -55,16 +55,49 @@ async function getProposalDetails(shareToken: string): Promise<ProposalDetails |
   }
 }
 
+type FontWeight = 500 | 600 | 700;
+type FontEntry = { name: string; data: ArrayBuffer; weight: FontWeight; style: "normal" };
+
+// Load fonts once at module scope. Every fetch is wrapped so a network/font
+// failure degrades gracefully — the card still renders with sans-serif.
+const loadFonts = (async (): Promise<FontEntry[]> => {
+  const out: FontEntry[] = [];
+  const grab = async (cssUrl: string, name: string, weights: FontWeight[]) => {
+    try {
+      const css = await (await fetch(cssUrl)).text();
+      for (const w of weights) {
+        const block = css.split("@font-face").find((b) => b.includes(`font-weight: ${w}`));
+        const url = block?.match(/url\((https:[^)]+\.ttf)\)/)?.[1];
+        if (!url) continue;
+        const r = await fetch(url);
+        if (!r.ok) continue;
+        out.push({ name, data: await r.arrayBuffer(), weight: w, style: "normal" });
+      }
+    } catch {}
+  };
+  await grab(
+    "https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;600;700",
+    "Red Hat Display",
+    [500, 600, 700],
+  );
+  await grab("https://fonts.googleapis.com/css2?family=Caveat:wght@700", "Caveat", [700]);
+  return out;
+})();
+
 export default async function Image({ params }: ImageProps) {
   const { shareToken } = await params;
   const proposal = await getProposalDetails(shareToken);
 
   const companyRaw = proposal?.company ?? "Your Contractor";
-  // Keep the name on a single line — truncate very long names.
-  const company = companyRaw.length > 24 ? `${companyRaw.slice(0, 24)}...` : companyRaw;
+  // Allow wrapping to two lines; truncate very long names.
+  const company = companyRaw.length > 44 ? `${companyRaw.slice(0, 44)}...` : companyRaw;
   const projectTitle = proposal?.projectTitle ?? "Project bid";
   // Price is masked in the share card — never expose the numeric amount.
   const hasPrice = proposal?.totalPrice != null;
+
+  const fonts = await loadFonts;
+  const hasRHD = fonts.some((f) => f.name === "Red Hat Display");
+  const hasCaveat = fonts.some((f) => f.name === "Caveat");
 
   return new ImageResponse(
     (
@@ -74,92 +107,84 @@ export default async function Image({ params }: ImageProps) {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "flex-start",
-          gap: "22px",
+          alignItems: "flex-start",
+          gap: "20px",
           background: "#FFFFFF",
-          padding: "40px 72px",
-          fontFamily: "sans-serif",
+          padding: "45px 60px",
+          position: "relative",
+          fontFamily: hasRHD ? "Red Hat Display" : "sans-serif",
         }}
       >
-        {/* 1. Wordmark */}
-        <div style={{ display: "flex", alignItems: "flex-start", fontSize: 44, fontWeight: 800, lineHeight: 1 }}>
-          <span style={{ color: "#0A84FF" }}>HOME</span>
-          <span style={{ color: "#111111" }}>BIDS</span>
-        </div>
+        {/* Main column (left) */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "20px" }}>
+          {/* 1. Wordmark */}
+          <div style={{ display: "flex", fontSize: 40, fontWeight: 700, lineHeight: 1 }}>
+            <span style={{ color: "#0A84FF" }}>HOME</span>
+            <span style={{ color: "#05070A" }}>BIDS</span>
+          </div>
 
-        {/* 2. Pill */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "14px",
-            background: "#E7F0FE",
-            borderRadius: "999px",
-            padding: "8px 22px",
-          }}
-        >
+          {/* 2. Pill */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              width: "30px",
-              height: "30px",
+              gap: "12px",
+              background: "#EAF3FF",
               borderRadius: "999px",
-              background: "#0A84FF",
+              height: "48px",
+              padding: "0 24px",
             }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "28px",
+                height: "28px",
+                borderRadius: "999px",
+                background: "#0A84FF",
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <div style={{ display: "flex", color: "#0A84FF", fontWeight: 700, fontSize: 19, letterSpacing: "0.16em" }}>
+              NEW BID RECEIVED
+            </div>
           </div>
-          <div style={{ display: "flex", color: "#0A84FF", fontWeight: 800, letterSpacing: "0.14em", fontSize: 20 }}>
-            NEW BID RECEIVED
+
+          {/* 3. Company name */}
+          <div
+            style={{
+              display: "flex",
+              color: "#05070A",
+              fontWeight: 700,
+              fontSize: 58,
+              lineHeight: 1.0,
+              maxWidth: "700px",
+            }}
+          >
+            {company}
           </div>
-        </div>
 
-        {/* 3. Company name */}
-        <div
-          style={{
-            display: "flex",
-            textAlign: "center",
-            color: "#111111",
-            fontWeight: 800,
-            fontSize: 60,
-            lineHeight: 1.05,
-            maxWidth: "1000px",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {company}
-        </div>
+          {/* 4. Subline */}
+          <div style={{ display: "flex", color: "#858990", fontSize: 38, fontWeight: 600 }}>
+            sent you a bid.
+          </div>
 
-        {/* 4. Subline */}
-        <div style={{ display: "flex", color: "#6B7280", fontSize: 32, fontWeight: 500 }}>
-          sent you a bid.
-        </div>
-
-        {/* 5. Info box */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "28px",
-            background: "#F3F4F6",
-            borderRadius: "24px",
-            padding: "20px 32px",
-          }}
-        >
+          {/* 5. Price teaser */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              width: "72px",
-              height: "72px",
-              borderRadius: "18px",
-              background: "#E5E7EB",
+              gap: "22px",
+              width: "500px",
+              height: "95px",
+              background: "#F6F7F8",
+              borderRadius: "20px",
+              padding: "0 28px",
             }}
           >
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -168,56 +193,89 @@ export default async function Image({ params }: ImageProps) {
               <path d="M17.64 15 22 10.64" />
               <path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h.86c.85 0 1.65.34 2.25.93l1.25 1.25" />
             </svg>
+            {hasPrice ? (
+              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                <div style={{ display: "flex", color: "#858990", fontWeight: 600, fontSize: 17, letterSpacing: "0.08em" }}>
+                  TOTAL ESTIMATE
+                </div>
+                <div style={{ display: "flex", alignItems: "center", marginTop: "8px" }}>
+                  <div style={{ display: "flex", color: "#858990", fontWeight: 700, fontSize: 26 }}>$</div>
+                  <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#B4B7BC", marginLeft: "7px" }} />
+                  <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#B4B7BC", marginLeft: "7px" }} />
+                  <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#B4B7BC", marginLeft: "7px" }} />
+                  <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#B4B7BC", marginLeft: "7px" }} />
+                  <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#B4B7BC", marginLeft: "7px" }} />
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", color: "#05070A", fontWeight: 700, fontSize: 28 }}>{projectTitle}</div>
+            )}
           </div>
-          <div style={{ display: "flex", width: "2px", height: "64px", background: "#D1D5DB" }} />
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <div style={{ display: "flex", color: "#111111", fontWeight: 700, fontSize: 32 }}>{projectTitle}</div>
-            {hasPrice ? (
-              <div style={{ display: "flex", color: "#6B7280", fontWeight: 600, fontSize: 22, marginTop: "8px" }}>
-                Total Estimate
-              </div>
-            ) : null}
-            {hasPrice ? (
-              <div style={{ display: "flex", alignItems: "center", marginTop: "6px" }}>
-                <div style={{ display: "flex", color: "#6B7280", fontWeight: 700, fontSize: 26 }}>$</div>
-                <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "6px" }} />
-                <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "6px" }} />
-                <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "6px" }} />
-                <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "6px" }} />
-                <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "6px" }} />
-              </div>
-            ) : null}
+
+          {/* 6. CTA */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "12px",
+              width: "500px",
+              height: "78px",
+              background: "#0A84FF",
+              borderRadius: "22px",
+            }}
+          >
+            <div style={{ display: "flex", color: "#FFFFFF", fontWeight: 700, fontSize: 29 }}>View Your Bid</div>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="4" y1="12" x2="20" y2="12" />
+              <polyline points="13 5 20 12 13 19" />
+            </svg>
+          </div>
+
+          {/* 7. Footer */}
+          <div style={{ display: "flex", color: "#858990", fontSize: 16, fontWeight: 500 }}>
+            Powered by HomeBids
           </div>
         </div>
 
-        {/* 6. Button look */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "14px",
-            background: "#0A84FF",
-            color: "#FFFFFF",
-            borderRadius: "999px",
-            padding: "16px 56px",
-            fontWeight: 700,
-            fontSize: 30,
-          }}
-        >
-          View Your Bid
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="4" y1="12" x2="20" y2="12" />
-            <polyline points="13 5 20 12 13 19" />
-          </svg>
-        </div>
+        {/* 8. Blue burst */}
+        <svg style={{ position: "absolute", left: "600px", top: "130px" }} width="120" height="110" viewBox="0 0 120 110" fill="none">
+          <line x1="18" y1="88" x2="40" y2="56" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
+          <line x1="55" y1="70" x2="68" y2="32" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
+          <line x1="88" y1="74" x2="112" y2="60" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
+        </svg>
 
-        {/* 7. Footer */}
-        <div style={{ display: "flex", color: "#9CA3AF", fontSize: 20 }}>
-          Powered by HomeBids
-        </div>
+        {/* 9. Handwriting */}
+        {hasCaveat ? (
+          <div
+            style={{
+              position: "absolute",
+              left: "850px",
+              top: "270px",
+              display: "flex",
+              flexDirection: "column",
+              fontFamily: "Caveat",
+              fontWeight: 700,
+              fontSize: "40px",
+              color: "#05070A",
+              transform: "rotate(-4deg)",
+              lineHeight: 1.25,
+            }}
+          >
+            <div style={{ display: "flex" }}>Real bids.</div>
+            <div style={{ display: "flex" }}>Real contractors.</div>
+            <div style={{ display: "flex" }}>Real fast.</div>
+          </div>
+        ) : null}
+
+        {/* 10. Hand-drawn arrow */}
+        <svg style={{ position: "absolute", left: "790px", top: "430px" }} width="150" height="110" viewBox="0 0 150 110" fill="none" stroke="#05070A" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M135 10 C 110 70, 70 90, 20 78" />
+          <polyline points="42,62 20,78 44,92" />
+        </svg>
       </div>
     ),
-    { ...size },
+    { ...size, ...(fonts.length ? { fonts } : {}) },
   );
 }
 
