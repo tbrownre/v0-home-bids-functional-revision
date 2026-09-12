@@ -176,10 +176,10 @@ export default async function Image({ params }: ImageProps) {
             >
               {company}
             </div>
-            <svg style={{ marginTop: "-10px" }} width="100" height="90" viewBox="0 0 100 90" fill="none">
-              <line x1="12" y1="72" x2="30" y2="46" stroke="#0A84FF" strokeWidth="10" strokeLinecap="round" />
-              <line x1="44" y1="58" x2="54" y2="26" stroke="#0A84FF" strokeWidth="10" strokeLinecap="round" />
-              <line x1="70" y1="62" x2="90" y2="50" stroke="#0A84FF" strokeWidth="10" strokeLinecap="round" />
+            <svg style={{ marginTop: "-36px" }} width="110" height="100" viewBox="0 0 110 100" fill="none">
+              <line x1="12" y1="84" x2="34" y2="50" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
+              <line x1="48" y1="62" x2="60" y2="22" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
+              <line x1="78" y1="68" x2="104" y2="54" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
             </svg>
           </div>
 
@@ -214,12 +214,12 @@ export default async function Image({ params }: ImageProps) {
                   TOTAL ESTIMATE
                 </div>
                 <div style={{ display: "flex", alignItems: "center", marginTop: "8px" }}>
-                  <div style={{ display: "flex", color: "#858990", fontWeight: 700, fontSize: 32 }}>$</div>
-                  <div style={{ display: "flex", width: "16px", height: "16px", borderRadius: "999px", background: "#9AA0A6", marginLeft: "8px" }} />
-                  <div style={{ display: "flex", width: "16px", height: "16px", borderRadius: "999px", background: "#9AA0A6", marginLeft: "8px" }} />
-                  <div style={{ display: "flex", width: "16px", height: "16px", borderRadius: "999px", background: "#9AA0A6", marginLeft: "8px" }} />
-                  <div style={{ display: "flex", width: "16px", height: "16px", borderRadius: "999px", background: "#9AA0A6", marginLeft: "8px" }} />
-                  <div style={{ display: "flex", width: "16px", height: "16px", borderRadius: "999px", background: "#9AA0A6", marginLeft: "8px" }} />
+                  <div style={{ display: "flex", color: "#858990", fontWeight: 700, fontSize: 28 }}>$</div>
+                  <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "7px" }} />
+                  <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "7px" }} />
+                  <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "7px" }} />
+                  <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "7px" }} />
+                  <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "7px" }} />
                 </div>
               </div>
             ) : (
