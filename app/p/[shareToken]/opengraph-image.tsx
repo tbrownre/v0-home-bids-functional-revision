@@ -121,6 +121,11 @@ export default async function Image({ params }: ImageProps) {
           <div style={{ display: "flex", fontSize: 40, fontWeight: 700, lineHeight: 1 }}>
             <span style={{ color: "#0A84FF" }}>HOME</span>
             <span style={{ color: "#05070A" }}>BIDS</span>
+            {hasRHD ? (
+              <span style={{ display: "flex", fontSize: 18, fontWeight: 700, color: "#05070A", marginTop: "2px", marginLeft: "2px" }}>
+                ™
+              </span>
+            ) : null}
           </div>
 
           {/* 2. Pill */}
@@ -155,18 +160,25 @@ export default async function Image({ params }: ImageProps) {
             </div>
           </div>
 
-          {/* 3. Company name */}
-          <div
-            style={{
-              display: "flex",
-              color: "#05070A",
-              fontWeight: 700,
-              fontSize: 58,
-              lineHeight: 1.0,
-              maxWidth: "700px",
-            }}
-          >
-            {company}
+          {/* 3. Company name + burst */}
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "20px" }}>
+            <div
+              style={{
+                display: "flex",
+                color: "#05070A",
+                fontWeight: 700,
+                fontSize: 58,
+                lineHeight: 1.0,
+                maxWidth: "700px",
+              }}
+            >
+              {company}
+            </div>
+            <svg style={{ marginTop: "6px" }} width="100" height="90" viewBox="0 0 100 90" fill="none">
+              <line x1="12" y1="72" x2="30" y2="46" stroke="#0A84FF" strokeWidth="10" strokeLinecap="round" />
+              <line x1="44" y1="58" x2="54" y2="26" stroke="#0A84FF" strokeWidth="10" strokeLinecap="round" />
+              <line x1="70" y1="62" x2="90" y2="50" stroke="#0A84FF" strokeWidth="10" strokeLinecap="round" />
+            </svg>
           </div>
 
           {/* 4. Subline */}
@@ -238,20 +250,13 @@ export default async function Image({ params }: ImageProps) {
           </div>
         </div>
 
-        {/* 8. Blue burst */}
-        <svg style={{ position: "absolute", left: "600px", top: "130px" }} width="120" height="110" viewBox="0 0 120 110" fill="none">
-          <line x1="18" y1="88" x2="40" y2="56" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
-          <line x1="55" y1="70" x2="68" y2="32" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
-          <line x1="88" y1="74" x2="112" y2="60" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
-        </svg>
-
         {/* 9. Handwriting */}
         {hasCaveat ? (
           <div
             style={{
               position: "absolute",
               left: "850px",
-              top: "270px",
+              top: "240px",
               display: "flex",
               flexDirection: "column",
               fontFamily: "Caveat",
@@ -269,9 +274,9 @@ export default async function Image({ params }: ImageProps) {
         ) : null}
 
         {/* 10. Hand-drawn arrow */}
-        <svg style={{ position: "absolute", left: "790px", top: "430px" }} width="150" height="110" viewBox="0 0 150 110" fill="none" stroke="#05070A" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M135 10 C 110 70, 70 90, 20 78" />
-          <polyline points="42,62 20,78 44,92" />
+        <svg style={{ position: "absolute", left: "560px", top: "330px" }} width="240" height="120" viewBox="0 0 240 120" fill="none" stroke="#05070A" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M215 15 C 180 80, 120 105, 25 80" />
+          <polyline points="48,64 25,80 50,96" />
         </svg>
       </div>
     ),
