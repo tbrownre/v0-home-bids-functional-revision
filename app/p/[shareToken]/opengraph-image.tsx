@@ -63,10 +63,8 @@ export default async function Image({ params }: ImageProps) {
   // Keep the name on a single line — truncate very long names.
   const company = companyRaw.length > 24 ? `${companyRaw.slice(0, 24)}...` : companyRaw;
   const projectTitle = proposal?.projectTitle ?? "Project bid";
-  const price =
-    proposal?.totalPrice != null
-      ? `$${Math.round(proposal.totalPrice).toLocaleString("en-US")}`
-      : "";
+  // Price is masked in the share card — never expose the numeric amount.
+  const hasPrice = proposal?.totalPrice != null;
 
   return new ImageResponse(
     (
@@ -174,8 +172,20 @@ export default async function Image({ params }: ImageProps) {
           <div style={{ display: "flex", width: "2px", height: "64px", background: "#D1D5DB" }} />
           <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
             <div style={{ display: "flex", color: "#111111", fontWeight: 700, fontSize: 32 }}>{projectTitle}</div>
-            {price ? (
-              <div style={{ display: "flex", color: "#6B7280", fontWeight: 700, fontSize: 26, marginTop: "8px" }}>{price}</div>
+            {hasPrice ? (
+              <div style={{ display: "flex", color: "#6B7280", fontWeight: 600, fontSize: 22, marginTop: "8px" }}>
+                Total Estimate
+              </div>
+            ) : null}
+            {hasPrice ? (
+              <div style={{ display: "flex", alignItems: "center", marginTop: "6px" }}>
+                <div style={{ display: "flex", color: "#6B7280", fontWeight: 700, fontSize: 26 }}>$</div>
+                <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "6px" }} />
+                <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "6px" }} />
+                <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "6px" }} />
+                <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "6px" }} />
+                <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "6px" }} />
+              </div>
             ) : null}
           </div>
         </div>
