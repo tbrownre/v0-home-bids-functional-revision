@@ -55,7 +55,7 @@ async function getProposalDetails(shareToken: string): Promise<ProposalDetails |
   }
 }
 
-type FontWeight = 500 | 600 | 700 | 800;
+type FontWeight = 500 | 600 | 700 | 800 | 900;
 type FontEntry = { name: string; data: ArrayBuffer; weight: FontWeight; style: "normal" };
 
 // Load fonts once at module scope. Every fetch is wrapped so a network/font
@@ -76,9 +76,9 @@ const loadFonts = (async (): Promise<FontEntry[]> => {
     } catch {}
   };
   await grab(
-    "https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;600;700;800",
+    "https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;600;700;800;900",
     "Red Hat Display",
-    [500, 600, 700, 800],
+    [500, 600, 700, 800, 900],
   );
   await grab("https://fonts.googleapis.com/css2?family=Caveat:wght@700", "Caveat", [700]);
   return out;
@@ -162,21 +162,21 @@ export default async function Image({ params }: ImageProps) {
           </div>
 
           {/* 3. Company name + burst */}
-          <div style={{ display: "flex", alignItems: "flex-start", gap: "20px" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
             <div
               style={{
                 display: "flex",
                 color: "#05070A",
-                fontWeight: 800,
+                fontWeight: 900,
                 fontSize: nameSize,
-                letterSpacing: "-0.02em",
+                letterSpacing: "-0.03em",
                 lineHeight: 1.0,
                 maxWidth: "720px",
               }}
             >
               {company}
             </div>
-            <svg style={{ marginTop: "6px" }} width="100" height="90" viewBox="0 0 100 90" fill="none">
+            <svg style={{ marginTop: "-10px" }} width="100" height="90" viewBox="0 0 100 90" fill="none">
               <line x1="12" y1="72" x2="30" y2="46" stroke="#0A84FF" strokeWidth="10" strokeLinecap="round" />
               <line x1="44" y1="58" x2="54" y2="26" stroke="#0A84FF" strokeWidth="10" strokeLinecap="round" />
               <line x1="70" y1="62" x2="90" y2="50" stroke="#0A84FF" strokeWidth="10" strokeLinecap="round" />
@@ -214,12 +214,12 @@ export default async function Image({ params }: ImageProps) {
                   TOTAL ESTIMATE
                 </div>
                 <div style={{ display: "flex", alignItems: "center", marginTop: "8px" }}>
-                  <div style={{ display: "flex", color: "#858990", fontWeight: 700, fontSize: 30 }}>$</div>
-                  <div style={{ display: "flex", width: "14px", height: "14px", borderRadius: "999px", background: "#B4B7BC", marginLeft: "8px" }} />
-                  <div style={{ display: "flex", width: "14px", height: "14px", borderRadius: "999px", background: "#B4B7BC", marginLeft: "8px" }} />
-                  <div style={{ display: "flex", width: "14px", height: "14px", borderRadius: "999px", background: "#B4B7BC", marginLeft: "8px" }} />
-                  <div style={{ display: "flex", width: "14px", height: "14px", borderRadius: "999px", background: "#B4B7BC", marginLeft: "8px" }} />
-                  <div style={{ display: "flex", width: "14px", height: "14px", borderRadius: "999px", background: "#B4B7BC", marginLeft: "8px" }} />
+                  <div style={{ display: "flex", color: "#858990", fontWeight: 700, fontSize: 32 }}>$</div>
+                  <div style={{ display: "flex", width: "16px", height: "16px", borderRadius: "999px", background: "#9AA0A6", marginLeft: "8px" }} />
+                  <div style={{ display: "flex", width: "16px", height: "16px", borderRadius: "999px", background: "#9AA0A6", marginLeft: "8px" }} />
+                  <div style={{ display: "flex", width: "16px", height: "16px", borderRadius: "999px", background: "#9AA0A6", marginLeft: "8px" }} />
+                  <div style={{ display: "flex", width: "16px", height: "16px", borderRadius: "999px", background: "#9AA0A6", marginLeft: "8px" }} />
+                  <div style={{ display: "flex", width: "16px", height: "16px", borderRadius: "999px", background: "#9AA0A6", marginLeft: "8px" }} />
                 </div>
               </div>
             ) : (
@@ -227,11 +227,7 @@ export default async function Image({ params }: ImageProps) {
             )}
           </div>
           {hasCaveat ? (
-            <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "10px", marginTop: "-30px" }}>
-              <svg width="140" height="100" viewBox="0 0 140 100" fill="none" stroke="#05070A" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M130 12 C 105 62, 70 82, 18 66" />
-                <polyline points="40,52 18,66 42,80" />
-              </svg>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "4px", marginTop: "-16px" }}>
               <div
                 style={{
                   display: "flex",
@@ -248,6 +244,10 @@ export default async function Image({ params }: ImageProps) {
                 <div style={{ display: "flex" }}>Real contractors.</div>
                 <div style={{ display: "flex" }}>Real fast.</div>
               </div>
+              <svg style={{ marginLeft: "-14px" }} width="150" height="110" viewBox="0 0 150 110" fill="none" stroke="#05070A" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M138 8 C 118 66, 76 96, 14 84" />
+                <polyline points="38,70 14,84 40,98" />
+              </svg>
             </div>
           ) : null}
           </div>
