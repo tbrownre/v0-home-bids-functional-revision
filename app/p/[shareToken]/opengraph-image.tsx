@@ -91,6 +91,8 @@ export default async function Image({ params }: ImageProps) {
   const companyRaw = proposal?.company ?? "Your Contractor";
   // Allow wrapping to two lines; truncate very long names.
   const company = companyRaw.length > 44 ? `${companyRaw.slice(0, 44)}...` : companyRaw;
+  // Scale the name down as it gets longer so it never overflows the column.
+  const nameSize = company.length <= 20 ? 68 : company.length <= 30 ? 56 : 46;
   const projectTitle = proposal?.projectTitle ?? "Project bid";
   // Price is masked in the share card — never expose the numeric amount.
   const hasPrice = proposal?.totalPrice != null;
@@ -111,7 +113,6 @@ export default async function Image({ params }: ImageProps) {
           gap: "24px",
           background: "#FFFFFF",
           padding: "56px 84px",
-          position: "relative",
           fontFamily: hasRHD ? "Red Hat Display" : "sans-serif",
         }}
       >
@@ -167,7 +168,7 @@ export default async function Image({ params }: ImageProps) {
                 display: "flex",
                 color: "#05070A",
                 fontWeight: 800,
-                fontSize: 68,
+                fontSize: nameSize,
                 letterSpacing: "-0.02em",
                 lineHeight: 1.0,
                 maxWidth: "720px",
@@ -187,7 +188,8 @@ export default async function Image({ params }: ImageProps) {
             sent you a bid.
           </div>
 
-          {/* 5. Price teaser */}
+          {/* 5. Price teaser + doodles */}
+          <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "26px" }}>
           <div
             style={{
               display: "flex",
@@ -224,6 +226,31 @@ export default async function Image({ params }: ImageProps) {
               <div style={{ display: "flex", color: "#05070A", fontWeight: 700, fontSize: 30 }}>{projectTitle}</div>
             )}
           </div>
+          {hasCaveat ? (
+            <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "10px", marginTop: "-30px" }}>
+              <svg width="140" height="100" viewBox="0 0 140 100" fill="none" stroke="#05070A" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M130 12 C 105 62, 70 82, 18 66" />
+                <polyline points="40,52 18,66 42,80" />
+              </svg>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  fontFamily: "Caveat",
+                  fontWeight: 700,
+                  fontSize: "38px",
+                  color: "#05070A",
+                  transform: "rotate(-4deg)",
+                  lineHeight: 1.25,
+                }}
+              >
+                <div style={{ display: "flex" }}>Real bids.</div>
+                <div style={{ display: "flex" }}>Real contractors.</div>
+                <div style={{ display: "flex" }}>Real fast.</div>
+              </div>
+            </div>
+          ) : null}
+          </div>
 
           {/* 6. CTA */}
           <div
@@ -250,35 +277,6 @@ export default async function Image({ params }: ImageProps) {
             Powered by HomeBids
           </div>
         </div>
-
-        {/* 9. Handwriting */}
-        {hasCaveat ? (
-          <div
-            style={{
-              position: "absolute",
-              left: "880px",
-              top: "240px",
-              display: "flex",
-              flexDirection: "column",
-              fontFamily: "Caveat",
-              fontWeight: 700,
-              fontSize: "40px",
-              color: "#05070A",
-              transform: "rotate(-4deg)",
-              lineHeight: 1.25,
-            }}
-          >
-            <div style={{ display: "flex" }}>Real bids.</div>
-            <div style={{ display: "flex" }}>Real contractors.</div>
-            <div style={{ display: "flex" }}>Real fast.</div>
-          </div>
-        ) : null}
-
-        {/* 10. Hand-drawn arrow */}
-        <svg style={{ position: "absolute", left: "610px", top: "360px" }} width="240" height="120" viewBox="0 0 240 120" fill="none" stroke="#05070A" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M215 15 C 180 80, 120 105, 25 80" />
-          <polyline points="48,64 25,80 50,96" />
-        </svg>
       </div>
     ),
     { ...size, ...(fonts.length ? { fonts } : {}) },
