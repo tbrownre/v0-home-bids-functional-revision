@@ -189,7 +189,7 @@ export default async function Image({ params }: ImageProps) {
           </div>
 
           {/* 5. Price teaser + doodles */}
-          <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "26px" }}>
+          <div style={{ display: "flex", flexDirection: "row", alignItems: "center", position: "relative" }}>
           <div
             style={{
               display: "flex",
@@ -227,7 +227,7 @@ export default async function Image({ params }: ImageProps) {
             )}
           </div>
           {hasCaveat ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "4px", marginTop: "-16px" }}>
+            <div style={{ position: "absolute", left: "600px", top: "-118px", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "6px" }}>
               <div
                 style={{
                   display: "flex",
@@ -244,7 +244,7 @@ export default async function Image({ params }: ImageProps) {
                 <div style={{ display: "flex" }}>Real contractors.</div>
                 <div style={{ display: "flex" }}>Real fast.</div>
               </div>
-              <svg style={{ marginLeft: "-14px" }} width="150" height="110" viewBox="0 0 150 110" fill="none" stroke="#05070A" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
+              <svg style={{ marginLeft: "-48px" }} width="150" height="110" viewBox="0 0 150 110" fill="none" stroke="#05070A" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M138 8 C 118 66, 76 96, 14 84" />
                 <polyline points="38,70 14,84 40,98" />
               </svg>
