@@ -176,10 +176,15 @@ export default async function Image({ params }: ImageProps) {
             >
               {company}
             </div>
-            <svg style={{ marginTop: "-36px" }} width="110" height="100" viewBox="0 0 110 100" fill="none">
-              <line x1="12" y1="84" x2="34" y2="50" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
-              <line x1="48" y1="62" x2="60" y2="22" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
-              <line x1="78" y1="68" x2="104" y2="54" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
+            <svg
+              width="120"
+              height="105"
+              viewBox="0 0 120 105"
+              style={{ marginTop: "-34px", marginLeft: "6px" }}
+            >
+              <line x1="20" y1="80" x2="36" y2="32" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
+              <line x1="46" y1="88" x2="82" y2="42" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
+              <line x1="68" y1="98" x2="112" y2="86" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
             </svg>
           </div>
 
