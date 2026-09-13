@@ -131,9 +131,11 @@ export default async function Image({ params }: ImageProps) {
             position: "absolute",
             left: "86px",
             top: "172px",
+            width: "640px",
+            height: "138px",
             display: "flex",
             flexDirection: "row",
-            alignItems: "flex-start",
+            alignItems: "center",
             gap: "10px",
           }}
         >
@@ -158,7 +160,11 @@ export default async function Image({ params }: ImageProps) {
             width="110"
             height="130"
             viewBox="0 0 110 130"
-            style={{ display: "flex", marginTop: `${Math.round(nameSize * 0.72 - 118)}px` }}
+            style={{
+              display: "flex",
+              alignSelf: "flex-start",
+              marginTop: `${Math.round((138 - lines.length * nameSize * 0.95) / 2 + nameSize * 0.72 - 118)}px`,
+            }}
           >
             <line x1="12" y1="80" x2="25" y2="42" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
             <line x1="32" y1="93" x2="63" y2="69" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
