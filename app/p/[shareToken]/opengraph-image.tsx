@@ -55,51 +55,53 @@ async function getProposalDetails(shareToken: string): Promise<ProposalDetails |
   }
 }
 
-type FontWeight = 500 | 600 | 700 | 800 | 900;
-type FontEntry = { name: string; data: ArrayBuffer; weight: FontWeight; style: "normal" };
+type FontEntry = { name: string; data: ArrayBuffer; weight: 900; style: "normal" };
 
-// Load fonts once at module scope. Every fetch is wrapped so a network/font
-// failure degrades gracefully — the card still renders with sans-serif.
+// Load Red Hat Display 900 once at module scope. The fetch is wrapped so a
+// network/font failure degrades gracefully — the name still renders in sans.
 const loadFonts = (async (): Promise<FontEntry[]> => {
   const out: FontEntry[] = [];
-  const grab = async (cssUrl: string, name: string, weights: FontWeight[]) => {
-    try {
-      const css = await (await fetch(cssUrl)).text();
-      for (const w of weights) {
-        const block = css.split("@font-face").find((b) => b.includes(`font-weight: ${w}`));
-        const url = block?.match(/url\((https:[^)]+\.ttf)\)/)?.[1];
-        if (!url) continue;
-        const r = await fetch(url);
-        if (!r.ok) continue;
-        out.push({ name, data: await r.arrayBuffer(), weight: w, style: "normal" });
-      }
-    } catch {}
-  };
-  // One request per weight — a combined URL sometimes returns only a subset of
-  // faces, so grabbing each weight on its own makes loading bulletproof.
-  for (const w of [500, 600, 700, 800, 900] as const) {
-    await grab(`https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@${w}`, "Red Hat Display", [w]);
-  }
-  await grab("https://fonts.googleapis.com/css2?family=Caveat:wght@700", "Caveat", [700]);
+  try {
+    const css = await (await fetch("https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@900")).text();
+    const url = css.match(/url\((https:[^)]+\.ttf)\)/)?.[1];
+    if (url) {
+      const r = await fetch(url);
+      if (r.ok) out.push({ name: "Red Hat Display", data: await r.arrayBuffer(), weight: 900, style: "normal" });
+    }
+  } catch {}
   return out;
 })();
+
+// Split a name into at most two balanced lines, breaking at the space nearest
+// the midpoint. Short names and spaceless names stay on a single line.
+function splitName(name: string): string[] {
+  if (name.length <= 14) return [name];
+  const mid = name.length / 2;
+  let best = -1;
+  let bestDist = Infinity;
+  for (let i = 0; i < name.length; i++) {
+    if (name[i] !== " ") continue;
+    const dist = Math.abs(i - mid);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = i;
+    }
+  }
+  if (best === -1) return [name];
+  return [name.slice(0, best), name.slice(best + 1)];
+}
 
 export default async function Image({ params }: ImageProps) {
   const { shareToken } = await params;
   const proposal = await getProposalDetails(shareToken);
 
-  const companyRaw = proposal?.company ?? "Your Contractor";
-  // Allow wrapping to two lines; truncate very long names.
-  const company = companyRaw.length > 44 ? `${companyRaw.slice(0, 44)}...` : companyRaw;
-  // Scale the name down as it gets longer so it never overflows the column.
-  const nameSize = company.length <= 20 ? 72 : company.length <= 30 ? 54 : 44;
-  const projectTitle = proposal?.projectTitle ?? "Project bid";
-  // Price is masked in the share card — never expose the numeric amount.
-  const hasPrice = proposal?.totalPrice != null;
+  const raw = (proposal?.company ?? "Your Contractor").trim();
+  const name = raw.length > 40 ? raw.slice(0, 40).trimEnd() + "..." : raw;
+  const nameSize = name.length <= 14 ? 76 : name.length <= 28 ? 60 : 46;
+  const lines = splitName(name);
 
   const fonts = await loadFonts;
-  const hasRHD = fonts.some((f) => f.name === "Red Hat Display");
-  const hasCaveat = fonts.some((f) => f.name === "Caveat");
+  const hasRHD = fonts.length > 0;
 
   return new ImageResponse(
     (
@@ -108,179 +110,60 @@ export default async function Image({ params }: ImageProps) {
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-start",
-          gap: "16px",
+          position: "relative",
           background: "#FFFFFF",
-          padding: "40px 84px",
           fontFamily: hasRHD ? "Red Hat Display" : "sans-serif",
         }}
       >
-        {/* Main column (left) */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "20px" }}>
-          {/* 1. Wordmark */}
-          <div style={{ display: "flex", fontSize: 42, fontWeight: 700, lineHeight: 1 }}>
-            <span style={{ color: "#0A84FF" }}>HOME</span>
-            <span style={{ color: "#05070A" }}>BIDS</span>
-            {hasRHD ? (
-              <span style={{ display: "flex", fontSize: 20, fontWeight: 700, color: "#05070A", marginTop: "2px", marginLeft: "2px" }}>
-                ™
-              </span>
-            ) : null}
-          </div>
+        {/* Hosted template — everything except the name + burst is baked in */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="https://xfopiidfpnwfwdcjdpaj.supabase.co/storage/v1/object/public/job-photos/brand/bid-card-template.png"
+          width={1200}
+          height={630}
+          alt=""
+          style={{ position: "absolute", top: 0, left: 0, width: "1200px", height: "630px" }}
+        />
 
-          {/* 2. Pill */}
+        {/* Dynamic unit: company name + burst */}
+        <div
+          style={{
+            position: "absolute",
+            left: "86px",
+            top: "172px",
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: "10px",
+          }}
+        >
           <div
             style={{
               display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              background: "#EAF3FF",
-              borderRadius: "999px",
-              height: "48px",
-              padding: "0 26px",
+              flexDirection: "column",
+              color: "#05070A",
+              fontWeight: 900,
+              fontSize: `${nameSize}px`,
+              lineHeight: 0.95,
+              letterSpacing: "-0.03em",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "30px",
-                height: "30px",
-                borderRadius: "999px",
-                background: "#0A84FF",
-              }}
-            >
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </div>
-            <div style={{ display: "flex", color: "#0A84FF", fontWeight: 700, fontSize: 20, letterSpacing: "0.16em" }}>
-              NEW BID RECEIVED
-            </div>
-          </div>
-
-          {/* 3. Company name + burst */}
-          <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
-            <div
-              style={{
-                display: "flex",
-                color: "#05070A",
-                fontWeight: 900,
-                fontSize: nameSize,
-                letterSpacing: "-0.04em",
-                lineHeight: 1.0,
-                maxWidth: "720px",
-              }}
-            >
-              {company}
-            </div>
-            <svg
-              width="120"
-              height="105"
-              viewBox="0 0 120 105"
-              style={{ marginTop: "-34px", marginLeft: "6px" }}
-            >
-              <line x1="20" y1="80" x2="36" y2="32" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
-              <line x1="46" y1="88" x2="82" y2="42" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
-              <line x1="68" y1="98" x2="112" y2="86" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
-            </svg>
-          </div>
-
-          {/* 4. Subline */}
-          <div style={{ display: "flex", color: "#858990", fontSize: 40, fontWeight: 600 }}>
-            sent you a bid.
-          </div>
-
-          {/* 5. Price teaser + doodles */}
-          <div style={{ display: "flex", flexDirection: "row", alignItems: "center", position: "relative" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "22px",
-              width: "560px",
-              height: "104px",
-              background: "#F6F7F8",
-              borderRadius: "20px",
-              padding: "0 28px",
-            }}
-          >
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m14.5 5.5-2 2" />
-              <path d="M12.5 7.5 4 16a2.12 2.12 0 0 0 3 3l8.5-8.5" />
-              <path d="M17.64 15 22 10.64" />
-              <path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h.86c.85 0 1.65.34 2.25.93l1.25 1.25" />
-            </svg>
-            {hasPrice ? (
-              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                <div style={{ display: "flex", color: "#858990", fontWeight: 600, fontSize: 19, letterSpacing: "0.08em" }}>
-                  TOTAL ESTIMATE
-                </div>
-                <div style={{ display: "flex", alignItems: "center", marginTop: "8px" }}>
-                  <div style={{ display: "flex", color: "#858990", fontWeight: 700, fontSize: 28 }}>$</div>
-                  <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "7px" }} />
-                  <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "7px" }} />
-                  <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "7px" }} />
-                  <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "7px" }} />
-                  <div style={{ display: "flex", width: "12px", height: "12px", borderRadius: "999px", background: "#9CA3AF", marginLeft: "7px" }} />
-                </div>
+            {lines.map((line, i) => (
+              <div key={i} style={{ display: "flex" }}>
+                {line}
               </div>
-            ) : (
-              <div style={{ display: "flex", color: "#05070A", fontWeight: 700, fontSize: 30 }}>{projectTitle}</div>
-            )}
+            ))}
           </div>
-          {hasCaveat ? (
-            <div style={{ position: "absolute", left: "600px", top: "-118px", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "6px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  fontFamily: "Caveat",
-                  fontWeight: 700,
-                  fontSize: "38px",
-                  color: "#05070A",
-                  transform: "rotate(-4deg)",
-                  lineHeight: 1.25,
-                }}
-              >
-                <div style={{ display: "flex" }}>Real bids.</div>
-                <div style={{ display: "flex" }}>Real contractors.</div>
-                <div style={{ display: "flex" }}>Real fast.</div>
-              </div>
-              <svg style={{ marginLeft: "-48px" }} width="150" height="110" viewBox="0 0 150 110" fill="none" stroke="#05070A" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M138 8 C 118 66, 76 96, 14 84" />
-                <polyline points="38,70 14,84 40,98" />
-              </svg>
-            </div>
-          ) : null}
-          </div>
-
-          {/* 6. CTA */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "12px",
-              width: "560px",
-              height: "84px",
-              background: "#0A84FF",
-              borderRadius: "22px",
-            }}
+          <svg
+            width="110"
+            height="130"
+            viewBox="0 0 110 130"
+            style={{ display: "flex", marginTop: `${Math.round(nameSize * 0.72 - 118)}px` }}
           >
-            <div style={{ display: "flex", color: "#FFFFFF", fontWeight: 700, fontSize: 32 }}>View Your Bid</div>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="4" y1="12" x2="20" y2="12" />
-              <polyline points="13 5 20 12 13 19" />
-            </svg>
-          </div>
-
-          {/* 7. Footer */}
-          <div style={{ display: "flex", color: "#858990", fontSize: 17, fontWeight: 500 }}>
-            Powered by HomeBids
-          </div>
+            <line x1="12" y1="80" x2="25" y2="42" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
+            <line x1="32" y1="93" x2="63" y2="69" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
+            <line x1="40" y1="118" x2="74" y2="118" stroke="#0A84FF" strokeWidth="11" strokeLinecap="round" />
+          </svg>
         </div>
       </div>
     ),
