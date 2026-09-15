@@ -66,6 +66,21 @@ function prettyState(state: string | null | undefined): string {
   return state.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function stateClasses(state: string | null | undefined): string {
+  switch ((state ?? "").toLowerCase()) {
+    case "new":
+      return "bg-blue-100 text-blue-700";
+    case "live":
+      return "bg-emerald-100 text-emerald-700";
+    case "scheduled":
+      return "bg-amber-100 text-amber-700";
+    case "hired":
+      return "bg-primary/10 text-primary";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+}
+
 export default function ContractorMessagesPage() {
   const { threads, loaded } = useContractorSignals();
 
@@ -103,7 +118,23 @@ export default function ContractorMessagesPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return threads.filter((t) => {
+    const ts = (v: string | null | undefined) => {
+      if (!v) return NaN;
+      const n = new Date(v).getTime();
+      return Number.isNaN(n) ? NaN : n;
+    };
+    // Sort a copy (never mutate the hook's array): valid last_at newest→oldest, invalid last.
+    const sorted = [...threads].sort((a, b) => {
+      const ta = ts(a.last_at);
+      const tb = ts(b.last_at);
+      const aBad = Number.isNaN(ta);
+      const bBad = Number.isNaN(tb);
+      if (aBad && bBad) return 0;
+      if (aBad) return 1;
+      if (bBad) return -1;
+      return tb - ta;
+    });
+    return sorted.filter((t) => {
       if (filter === "unread" && t.last_sender !== "homeowner") return false;
       if (!q) return true;
       return (
@@ -226,6 +257,11 @@ export default function ContractorMessagesPage() {
     }
   }
 
+  const needsReplyCount = useMemo(
+    () => threads.filter((t) => t.last_sender === "homeowner").length,
+    [threads],
+  );
+
   const paneOpen = activeToken != null;
 
   return (
@@ -267,7 +303,11 @@ export default function ContractorMessagesPage() {
                         : "border-border bg-card text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    {key === "all" ? "All" : "Needs reply"}
+                    {key === "all"
+                      ? "All"
+                      : needsReplyCount > 0
+                        ? `Needs reply (${needsReplyCount})`
+                        : "Needs reply"}
                   </button>
                 ))}
               </div>
@@ -301,21 +341,28 @@ export default function ContractorMessagesPage() {
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex min-w-0 items-center gap-2">
-                          {unread && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden />}
-                          <span className="truncate font-bold text-foreground">{t.homeowner_first || "Homeowner"}</span>
-                        </div>
+                        <span className="truncate font-bold text-foreground">{t.title}</span>
                         <span className="shrink-0 text-xs text-muted-foreground">{relativeTime(t.last_at)}</span>
                       </div>
-                      <span className="mt-1 truncate text-xs font-bold text-muted-foreground">{t.title}</span>
-                      {t.last_message && (
-                        <span className="mt-1 truncate text-[13px] text-muted-foreground">
-                          {t.last_sender === "contractor" ? "You: " : ""}
-                          {t.last_message}
+                      <span className="mt-1 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+                        {unread && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden />}
+                        <span className="truncate">
+                          {t.homeowner_first || "Homeowner"}
+                          {" · "}
+                          {t.last_message ? (
+                            <>
+                              {t.last_sender === "contractor" ? "You: " : ""}
+                              {t.last_message}
+                            </>
+                          ) : (
+                            <span className="italic">No messages yet</span>
+                          )}
                         </span>
-                      )}
+                      </span>
                       {t.state && (
-                        <span className="mt-2 inline-flex w-fit rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                        <span
+                          className={`mt-2 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${stateClasses(t.state)}`}
+                        >
                           {prettyState(t.state)}
                         </span>
                       )}
