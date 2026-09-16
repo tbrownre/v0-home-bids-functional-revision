@@ -137,21 +137,32 @@ export function JobPageContent({ job, homeownerFirstName }: JobPageContentProps)
         {/* Photo Gallery */}
         {job.images && job.images.length > 0 && (
           <div className="mb-8">
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-              {job.images.map((img, idx) => (
-                <div
-                  key={idx}
-                  className="relative aspect-square overflow-hidden rounded-lg bg-muted"
-                >
-                  <Image
-                    src={img}
-                    alt={`${job.title} photo ${idx + 1}`}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
+            {job.images.length === 1 ? (
+              <div className="relative mx-auto aspect-square w-1/2 overflow-hidden rounded-lg bg-muted md:w-1/3">
+                <Image
+                  src={job.images[0]}
+                  alt={`${job.title} photo 1`}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                {job.images.map((img, idx) => (
+                  <div
+                    key={idx}
+                    className="relative aspect-square overflow-hidden rounded-lg bg-muted"
+                  >
+                    <Image
+                      src={img}
+                      alt={`${job.title} photo ${idx + 1}`}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

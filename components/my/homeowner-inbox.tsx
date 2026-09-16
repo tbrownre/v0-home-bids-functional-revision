@@ -1,6 +1,7 @@
 'use client'
 
 import { Fragment, useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { HomeBidsLogo } from '@/components/homebids-logo'
 
@@ -60,6 +61,53 @@ const HB_CSS = `
 `
 
 const SHARE_BASE = 'https://www.homebids.ai/j/'
+
+// Local celebratory confetti — mirrors the implementation in app/jobs/[id]/page.tsx.
+function ConfettiOverlay({ show }: { show: boolean }) {
+  return (
+    <AnimatePresence>
+      {show && (
+        <div className="pointer-events-none fixed inset-0 z-[70] overflow-hidden" aria-hidden="true">
+          {Array.from({ length: 60 }).map((_, i) => {
+            const left = Math.random() * 100
+            const delay = Math.random() * 0.8
+            const duration = 2.5 + Math.random() * 2
+            const size = 6 + Math.random() * 8
+            const rotation = Math.random() * 360
+            const colors = [
+              "#22c55e", "#16a34a", "#facc15", "#f59e0b",
+              "#3b82f6", "#ec4899", "#f97316", "#8b5cf6",
+            ]
+            const color = colors[i % colors.length]
+            const shape = i % 3
+
+            return (
+              <motion.div
+                key={`confetti-${i}`}
+                initial={{ y: -20, x: `${left}vw`, opacity: 1, rotate: rotation, scale: 1 }}
+                animate={{
+                  y: "110vh",
+                  rotate: rotation + 720,
+                  opacity: [1, 1, 0.8, 0],
+                  x: `${left + (Math.random() - 0.5) * 20}vw`,
+                }}
+                exit={{ opacity: 0 }}
+                transition={{ duration, delay, ease: "easeIn" }}
+                className="absolute"
+                style={{
+                  width: shape === 2 ? size * 0.6 : size,
+                  height: shape === 1 ? size * 0.6 : size,
+                  backgroundColor: color,
+                  borderRadius: shape === 0 ? "50%" : shape === 1 ? "2px" : "1px",
+                }}
+              />
+            )
+          })}
+        </div>
+      )}
+    </AnimatePresence>
+  )
+}
 
 type Contractor = string | { name?: string | null; full_name?: string | null; company?: string | null }
 type Job = {
@@ -180,6 +228,8 @@ const BADGE: Record<OwnerState | 'collecting', [string, string]> = {
 export function HomeownerInbox({ token }: { token: string }) {
   const [inbox, setInbox] = useState<Inbox | null | undefined>(undefined)
   const [busy, setBusy] = useState(false)
+  const [accepting, setAccepting] = useState(false)
+  const [showConfetti, setShowConfetti] = useState(false)
   const [toast, setToast] = useState('')
   const [panelOpen, setPanelOpen] = useState<Record<string, boolean>>({})
   const [askOpen, setAskOpen] = useState<Record<string, boolean>>({})
@@ -253,10 +303,15 @@ export function HomeownerInbox({ token }: { token: string }) {
 
   async function acceptBid(bid: Bid) {
     if (!bid || busy) return
+    // Celebrate immediately on click, before the network round-trip.
+    setShowConfetti(true)
+    window.setTimeout(() => setShowConfetti(false), 4000)
     sendingRef.current = true
     setBusy(true)
+    setAccepting(true)
     const { data, error } = await createClient().rpc('accept_proposal', { p_token: bid.share_token })
     setBusy(false)
+    setAccepting(false)
     sendingRef.current = false
     if (!error && data?.ok) {
       say('Accepted — the pro has been notified')
@@ -502,7 +557,7 @@ export function HomeownerInbox({ token }: { token: string }) {
                   </div>
                 )}
                 <div className={`panel${panelOpen[thread.thread_id] ? ' on' : ''}`}>
-                  <button className="primary" style={{ marginTop: 0 }} onClick={() => acceptBid(ps.bid)} disabled={busy}>{busy ? 'Working…' : `Accept ${amount} bid`}</button>
+                  <button className="primary" style={{ marginTop: 0 }} onClick={() => acceptBid(ps.bid)} disabled={busy}>{accepting ? 'Accepting…' : `Accept ${amount} bid`}</button>
                   {ps.bid && <a className="secondary" href={`/p/${ps.bid.share_token}`}>View full bid</a>}
                 </div>
                 <div className="quiet">You don&apos;t have to decide now. We&apos;ll text you if {name} updates the bid or offers a visit.</div>
@@ -585,7 +640,7 @@ export function HomeownerInbox({ token }: { token: string }) {
                 {person('Final quote after the in-person estimate')}
                 <button className="primary" onClick={() => setPanelOpen((current) => ({ ...current, [thread.thread_id]: !current[thread.thread_id] }))}>Review final bid</button>
                 <div className={`panel${panelOpen[thread.thread_id] ? ' on' : ''}`}>
-                  <button className="primary" style={{ marginTop: 0 }} onClick={() => acceptBid(ps.bid)} disabled={busy}>{busy ? 'Working…' : `Hire ${name} for ${amount}`}</button>
+                  <button className="primary" style={{ marginTop: 0 }} onClick={() => acceptBid(ps.bid)} disabled={busy}>{accepting ? 'Accepting…' : `Hire ${name} for ${amount}`}</button>
                   {ps.bid && <a className="secondary" href={`/p/${ps.bid.share_token}`}>View full bid</a>}
                 </div>
               </div></div>
@@ -714,6 +769,7 @@ export function HomeownerInbox({ token }: { token: string }) {
         </details></div>
       </div>
       <div className={`toast${toast ? ' on' : ''}`} role="status" aria-live="polite">{toast}</div>
+      <ConfettiOverlay show={showConfetti} />
     </main>
   )
 }
