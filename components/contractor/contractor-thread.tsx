@@ -477,7 +477,7 @@ export function ContractorThread({ token }: { token: string }) {
             <div className="sub">You offered {slotsText}.</div>
             <div className="nextbox"><strong>Nothing else to do.</strong> HomeBids will text you as soon as {first} picks a time or suggests another one.</div>
             <button className="textbtn" onClick={() => setComposerOpen((value) => !value)}>Change offered times</button>
-            <button className="secondary" onClick={() => setComposerOpen(true)}>Homeowner passed? Submit a bid instead</button>
+            <a className="secondary" href={sms(`The homeowner passed on the visit - I'd like to submit a bid for this job instead (Job: ${job.job_ref})`)}>Homeowner passed? Submit a bid instead</a>
             {composer}
           </div></div>
         )}
@@ -490,7 +490,7 @@ export function ContractorThread({ token }: { token: string }) {
             <button className="primary" onClick={confirmTime} disabled={busy}>{busy ? 'Confirming…' : 'Yes — confirm'}</button>
             <button className="secondary" onClick={() => setComposerOpen((value) => !value)}>Suggest another time</button>
             <div className="quiet">Once you confirm, HomeBids sends {first} the confirmation and unlocks the service address for you.</div>
-            <button className="secondary" onClick={() => setComposerOpen(true)}>Homeowner passed? Submit a bid instead</button>
+            <a className="secondary" href={sms(`The homeowner passed on the visit - I'd like to submit a bid for this job instead (Job: ${job.job_ref})`)}>Homeowner passed? Submit a bid instead</a>
             {composer}
           </div></div>
         )}
@@ -510,7 +510,7 @@ export function ContractorThread({ token }: { token: string }) {
             )}
             <a className="secondary" href={sms(`I'm ready to confirm the final bid for (Job: ${job.job_ref})`)}>Confirm final bid in Messages</a>
             <button className="textbtn" onClick={() => setComposerOpen((value) => !value)}>Need to change the time?</button>
-            <button className="secondary" onClick={() => setComposerOpen(true)}>Homeowner passed? Submit a bid instead</button>
+            <a className="secondary" href={sms(`The homeowner passed on the visit - I'd like to submit a bid for this job instead (Job: ${job.job_ref})`)}>Homeowner passed? Submit a bid instead</a>
             <div className="nextbox"><strong>After the visit:</strong> confirm the final quote in Messages. HomeBids will send it back to {first} for approval.</div>
             {composer}
           </div></div>
