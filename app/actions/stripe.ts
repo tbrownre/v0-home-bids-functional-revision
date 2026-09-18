@@ -42,7 +42,6 @@ export async function startSubscriptionCheckout(
     ],
     mode: 'subscription',
     subscription_data: {
-      trial_period_days: 3,
       // Pass userId + planId through so the webhook can link the subscription
       // back to the correct Supabase user without relying on the browser session.
       metadata: {

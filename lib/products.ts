@@ -51,9 +51,8 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
       'Unlimited AI usage during beta',
       'SMS-first workflow',
       'Mobile-first contractor dashboard',
-      '3-day free trial included',
     ],
-    savingsCallout: '3-day free trial',
+    savingsCallout: 'Unlimited bids + estimates',
   },
 ]
 

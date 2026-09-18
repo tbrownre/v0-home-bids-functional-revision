@@ -494,7 +494,7 @@ function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan:
   const monthlyPrice = (plan.priceInCents / 100).toFixed(0);
 
   const ctaLabel =
-    plan.id === "contractor-growth" ? "Start Free Trial"
+    plan.id === "contractor-growth" ? "Subscribe — $99/mo"
     : plan.id === "homeowner-monthly" ? "Post Your Project — Free"
     : plan.hasTrial === false ? `Get ${plan.name}`
     : "Get Started";
@@ -538,11 +538,11 @@ function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan:
           ) : (
             <>
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-extrabold text-foreground">$0</span>
-                <span className="text-sm font-medium text-muted-foreground">today</span>
+                <span className="text-4xl font-extrabold text-foreground">$99</span>
+                <span className="text-sm font-medium text-muted-foreground">/month</span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground/50">
-                then ${monthlyPrice}/month after free trial
+                Billed monthly. Cancel anytime.
               </p>
             </>
           )}
