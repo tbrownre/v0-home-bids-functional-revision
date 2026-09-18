@@ -506,32 +506,31 @@ export function HomeownerInbox({ token }: { token: string }) {
           </div>
           <h1 className="title">{job.title}</h1>
           <div className="meta">{job.location} · Posted {postedDate(job.created_at)}</div>
+          {job.images && job.images.length > 0 && (
+            <div className="mt-4 mb-6">
+              {job.images.length === 1 ? (
+                <img
+                  src={job.images[0] || "/placeholder.svg"}
+                  alt={`${job.title} photo 1`}
+                  className="mx-auto aspect-square w-1/2 rounded-lg object-cover md:w-1/3"
+                />
+              ) : (
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                  {job.images.map((img, idx) => (
+                    <img
+                      key={idx}
+                      src={img || "/placeholder.svg"}
+                      alt={`${job.title} photo ${idx + 1}`}
+                      className="aspect-square w-full rounded-lg object-cover"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {job.description && <p className="scope">{job.description}</p>}
           <div className="privacy">Keep this link private. Anyone with it can act on your project.</div>
         </header>
-
-        {job.images && job.images.length > 0 && (
-          <div className="mb-4">
-            {job.images.length === 1 ? (
-              <img
-                src={job.images[0] || "/placeholder.svg"}
-                alt={`${job.title} photo 1`}
-                className="mx-auto aspect-square w-1/2 rounded-lg object-cover md:w-1/3"
-              />
-            ) : (
-              <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-                {job.images.map((img, idx) => (
-                  <img
-                    key={idx}
-                    src={img || "/placeholder.svg"}
-                    alt={`${job.title} photo ${idx + 1}`}
-                    className="aspect-square w-full rounded-lg object-cover"
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
         {collecting && (
           <div className="sec"><div className="card hero">
