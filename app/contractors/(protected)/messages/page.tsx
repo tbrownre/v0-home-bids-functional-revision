@@ -278,9 +278,9 @@ export default function ContractorMessagesPage() {
           </div>
         </div>
 
-        <div className={`${CARD} grid min-h-[640px] grid-cols-1 overflow-hidden md:grid-cols-[360px_minmax(0,1fr)]`}>
+        <div className={`${CARD} grid h-[calc(100dvh-190px)] min-h-[520px] grid-cols-1 overflow-hidden md:grid-cols-[360px_minmax(0,1fr)]`}>
           {/* ── Conversation list ── */}
-          <div className={`flex flex-col border-border md:border-r ${paneOpen ? "hidden md:flex" : "flex"}`}>
+          <div className={`flex h-full min-h-0 flex-col border-border md:border-r ${paneOpen ? "hidden md:flex" : "flex"}`}>
             <div className="border-b border-border p-4">
               <div className="relative">
                 <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
@@ -313,7 +313,7 @@ export default function ContractorMessagesPage() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 min-h-0 overflow-auto">
               {!loaded ? (
                 <p className="px-4 py-10 text-center text-sm text-muted-foreground">Loading conversations…</p>
               ) : filtered.length === 0 ? (
@@ -374,7 +374,7 @@ export default function ContractorMessagesPage() {
           </div>
 
           {/* ── Chat pane ── */}
-          <div className={`flex min-w-0 flex-col bg-[#fbfcfd] ${paneOpen ? "flex" : "hidden md:flex"}`}>
+          <div className={`flex h-full min-h-0 min-w-0 flex-col bg-[#fbfcfd] ${paneOpen ? "flex" : "hidden md:flex"}`}>
             {!activeToken ? (
               <div className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
                 <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
@@ -451,7 +451,7 @@ export default function ContractorMessagesPage() {
                 </div>
 
                 {/* Transcript */}
-                <div ref={bodyRef} className="flex flex-1 flex-col gap-2.5 overflow-auto px-5 py-6">
+                <div ref={bodyRef} className="flex flex-1 min-h-0 flex-col gap-2.5 overflow-auto px-5 py-6">
                   {detailLoading && messages.length === 0 ? (
                     <p className="m-auto text-sm text-muted-foreground">Loading messages…</p>
                   ) : messages.length === 0 ? (
