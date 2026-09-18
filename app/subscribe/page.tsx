@@ -422,7 +422,7 @@ export default function SubscribePage() {
                     Ready to win more jobs?
                   </h2>
                   <p className="mx-auto mt-4 max-w-lg text-primary-foreground/80">
-                    Start your free 3-day trial today. No commitment — cancel anytime.
+                    $99/month. No commitment — cancel anytime.
                   </p>
                   <Button
                     size="lg"
@@ -434,7 +434,7 @@ export default function SubscribePage() {
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                   <p className="mt-3 text-xs text-primary-foreground/40">
-                    $99/month after 3-day trial. Cancel anytime.
+                    $99/month. Cancel anytime.
                   </p>
                 </div>
 
