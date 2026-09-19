@@ -3,6 +3,7 @@ import { ImageResponse } from "next/og";
 export const alt = "HomeBids job share";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+export const revalidate = 86400; // cache the drawn card for a day — crawlers get it instantly
 
 interface ImageProps {
   params: Promise<{ token: string }>;
@@ -130,6 +131,3 @@ export default async function Image({ params }: ImageProps) {
     return new ImageResponse(renderCard(fallback), { width: 1200, height: 630 });
   }
 }
-
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
