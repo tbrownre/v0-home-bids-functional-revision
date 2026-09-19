@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Sparkles,
   ArrowRight,
-  Play,
   Check,
   FileText,
   Pencil,
@@ -186,7 +185,7 @@ function NewUserDashboard({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-balance text-4xl font-extrabold tracking-tight text-foreground">{greeting}, {name}</h1>
+        <h1 className="text-balance text-4xl font-extrabold tracking-tight text-foreground">{greeting}, {name}!</h1>
         <p className="mt-2 text-lg text-muted-foreground">Let&apos;s get your first bid out today.</p>
       </div>
 
@@ -207,12 +206,6 @@ function NewUserDashboard({
                 <Sparkles className="h-[18px] w-[18px]" />
                 Build My First Bid
                 <ArrowRight className="h-[18px] w-[18px]" />
-              </Button>
-              <Button asChild variant="outline" className="h-12 gap-2 rounded-full px-5 text-sm font-semibold">
-                <Link href="/how-it-works">
-                  <Play className="h-4 w-4" />
-                  Watch 60-second demo
-                </Link>
               </Button>
             </div>
           </div>
@@ -359,7 +352,7 @@ function SeasonedDashboard({
       {/* Welcome */}
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-balance text-4xl font-extrabold tracking-tight text-foreground">{greeting}, {name}</h1>
+          <h1 className="text-balance text-4xl font-extrabold tracking-tight text-foreground">{greeting}, {name}!</h1>
           <p className="mt-2 text-lg text-muted-foreground">Keep the momentum going. Your next bid is one click away.</p>
         </div>
         <div className="flex flex-wrap gap-2.5">
