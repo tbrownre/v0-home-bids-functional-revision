@@ -3,7 +3,8 @@ import { ImageResponse } from "next/og";
 export const alt = "HomeBids job share";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const revalidate = 86400; // cache the drawn card for a day — crawlers get it instantly
+
+const OG_CACHE = { "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800" };
 
 interface ImageProps {
   params: Promise<{ token: string }>;
@@ -126,8 +127,8 @@ export default async function Image({ params }: ImageProps) {
   try {
     const { token } = await params;
     const details = await getJobDetails(token);
-    return new ImageResponse(renderCard(details), { width: 1200, height: 630 });
+    return new ImageResponse(renderCard(details), { width: 1200, height: 630, headers: OG_CACHE });
   } catch {
-    return new ImageResponse(renderCard(fallback), { width: 1200, height: 630 });
+    return new ImageResponse(renderCard(fallback), { width: 1200, height: 630, headers: OG_CACHE });
   }
 }
