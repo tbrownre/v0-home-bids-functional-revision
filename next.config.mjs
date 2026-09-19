@@ -4,6 +4,13 @@ const nextConfig = {
     unoptimized: true,
   },
 
+  // Allow logo/photo uploads through server actions (Next's default cap is 1 MB)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "8mb",
+    },
+  },
+
   // Security headers applied to every response
   async headers() {
     return [
