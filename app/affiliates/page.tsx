@@ -402,7 +402,7 @@ export default function AffiliatesPage() {
       {/* Floating social proof notification */}
       <FloatingSocialProof />
 
-      {/* ── Hero ──────────���───────────────────────────────────────────── */}
+      {/* ── Hero ──────────   ───────────────────────────────────────────── */}
       <section className="px-4 pb-20 pt-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
           <motion.div variants={stagger} initial="hidden" animate="show">
@@ -984,7 +984,7 @@ export default function AffiliatesPage() {
               className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center"
             >
               <Button size="lg" className="h-12 gap-2 px-10 text-base" asChild>
-                <a href={`mailto:affiliates@homebids.ai?subject=${encodeURIComponent("Affiliate Link Request")}&body=${encodeURIComponent("Hi HomeBids team,\n\nI'd like to get my affiliate link. Here's a bit about me and my network:\n\n")}`}>
+                <a href="https://whop.com/homebids/affiliates" target="_blank" rel="noopener noreferrer">
                   Get Your Affiliate Link <ArrowRight className="h-4 w-4" />
                 </a>
               </Button>
@@ -994,7 +994,7 @@ export default function AffiliatesPage() {
                 className="h-12 gap-2 bg-transparent px-10 text-base"
                 asChild
               >
-                <a href={`mailto:affiliates@homebids.ai?subject=${encodeURIComponent("Founding Affiliate Application")}&body=${encodeURIComponent("Hi HomeBids team,\n\nI'd like to apply as a founding affiliate. Here's a bit about me and my network:\n\n")}`}>
+                <a href="https://whop.com/homebids/affiliates" target="_blank" rel="noopener noreferrer">
                   Join as a Founding Affiliate
                 </a>
               </Button>
