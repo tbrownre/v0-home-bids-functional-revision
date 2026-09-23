@@ -468,16 +468,10 @@ export default function HowItWorksPage() {
                     </p>
                     <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
                       <Button size="lg" variant="secondary" asChild className="w-full sm:w-auto">
-                        <Link href="/">
+                        <a href="sms:+14043952879?body=Hi%20HomeBids%2C%20help%20me%20create%20a%20new%20job!">
                           Start Your Project
                           <ArrowRight className="ml-2 h-4 w-4" />
-                        </Link>
-                      </Button>
-                      <Button size="lg" variant="ghost" className="w-full border border-white/30 text-white hover:bg-white/10 sm:w-auto" asChild>
-                        <Link href="/">
-                          <MessageSquare className="mr-2 h-4 w-4" />
-                          Text HomeBids
-                        </Link>
+                        </a>
                       </Button>
                     </div>
                     <p className="mt-4 text-xs text-white/50">Free for homeowners. No account or credit card required.</p>
