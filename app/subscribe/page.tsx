@@ -15,7 +15,7 @@ import {
   Lightbulb, PaintBucket, Trees, Hammer, Bath, ChefHat,
   ArrowRight, BadgeCheck, Link2,
   Shield, Star,
-  Smartphone, Bot,
+  Smartphone, Bot, Home,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -82,9 +82,9 @@ export default function SubscribePage() {
   const contractorPlans = getContractorPlans();
 
   const handleSelectPlan = (plan: SubscriptionPlan) => {
-    // Homeowner plan is free — skip Stripe and go straight to posting
+    // Homeowner plan is free — no checkout: start the project by texting Ava
     if (plan.userType === "homeowner") {
-      router.push("/new-job");
+      window.location.href = "sms:+14043952879?body=Hi%20HomeBids%2C%20help%20me%20create%20a%20new%20job!";
       return;
     }
     setSelectedPlan(plan);
@@ -99,8 +99,8 @@ export default function SubscribePage() {
       // Payment confirmed — send contractor to their dashboard
       router.push("/contractors/dashboard");
     } else {
-      // Homeowner payment confirmed — send them to post their first job
-      router.push("/new-job");
+      // Homeowners never pay — starting a project happens over text
+      window.location.href = "sms:+14043952879?body=Hi%20HomeBids%2C%20help%20me%20create%20a%20new%20job!";
     }
   };
 
@@ -110,6 +110,44 @@ export default function SubscribePage() {
 
       <main className="px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-5xl">
+
+          {/* Audience toggle — same pattern as /how-it-works (Tim spec Sep 21:
+              "include a toggle... Homeowner = free. Contractor = paid") */}
+          <div className="mb-10 flex flex-col items-center gap-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">I am a</p>
+            <div
+              className="relative inline-flex rounded-2xl border border-border p-1.5"
+              style={{
+                background: "rgba(255,255,255,0.6)",
+                backdropFilter: "blur(12px)",
+                boxShadow: "0 2px 16px #0001, inset 0 1px 0 #fff4",
+              }}
+            >
+              <motion.div
+                className="absolute top-1.5 h-[calc(100%-12px)] rounded-xl bg-background shadow-md"
+                animate={{ left: userType === "homeowner" ? "6px" : "calc(50%)" }}
+                style={{ width: "calc(50% - 6px)" }}
+                transition={{ type: "spring", stiffness: 380, damping: 32 }}
+              />
+              {(["homeowner", "contractor"] as UserTypeFilter[]).map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => setUserType(opt)}
+                  className={`relative z-10 min-w-[150px] rounded-xl px-6 py-2.5 text-sm font-semibold transition-colors duration-200 ${
+                    userType === opt ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {opt === "homeowner" ? (
+                    <span className="flex items-center justify-center gap-1.5"><Home className="h-3.5 w-3.5" />Homeowner · Free</span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-1.5"><Hammer className="h-3.5 w-3.5" />Contractor · $99/mo</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <AnimatePresence mode="wait">
             {userType === "homeowner" ? (
               <motion.div
