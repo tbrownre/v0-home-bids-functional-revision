@@ -16,6 +16,7 @@ export const loggedOutNavItems: NavItem[] = [
 
 // Single source of truth for homeowner logged-in navigation.
 // Sign Out is intentionally excluded — it must be appended as an action, not a link.
+// "New Job" removed (Sep 2026): /new-job is retired — homeowners create jobs by texting Ava.
 export const homeownerNavItems: NavItem[] = [
   { label: "Home",         href: "/" },
   { label: "Services",     href: "/services" },
@@ -23,7 +24,6 @@ export const homeownerNavItems: NavItem[] = [
   { label: "Your Jobs",    href: "/homeowners/dashboard", match: ["/homeowners/dashboard", "/jobs", "/projects"] },
   { label: "Inbox",        href: "/inbox",          match: ["/messages", "/inbox"] },
   { label: "Profile",      href: "/profile",        match: ["/profile", "/settings"] },
-  { label: "New Job",      href: "/new-job" },
 ];
 
 // Single source of truth for contractor logged-in navigation.
