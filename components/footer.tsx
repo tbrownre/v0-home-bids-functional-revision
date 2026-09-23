@@ -17,6 +17,7 @@ import {
 import { Home, Building2, Send, CheckCircle2, ChevronUp } from "lucide-react";
 import { HomeBidsLogo } from "@/components/homebids-logo";
 import { useContractorLogoHref } from "@/lib/use-contractor-logo-href";
+import { submitContactMessage } from "@/lib/supabase/contact";
 
 // Flyout group — keeps open while hovering trigger or panel
 function FlyoutGroup({ label, items }: { label: string; items: { href?: string; label: string; onClick?: () => void }[] }) {
@@ -93,16 +94,34 @@ export function Footer() {
   const [contactPhone, setContactPhone] = useState("");
   const [contactMessage, setContactMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState(false);
   const logoHref = useContractorLogoHref();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    if (sending) return;
+    setSending(true);
+    setSendError(false);
+    const { ok } = await submitContactMessage({
+      type: contactType,
+      name: contactName,
+      email: contactEmail,
+      phone: contactPhone,
+      message: contactMessage,
+    });
+    setSending(false);
+    if (ok) {
+      setSubmitted(true);
+    } else {
+      setSendError(true);
+    }
   };
 
   const resetForm = () => {
     setContactName(""); setContactEmail(""); setContactPhone("");
     setContactMessage(""); setContactType("homeowner"); setSubmitted(false);
+    setSending(false); setSendError(false);
   };
 
   return (
@@ -231,9 +250,14 @@ export function Footer() {
                     onChange={(e) => setContactMessage(e.target.value)} className="min-h-[100px] resize-none" required />
                 </div>
                 <Button type="submit" className="h-11 w-full gap-2"
-                  disabled={!contactName.trim() || !contactEmail.trim() || !contactPhone.trim() || !contactMessage.trim()}>
-                  <Send className="h-4 w-4" />Send Message
+                  disabled={sending || !contactName.trim() || !contactEmail.trim() || !contactPhone.trim() || !contactMessage.trim()}>
+                  <Send className="h-4 w-4" />{sending ? "Sending…" : "Send Message"}
                 </Button>
+                {sendError && (
+                  <p className="text-center text-sm text-red-600">
+                    Couldn&apos;t send your message — please try again.
+                  </p>
+                )}
               </form>
             </>
           ) : (
