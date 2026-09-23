@@ -372,13 +372,13 @@ function SeasonedDashboard({
       {/* Tracker */}
       <section className={`${CARD} relative grid gap-8 overflow-hidden p-7 md:grid-cols-[1.45fr_0.55fr]`}>
         <div>
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-xs font-extrabold uppercase tracking-[0.08em] text-primary">Monthly bid goal</p>
-              <div className="mt-2 flex items-baseline gap-2">
+              <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 <span className="text-5xl font-extrabold tracking-tight text-primary">{bidsCount}</span>
-                <span className="text-3xl font-bold text-foreground">/ {goal}</span>
-                <span className="ml-1 text-sm font-medium text-muted-foreground">bids created</span>
+                <span className="whitespace-nowrap text-3xl font-bold text-foreground">/ {goal}</span>
+                <span className="ml-1 whitespace-nowrap text-sm font-medium text-muted-foreground">bids created</span>
               </div>
             </div>
             <button
