@@ -26,7 +26,6 @@ import {
   FileText,
   Building2,
   LogIn,
-  Clock,
   DollarSign,
   ChevronRight,
 } from "lucide-react";
@@ -117,7 +116,7 @@ const planFeatures = [
   "Homeowner Bid Opportunities",
   "Contractor Profile",
   "No bid fees — ever",
-  "3-day free trial",
+  "Cancel anytime",
 ];
 
 /* ─── ROI Calculator ─── */
@@ -306,13 +305,13 @@ export default function ContractorsPage() {
                 <ArrowRight className="h-4 w-4" />
                 Text Us To Build A Bid
               </a>
-                <Link
-                href="/subscribe?type=contractor"
+                <a
+                href="sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid!"
                 className="inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-full border border-primary bg-background px-10 text-base font-semibold text-primary shadow-sm transition-colors hover:bg-primary/5 active:scale-[0.98] sm:w-auto"
               >
                 <ChevronRight className="h-4 w-4" />
                 Start Free Right Now
-              </Link>
+              </a>
             </motion.div>
             <motion.div variants={fadeUp} className="mt-4 flex justify-center">
               <Link
@@ -325,7 +324,7 @@ export default function ContractorsPage() {
 
             <motion.div variants={fadeUp} className="mt-5 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-primary" /> $99/month</span>
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-primary" /> 3-day free trial</span>
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-primary" /> Unlimited AI bids</span>
               <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-primary" /> No contracts</span>
             </motion.div>
           </motion.div>
@@ -554,7 +553,7 @@ export default function ContractorsPage() {
               <h2 className="mt-3 text-3xl font-bold text-foreground sm:text-4xl">
                 Simple, Transparent Pricing
               </h2>
-              <p className="mt-4 text-muted-foreground">One plan. Everything included. Start with a 3-day free trial.</p>
+              <p className="mt-4 text-muted-foreground">One plan. Everything included. $99/month — cancel anytime.</p>
             </motion.div>
 
             <motion.div variants={fadeUp} className="mx-auto max-w-sm">
@@ -574,7 +573,7 @@ export default function ContractorsPage() {
                     <span className="mb-2 text-muted-foreground">/mo</span>
                   </div>
                   <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                    <Clock className="h-3 w-3" /> 3-day free trial
+                    <Zap className="h-3 w-3" /> Unlimited AI bids
                   </span>
                 </div>
 
@@ -587,19 +586,13 @@ export default function ContractorsPage() {
                   ))}
                 </ul>
 
-                <Link
-                  href="/subscribe?type=contractor"
+                <a
+                  href="sms:+12832291348?body=Let%27s%20create%20a%20new%20bid!"
                   className="relative mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 active:scale-[0.98]"
                 >
                   <ArrowRight className="h-4 w-4" />
                   Start A Bid By Text
-                </Link>
-                <div className="relative mt-3 text-center">
-                  <Link href="/subscribe?type=contractor" className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
-                    Prefer to use a form?
-                  </Link>
-                </div>
-
+                </a>
                 <p className="relative mt-4 text-center text-xs leading-relaxed text-muted-foreground">
                   HomeBids does not guarantee a specific number of leads or jobs. Homeowner
                   opportunities vary based on service area, category, and demand.
@@ -678,9 +671,9 @@ export default function ContractorsPage() {
               <ArrowRight className="h-5 w-5" />
               Text Us To Build A Bid
             </a>
-            <Link href="/subscribe?type=contractor" className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
+            <a href="sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid!" className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
               Start Free Right Now
-            </Link>
+            </a>
           </div>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-5 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5"><DollarSign className="h-4 w-4 text-primary" />$99/month</span>
@@ -773,7 +766,7 @@ export default function ContractorsPage() {
             <div className="text-center text-sm text-muted-foreground">
               {"Want to join as a contractor? "}
               <a href="/subscribe?type=contractor" className="font-semibold text-primary hover:underline">
-                Start your free trial
+                Subscribe — $99/mo
               </a>
             </div>
           </div>
