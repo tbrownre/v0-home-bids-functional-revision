@@ -75,6 +75,13 @@ async function handleCheckoutCompleted(
   const userId = session.metadata?.userId
   const planId = session.metadata?.planId
   const userType = session.metadata?.userType
+  const phone = session.metadata?.phone
+
+  // A2 PHONEUNLOCK (Sep 23): account-less upgrade — phone in metadata, no userId.
+  if (!userId && phone) {
+    await handlePhoneCheckoutCompleted(session, phone, planId, supabase)
+    return
+  }
 
   if (!userId) {
     console.warn('[stripe-webhook] checkout.session.completed missing userId metadata — skipping DB write')
@@ -138,17 +145,104 @@ async function handleCheckoutCompleted(
   }
 }
 
+/**
+ * A2 PHONEUNLOCK: write a phone-keyed subscription row (no account) and
+ * queue Tim's "You're officially Pro" text via the notify worker.
+ * check_bid_allowance v3 unlocks this phone by digit match immediately.
+ */
+async function handlePhoneCheckoutCompleted(
+  session: Stripe.Checkout.Session,
+  rawPhone: string,
+  planId: string | undefined,
+  supabase: SupabaseClient,
+) {
+  const digits = String(rawPhone).replace(/\D/g, '').slice(-10)
+  if (digits.length < 10) {
+    console.warn('[stripe-webhook] phone_upgrade with invalid phone — skipping')
+    return
+  }
+  const e164 = '+1' + digits
+
+  const customerId = typeof session.customer === 'string'
+    ? session.customer
+    : session.customer?.id ?? null
+
+  const subscriptionId = typeof session.subscription === 'string'
+    ? session.subscription
+    : session.subscription?.id ?? null
+
+  let periodEnd: string | null = null
+  let subStatus: string = 'active'
+  if (subscriptionId) {
+    const sub = await stripe.subscriptions.retrieve(subscriptionId, {
+      expand: ['items'],
+    })
+    subStatus = sub.status
+    const firstItem = sub.items?.data?.[0]
+    const rawEnd = (firstItem as { current_period_end?: number })?.current_period_end ?? null
+    periodEnd = rawEnd ? new Date(rawEnd * 1000).toISOString() : null
+  }
+
+  const row = {
+    user_id: null as string | null,
+    phone: e164,
+    plan_id: planId ?? 'contractor-growth',
+    status: subStatus,
+    stripe_customer_id: customerId,
+    stripe_subscription_id: subscriptionId,
+    stripe_checkout_session_id: session.id,
+    current_period_end: periodEnd,
+  }
+
+  const { error: subError } = subscriptionId
+    ? await supabase.from('subscriptions').upsert(row, { onConflict: 'stripe_subscription_id' })
+    : await supabase.from('subscriptions').insert(row)
+
+  if (subError) {
+    console.error('[stripe-webhook] Failed to write phone subscription:', subError)
+    throw subError
+  }
+
+  // A3: Tim's verbatim Pro confirmation, from the Bid Builder number,
+  // through the notify worker (alerts never ride direct sends).
+  const { error: notifyError } = await supabase.from('notify_outbox').insert({
+    to_number: e164,
+    from_number: '+12832291348',
+    body: "You're officially Pro 🚀\n\nUnlimited bids are unlocked.\n\nWhenever you're ready, just text me your next job.",
+    dedupe_key: 'pro-' + digits,
+  })
+  if (notifyError) {
+    // Unlock already happened — never fail the webhook over the text.
+    console.error('[stripe-webhook] Failed to queue Pro confirmation text:', notifyError)
+  }
+}
+
 async function handleSubscriptionUpdated(
   subscription: Stripe.Subscription,
   supabase: SupabaseClient,
 ) {
   const userId = subscription.metadata?.userId
-  if (!userId) return
+  const phone = subscription.metadata?.phone
 
   // current_period_end moved to items level in the 2025-03-31.basil API.
   const firstItem = subscription.items?.data?.[0]
   const rawEnd = (firstItem as { current_period_end?: number })?.current_period_end ?? null
   const periodEnd = rawEnd ? new Date(rawEnd * 1000).toISOString() : null
+
+  // A2 PHONEUNLOCK rows have no user_id — key on the Stripe subscription id.
+  if (!userId && phone) {
+    const { error: phoneUpdError } = await supabase
+      .from('subscriptions')
+      .update({ status: subscription.status, current_period_end: periodEnd })
+      .eq('stripe_subscription_id', subscription.id)
+    if (phoneUpdError) {
+      console.error('[stripe-webhook] Failed to update phone subscription:', phoneUpdError)
+      throw phoneUpdError
+    }
+    return
+  }
+
+  if (!userId) return
 
   const { error: updError } = await supabase
     .from('subscriptions')
@@ -170,6 +264,21 @@ async function handleSubscriptionDeleted(
   supabase: SupabaseClient,
 ) {
   const userId = subscription.metadata?.userId
+  const phone = subscription.metadata?.phone
+
+  // A2 PHONEUNLOCK rows have no user_id — cancel by Stripe subscription id.
+  if (!userId && phone) {
+    const { error: phoneDelError } = await supabase
+      .from('subscriptions')
+      .update({ status: 'canceled' })
+      .eq('stripe_subscription_id', subscription.id)
+    if (phoneDelError) {
+      console.error('[stripe-webhook] Failed to cancel phone subscription:', phoneDelError)
+      throw phoneDelError
+    }
+    return
+  }
+
   if (!userId) return
 
   const { error: delError } = await supabase
