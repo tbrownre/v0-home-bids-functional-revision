@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   EmbeddedCheckout,
   EmbeddedCheckoutProvider,
@@ -17,6 +17,8 @@ const stripePromise = stripeKey ? loadStripe(stripeKey) : null
 interface PhoneUpgradeCheckoutProps {
   /** The contractor's phone (any format — digits are normalized server-side). */
   phone: string
+  /** When provided, fires on successful payment INSTEAD of the built-in success screen (parent renders step 3). */
+  onPaid?: () => void
 }
 
 /**
@@ -25,7 +27,7 @@ interface PhoneUpgradeCheckoutProps {
  * Stripe webhook unlocks bidding for this number the moment payment lands,
  * and texts the "You're officially Pro" confirmation from the Bid Builder.
  */
-export function PhoneUpgradeCheckout({ phone }: PhoneUpgradeCheckoutProps) {
+export function PhoneUpgradeCheckout({ phone, onPaid }: PhoneUpgradeCheckoutProps) {
   const [isComplete, setIsComplete] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -40,8 +42,14 @@ export function PhoneUpgradeCheckout({ phone }: PhoneUpgradeCheckoutProps) {
   }, [phone])
 
   // Stable reference — Stripe forbids mutating onComplete after first render.
+  const onPaidRef = useRef(onPaid)
+  useEffect(() => { onPaidRef.current = onPaid }, [onPaid])
   const handleComplete = useCallback(() => {
-    setIsComplete(true)
+    if (onPaidRef.current) {
+      onPaidRef.current()
+    } else {
+      setIsComplete(true)
+    }
   }, [])
 
   if (!stripeKey) {
