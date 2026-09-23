@@ -80,7 +80,7 @@ export default function UpgradePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border px-4 py-4">
+      <header className="border-b border-border px-4 py-3">
         <div className="mx-auto flex max-w-md items-center justify-center">
           {step === "pay" && (
             <button
@@ -96,47 +96,45 @@ export default function UpgradePage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-md px-5 py-8">
+      <main className="mx-auto max-w-md px-5 py-5 sm:max-w-lg">
         {/* ── STEP 1 — pitch ─────────────────────────────────────────── */}
         {step === "pitch" && (
           <div>
-            <h1 className="text-balance text-4xl font-extrabold leading-tight tracking-tight text-foreground">
-              Go Pro.
-              <br />
-              Build Faster.
+            <h1 className="text-balance text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl">
+              Go Pro. Build Faster.
             </h1>
-            <p className="mt-3 text-lg text-muted-foreground">
+            <p className="mt-1.5 text-base text-muted-foreground">
               Unlimited professional bids for busy contractors.
             </p>
 
-            <ul className="mt-7 flex flex-col gap-4">
+            <ul className="mt-5 grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3">
               {PERKS.map(({ icon: Icon, text }) => (
-                <li key={text} className="flex items-center gap-3 text-[15px] font-medium text-foreground">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                    <Icon className="h-4 w-4 text-primary" />
+                <li key={text} className="flex items-center gap-2.5 text-sm font-medium text-foreground">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                    <Icon className="h-3.5 w-3.5 text-primary" />
                   </span>
                   {text}
                 </li>
               ))}
             </ul>
 
-            <div className="mt-8 rounded-2xl bg-primary/5 p-6 text-center">
+            <div className="mt-5 rounded-2xl bg-primary/5 p-4 text-center">
               <p>
-                <span className="text-5xl font-extrabold tracking-tight text-primary">$99</span>
-                <span className="ml-1.5 text-lg font-medium text-muted-foreground">/ month</span>
+                <span className="text-4xl font-extrabold tracking-tight text-primary">$99</span>
+                <span className="ml-1.5 text-base font-medium text-muted-foreground">/ month</span>
               </p>
-              <p className="mt-1.5 text-sm text-muted-foreground">No contracts. Cancel anytime.</p>
+              <p className="mt-1 text-xs text-muted-foreground">No contracts. Cancel anytime.</p>
             </div>
 
             <Button
-              className="mt-6 h-13 w-full gap-2 rounded-xl py-4 text-base font-semibold"
+              className="mt-4 h-12 w-full gap-2 rounded-xl text-base font-semibold"
               onClick={() => setStep("pay")}
             >
               Continue to payment
               <ArrowRight className="h-[18px] w-[18px]" />
             </Button>
 
-            <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
               <Lock className="h-3.5 w-3.5" />
               Secure checkout powered by Stripe
             </p>
