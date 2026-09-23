@@ -5,119 +5,218 @@ import { HomeBidsLogo } from "@/components/homebids-logo";
 import { PhoneUpgradeCheckout } from "@/components/phone-upgrade-checkout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CheckCircle2 } from "lucide-react";
+import {
+  Infinity as InfinityIcon,
+  FileText,
+  Link2,
+  MessageCircle,
+  Zap,
+  Calendar,
+  CheckCircle2,
+  ArrowRight,
+  ChevronLeft,
+  Lock,
+} from "lucide-react";
 
 /**
- * /upgrade v2 — A2 PHONEUNLOCK (Sep 23).
- * Was: a bare redirect into /subscribe, which demanded an account before
- * payment ("the paywall experience was awful" — Tim, Sep 21).
- * Now: the page the wall text links to (/upgrade?p=<phone>) — one purpose,
- * card form immediately, no sign-in. No ?p (old links / manual sends) →
- * one phone field, then the same checkout.
+ * /upgrade v3 STEPFLOW — Tim's mock (Sep 23): "That's each page, step by step."
+ * Step 1: "Go Pro. Build Faster." pitch. Step 2: payment only (Stripe embedded;
+ * Apple/Google Pay appear once enabled in Stripe settings). Step 3: "You're in!"
+ * with Create password + Return to Messages. Tagline carries NO ™ (Tim's note).
+ * ?p=<phone> keys the checkout to the contractor; without it, one phone field
+ * appears between steps 1 and 2. No account, no sign-in, ever.
  */
 
 const PERKS = [
-  "Unlimited professional bids + estimates",
-  "Your company branding + license info on every bid",
-  "Cancel anytime — no contracts",
+  { icon: InfinityIcon, text: "Unlimited bids" },
+  { icon: FileText, text: "Your company branding" },
+  { icon: Link2, text: "Shareable proposals (link + PDF)" },
+  { icon: MessageCircle, text: "iMessage support included" },
+  { icon: Zap, text: "Save time. Win more jobs" },
+  { icon: Calendar, text: "Cancel anytime" },
+];
+
+const DONE_PERKS = [
+  { icon: InfinityIcon, text: "Unlimited bids" },
+  { icon: FileText, text: "Your branding enabled" },
+  { icon: Link2, text: "Shareable proposals" },
+  { icon: MessageCircle, text: "iMessage support included" },
+  { icon: Zap, text: "Get back to building" },
 ];
 
 function digitsOf(v: string): string {
   return String(v || "").replace(/\D/g, "").slice(-10);
 }
 
+type Step = "pitch" | "pay" | "done";
+
 export default function UpgradePage() {
+  const [step, setStep] = useState<Step>("pitch");
   const [phone, setPhone] = useState<string | null>(null);
   const [entry, setEntry] = useState("");
-  const [checked, setChecked] = useState(false);
 
-  // Read ?p= via window.location so the page needs no Suspense boundary.
   useEffect(() => {
     try {
       const p = new URLSearchParams(window.location.search).get("p");
       const d = digitsOf(p || "");
       if (d.length === 10) setPhone(d);
     } catch {
-      // no-op — fall through to manual entry
+      // no-op — manual entry covers it
     }
-    setChecked(true);
   }, []);
+
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0 });
+    } catch {
+      // no-op
+    }
+  }, [step]);
 
   const submitEntry = () => {
     const d = digitsOf(entry);
     if (d.length === 10) setPhone(d);
   };
 
-  if (!checked) return null;
-
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border px-4 py-4">
-        <div className="mx-auto flex max-w-2xl items-center justify-center">
+        <div className="mx-auto flex max-w-md items-center justify-center">
+          {step === "pay" && (
+            <button
+              type="button"
+              onClick={() => setStep("pitch")}
+              className="absolute left-4 flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Back"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+          )}
           <HomeBidsLogo size="22px" />
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-        <div className="text-center">
-          <span className="inline-flex items-center rounded-full bg-primary/10 px-4 py-1.5 text-sm font-semibold text-primary">
-            HomeBids Pro
-          </span>
-          <h1 className="mt-4 text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Unlimited bids. <span className="text-primary">$99/mo.</span>
-          </h1>
-          <p className="mt-2 text-muted-foreground">Billed monthly. Cancel anytime.</p>
-          <ul className="mx-auto mt-5 flex max-w-md flex-col gap-2 text-left">
-            {PERKS.map((perk) => (
-              <li key={perk} className="flex items-center gap-2.5 text-sm text-foreground">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
-                {perk}
-              </li>
-            ))}
-          </ul>
-        </div>
+      <main className="mx-auto max-w-md px-5 py-8">
+        {/* ── STEP 1 — pitch ─────────────────────────────────────────── */}
+        {step === "pitch" && (
+          <div>
+            <h1 className="text-balance text-4xl font-extrabold leading-tight tracking-tight text-foreground">
+              Go Pro.
+              <br />
+              Build Faster.
+            </h1>
+            <p className="mt-3 text-lg text-muted-foreground">
+              Unlimited professional bids for busy contractors.
+            </p>
 
-        <div className="mt-8">
-          {phone ? (
-            <PhoneUpgradeCheckout phone={phone} />
-          ) : (
-            <div className="mx-auto max-w-md rounded-2xl border border-border bg-card p-6">
-              <p className="font-semibold text-foreground">What number do you text your bids from?</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                That&apos;s how we unlock your unlimited bids the moment you&apos;re done.
+            <ul className="mt-7 flex flex-col gap-4">
+              {PERKS.map(({ icon: Icon, text }) => (
+                <li key={text} className="flex items-center gap-3 text-[15px] font-medium text-foreground">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Icon className="h-4 w-4 text-primary" />
+                  </span>
+                  {text}
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-8 rounded-2xl bg-primary/5 p-6 text-center">
+              <p>
+                <span className="text-5xl font-extrabold tracking-tight text-primary">$99</span>
+                <span className="ml-1.5 text-lg font-medium text-muted-foreground">/ month</span>
               </p>
-              <Input
-                type="tel"
-                inputMode="tel"
-                placeholder="(480) 555-0192"
-                value={entry}
-                onChange={(e) => setEntry(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") submitEntry();
-                }}
-                className="mt-4 h-12"
-              />
-              <Button
-                className="mt-3 h-11 w-full font-semibold"
-                onClick={submitEntry}
-                disabled={digitsOf(entry).length !== 10}
-              >
-                Continue to checkout
-              </Button>
+              <p className="mt-1.5 text-sm text-muted-foreground">No contracts. Cancel anytime.</p>
             </div>
-          )}
-        </div>
 
-        <p className="mt-8 text-center text-xs text-muted-foreground">
-          Secure checkout by Stripe. Questions?{" "}
-          <a
-            className="font-semibold text-primary"
-            href="sms:+12832291348?body=I%20have%20a%20question%20about%20HomeBids%20Pro."
-          >
-            Text us
-          </a>
-          .
-        </p>
+            <Button
+              className="mt-6 h-13 w-full gap-2 rounded-xl py-4 text-base font-semibold"
+              onClick={() => setStep("pay")}
+            >
+              Continue to payment
+              <ArrowRight className="h-[18px] w-[18px]" />
+            </Button>
+
+            <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+              <Lock className="h-3.5 w-3.5" />
+              Secure checkout powered by Stripe
+            </p>
+          </div>
+        )}
+
+        {/* ── STEP 2 — payment only ──────────────────────────────────── */}
+        {step === "pay" && (
+          <div>
+            {phone ? (
+              <PhoneUpgradeCheckout phone={phone} onPaid={() => setStep("done")} />
+            ) : (
+              <div className="rounded-2xl border border-border bg-card p-6">
+                <p className="font-semibold text-foreground">What number do you text your bids from?</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  That&apos;s how we unlock your unlimited bids the moment you&apos;re done.
+                </p>
+                <Input
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="(480) 555-0192"
+                  value={entry}
+                  onChange={(e) => setEntry(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") submitEntry();
+                  }}
+                  className="mt-4 h-12"
+                />
+                <Button
+                  className="mt-3 h-11 w-full font-semibold"
+                  onClick={submitEntry}
+                  disabled={digitsOf(entry).length !== 10}
+                >
+                  Continue
+                </Button>
+              </div>
+            )}
+            <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+              <Lock className="h-3.5 w-3.5" />
+              Payments are secure and encrypted by Stripe
+            </p>
+          </div>
+        )}
+
+        {/* ── STEP 3 — you're in ─────────────────────────────────────── */}
+        {step === "done" && (
+          <div className="flex flex-col items-center text-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+              <CheckCircle2 className="h-10 w-10 text-primary" />
+            </div>
+            <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-foreground">You&apos;re in!</h1>
+            <p className="mt-2 text-lg text-muted-foreground">HomeBids Pro is now active.</p>
+
+            <ul className="mt-7 w-full rounded-2xl bg-primary/5 p-6 text-left">
+              {DONE_PERKS.map(({ icon: Icon, text }, i) => (
+                <li
+                  key={text}
+                  className={`flex items-center gap-3 text-[15px] font-medium text-foreground ${i > 0 ? "mt-4" : ""}`}
+                >
+                  <Icon className="h-4.5 w-4.5 shrink-0 text-primary" />
+                  {text}
+                </li>
+              ))}
+            </ul>
+
+            <Button asChild className="mt-7 h-13 w-full rounded-xl py-4 text-base font-semibold">
+              <a href="/auth/sign-up">Create password</a>
+            </Button>
+            <a
+              href="sms:+12832291348?body=Let%27s%20create%20a%20new%20bid!"
+              className="mt-4 text-sm font-semibold text-primary hover:underline"
+            >
+              Return to Messages
+            </a>
+
+            <p className="mt-8 text-lg italic text-muted-foreground" style={{ fontFamily: "cursive" }}>
+              Better bids. Better homes.
+            </p>
+          </div>
+        )}
       </main>
     </div>
   );
