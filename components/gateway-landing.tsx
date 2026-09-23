@@ -329,7 +329,7 @@ export function GatewayLanding() {
 
           {/* CTA buttons */}
           <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            
+            <a
               href={HOMEBIDS_SMS.homeowner.href}
               onClick={(e) => {
                 if (!isSmsCapableDevice()) {
