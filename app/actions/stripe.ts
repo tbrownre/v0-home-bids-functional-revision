@@ -29,7 +29,7 @@ export async function startSubscriptionCheckout(
         price_data: {
           currency: 'usd',
           product_data: {
-            name: `HomeBids ${plan.name} Plan`,
+            name: 'HomeBids Pro', // Tim (Sep 24): was "HomeBids HomeBids AI Growth Tools Plan" on the Stripe sheet
             description: plan.description,
           },
           unit_amount: plan.priceInCents,
@@ -93,7 +93,7 @@ export async function startPhoneUpgradeCheckout(rawPhone: string): Promise<strin
         price_data: {
           currency: 'usd',
           product_data: {
-            name: `HomeBids ${plan.name} Plan`,
+            name: 'HomeBids Pro', // Tim (Sep 24): was "HomeBids HomeBids AI Growth Tools Plan" on the Stripe sheet
             description: plan.description,
           },
           unit_amount: plan.priceInCents,
