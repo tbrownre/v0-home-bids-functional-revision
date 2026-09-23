@@ -39,19 +39,19 @@ const JOURNEY_STEPS = [
     step: "2",
     icon: FileText,
     title: "AI Builds Your Project Scope",
-    desc: "We help organize your project details, timeline, budget, and requirements.",
+    desc: "Your texts become a clear scope contractors can bid on — no forms, no phone calls.",
   },
   {
     step: "3",
     icon: Users,
-    title: "Contractor Outreach Begins",
-    desc: "HomeBids contacts qualified contractors that match your project.",
+    title: "We Contact Local Pros",
+    desc: "Qualified contractors in your area get your project and start bidding.",
   },
   {
     step: "4",
     icon: CheckCircle2,
-    title: "Compare Options",
-    desc: "Review bids and choose the contractor that best fits your needs.",
+    title: "Compare Bids & Hire",
+    desc: "Review real bids side by side and pick the contractor that fits.",
   },
 ];
 
@@ -70,7 +70,7 @@ const FAQS = [
   },
   {
     q: "Do contractors pay HomeBids for homeowner leads?",
-    a: "No. Contractors never pay HomeBids for individual leads, and we never sell your information to the highest bidder. Our goal is to connect you with qualified contractors who are a strong fit for your project, so you can compare competitive estimates and choose the option that works best for you.",
+    a: "No. Contractors bid on your project for free, and your information is never sold. HomeBids makes money when contractors subscribe to optional business tools — so the bids you receive are from pros who actually want the job, not pros who paid for your name.",
   },
   {
     q: "What types of projects can I post?",
@@ -78,7 +78,7 @@ const FAQS = [
   },
   {
     q: "How many bids will I receive?",
-    a: "It depends on your project type and location, but HomeBids reaches out to qualified contractors in your area to maximize your options.",
+    a: "Most projects receive 3–5 bids within a day or two, depending on the trade and your location. We reach out to every qualified contractor in your area to maximize your options.",
   },
 ];
 
@@ -109,8 +109,8 @@ export default function HomeownersPage() {
               </h1>
 
               <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground lg:mx-0">
-                Text HomeBids and our AI will help define your project, organize the details, and
-                connect you with qualified contractors.
+                Text us what you need done. Our AI turns it into a clear project, puts it in
+                front of qualified local contractors, and real bids come back to your phone.
               </p>
 
               <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
@@ -364,7 +364,7 @@ export default function HomeownersPage() {
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5" style={{ fontSize: 13, fontWeight: 600, color: "#000" }}>
                       <MapPin className="h-4 w-4" style={{ color: "#0A84FF" }} />
-                      Austin, TX 78704
+                      Gilbert, AZ 85233
                     </span>
                     <span className="flex items-center gap-1" style={{ fontSize: 10, fontWeight: 600, color: "#34C759" }}>
                       <CheckCircle2 className="h-3 w-3" style={{ color: "#34C759" }} />
