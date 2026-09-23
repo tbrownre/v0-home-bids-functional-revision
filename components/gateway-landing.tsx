@@ -128,7 +128,7 @@ function RolePickerModal({ open, onClose }: { open: boolean; onClose: () => void
   const handlePro = () => {
     onClose();
     localStorage.setItem("homebids_audience", "contractor");
-    window.location.href = "/contractors/signup";
+    window.location.href = "/contractors"; // Tim (Sep 24): Pro card goes to the contractor page, not straight to signup
   };
 
   return (
