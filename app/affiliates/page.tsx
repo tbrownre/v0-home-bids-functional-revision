@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { AffiliateSignupModal } from "@/components/affiliate-signup-modal";
 import Link from "next/link";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { HeaderWithEarlyAccess } from "@/components/header-with-early-access";
@@ -395,6 +396,9 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────
 export default function AffiliatesPage() {
+  // G2 (Tim's mock, Sep 23): signup happens in an on-site popup — Whop affiliate
+  // created by email server-side; the portal stays as the fallback inside it.
+  const [signupOpen, setSignupOpen] = useState(false);
   return (
     <div className="min-h-screen bg-background">
       <HeaderWithEarlyAccess />
@@ -983,20 +987,16 @@ export default function AffiliatesPage() {
               variants={fadeUp}
               className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center"
             >
-              <Button size="lg" className="h-12 gap-2 px-10 text-base" asChild>
-                <a href="https://whop.com/homebids/affiliates" target="_blank" rel="noopener noreferrer">
-                  Get Your Affiliate Link <ArrowRight className="h-4 w-4" />
-                </a>
+              <Button size="lg" className="h-12 gap-2 px-10 text-base" onClick={() => setSignupOpen(true)}>
+                Get Your Affiliate Link <ArrowRight className="h-4 w-4" />
               </Button>
               <Button
                 size="lg"
                 variant="outline"
                 className="h-12 gap-2 bg-transparent px-10 text-base"
-                asChild
+                onClick={() => setSignupOpen(true)}
               >
-                <a href="https://whop.com/homebids/affiliates" target="_blank" rel="noopener noreferrer">
-                  Join as a Founding Affiliate
-                </a>
+                Join as a Founding Affiliate
               </Button>
             </motion.div>
 
@@ -1007,6 +1007,8 @@ export default function AffiliatesPage() {
           </motion.div>
         </div>
       </Section>
+
+      <AffiliateSignupModal open={signupOpen} onClose={() => setSignupOpen(false)} />
 
       {/* Footer note */}
       <div className="border-t border-border px-4 py-6 text-center">
