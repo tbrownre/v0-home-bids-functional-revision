@@ -239,6 +239,18 @@ export function GatewayLanding() {
 
   const openRolePicker = useCallback(() => setRolePickerOpen(true), []);
 
+  // Tim (Sep 26): header "Get Started" everywhere lands on /?picker=1 —
+  // open the role picker immediately so it's one tap, not two.
+  useEffect(() => {
+    try {
+      if (new URLSearchParams(window.location.search).get("picker") === "1") {
+        setRolePickerOpen(true);
+      }
+    } catch {
+      // no-op
+    }
+  }, []);
+
   return (
     // Normal document flow so root-layout <Footer /> renders below naturally
     <div className="relative overflow-x-hidden font-sans" style={{ background: "#f9f9f9" }}>

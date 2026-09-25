@@ -417,21 +417,14 @@ export function Header({
               >
                 Log In
               </button>
-              {audience === "homeowner" ? (
-                <a
-                  href="sms:+14043952879?body=Hi%20HomeBids%2C%20I%20need%20help%20with%20a%20home%20project!"
-                  className="inline-flex h-8 items-center rounded-full bg-primary px-2.5 sm:px-3.5 text-xs sm:text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  Get Started
-                </a>
-              ) : (
-                <Link
-                  href="/contractors/signup"
-                  className="inline-flex h-8 items-center rounded-full bg-primary px-2.5 sm:px-3.5 text-xs sm:text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  Get Started
-                </Link>
-              )}
+              {/* Tim (Sep 26): Get Started always opens the role picker
+                  (homeowner vs pro), same popup as the gateway hero. */}
+              <Link
+                href="/?picker=1"
+                className="inline-flex h-8 items-center rounded-full bg-primary px-2.5 sm:px-3.5 text-xs sm:text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                Get Started
+              </Link>
             </>
           ) : (
             // Spacer keeps logo centered when signed in and no back link
