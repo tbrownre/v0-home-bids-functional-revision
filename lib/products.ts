@@ -42,7 +42,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     priceInCents: 9900, // $99/month
     userType: 'contractor',
     highlighted: true,
-    hasTrial: true,
+    hasTrial: false,
     features: [
       'Unlimited bids — no bid fees, ever',
       'No pay-per-lead charges',
