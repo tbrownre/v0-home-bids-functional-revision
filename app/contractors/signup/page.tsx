@@ -325,7 +325,7 @@ export default function ContractorSignupPage() {
                         id="serviceArea"
                         value={formData.serviceArea}
                         onChange={(e) => update("serviceArea", e.target.value)}
-                        placeholder="Austin, TX or 78701"
+                        placeholder="Gilbert, AZ or 85233"
                         className="mt-1.5"
                       />
                     </div>
