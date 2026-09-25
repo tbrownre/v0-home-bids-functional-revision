@@ -455,10 +455,12 @@ export default function AffiliatesPage() {
               variants={fadeUp}
               className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center"
             >
-              <Button size="lg" className="h-12 gap-2 px-8 text-base" asChild>
-                <Link href="#signup">
-                  Start Earning Now <ArrowRight className="h-4 w-4" />
-                </Link>
+              <Button
+                size="lg"
+                className="h-12 gap-2 px-8 text-base"
+                onClick={() => setSignupOpen(true)}
+              >
+                Start Earning Now <ArrowRight className="h-4 w-4" />
               </Button>
               <Button
                 size="lg"
