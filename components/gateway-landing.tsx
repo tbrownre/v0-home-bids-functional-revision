@@ -294,7 +294,7 @@ export function GatewayLanding() {
               onClick={openRolePicker}
               className="inline-flex h-8 items-center rounded-full px-3.5 text-sm font-semibold bg-[#0A84FF] text-white hover:bg-[#006EDB] transition-colors"
             >
-              Try for free
+              Get started
             </button>
           </nav>
         </div>

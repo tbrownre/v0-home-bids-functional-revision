@@ -422,14 +422,14 @@ export function Header({
                   href="sms:+14043952879?body=Hi%20HomeBids%2C%20I%20need%20help%20with%20a%20home%20project!"
                   className="inline-flex h-8 items-center rounded-full bg-primary px-2.5 sm:px-3.5 text-xs sm:text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                 >
-                  Try for Free
+                  Get Started
                 </a>
               ) : (
                 <Link
                   href="/contractors/signup"
                   className="inline-flex h-8 items-center rounded-full bg-primary px-2.5 sm:px-3.5 text-xs sm:text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                 >
-                  Try for Free
+                  Get Started
                 </Link>
               )}
             </>
