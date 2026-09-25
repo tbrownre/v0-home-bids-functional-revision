@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 
 /**
- * Affiliate signup popup — REWARDFUL edition (Sep 26, replaces the Whop API).
+ * Affiliate signup popup — REWARDFUL edition v2 PORTAL (Sep 26).
  * Email in → Rewardful affiliate created server-side → success card with the
  * personal 20% link on OUR domain (homebids.ai/?via=name). Commissions come
  * straight off the Stripe $99s; payouts via PayPal.
@@ -37,6 +37,9 @@ interface AffiliateSignupModalProps {
 }
 
 type View = 'form' | 'working' | 'success' | 'error'
+
+// Rewardful-hosted affiliate dashboard (from the Rewardful Affiliates page)
+const PORTAL = 'https://homebids-llc-1.getrewardful.com'
 
 export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProps) {
   const [view, setView] = useState<View>('form')
@@ -223,9 +226,17 @@ export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProp
               </Button>
             </div>
 
-            <p className="mt-5 text-[11px] text-muted-foreground">
-              Start sharing now — payouts go out via <b>PayPal</b>, and we&apos;ll email you about
-              setup. · Tracking by <b>Rewardful</b>
+            <a
+              href={PORTAL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 text-sm font-semibold text-primary hover:underline"
+            >
+              View my dashboard →
+            </a>
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              Log in there anytime with this email — clicks, earnings, and <b>PayPal</b> payout setup. ·
+              Tracking by <b>Rewardful</b>
             </p>
           </div>
         )}
@@ -238,12 +249,16 @@ export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProp
             </DialogTitle>
             <p className="mt-2 max-w-sm text-sm text-muted-foreground">
               {result?.error === 'email_exists'
-                ? 'This email already has a HomeBids partner account. Text us and we’ll resend your link.'
+                ? 'This email already has a HomeBids partner account — just log in to your dashboard below.'
                 : 'Something hiccuped on our side. Try a different email, or text us and we’ll set you up by hand.'}
             </p>
             <Button asChild className="mt-5 h-12 w-full gap-2 text-base font-semibold">
-              <a href="sms:+12832291348?body=I%20need%20help%20with%20my%20HomeBids%20affiliate%20link">
-                Text us for help
+              <a
+                href={result?.error === 'email_exists' ? PORTAL : 'sms:+12832291348?body=I%20need%20help%20with%20my%20HomeBids%20affiliate%20link'}
+                target={result?.error === 'email_exists' ? '_blank' : undefined}
+                rel={result?.error === 'email_exists' ? 'noopener noreferrer' : undefined}
+              >
+                {result?.error === 'email_exists' ? 'Log in to my dashboard' : 'Text us for help'}
               </a>
             </Button>
             <button
