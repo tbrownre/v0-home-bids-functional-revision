@@ -3,6 +3,13 @@
 import { stripe } from '@/lib/stripe'
 import { getPlanById } from '@/lib/products'
 
+/** Rewardful referral UUID from the browser — passed to Stripe as
+ *  client_reference_id so the affiliate gets credited (their Step 3). */
+function cleanReferral(referral?: string): string | undefined {
+  const r = String(referral || '').trim()
+  return r && r.length <= 191 ? r : undefined
+}
+
 /**
  * Create a Stripe Embedded Checkout session for a subscription plan.
  * Returns the client_secret needed to mount EmbeddedCheckout.
@@ -11,6 +18,7 @@ import { getPlanById } from '@/lib/products'
 export async function startSubscriptionCheckout(
   planId: string,
   userId?: string,
+  referral?: string,
 ): Promise<string> {
   if (!userId) {
     throw new Error('SIGN_IN_REQUIRED')
@@ -41,6 +49,7 @@ export async function startSubscriptionCheckout(
       },
     ],
     mode: 'subscription',
+    client_reference_id: cleanReferral(referral),
     subscription_data: {
       // Pass userId + planId through so the webhook can link the subscription
       // back to the correct Supabase user without relying on the browser session.
@@ -72,7 +81,7 @@ export async function startSubscriptionCheckout(
  * a phone-keyed subscriptions row and check_bid_allowance v3 unlocks by digit
  * match. No account, no sign-in — the card form renders immediately.
  */
-export async function startPhoneUpgradeCheckout(rawPhone: string): Promise<string> {
+export async function startPhoneUpgradeCheckout(rawPhone: string, referral?: string): Promise<string> {
   const digits = String(rawPhone || '').replace(/\D/g, '')
   const ten = digits.slice(-10)
   if (ten.length < 10) {
@@ -105,6 +114,7 @@ export async function startPhoneUpgradeCheckout(rawPhone: string): Promise<strin
       },
     ],
     mode: 'subscription',
+    client_reference_id: cleanReferral(referral),
     subscription_data: {
       // Phone travels in metadata so the webhook can unlock the gate
       // without any Supabase user existing yet.
