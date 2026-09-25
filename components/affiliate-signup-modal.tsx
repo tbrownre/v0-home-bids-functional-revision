@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { createWhopAffiliate, type WhopAffiliateResult } from '@/app/actions/whop'
+import { createRewardfulAffiliate, type RewardfulAffiliateResult } from '@/app/actions/rewardful'
 import {
   CheckCircle2,
   Copy,
@@ -17,16 +17,18 @@ import {
   Users,
   DollarSign,
   Send,
-  ExternalLink,
   Loader2,
-  Settings,
 } from 'lucide-react'
 
 /**
- * G2 — on-site affiliate signup popup (Tim's mock, Sep 23).
- * Email in → Whop affiliate created server-side → success card with the
- * personal 20% referral link. Any API hiccup lands on a friendly
- * "Continue on Whop" fallback (the proven portal), never a dead end.
+ * Affiliate signup popup — REWARDFUL edition (Sep 26, replaces the Whop API).
+ * Email in → Rewardful affiliate created server-side → success card with the
+ * personal 20% link on OUR domain (homebids.ai/?via=name). Commissions come
+ * straight off the Stripe $99s; payouts via PayPal.
+ *
+ * Carries the SAFARIFIX layout (Sep 24): the link wraps (break-all) and every
+ * view root has min-w-0, so iPhone Safari can never push the popup wider than
+ * the screen.
  */
 
 interface AffiliateSignupModalProps {
@@ -39,7 +41,7 @@ type View = 'form' | 'working' | 'success' | 'error'
 export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProps) {
   const [view, setView] = useState<View>('form')
   const [email, setEmail] = useState('')
-  const [result, setResult] = useState<WhopAffiliateResult | null>(null)
+  const [result, setResult] = useState<RewardfulAffiliateResult | null>(null)
   const [copied, setCopied] = useState(false)
 
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
@@ -59,7 +61,7 @@ export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProp
   const submit = async () => {
     if (!emailOk || view === 'working') return
     setView('working')
-    const res = await createWhopAffiliate(email)
+    const res = await createRewardfulAffiliate(email)
     setResult(res)
     setView(res.ok ? 'success' : 'error')
   }
@@ -101,16 +103,16 @@ export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProp
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose() }}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden sm:max-w-md">
         {/* ── FORM ─────────────────────────────────────────────────── */}
         {view === 'form' && (
-          <div className="flex flex-col items-center px-1 pb-2 pt-4 text-center">
+          <div className="flex min-w-0 flex-col items-center px-1 pb-2 pt-4 text-center">
             <DialogTitle className="text-2xl font-extrabold tracking-tight text-foreground">
               Start earning with HomeBids.
             </DialogTitle>
             <p className="mt-1.5 text-muted-foreground">Get your referral link in seconds.</p>
 
-            <div className="mt-6 w-full">
+            <div className="mt-6 w-full min-w-0">
               <Input
                 type="email"
                 inputMode="email"
@@ -135,18 +137,18 @@ export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProp
               20% recurring&nbsp;&nbsp;·&nbsp;&nbsp;Free to join
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Affiliate tracking &amp; payouts powered by <b>Whop</b>
+              Tracking by <b>Rewardful</b> · Payouts via <b>PayPal</b>
             </p>
 
-            <div className="mt-6 w-full rounded-2xl bg-muted/60 p-5">
+            <div className="mt-6 w-full min-w-0 rounded-2xl bg-muted/60 p-5">
               <p className="text-sm font-bold text-foreground">How does it work?</p>
               <div className="mt-4 grid grid-cols-3 gap-2 text-center">
                 {[
                   { icon: Link2, t: '1. Share your link', d: 'Send it to contractors.' },
-                  { icon: Users, t: '2. They go Pro', d: 'Whop tracks automatically.' },
+                  { icon: Users, t: '2. They go Pro', d: 'Tracked automatically.' },
                   { icon: DollarSign, t: '3. You get paid', d: '20% recurring as long as they stay.' },
                 ].map(({ icon: Icon, t, d }) => (
-                  <div key={t} className="flex flex-col items-center gap-1.5">
+                  <div key={t} className="flex min-w-0 flex-col items-center gap-1.5">
                     <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
                       <Icon className="h-4 w-4 text-primary" />
                     </span>
@@ -161,7 +163,7 @@ export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProp
 
         {/* ── WORKING ──────────────────────────────────────────────── */}
         {view === 'working' && (
-          <div className="flex flex-col items-center px-1 py-14 text-center">
+          <div className="flex min-w-0 flex-col items-center px-1 py-14 text-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <DialogTitle className="mt-4 text-lg font-semibold text-foreground">
               Setting up your partner account…
@@ -171,7 +173,7 @@ export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProp
 
         {/* ── SUCCESS ──────────────────────────────────────────────── */}
         {view === 'success' && result?.ok && (
-          <div className="flex flex-col items-center px-1 pb-2 pt-4 text-center">
+          <div className="flex min-w-0 flex-col items-center px-1 pb-2 pt-4 text-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
               <CheckCircle2 className="h-7 w-7 text-primary" />
             </div>
@@ -180,12 +182,14 @@ export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProp
             </DialogTitle>
             <p className="mt-1 text-muted-foreground">Your HomeBids partner account is ready.</p>
 
-            <div className="mt-5 w-full rounded-xl bg-primary/5 p-4 text-left">
+            <div className="mt-5 w-full min-w-0 overflow-hidden rounded-xl bg-primary/5 p-4 text-left">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Your referral link
               </p>
-              <div className="mt-2 flex items-center gap-2">
-                <p className="min-w-0 flex-1 truncate font-mono text-sm text-foreground">{result.link}</p>
+              <div className="mt-2 flex items-start gap-2">
+                <p className="min-w-0 flex-1 break-all font-mono text-xs leading-relaxed text-foreground">
+                  {result.link}
+                </p>
                 <Button size="sm" className="shrink-0 gap-1.5 font-semibold" onClick={copyLink}>
                   {copied ? (
                     <>
@@ -200,7 +204,7 @@ export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProp
               </div>
             </div>
 
-            <div className="mt-3 w-full rounded-xl bg-muted/60 p-4 text-left">
+            <div className="mt-3 w-full min-w-0 rounded-xl bg-muted/60 p-4 text-left">
               <p className="text-sm font-bold text-foreground">You earn 20% recurring.</p>
               <p className="text-sm text-muted-foreground">$19.80/mo per active Pro contractor.</p>
             </div>
@@ -214,55 +218,32 @@ export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProp
                 <Send className="h-4 w-4" />
                 Share
               </Button>
-              <Button asChild variant="outline" className="h-11 gap-2 font-semibold">
+              <Button asChild variant="outline" className="h-11 gap-2 truncate font-semibold">
                 <a href={smsShare}>Send to a contractor</a>
               </Button>
             </div>
 
-            <a
-              href={result.portal}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-5 text-sm font-semibold text-primary hover:underline"
-            >
-              Go to affiliate dashboard →
-            </a>
-            <a
-              href={result.portal}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 flex w-full items-center gap-3 rounded-xl border border-border p-3.5 text-left transition-colors hover:bg-muted"
-            >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                <Settings className="h-4 w-4 text-primary" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-bold text-foreground">Set up payouts (recommended)</span>
-                <span className="block text-xs text-muted-foreground">Required before withdrawing earnings.</span>
-              </span>
-              <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" />
-            </a>
-
-            <p className="mt-4 text-[11px] text-muted-foreground">
-              You can start sharing your link now and set up payouts later. · Powered by <b>Whop</b>
+            <p className="mt-5 text-[11px] text-muted-foreground">
+              Start sharing now — payouts go out via <b>PayPal</b>, and we&apos;ll email you about
+              setup. · Tracking by <b>Rewardful</b>
             </p>
           </div>
         )}
 
-        {/* ── ERROR → friendly Whop fallback ───────────────────────── */}
+        {/* ── ERROR ────────────────────────────────────────────────── */}
         {view === 'error' && (
-          <div className="flex flex-col items-center px-1 pb-2 pt-6 text-center">
+          <div className="flex min-w-0 flex-col items-center px-1 pb-2 pt-6 text-center">
             <DialogTitle className="text-xl font-extrabold tracking-tight text-foreground">
-              One more step on Whop
+              {result?.error === 'email_exists' ? 'That email is already a partner' : "Couldn't finish signup"}
             </DialogTitle>
             <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-              We couldn&apos;t finish the setup automatically for that email. No problem — creating your free
-              account on Whop takes about a minute, and your 20% link is issued there instantly.
+              {result?.error === 'email_exists'
+                ? 'This email already has a HomeBids partner account. Text us and we’ll resend your link.'
+                : 'Something hiccuped on our side. Try a different email, or text us and we’ll set you up by hand.'}
             </p>
             <Button asChild className="mt-5 h-12 w-full gap-2 text-base font-semibold">
-              <a href={result?.portal || 'https://whop.com/homebids/affiliates'} target="_blank" rel="noopener noreferrer">
-                Continue on Whop
-                <ExternalLink className="h-4 w-4" />
+              <a href="sms:+12832291348?body=I%20need%20help%20with%20my%20HomeBids%20affiliate%20link">
+                Text us for help
               </a>
             </Button>
             <button

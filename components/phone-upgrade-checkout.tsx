@@ -33,7 +33,10 @@ export function PhoneUpgradeCheckout({ phone, onPaid }: PhoneUpgradeCheckoutProp
 
   const fetchClientSecret = useCallback(async () => {
     try {
-      return await startPhoneUpgradeCheckout(phone)
+      // Rewardful referral (rw.js sets it when the visitor arrived via a ?via= link)
+      const rw = typeof window !== 'undefined' ? (window as unknown as { Rewardful?: { referral?: string } }).Rewardful : undefined
+      const referral = rw && rw.referral ? String(rw.referral) : undefined
+      return await startPhoneUpgradeCheckout(phone, referral)
     } catch (err) {
       console.error('[PhoneUpgradeCheckout] Failed to start checkout:', err)
       setError("We couldn't start checkout. Please try again.")
