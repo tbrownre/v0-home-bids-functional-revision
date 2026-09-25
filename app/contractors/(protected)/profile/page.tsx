@@ -83,6 +83,12 @@ export default function ContractorProfilePage() {
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Security card state (change password — Sep 25)
+  const [pw1, setPw1] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
+
   function showToast(message: string) {
     setToast(message);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -138,6 +144,26 @@ export default function ContractorProfilePage() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  async function changePassword() {
+    setPwError(null);
+    if (pw1.length < 8) { setPwError("Password needs at least 8 characters."); return; }
+    if (pw1 !== pw2) { setPwError("Passwords don't match."); return; }
+    setPwSaving(true);
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({ password: pw1 });
+      if (error) { setPwError(error.message || "Couldn't update the password — please try again."); return; }
+      setPw1("");
+      setPw2("");
+      showToast("Password updated");
+    } catch {
+      setPwError("Couldn't update the password — please try again.");
+    } finally {
+      setPwSaving(false);
+    }
+  }
 
   function set<K extends keyof FormState>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -482,6 +508,30 @@ export default function ContractorProfilePage() {
               </div>
             </>
           )}
+        </section>
+
+        {/* Security — signed-in password change; no email round-trip needed */}
+        <section className={`${CARD} mt-5 p-6`}>
+          <p className="mb-1 text-sm font-bold text-foreground">Security</p>
+          <p className="mb-4 text-sm text-muted-foreground">Change the password you use to sign in.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-semibold text-foreground">New Password</Label>
+              <Input type="password" value={pw1} onChange={(e) => setPw1(e.target.value)} placeholder="8+ characters" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-semibold text-foreground">Confirm New Password</Label>
+              <Input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Repeat it" />
+            </div>
+          </div>
+          {pwError && <p className="mt-3 text-sm font-medium text-destructive">{pwError}</p>}
+          <Button
+            onClick={changePassword}
+            disabled={pwSaving || pw1.length < 8 || pw1 !== pw2}
+            className="mt-4 gap-2 rounded-xl font-semibold"
+          >
+            {pwSaving ? "Updating…" : "Update Password"}
+          </Button>
         </section>
       </main>
     </div>
