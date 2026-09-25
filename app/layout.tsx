@@ -1,6 +1,7 @@
 import React from "react"
 import type { Metadata, Viewport } from 'next'
 import { Red_Hat_Display } from 'next/font/google'
+import Script from 'next/script'
 import { Analytics } from '@vercel/analytics/next'
 import { ScrollRestoration } from '@/components/scroll-restoration'
 import { FooterWrapper } from '@/components/footer-wrapper'
@@ -76,6 +77,12 @@ export default function RootLayout({
         <FooterWrapper />
         <ScrollToTop />
         <Analytics />
+        {/* Rewardful affiliate tracking (Sep 26) — public site tag; reads ?via= links
+            and hands the referral to checkout. Their docs: keep Scripts in <body>. */}
+        <Script id="rewardful-queue" strategy="beforeInteractive">
+          {`(function(w,r){w._rwq=r;w[r]=w[r]||function(){(w[r].q=w[r].q||[]).push(arguments)}})(window,'rewardful');`}
+        </Script>
+        <Script src="https://r.wdfl.co/rw.js" data-rewardful="02cbe3" />
       </body>
     </html>
   )
