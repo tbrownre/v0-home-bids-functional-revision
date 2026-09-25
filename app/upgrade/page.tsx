@@ -5,6 +5,8 @@ import { HomeBidsLogo } from "@/components/homebids-logo";
 import { PhoneUpgradeCheckout } from "@/components/phone-upgrade-checkout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { realSignIn, redirectAfterSignIn } from "@/lib/mock-auth";
+import { createProAccount } from "@/app/actions/create-pro-account";
 import {
   Infinity as InfinityIcon,
   FileText,
@@ -16,15 +18,17 @@ import {
   ArrowRight,
   ChevronLeft,
   Lock,
+  Loader2,
 } from "lucide-react";
 
 /**
- * /upgrade v3 STEPFLOW — Tim's mock (Sep 23): "That's each page, step by step."
- * Step 1: "Go Pro. Build Faster." pitch. Step 2: payment only (Stripe embedded;
- * Apple/Google Pay appear once enabled in Stripe settings). Step 3: "You're in!"
- * with Create password + Return to Messages. Tagline carries NO ™ (Tim's note).
- * ?p=<phone> keys the checkout to the contractor; without it, one phone field
- * appears between steps 1 and 2. No account, no sign-in, ever.
+ * /upgrade v4 ACCOUNTLOGIN — Tim + Abir (Sep 25): the old "Create password"
+ * button pointed at /auth/sign-up, which does not exist (404), and the
+ * signup pages carry free-trial language a paid Pro must never see.
+ * Step 3 now creates the login RIGHT HERE: email + password with their paid
+ * number locked in. Real email = /auth/forgot-password works for them later.
+ * Skipping stays harmless — the number itself is the subscription.
+ * Steps 1–2 unchanged from v3.1 COMPACT. Tagline carries NO ™ (Tim's note).
  */
 
 const PERKS = [
@@ -48,12 +52,22 @@ function digitsOf(v: string): string {
   return String(v || "").replace(/\D/g, "").slice(-10);
 }
 
+function formatPhone(d: string): string {
+  return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : d;
+}
+
 type Step = "pitch" | "pay" | "done";
+type AccountState = "form" | "working" | "created";
 
 export default function UpgradePage() {
   const [step, setStep] = useState<Step>("pitch");
   const [phone, setPhone] = useState<string | null>(null);
   const [entry, setEntry] = useState("");
+
+  const [acct, setAcct] = useState<AccountState>("form");
+  const [acctEmail, setAcctEmail] = useState("");
+  const [acctPw, setAcctPw] = useState("");
+  const [acctErr, setAcctErr] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -76,6 +90,37 @@ export default function UpgradePage() {
   const submitEntry = () => {
     const d = digitsOf(entry);
     if (d.length === 10) setPhone(d);
+  };
+
+  const acctEmailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(acctEmail.trim());
+  const acctPwOk = acctPw.length >= 8;
+
+  const submitAccount = async () => {
+    if (!phone || acct === "working" || !acctEmailOk || !acctPwOk) return;
+    setAcctErr(null);
+    setAcct("working");
+    const res = await createProAccount({ phone, email: acctEmail, password: acctPw });
+    if (!res.ok) {
+      setAcct("form");
+      setAcctErr(
+        res.error === "email_exists"
+          ? "That email already has an account — use Sign in below instead."
+          : res.error === "weak_password"
+            ? "Password needs at least 8 characters."
+            : res.error === "invalid_email"
+              ? "That email doesn't look right."
+              : "Couldn't create the account — please try again.",
+      );
+      return;
+    }
+    try {
+      // Same bridge the sign-in page uses: signs in AND syncs the local
+      // session mirror, so the dashboard guard recognizes them.
+      await realSignIn(acctEmail.trim().toLowerCase(), acctPw);
+    } catch {
+      // account exists either way; worst case they sign in manually
+    }
+    setAcct("created");
   };
 
   return (
@@ -179,7 +224,7 @@ export default function UpgradePage() {
           </div>
         )}
 
-        {/* ── STEP 3 — you're in ─────────────────────────────────────── */}
+        {/* ── STEP 3 — you're in + create login ──────────────────────── */}
         {step === "done" && (
           <div className="flex flex-col items-center text-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
@@ -200,12 +245,84 @@ export default function UpgradePage() {
               ))}
             </ul>
 
-            <Button asChild className="mt-7 h-13 w-full rounded-xl py-4 text-base font-semibold">
-              <a href="/auth/sign-up">Create password</a>
-            </Button>
+            {acct !== "created" && (
+              <div className="mt-6 w-full rounded-2xl border border-border bg-card p-5 text-left">
+                <p className="font-semibold text-foreground">Create your login</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Manage your bids, branding, and billing at homebids.ai. Your Pro number is already attached.
+                </p>
+
+                {phone && (
+                  <div className="mt-4 flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2.5 text-sm font-medium text-foreground">
+                    <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    {formatPhone(phone)}
+                    <span className="ml-auto text-xs font-semibold text-primary">Pro active</span>
+                  </div>
+                )}
+
+                <Input
+                  type="email"
+                  inputMode="email"
+                  placeholder="you@email.com"
+                  value={acctEmail}
+                  onChange={(e) => setAcctEmail(e.target.value)}
+                  className="mt-3 h-12"
+                />
+                <Input
+                  type="password"
+                  placeholder="Choose a password (8+ characters)"
+                  value={acctPw}
+                  onChange={(e) => setAcctPw(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") submitAccount();
+                  }}
+                  className="mt-2.5 h-12"
+                />
+
+                {acctErr && <p className="mt-2 text-sm font-medium text-destructive">{acctErr}</p>}
+
+                <Button
+                  className="mt-3 h-12 w-full gap-2 font-semibold"
+                  onClick={submitAccount}
+                  disabled={!acctEmailOk || !acctPwOk || acct === "working"}
+                >
+                  {acct === "working" ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Creating your account…
+                    </>
+                  ) : (
+                    "Create my account"
+                  )}
+                </Button>
+
+                <p className="mt-3 text-center text-xs text-muted-foreground">
+                  Optional — your number stays unlocked either way.{" "}
+                  <a href="/auth/sign-in" className="font-semibold text-primary hover:underline">
+                    Already have an account? Sign in
+                  </a>
+                </p>
+              </div>
+            )}
+
+            {acct === "created" && (
+              <div className="mt-6 w-full rounded-2xl bg-primary/5 p-5">
+                <p className="font-semibold text-foreground">Your login is ready ✅</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Same email + password works anytime at homebids.ai.
+                </p>
+                <Button
+                  className="mt-4 h-12 w-full rounded-xl font-semibold"
+                  onClick={() => redirectAfterSignIn("contractor")}
+                >
+                  Go to my dashboard
+                </Button>
+              </div>
+            )}
+
             <a
               href="sms:+12832291348?body=Let%27s%20create%20a%20new%20bid!"
-              className="mt-4 text-sm font-semibold text-primary hover:underline"
+              className="mt-5 text-sm font-semibold text-primary hover:underline"
             >
               Return to Messages
             </a>
