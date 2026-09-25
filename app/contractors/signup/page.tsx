@@ -203,7 +203,7 @@ export default function ContractorSignupPage() {
             className="mb-8 text-center"
           >
             <h1 className="text-3xl font-bold text-foreground sm:text-4xl text-balance">
-              Start Your Free Trial
+              Create Your Pro Account
             </h1>
             <p className="mt-3 text-muted-foreground text-pretty">
               Create your account in under a minute. You can build your first bid right after —
@@ -216,7 +216,7 @@ export default function ContractorSignupPage() {
             {(
               [
                 { key: "info", label: "Your Info", icon: User },
-                { key: "trial", label: "Start Trial", icon: Zap },
+                { key: "trial", label: "Review", icon: Zap },
               ] as { key: Step; label: string; icon: React.ElementType }[]
             ).map((s, i) => {
               const active = currentStep === s.key;
@@ -457,7 +457,7 @@ export default function ContractorSignupPage() {
                 </motion.div>
               )}
 
-              {/* Step 2: Start Trial */}
+              {/* Step 2: Review & create (trial removed site-wide — Tim/Abir Sep 25) */}
               {currentStep === "trial" && (
                 <motion.div
                   key="trial"
@@ -466,9 +466,9 @@ export default function ContractorSignupPage() {
                   className="space-y-6"
                 >
                   <div>
-                    <h2 className="text-xl font-semibold text-foreground">Start Your Free Trial</h2>
+                    <h2 className="text-xl font-semibold text-foreground">Review &amp; Create Account</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Try HomeBids free for 3 days. Cancel anytime before it ends and you won&apos;t be charged.
+                      Confirm your details below. Go unlimited anytime with HomeBids Pro — $99/month, cancel anytime.
                     </p>
                   </div>
 
@@ -476,7 +476,7 @@ export default function ContractorSignupPage() {
                     <div className="flex items-baseline justify-between">
                       <p className="text-2xl font-bold text-foreground">$99 / month</p>
                       <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-                        <Clock className="h-3 w-3" /> 3-day free trial
+                        <Clock className="h-3 w-3" /> Cancel anytime
                       </span>
                     </div>
                     <ul className="mt-4 space-y-2">
@@ -585,7 +585,7 @@ export default function ContractorSignupPage() {
                         </>
                       ) : (
                         <>
-                          Start Free Trial
+                          Create My Account
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </>
                       )}
