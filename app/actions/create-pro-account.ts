@@ -4,17 +4,16 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
  * Post-payment account creation for phone-first Pros (Tim + Abir, Sep 25).
- * The contractor pays on /upgrade with just a phone number; on the "You're in!"
- * screen they can optionally add email + password. This action births the
- * account THROUGH the same database rail the SMS side uses:
+ * v2 DPAJREAL — rebuilt against the live database's actual auth trigger
+ * (verified Sep 25): handle_new_user reads user_type (NOT role) from the
+ * metadata and inserts ONLY the profiles row (id, user_type, full_name,
+ * email, phone). The contractor_profiles row is inserted here, mirroring
+ * signUpContractor exactly (approved immediately — they just paid).
  *
- *   admin createUser (role: contractor) -> on_auth_user_created trigger
- *   (handle_new_user) builds profiles (role + phone) + contractor_profiles
- *   + an affiliate_links row automatically.
- *
- * Then it attaches their already-paid, phone-keyed subscription row(s) to the
- * new account (user_id was NULL until now). Real email = the existing
- * /auth/forgot-password flow works for them in the future.
+ * Flow: admin createUser (user_type: contractor, phone) -> trigger builds
+ * profiles with phone -> we insert contractor_profiles + attach their paid,
+ * phone-keyed subscription row(s) (user_id was NULL until now). Real email
+ * means the existing /auth/forgot-password flow works for them later.
  */
 
 export interface CreateProAccountResult {
@@ -42,23 +41,21 @@ export async function createProAccount(input: {
 
   const admin = createAdminClient()
 
-  // 1) Create the confirmed auth user. The DB trigger does the rest
-  //    (profile with phone, contractor_profiles, affiliate link).
+  // 1) Create the confirmed auth user. handle_new_user inserts the profiles
+  //    row from this metadata (user_type + phone are the fields it reads).
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
     user_metadata: {
-      role: 'contractor',
-      tenant_slug: 'public',
+      user_type: 'contractor',
       phone,
     },
   })
 
   if (createErr || !created?.user?.id) {
     const msg = String(createErr?.message || '').toLowerCase()
-    const code = String((createErr as { code?: string } | null)?.code || '')
-    if (msg.includes('already') || code === 'email_exists') {
+    if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('already been registered')) {
       return { ok: false, error: 'email_exists' }
     }
     console.error('[createProAccount] createUser failed:', createErr?.message)
@@ -67,11 +64,27 @@ export async function createProAccount(input: {
 
   const userId = created.user.id
 
-  // 2) Attach their paid, phone-keyed subscription row(s) to the account.
+  // 2) Contractor row — same shape signUpContractor writes, minus the details
+  //    they haven't given us yet (those come from the Account page later).
+  //    Approved immediately: this person has already paid.
+  const { error: cpErr } = await admin.from('contractor_profiles').upsert(
+    {
+      id: userId,
+      approval_status: 'approved',
+      is_verified: false,
+      is_approved: true,
+    },
+    { onConflict: 'id' },
+  )
+  if (cpErr) {
+    // Non-fatal: they are paid + signed in either way; details save creates it too.
+    console.warn('[createProAccount] contractor_profiles upsert skipped:', cpErr.message)
+  }
+
+  // 3) Attach their paid, phone-keyed subscription row(s) to the account.
   //    The Stripe webhook stores phone as '+1' + 10 digits — identical
-  //    normalization to toE164 above, so eq() matches exactly.
-  //    Non-fatal: the phone clause in check_bid_allowance keeps their number
-  //    unlocked even if this linking write ever fails.
+  //    normalization to toE164 above, so eq() matches exactly. Non-fatal:
+  //    the phone clause in check_bid_allowance keeps them unlocked anyway.
   const { error: linkErr } = await admin
     .from('subscriptions')
     .update({ user_id: userId })
@@ -79,17 +92,6 @@ export async function createProAccount(input: {
     .eq('phone', phone)
   if (linkErr) {
     console.warn('[createProAccount] subscription link skipped:', linkErr.message)
-  }
-
-  // 3) Belt-and-braces: make sure the profile carries the phone even if the
-  //    trigger's metadata path ever changes. Only fills an empty value.
-  const { error: profErr } = await admin
-    .from('profiles')
-    .update({ phone })
-    .eq('id', userId)
-    .is('phone', null)
-  if (profErr) {
-    console.warn('[createProAccount] profile phone backfill skipped:', profErr.message)
   }
 
   return { ok: true }
