@@ -21,7 +21,10 @@ import {
 } from 'lucide-react'
 
 /**
- * Affiliate signup popup — REWARDFUL edition v2 PORTAL (Sep 26).
+ * Affiliate signup popup — REWARDFUL edition v2.1 PORTALLOGIN (Sep 26).
+ * v2.1: dashboard link -> /login (Rewardful serves the portal at /login; the bare
+ * subdomain 404s — Tim hit it live). Helper line tells API-created affiliates to
+ * set their first password via "Forgot your password?".
  * Email in → Rewardful affiliate created server-side → success card with the
  * personal 20% link on OUR domain (homebids.ai/?via=name). Commissions come
  * straight off the Stripe $99s; payouts via PayPal.
@@ -39,7 +42,7 @@ interface AffiliateSignupModalProps {
 type View = 'form' | 'working' | 'success' | 'error'
 
 // Rewardful-hosted affiliate dashboard (from the Rewardful Affiliates page)
-const PORTAL = 'https://homebids-llc-1.getrewardful.com'
+const PORTAL = 'https://homebids-llc-1.getrewardful.com/login'
 
 export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProps) {
   const [view, setView] = useState<View>('form')
@@ -235,7 +238,7 @@ export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProp
               View my dashboard →
             </a>
             <p className="mt-3 text-[11px] text-muted-foreground">
-              Log in there anytime with this email — clicks, earnings, and <b>PayPal</b> payout setup. ·
+              Log in there with this email — first time, tap <b>Forgot your password?</b> to set one (10 seconds). Clicks, earnings, and <b>PayPal</b> payout setup all live there. ·
               Tracking by <b>Rewardful</b>
             </p>
           </div>
