@@ -960,8 +960,47 @@ export async function updateContractorProfile(profile: {
     .from("contractor_profiles")
     .upsert({ id: user.id, ...profile }, { onConflict: "id" });
   if (error) return { error: error.message };
+
+  // PUBLISH-ON-SAVE (Tim, Sep 27): "add your info and your page goes live
+  // automatically" must be true the moment the form is complete — not only when
+  // a drip happens to tick. Same rule as Pro Welcome / Drip 4: business name +
+  // services + service area. publish_landing_page is service-role only, so the
+  // admin client calls it; any failure here is non-fatal — the save already stuck.
+  let published = false;
+  let landingPageUrl: string | null = null;
+  try {
+    const admin = createAdminClient();
+    const { data: row } = await admin
+      .from("contractor_profiles")
+      .select("business_name, specialties, service_area, landing_page_url")
+      .eq("id", user.id)
+      .maybeSingle();
+    const complete =
+      !!String(row?.business_name ?? "").trim() &&
+      Array.isArray(row?.specialties) && row.specialties.length > 0 &&
+      !!String(row?.service_area ?? "").trim();
+    landingPageUrl = (row?.landing_page_url as string | null) ?? null;
+    if (complete && !landingPageUrl) {
+      const { error: pubErr } = await admin.rpc("publish_landing_page", { p_contractor: user.id });
+      if (pubErr) {
+        console.warn("[updateContractorProfile] publish_landing_page skipped:", pubErr.message);
+      } else {
+        const { data: after } = await admin
+          .from("contractor_profiles")
+          .select("landing_page_url")
+          .eq("id", user.id)
+          .maybeSingle();
+        landingPageUrl = (after?.landing_page_url as string | null) ?? null;
+        published = !!landingPageUrl;
+      }
+    }
+  } catch (e) {
+    console.warn("[updateContractorProfile] publish check skipped:", e instanceof Error ? e.message : String(e));
+  }
+
   revalidatePath("/contractors/dashboard");
-  return { error: null };
+  revalidatePath("/contractors/profile");
+  return { error: null, published, landing_page_url: landingPageUrl };
 }
 
 // ── Proposals (Online Bid Builder) ────────────────────────────────────────────

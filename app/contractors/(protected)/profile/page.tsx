@@ -263,7 +263,7 @@ export default function ContractorProfilePage() {
     setSaved(false);
     try {
       const { updateContractorProfile } = await import("@/lib/supabase/actions");
-      await updateContractorProfile({
+      const res = await updateContractorProfile({
         business_name: form.business_name || null,
         logo_url: form.logo_url || null,
         bio: form.bio || null,
@@ -279,6 +279,9 @@ export default function ContractorProfilePage() {
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
+      if (res?.published && res.landing_page_url) {
+        showToast("Your contractor landing page is live \u2014 see it on your dashboard");
+      }
     } catch (e) {
       console.error("[Profile] save failed:", e);
     } finally {
