@@ -349,7 +349,7 @@ const FAQS = [
   },
   {
     q: "What is the HomeBids contractor plan?",
-    a: "The HomeBids Contractor Plan is $99/month. It includes unlimited AI Bid Builder usage, unlimited contractor tools, no bid fees, and no hidden fees.",
+    a: "The HomeBids Contractor Plan is $99/month. It includes unlimited AI Bid Builder usage, unlimited contractor tools, their own contractor landing page, no bid fees, and no hidden fees.",
   },
   {
     q: "How are affiliate commissions calculated?",
@@ -659,6 +659,7 @@ export default function AffiliatesPage() {
                 {[
                   "Unlimited AI Bid Builder",
                   "Shareable bid links",
+                  "Your own contractor landing page",
                   "No bid fees",
                   "No hidden fees",
                 ].map((f) => (

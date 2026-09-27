@@ -30,21 +30,26 @@ export function ContractorTopbar() {
   const pathname = usePathname() ?? "";
   const signals = useContractorSignals();
 
-  const [name, setName] = useState("there");
+  // NAMEFIX (Tim, Sep 27): phone-first Pros have no profiles.full_name yet, and
+  // the old default rendered the literal word "there". Fall back to the business
+  // name, then a neutral label — never "there".
+  const [firstName, setFirstName] = useState("");
   useEffect(() => {
     let cancelled = false;
     (async () => {
       // Show the cached name immediately, then reconcile against the real
       // profile so an edited name (profiles.full_name) is never stale.
       const cached = getMockUser();
-      if (cached?.firstName) setName(cached.firstName);
+      if (cached?.firstName) setFirstName(cached.firstName);
       const fresh = await syncMirrorFromSupabase();
-      if (!cancelled && fresh?.firstName) setName(fresh.firstName);
+      if (!cancelled && fresh?.firstName) setFirstName(fresh.firstName);
     })();
     return () => { cancelled = true; };
   }, []);
 
-  const initial = name.charAt(0).toUpperCase() || "T";
+  const businessName = String(signals.profile?.business_name ?? "").trim();
+  const name = firstName.trim() || businessName || "My account";
+  const initial = (firstName.trim() || businessName).charAt(0).toUpperCase() || "H";
 
   // ── Build the notification feed from real data ──────────────────────────────
   const notes = useMemo<Note[]>(() => {

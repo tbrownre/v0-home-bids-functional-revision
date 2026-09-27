@@ -30,10 +30,15 @@ export async function createProAccount(input: {
   phone: string
   email: string
   password: string
+  fullName?: string
 }): Promise<CreateProAccountResult> {
   const email = String(input.email || '').trim().toLowerCase()
   const password = String(input.password || '')
   const phone = toE164(input.phone)
+  // v3 NAME (Sep 27): the dashboard greeted phone-first Pros as "there" because
+  // nothing ever set profiles.full_name. handle_new_user reads full_name from
+  // this metadata, so the greeting and topbar get a real name from day one.
+  const fullName = String(input.fullName || '').replace(/\s+/g, ' ').trim().slice(0, 80)
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: 'invalid_email' }
   if (password.length < 8) return { ok: false, error: 'weak_password' }
@@ -50,6 +55,7 @@ export async function createProAccount(input: {
     user_metadata: {
       user_type: 'contractor',
       phone,
+      ...(fullName ? { full_name: fullName } : {}),
     },
   })
 

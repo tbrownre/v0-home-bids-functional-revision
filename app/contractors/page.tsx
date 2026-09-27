@@ -18,6 +18,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import Link from "next/link";
+import { LandingPageDemoLink } from "@/components/landing-page-demo-link";
 import { motion, useInView, useMotionValue, useSpring, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
@@ -115,6 +116,7 @@ const planFeatures = [
   "SMS / iMessage Workflow",
   "Homeowner Bid Opportunities",
   "Contractor Profile",
+  "Your own contractor landing page",
   "No bid fees — ever",
   "Cancel anytime",
 ];
@@ -585,6 +587,9 @@ export default function ContractorsPage() {
                     </li>
                   ))}
                 </ul>
+                <div className="relative mt-4 text-center">
+                  <LandingPageDemoLink />
+                </div>
 
                 <a
                   href="sms:+12832291348?body=Let%27s%20create%20a%20new%20bid!"

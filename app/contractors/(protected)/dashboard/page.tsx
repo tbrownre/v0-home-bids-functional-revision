@@ -10,7 +10,11 @@ import {
   Pencil,
   MessageSquareText,
   ExternalLink,
+  Globe,
+  Copy,
+  Send,
 } from "lucide-react";
+import { LandingPageDemoLink, LANDING_PAGE_FEATURE_DESC } from "@/components/landing-page-demo-link";
 import { ContractorTopbar } from "@/components/contractor/contractor-topbar";
 import { BuildBidModal } from "@/components/contractor/build-bid-modal";
 import { EditGoalModal } from "@/components/contractor/edit-goal-modal";
@@ -48,7 +52,9 @@ function shortDate(iso: string | null | undefined): string {
 
 export default function ContractorDashboard() {
   // ── Auth guard (unchanged behavior) ─────────────────────────────────────────
-  const [contractorName, setContractorName] = useState("there");
+  // NAMEFIX (Tim, Sep 27): empty until a real first name loads — the greeting
+  // falls back to the business name, then to no name at all. Never "there".
+  const [contractorName, setContractorName] = useState("");
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -99,6 +105,9 @@ export default function ContractorDashboard() {
 
   const hasBids = signals.proposals.length > 0;
 
+  // Greeting name: first name -> business name -> none.
+  const displayName = contractorName.trim() || String(signals.profile?.business_name ?? "").trim();
+
   if (!signals.loaded) {
     return (
       <div className="min-h-screen bg-muted/30">
@@ -116,7 +125,7 @@ export default function ContractorDashboard() {
       <main className="mx-auto w-full max-w-[1180px] px-4 pb-16 pt-8 sm:px-6">
         {hasBids ? (
           <SeasonedDashboard
-            name={contractorName}
+            name={displayName}
             greeting={greeting}
             proposals={signals.proposals}
             profile={signals.profile}
@@ -130,7 +139,7 @@ export default function ContractorDashboard() {
           />
         ) : (
           <NewUserDashboard
-            name={contractorName}
+            name={displayName}
             greeting={greeting}
             profile={signals.profile}
             proposals={signals.proposals}
@@ -185,7 +194,7 @@ function NewUserDashboard({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-balance text-4xl font-extrabold tracking-tight text-foreground">{greeting}, {name}!</h1>
+        <h1 className="text-balance text-4xl font-extrabold tracking-tight text-foreground">{greeting}{name ? `, ${name}` : ""}!</h1>
         <p className="mt-2 text-lg text-muted-foreground">Let&apos;s get your first bid out today.</p>
       </div>
 
@@ -282,6 +291,8 @@ function NewUserDashboard({
         </section>
       </div>
 
+      <LandingPageCard profile={profile} />
+
       {/* Empty bids */}
       <section className={`${CARD} p-8 text-center`}>
         <div className="mb-4 flex items-center justify-between">
@@ -352,7 +363,7 @@ function SeasonedDashboard({
       {/* Welcome */}
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-balance text-4xl font-extrabold tracking-tight text-foreground">{greeting}, {name}!</h1>
+          <h1 className="text-balance text-4xl font-extrabold tracking-tight text-foreground">{greeting}{name ? `, ${name}` : ""}!</h1>
           <p className="mt-2 text-lg text-muted-foreground">Keep the momentum going. Your next bid is one click away.</p>
         </div>
         <div className="flex flex-wrap gap-2.5">
@@ -479,6 +490,8 @@ function SeasonedDashboard({
 
         {/* Side stack */}
         <aside className="flex flex-col gap-5">
+          <LandingPageCard profile={profile} />
+
           <section className={`${CARD} p-6`}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-xl font-bold tracking-tight text-foreground">Needs attention</h2>
@@ -532,6 +545,94 @@ function SeasonedDashboard({
 }
 
 // ── Shared pieces ─────────────────────────────────────────────────────────────
+
+/**
+ * Contractor Landing Page card (Tim, Sep 27: "it has to be included somewhere in
+ * the dashboard. Easily shareable."). Live page -> link + Copy / Share / Open.
+ * Not live yet -> the exact step that publishes it, plus the demo.
+ */
+function LandingPageCard({ profile }: { profile: ContractorProfile | null }) {
+  const [copied, setCopied] = useState(false);
+  const url = String(profile?.landing_page_url ?? "").trim();
+  const pretty = url.replace(/^https?:\/\//, "");
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* no-op */
+    }
+  };
+  const shareLink = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "My HomeBids page", text: "Text me from my HomeBids page for a quote:", url });
+      } else {
+        await copyLink();
+      }
+    } catch {
+      /* user cancelled — no-op */
+    }
+  };
+
+  return (
+    <section className={`${CARD} p-6`}>
+      <div className="mb-2 flex items-center gap-2">
+        <Globe className="h-5 w-5 shrink-0 text-primary" />
+        <h2 className="text-xl font-bold tracking-tight text-foreground">Your contractor landing page</h2>
+      </div>
+
+      {url ? (
+        <>
+          <p className="text-sm text-muted-foreground">
+            Homeowners who text from your page come to you only. Put it in your bio, your truck, your cards.
+          </p>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 block truncate rounded-lg bg-muted/60 px-3 py-2 font-mono text-xs text-foreground hover:underline"
+          >
+            {pretty}
+          </a>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" className="gap-1.5 rounded-full font-semibold" onClick={copyLink}>
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? "Copied" : "Copy link"}
+            </Button>
+            <Button size="sm" variant="outline" className="gap-1.5 rounded-full font-semibold" onClick={shareLink}>
+              <Send className="h-3.5 w-3.5" />
+              Share
+            </Button>
+            <Button asChild size="sm" variant="ghost" className="gap-1.5 rounded-full font-semibold">
+              <a href={url} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-3.5 w-3.5" />
+                Open
+              </a>
+            </Button>
+          </div>
+          <Link href="/contractors/profile" className="mt-3 inline-block text-sm font-bold text-primary hover:underline">
+            Edit my page →
+          </Link>
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-muted-foreground">
+            {LANDING_PAGE_FEATURE_DESC} Add your business name, services, and service area and it goes live automatically.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Link href="/contractors/profile" className="text-sm font-bold text-primary hover:underline">
+              Set up my page →
+            </Link>
+            <LandingPageDemoLink />
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
 
 function NeedHelpBar() {
   return (

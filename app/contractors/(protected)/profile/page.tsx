@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Mail, Phone, Upload, LogOut, Check, Pencil } from "lucide-react";
+import { LandingPageDemoLink } from "@/components/landing-page-demo-link";
 import { ContractorTopbar } from "@/components/contractor/contractor-topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ interface FormState {
   google_review_link: string;
   specialties: string; // comma/newline separated
   social_links: string; // comma separated URLs
+  service_area: string; // "Gilbert, Mesa, Chandler" — required for the landing page
 }
 
 const EMPTY_FORM: FormState = {
@@ -42,6 +44,7 @@ const EMPTY_FORM: FormState = {
   google_review_link: "",
   specialties: "",
   social_links: "",
+  service_area: "",
 };
 
 const PLAN_FEATURES = [
@@ -50,6 +53,7 @@ const PLAN_FEATURES = [
   "HomeBids AI lead matching",
   "Direct homeowner contact after approval",
   "Bid Builder — shareable link + PDF included",
+  "Your own contractor landing page",
 ];
 
 function CompletionPill({ done }: { done: boolean }) {
@@ -136,6 +140,7 @@ export default function ContractorProfilePage() {
             google_review_link: p.google_review_link ?? "",
             specialties: Array.isArray(p.specialties) ? p.specialties.join(", ") : "",
             social_links: p.social_links ? Object.values(p.social_links).join(", ") : "",
+            service_area: (p as { service_area?: string | null }).service_area ?? "",
           });
         }
       } catch { /* non-fatal */ } finally {
@@ -270,6 +275,7 @@ export default function ContractorProfilePage() {
         google_review_link: form.google_review_link || null,
         specialties: liveProfile.specialties ?? [],
         social_links: liveProfile.social_links ?? {},
+        service_area: form.service_area.trim() || null,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -393,6 +399,7 @@ export default function ContractorProfilePage() {
                 </li>
               ))}
             </ul>
+            <LandingPageDemoLink className="mt-3" />
           </section>
         </div>
 
@@ -487,6 +494,9 @@ export default function ContractorProfilePage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Services Offered" full done={isProfileFieldFilled(liveProfile, "specialties")}>
                   <Textarea value={form.specialties} onChange={(e) => set("specialties", e.target.value)} placeholder="HVAC, Plumbing, Electrical" />
+                </Field>
+                <Field label="Service Area" done={form.service_area.trim().length > 0}>
+                  <Input value={form.service_area} onChange={(e) => set("service_area", e.target.value)} placeholder="Gilbert, Mesa, Chandler" />
                 </Field>
                 <Field label="Social Links" done={isProfileFieldFilled(liveProfile, "social_links")}>
                   <Input value={form.social_links} onChange={(e) => set("social_links", e.target.value)} placeholder="https://facebook.com/…, https://instagram.com/…" />

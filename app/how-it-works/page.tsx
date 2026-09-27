@@ -134,8 +134,8 @@ function BeforeAfter({ audience }: { audience: Audience }) {
         after: ["One simple conversation", "AI handles the outreach", "Multiple options delivered", "Your info stays private"],
       }
     : {
-        before: ["Manual estimates taking hours", "Lost evenings on paperwork", "Slow follow-up losing jobs", "Looking less professional"],
-        after: ["AI proposals in minutes", "Shareable bid link sent same day", "First bid out wins more jobs", "Professional bids every time"],
+        before: ["Manual estimates taking hours", "Lost evenings on paperwork", "Slow follow-up losing jobs", "Looking less professional", "Nothing to send customers but a phone number"],
+        after: ["AI proposals in minutes", "Shareable bid link sent same day", "First bid out wins more jobs", "Professional bids every time", "Your own contractor landing page"],
       };
 
   return (

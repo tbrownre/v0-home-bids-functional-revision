@@ -951,6 +951,7 @@ export async function updateContractorProfile(profile: {
   google_review_link?: string | null;
   specialties?: string[];
   social_links?: Record<string, string>;
+  service_area?: string | null;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

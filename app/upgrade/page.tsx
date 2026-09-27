@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { realSignIn, redirectAfterSignIn } from "@/lib/mock-auth";
 import { createProAccount } from "@/app/actions/create-pro-account";
+import { LandingPageDemoLink } from "@/components/landing-page-demo-link";
 import {
   Infinity as InfinityIcon,
   FileText,
@@ -19,6 +20,7 @@ import {
   ChevronLeft,
   Lock,
   Loader2,
+  Globe,
 } from "lucide-react";
 
 /**
@@ -35,6 +37,7 @@ const PERKS = [
   { icon: InfinityIcon, text: "Unlimited bids" },
   { icon: FileText, text: "Your company branding" },
   { icon: Link2, text: "Shareable proposals (link + PDF)" },
+  { icon: Globe, text: "Your own contractor landing page" },
   { icon: MessageCircle, text: "iMessage support included" },
   { icon: Zap, text: "Save time. Win more jobs" },
   { icon: Calendar, text: "Cancel anytime" },
@@ -44,6 +47,7 @@ const DONE_PERKS = [
   { icon: InfinityIcon, text: "Unlimited bids" },
   { icon: FileText, text: "Your branding enabled" },
   { icon: Link2, text: "Shareable proposals" },
+  { icon: Globe, text: "Your own contractor landing page" },
   { icon: MessageCircle, text: "iMessage support included" },
   { icon: Zap, text: "Get back to building" },
 ];
@@ -65,6 +69,7 @@ export default function UpgradePage() {
   const [entry, setEntry] = useState("");
 
   const [acct, setAcct] = useState<AccountState>("form");
+  const [acctName, setAcctName] = useState("");
   const [acctEmail, setAcctEmail] = useState("");
   const [acctPw, setAcctPw] = useState("");
   const [acctErr, setAcctErr] = useState<string | null>(null);
@@ -92,14 +97,15 @@ export default function UpgradePage() {
     if (d.length === 10) setPhone(d);
   };
 
+  const acctNameOk = acctName.trim().length >= 2;
   const acctEmailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(acctEmail.trim());
   const acctPwOk = acctPw.length >= 8;
 
   const submitAccount = async () => {
-    if (!phone || acct === "working" || !acctEmailOk || !acctPwOk) return;
+    if (!phone || acct === "working" || !acctNameOk || !acctEmailOk || !acctPwOk) return;
     setAcctErr(null);
     setAcct("working");
-    const res = await createProAccount({ phone, email: acctEmail, password: acctPw });
+    const res = await createProAccount({ phone, email: acctEmail, password: acctPw, fullName: acctName });
     if (!res.ok) {
       setAcct("form");
       setAcctErr(
@@ -162,6 +168,9 @@ export default function UpgradePage() {
                 </li>
               ))}
             </ul>
+            <div className="mt-3">
+              <LandingPageDemoLink />
+            </div>
 
             <div className="mt-5 rounded-2xl bg-primary/5 p-4 text-center">
               <p>
@@ -261,12 +270,20 @@ export default function UpgradePage() {
                 )}
 
                 <Input
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Your name"
+                  value={acctName}
+                  onChange={(e) => setAcctName(e.target.value)}
+                  className="mt-3 h-12"
+                />
+                <Input
                   type="email"
                   inputMode="email"
                   placeholder="you@email.com"
                   value={acctEmail}
                   onChange={(e) => setAcctEmail(e.target.value)}
-                  className="mt-3 h-12"
+                  className="mt-2.5 h-12"
                 />
                 <Input
                   type="password"
@@ -284,7 +301,7 @@ export default function UpgradePage() {
                 <Button
                   className="mt-3 h-12 w-full gap-2 font-semibold"
                   onClick={submitAccount}
-                  disabled={!acctEmailOk || !acctPwOk || acct === "working"}
+                  disabled={!acctNameOk || !acctEmailOk || !acctPwOk || acct === "working"}
                 >
                   {acct === "working" ? (
                     <>
@@ -319,6 +336,24 @@ export default function UpgradePage() {
                 </Button>
               </div>
             )}
+
+            <div className="mt-4 w-full rounded-2xl border border-border bg-card p-5 text-left">
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 shrink-0 text-primary" />
+                <p className="font-semibold text-foreground">Next: your own contractor landing page</p>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Add your business name, services, and service area in your profile and your page goes live automatically. Homeowners who text from it come to you only.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                {acct === "created" && (
+                  <a href="/contractors/profile" className="text-sm font-semibold text-primary hover:underline">
+                    Set up my page &rarr;
+                  </a>
+                )}
+                <LandingPageDemoLink />
+              </div>
+            </div>
 
             <a
               href="sms:+12832291348?body=Let%27s%20create%20a%20new%20bid!"

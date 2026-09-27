@@ -31,6 +31,8 @@ export interface ContractorProfile {
   google_review_link?: string | null;
   specialties?: string[] | null;
   social_links?: Record<string, string> | null;
+  service_area?: string | null;
+  landing_page_url?: string | null;
 }
 
 // The 11 profile fields that make up completion (matches the Account form).

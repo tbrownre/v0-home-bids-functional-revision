@@ -48,6 +48,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
       'No pay-per-lead charges',
       'AI Estimate Assistant',
       'Shareable bid link previews',
+      'Your own contractor landing page',
       'Unlimited AI usage during beta',
       'SMS-first workflow',
       'Mobile-first contractor dashboard',

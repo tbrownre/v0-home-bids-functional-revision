@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { AlertTriangle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { LandingPageDemoLink } from '@/components/landing-page-demo-link';
 
 /**
  * Screen shown when a free-tier contractor exceeds their 3 free bids for own projects.
@@ -49,6 +50,15 @@ export function BidLimitUpgrade() {
                 <p className="text-sm text-muted-foreground">Always free, unlimited, never count toward limit</p>
               </div>
             </div>
+            <div className="flex items-start gap-3">
+              <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100">
+                <span className="text-xs font-semibold text-green-700">✓</span>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Your own contractor landing page</p>
+                <p className="text-sm text-muted-foreground">Included with Pro · <LandingPageDemoLink className="text-xs" /></p>
+              </div>
+            </div>
           </div>
 
           {/* CTA */}
@@ -60,7 +70,7 @@ export function BidLimitUpgrade() {
               </Button>
             </Link>
             <p className="text-center text-xs text-muted-foreground">
-              3-day free trial. Cancel anytime. $99/month after trial.
+              $99/month. Cancel anytime.
             </p>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { SubscriptionCheckout } from "@/components/subscription-checkout";
+import { LandingPageDemoLink, LANDING_PAGE_FEATURE_TITLE, LANDING_PAGE_FEATURE_DESC } from "@/components/landing-page-demo-link";
 import { getContractorPlans, getHomeownerPlan, type SubscriptionPlan } from "@/lib/products";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -15,7 +16,7 @@ import {
   Lightbulb, PaintBucket, Trees, Hammer, Bath, ChefHat,
   ArrowRight, BadgeCheck, Link2,
   Shield, Star,
-  Smartphone, Bot, Home,
+  Smartphone, Bot, Home, Globe,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -429,6 +430,18 @@ export default function SubscribePage() {
                       </div>
                     ))}
                   </div>
+                  <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                        <Globe className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground">{LANDING_PAGE_FEATURE_TITLE}</p>
+                        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{LANDING_PAGE_FEATURE_DESC}</p>
+                      </div>
+                    </div>
+                    <LandingPageDemoLink className="shrink-0" />
+                  </div>
                 </div>
 
                 {/* BUILT FOR CONTRACTORS */}
@@ -444,6 +457,7 @@ export default function SubscribePage() {
                       "Share every bid as a polished link preview",
                       "Stay organized without adding office staff",
                       "Send everything via text message",
+                      "Your own contractor landing page — share it anywhere",
                       "Works on any device — no app required",
                     ].map((item) => (
                       <li key={item} className="flex items-center gap-2 text-sm text-foreground">
@@ -600,6 +614,7 @@ function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan:
             </li>
           ))}
         </ul>
+        {plan.userType === "contractor" && <LandingPageDemoLink className="mt-3" />}
 
       </div>
 
