@@ -14,6 +14,10 @@ const redHatDisplay = Red_Hat_Display({ subsets: ["latin"], weight: ["300", "400
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // IOSZOOM (Tim, Sep 28): stops Safari's automatic zoom-in when a text field is
+  // tapped (the page would stay zoomed until the phone was rotated). iOS still
+  // allows pinch-zoom with this set, so accessibility is unaffected.
+  maximumScale: 1,
   themeColor: '#f9f9f9',
 }
 

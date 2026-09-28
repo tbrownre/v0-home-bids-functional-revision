@@ -206,3 +206,13 @@
     cursor: pointer !important;
   }
 }
+
+/* IOSZOOM (Tim, Sep 28): any text field under 16px makes iPhone Safari zoom the whole
+   page in on focus and leave it there. Phones get 16px fields everywhere, no exceptions. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
