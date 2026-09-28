@@ -17,6 +17,7 @@ import {
 import { LandingPageDemoLink, LANDING_PAGE_FEATURE_DESC } from "@/components/landing-page-demo-link";
 import { ContractorTopbar } from "@/components/contractor/contractor-topbar";
 import { BuildBidModal } from "@/components/contractor/build-bid-modal";
+import { PageLeadsCard } from "@/components/contractor/page-leads-card";
 import { EditGoalModal } from "@/components/contractor/edit-goal-modal";
 import { Button } from "@/components/ui/button";
 import { getMockUser, syncMirrorFromSupabase } from "@/lib/mock-auth";
@@ -294,6 +295,7 @@ function NewUserDashboard({
       </div>
 
       <LandingPageCard profile={profile} />
+      <PageLeadsCard pageLive={!!String(profile?.landing_page_url ?? "").trim()} />
 
       {/* Empty bids */}
       <section className={`${CARD} p-8 text-center`}>
@@ -493,6 +495,7 @@ function SeasonedDashboard({
         {/* Side stack */}
         <aside className="flex min-w-0 flex-col gap-5">
           <LandingPageCard profile={profile} />
+          <PageLeadsCard pageLive={!!String(profile?.landing_page_url ?? "").trim()} />
 
           <section className={`${CARD} p-6`}>
             <div className="mb-3 flex items-center justify-between">
