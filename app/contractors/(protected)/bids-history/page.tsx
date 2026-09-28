@@ -52,11 +52,13 @@ export default function BidsPage() {
       if (!user) user = await syncMirrorFromSupabase();
       if (cancelled) return;
       if (!user) {
-        window.location.replace("/auth/sign-in");
+        window.location.replace("/auth/sign-in?redirect=" + encodeURIComponent(window.location.pathname));
         return;
       }
       if (user.role !== "contractor" && user.role !== "admin") {
-        window.location.replace("/");
+        // DEEPLINK (Tim, Sep 28): a contractor link in a homeowner-signed-in browser
+        // asks for the contractor account instead of dumping them on the homepage.
+        window.location.replace("/auth/sign-in?redirect=" + encodeURIComponent(window.location.pathname) + "&switch=1");
       }
     })();
     return () => { cancelled = true; };

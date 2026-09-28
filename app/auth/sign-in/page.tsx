@@ -12,6 +12,7 @@ import {
   realSignIn,
   syncMirrorFromSupabase,
   redirectAfterSignIn,
+  quietSignOut,
 } from "@/lib/mock-auth";
 import { phoneSignIn } from "@/lib/supabase/actions";
 
@@ -19,6 +20,15 @@ type View = "signin" | "forgot" | "forgot-sent";
 type UserType = "contractor" | "homeowner";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// DEEPLINK (Tim, Sep 28): a texted link like /contractors/profile must land on
+// that page after sign-in. Only same-site contractor/admin paths are honored.
+function safeRedirect(raw: string | null): string | null {
+  if (!raw) return null;
+  if (!/^\/(?!\/)[A-Za-z0-9\-._~/?&=%]*$/.test(raw)) return null;
+  if (!raw.startsWith("/contractors/") && !raw.startsWith("/admin")) return null;
+  return raw;
+}
 
 export default function SignInPage() {
   const router = useRouter();
@@ -32,6 +42,8 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [redirectTo, setRedirectTo] = useState<string | null>(null);
+  const [switchedOut, setSwitchedOut] = useState(false);
 
   // Forgot-password sub-form state
   const [resetEmail, setResetEmail] = useState("");
@@ -49,6 +61,21 @@ export default function SignInPage() {
       }
     }
 
+    // DEEPLINK: remember where a contractor link wanted to go; ?switch=1 means
+    // that link opened in a browser signed in as someone else.
+    let target: string | null = null;
+    let wantsSwitch = false;
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      target = safeRedirect(params.get("redirect"));
+      wantsSwitch = params.get("switch") === "1";
+      if (target || wantsSwitch) {
+        setUserType("contractor");
+        setUsePhoneForHomeowner(false);
+      }
+      setRedirectTo(target);
+    }
+
     let cancelled = false;
     (async () => {
       // Verify the REAL Supabase session — not the possibly-stale local mirror.
@@ -58,6 +85,20 @@ export default function SignInPage() {
       const user = await syncMirrorFromSupabase();
       if (cancelled) return;
       if (user) {
+        const isPro = user.role === "contractor" || user.role === "admin";
+        if (isPro && target) {
+          window.location.replace(target);
+          return;
+        }
+        if (!isPro && wantsSwitch) {
+          // A homeowner session is in the way of a contractor link: end it
+          // quietly and let them sign in with their contractor account.
+          await quietSignOut();
+          if (cancelled) return;
+          setSwitchedOut(true);
+          setCheckingSession(false);
+          return;
+        }
         redirectAfterSignIn(user.role);
         return;
       }
@@ -138,7 +179,12 @@ export default function SignInPage() {
       setError("");
       const result = await realSignIn(email, password);
       if (result.user) {
-        redirectAfterSignIn(result.user.role);
+        const isPro = result.user.role === "contractor" || result.user.role === "admin";
+        if (isPro && redirectTo) {
+          window.location.replace(redirectTo);
+        } else {
+          redirectAfterSignIn(result.user.role);
+        }
       } else {
         setError(result.error ?? "Unable to sign in.");
         setLoading(false);
@@ -209,8 +255,15 @@ export default function SignInPage() {
 
           <div className="text-center">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome back to HomeBids</h1>
+            {switchedOut && (
+              <p className="mt-2 rounded-lg bg-muted px-3 py-2 text-sm text-foreground">
+                This device was signed in as a homeowner, so we signed that out. Sign in with your contractor account to continue.
+              </p>
+            )}
             <p className="mt-2 text-sm text-muted-foreground">
-              {userType === "contractor"
+              {redirectTo
+                ? `Sign in to continue to your ${redirectTo.includes("/profile") ? "profile" : "dashboard"}.`
+                : userType === "contractor"
                 ? "Sign in to view your project, bids, messages, and contractor activity."
                 : "Sign in to view your project and bids."}
             </p>

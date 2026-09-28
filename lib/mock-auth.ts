@@ -170,6 +170,18 @@ export async function syncMirrorFromSupabase(): Promise<MockUser | null> {
   }
 }
 
+/** Sign out WITHOUT navigating — used when a contractor deep link lands in a
+ *  browser that is signed in as a homeowner (Tim, Sep 28). */
+export async function quietSignOut() {
+  try {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+  } catch {
+    // ignore network errors — still clear local state below
+  }
+  clearMockSession();
+}
+
 /** Real sign-out — ends the Supabase session and clears the local cache. */
 export async function realSignOut() {
   try {

@@ -404,7 +404,9 @@ export function Header({
               href="/contractors/dashboard?tab=overview"
               className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              <span>Return to dashboard</span>
+              {/* Tim (Sep 28): the full label collided with the centered logo on phones */}
+              <span className="sm:hidden">Dashboard</span>
+              <span className="hidden sm:inline">Return to dashboard</span>
               <ArrowLeft className="h-4 w-4 scale-x-[-1]" />
             </Link>
           ) : !isLoggedIn ? (

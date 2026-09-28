@@ -52,16 +52,19 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Logged-out users hitting a protected route → clean redirect to sign-in.
+  // Logged-out users hitting a protected route → sign-in, remembering where
+  // they were going (DEEPLINK, Tim Sep 28: a texted link must land on that page).
   if (!user && startsWithAny(pathname, PROTECTED_PREFIXES)) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/sign-in";
-    url.search = "";
+    url.search = "?redirect=" + encodeURIComponent(pathname);
     return NextResponse.redirect(url);
   }
 
   // Signed-in users visiting an auth page → send them to the right home.
-  if (user && startsWithAny(pathname, AUTH_PREFIXES)) {
+  // Exception: ?switch=1 means a contractor link opened in a browser signed in
+  // as someone else — the sign-in page handles that swap itself.
+  if (user && startsWithAny(pathname, AUTH_PREFIXES) && request.nextUrl.searchParams.get("switch") !== "1") {
     const url = request.nextUrl.clone();
     url.search = "";
     url.pathname =
