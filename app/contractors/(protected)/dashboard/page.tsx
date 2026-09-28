@@ -202,7 +202,7 @@ function NewUserDashboard({
 
       {/* Hero */}
       <section className={`${CARD} relative overflow-hidden p-8 sm:p-10`}>
-        <div className="grid items-center gap-8 md:grid-cols-[1.4fr_1fr]">
+        <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
           <div>
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
               <Sparkles className="h-6 w-6 text-primary" />
@@ -227,7 +227,7 @@ function NewUserDashboard({
       </section>
 
       {/* Progress + This month */}
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <section className={`${CARD} p-6 sm:p-7`}>
           <h3 className="text-lg font-bold text-foreground">Your progress</h3>
           <div className="mt-4 flex flex-col">
@@ -383,7 +383,7 @@ function SeasonedDashboard({
       </div>
 
       {/* Tracker */}
-      <section className={`${CARD} relative grid gap-8 overflow-hidden p-7 md:grid-cols-[1.45fr_0.55fr]`}>
+      <section className={`${CARD} relative grid min-w-0 grid-cols-1 gap-8 overflow-hidden p-7 md:grid-cols-[minmax(0,1.45fr)_minmax(0,0.55fr)]`}>
         <div>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -423,9 +423,9 @@ function SeasonedDashboard({
         <div className="pointer-events-none absolute -right-28 -top-28 h-80 w-80 rounded-full bg-primary/5" />
       </section>
 
-      <div className="grid gap-5 lg:grid-cols-[1.7fr_0.7fr]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,0.7fr)]">
         {/* Your bids */}
-        <section className={`${CARD} p-6`}>
+        <section className={`${CARD} min-w-0 p-6`}>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2.5">
               <h2 className="text-xl font-bold tracking-tight text-foreground">Your bids</h2>
@@ -491,7 +491,7 @@ function SeasonedDashboard({
         </section>
 
         {/* Side stack */}
-        <aside className="flex flex-col gap-5">
+        <aside className="flex min-w-0 flex-col gap-5">
           <LandingPageCard profile={profile} />
 
           <section className={`${CARD} p-6`}>
