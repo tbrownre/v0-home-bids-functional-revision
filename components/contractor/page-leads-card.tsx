@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Inbox, MessageSquareText, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getSmsHref, CONTRACTOR_SMS_PHONE_NUMBER } from "@/lib/sms-config";
@@ -88,11 +89,16 @@ export function PageLeadsCard({ pageLive }: { pageLive: boolean }) {
           <Inbox className="h-5 w-5 shrink-0 text-primary" />
           <h2 className="truncate text-xl font-bold tracking-tight text-foreground">Leads from your page</h2>
         </div>
-        {leads.length > 0 && (
-          <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">
-            {open > 0 ? `${open} new` : `${leads.length}`}
-          </span>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {leads.length > 0 && (
+            <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">
+              {open > 0 ? `${open} new` : `${leads.length}`}
+            </span>
+          )}
+          <Button asChild variant="outline" size="sm" className="rounded-full text-sm font-semibold">
+            <Link href="/contractors/leads">View all</Link>
+          </Button>
+        </div>
       </div>
 
       {shown.length === 0 ? (
@@ -148,7 +154,9 @@ export function PageLeadsCard({ pageLive }: { pageLive: boolean }) {
       )}
 
       {leads.length > shown.length && (
-        <p className="mt-2 text-xs text-muted-foreground">Showing the latest {shown.length} of {leads.length}.</p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Showing the latest {shown.length} of {leads.length} · <Link href="/contractors/leads" className="font-bold text-primary hover:underline">See all leads →</Link>
+        </p>
       )}
     </section>
   );

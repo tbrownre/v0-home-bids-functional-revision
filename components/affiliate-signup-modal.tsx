@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { createRewardfulAffiliate, type RewardfulAffiliateResult } from '@/app/actions/rewardful'
+import { createRewardfulAffiliate, getAffiliateDashboardLink, type RewardfulAffiliateResult } from '@/app/actions/rewardful'
 import {
   CheckCircle2,
   Copy,
@@ -21,7 +21,11 @@ import {
 } from 'lucide-react'
 
 /**
- * Affiliate signup popup — REWARDFUL edition v2.1 PORTALLOGIN (Sep 26).
+ * Affiliate signup popup — REWARDFUL edition v3 SSO (Sep 29).
+ * v3: "View my dashboard" now opens Rewardful's one-time magic link (fetched on tap)
+ * — no password, no portal URL to get wrong (Tim hit a Rewardful 404 on Sep 29).
+ * Returning partners still use the portal login page below.
+ * (v2.1 PORTALLOGIN, Sep 26 — kept as the fallback.)
  * v2.1: dashboard link -> /login (Rewardful serves the portal at /login; the bare
  * subdomain 404s — Tim hit it live). Helper line tells API-created affiliates to
  * set their first password via "Forgot your password?".
@@ -49,6 +53,7 @@ export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProp
   const [email, setEmail] = useState('')
   const [result, setResult] = useState<RewardfulAffiliateResult | null>(null)
   const [copied, setCopied] = useState(false)
+  const [opening, setOpening] = useState(false)
 
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
 
@@ -57,6 +62,7 @@ export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProp
     setEmail('')
     setResult(null)
     setCopied(false)
+    setOpening(false)
   }
 
   const handleClose = () => {
@@ -98,6 +104,30 @@ export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProp
     } catch {
       // user cancelled share — no-op
     }
+  }
+
+  // v3 SSO: fetch the single-use magic link when tapped and open it. A blank tab is
+  // opened synchronously (inside the tap) so iOS Safari never treats it as a popup;
+  // if the link can't be fetched, fall back to the portal login page.
+  const openDashboard = async () => {
+    if (opening) return
+    setOpening(true)
+    const win = window.open('', '_blank')
+    let target = PORTAL
+    try {
+      if (result?.id) {
+        const r = await getAffiliateDashboardLink(result.id)
+        if (r.ok && r.url) target = r.url
+      }
+    } catch {
+      // fall through to the portal login
+    }
+    if (win) {
+      win.location.href = target
+    } else {
+      window.location.href = target
+    }
+    setOpening(false)
   }
 
   const smsShare = result?.link
@@ -229,16 +259,17 @@ export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProp
               </Button>
             </div>
 
-            <a
-              href={PORTAL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-5 text-sm font-semibold text-primary hover:underline"
+            <button
+              type="button"
+              onClick={openDashboard}
+              disabled={opening}
+              className="mt-5 text-sm font-semibold text-primary hover:underline disabled:opacity-60"
             >
-              View my dashboard →
-            </a>
+              {opening ? 'Opening your dashboard…' : 'View my dashboard →'}
+            </button>
             <p className="mt-3 text-[11px] text-muted-foreground">
-              Log in there with this email — first time, tap <b>Forgot your password?</b> to set one (10 seconds). Clicks, earnings, and <b>PayPal</b> payout setup all live there. ·
+              Opens your partner dashboard signed in — clicks, earnings, and <b>PayPal</b> payout setup all live there.
+              Next time, log in with this email (tap <b>Forgot your password?</b> once to set one). ·
               Tracking by <b>Rewardful</b>
             </p>
           </div>

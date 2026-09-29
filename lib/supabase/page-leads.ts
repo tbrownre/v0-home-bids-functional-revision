@@ -36,7 +36,7 @@ export interface PageLead {
 
 const digits10 = (v: unknown) => String(v ?? "").replace(/\D/g, "").slice(-10);
 
-export async function getMyPageLeads(): Promise<{ leads: PageLead[]; error: string | null }> {
+export async function getMyPageLeads(limit = 20): Promise<{ leads: PageLead[]; error: string | null }> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -55,7 +55,7 @@ export async function getMyPageLeads(): Promise<{ leads: PageLead[]; error: stri
     .select("id, job_ref, title, category, location, zip_code, status, created_at")
     .eq("source_contractor_id", user.id)
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(Math.max(1, Math.min(500, Math.floor(limit))));
   if (error) return { leads: [], error: error.message };
 
   const rows = (jobs ?? []) as Array<Record<string, unknown>>;

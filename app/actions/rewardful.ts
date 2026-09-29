@@ -12,6 +12,8 @@ export interface RewardfulAffiliateResult {
   ok: boolean
   link?: string
   token?: string
+  /** Rewardful affiliate id (UUID) — needed for the magic-link dashboard login. */
+  id?: string
   error?: 'not_configured' | 'invalid_email' | 'email_exists' | 'api_error' | 'network'
 }
 
@@ -51,6 +53,7 @@ export async function createRewardfulAffiliate(email: string): Promise<Rewardful
 
     const data: unknown = await res.json().catch(() => null)
     const d = data as {
+      id?: string
       details?: string[]
       error?: string
       links?: Array<{ url?: string; token?: string }>
@@ -74,9 +77,45 @@ export async function createRewardfulAffiliate(email: string): Promise<Rewardful
       return { ok: false, error: 'api_error' }
     }
 
-    return { ok: true, link, token }
+    return { ok: true, link, token, id: typeof d?.id === 'string' ? d.id : undefined }
   } catch (err) {
     console.warn('[createRewardfulAffiliate] Network error:', err)
+    return { ok: false, error: 'network' }
+  }
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * v3 SSO (Tim, Sep 29: "View my dashboard" -> Rewardful 404): Rewardful's magic
+ * link — GET /v1/affiliates/:id/sso — logs the affiliate straight into their
+ * dashboard, no password, no guessed portal URL. The link is single-use and
+ * expires after one minute, so it is fetched at click time, never rendered early.
+ * Only callable with the affiliate's UUID (returned to the person who just
+ * created the account) — never by email, so nobody can open someone else's dashboard.
+ */
+export async function getAffiliateDashboardLink(
+  affiliateId: string,
+): Promise<{ ok: boolean; url?: string; error?: 'not_configured' | 'invalid_id' | 'api_error' | 'network' }> {
+  const secret = process.env.REWARDFUL_API_SECRET
+  if (!secret) return { ok: false, error: 'not_configured' }
+  const id = String(affiliateId || '').trim()
+  if (!UUID_RE.test(id)) return { ok: false, error: 'invalid_id' }
+  try {
+    const res = await fetch('https://api.getrewardful.com/v1/affiliates/' + encodeURIComponent(id) + '/sso', {
+      method: 'GET',
+      headers: { Authorization: 'Basic ' + Buffer.from(secret + ':').toString('base64') },
+      cache: 'no-store',
+    })
+    const data: unknown = await res.json().catch(() => null)
+    const url = (data as { sso?: { url?: string } } | null)?.sso?.url
+    if (!res.ok || !url || !/^https:\/\//.test(url)) {
+      console.warn('[getAffiliateDashboardLink] API error:', res.status)
+      return { ok: false, error: 'api_error' }
+    }
+    return { ok: true, url }
+  } catch (err) {
+    console.warn('[getAffiliateDashboardLink] Network error:', err)
     return { ok: false, error: 'network' }
   }
 }
