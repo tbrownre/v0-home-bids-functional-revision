@@ -87,7 +87,8 @@ export function PageLeadsCard({ pageLive }: { pageLive: boolean }) {
       <div className="mb-2 flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <Inbox className="h-5 w-5 shrink-0 text-primary" />
-          <h2 className="truncate text-xl font-bold tracking-tight text-foreground">Leads from your page</h2>
+          {/* Tim (Oct 4): "Can this section just say 'Leads'" — the long title truncated on mobile. */}
+          <h2 className="truncate text-xl font-bold tracking-tight text-foreground">Leads</h2>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {leads.length > 0 && (
