@@ -671,10 +671,6 @@ export default function ContractorsPage() {
                 <p className="relative mt-4 text-center text-sm text-muted-foreground">
                   Start free today. Cancel anytime before your trial ends.
                 </p>
-                <p className="relative mt-4 text-center text-xs leading-relaxed text-muted-foreground/80">
-                  HomeBids does not guarantee a specific number of leads or jobs. Homeowner
-                  opportunities vary based on service area, category, and demand.
-                </p>
               </div>
             </motion.div>
           </motion.div>
