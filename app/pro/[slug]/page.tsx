@@ -38,9 +38,21 @@ async function getContractorLandingPage(slug: string) {
       .eq('id', landingPage.contractor_id)
       .maybeSingle();
 
+    // LIVE NAME (Tim, Oct 2 Trello: "Wrong company name in OG preview"): config.brand.company_name is a
+    // snapshot taken when the page was published, so a renamed business kept showing the old name in the
+    // title/iMessage preview and on the page. The contractor's current business name wins everywhere
+    // (title, OG, H1). The demo account keeps its demo brand.
+    const config = (landingPage.config && typeof landingPage.config === 'object' ? landingPage.config : {}) as Record<string, any>;
+    const liveName = String(profile?.business_name ?? '').trim();
+    const isDemo = /^0{8}-/.test(String(landingPage.contractor_id ?? ''));
+    if (liveName && !isDemo) {
+      config.brand = { ...(config.brand || {}), company_name: liveName };
+    }
+
     return {
       page: {
         ...landingPage,
+        config,
         contractor_profiles: profile || undefined,
       },
       error: null,
@@ -63,7 +75,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const config = page.config as any;
-  const companyName = config?.brand?.company_name || page.contractor_profiles?.business_name || 'Contractor';
+  const companyName = config?.brand?.company_name || page.contractor_profiles?.business_name || 'Your Local Pro';
   const headline = config?.copy?.headline || `Get an estimate from ${companyName}`;
   const subhead = config?.copy?.subhead || '';
 

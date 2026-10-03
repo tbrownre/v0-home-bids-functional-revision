@@ -268,7 +268,7 @@ export function AffiliateSignupModal({ open, onClose }: AffiliateSignupModalProp
               {opening ? 'Opening your dashboard…' : 'View my dashboard →'}
             </button>
             <p className="mt-3 text-[11px] text-muted-foreground">
-              Opens your partner dashboard signed in — clicks, earnings, and <b>PayPal</b> payout setup all live there.
+              Opens your partner dashboard signed in. First visit asks for your <b>PayPal</b> email for payouts — confirm it and you&apos;re on the dashboard (clicks, earnings, payouts).
               Next time, log in with this email (tap <b>Forgot your password?</b> once to set one). ·
               Tracking by <b>Rewardful</b>
             </p>
