@@ -31,12 +31,18 @@ async function getContractorLandingPage(slug: string) {
       return { page: null, error: null };
     }
 
-    // Fetch contractor profile (RLS would block anon client)
-    const { data: profile } = await supabase
+    // Fetch contractor profile (RLS would block anon client).
+    // Oct 3: the column is logo_url — 'contractor_logo_url' lives on bids/proposals, so this select
+    // had been erroring silently and the profile (and its business name) never loaded.
+    const { data: profileRow, error: profileErr } = await supabase
       .from('contractor_profiles')
-      .select('business_name, contractor_logo_url')
+      .select('business_name, logo_url')
       .eq('id', landingPage.contractor_id)
       .maybeSingle();
+    if (profileErr) console.error('[estimate-page] Profile query error:', profileErr.message);
+    const profile = profileRow
+      ? { business_name: (profileRow.business_name as string | null) ?? undefined, contractor_logo_url: (profileRow.logo_url as string | null) ?? undefined }
+      : null;
 
     // LIVE NAME (Tim, Oct 2 Trello: "Wrong company name in OG preview"): config.brand.company_name is a
     // snapshot taken when the page was published, so a renamed business kept showing the old name in the
