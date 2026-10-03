@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { signUpContractor } from "@/lib/supabase/actions";
+import { TRIAL_DAYS } from "@/lib/products";
 import { createClient } from "@/lib/supabase/client";
 import {
   ArrowRight,
@@ -55,15 +56,44 @@ const trades = [
   "Other",
 ];
 
+// Trello #5 (Tim, Oct 3): "GET HOMEBIDS NOW" on /contractors lands here with ?plan=pro —
+// same account form, then straight into the $99/mo checkout instead of the dashboard.
+// TRIAL14 (Tim, Oct 4): ?plan=trial does the same but opens the 14-day free trial checkout
+// (card up front, $0 today). ?p=<phone> (from the Bid Builder text) prefills the phone so the
+// account matches the number they text from — that match is what unlocks their texts.
+// Read from window (not useSearchParams) so this client page needs no Suspense boundary.
+type Intent = "free" | "pro" | "trial";
+function readIntent(): { intent: Intent; phone: string } {
+  try {
+    const q = new URLSearchParams(window.location.search);
+    const plan = q.get("plan");
+    const intent: Intent = plan === "trial" ? "trial" : plan === "pro" ? "pro" : "free";
+    const digits = String(q.get("p") || "").replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "");
+    const phone = digits.length === 10 ? `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}` : "";
+    return { intent, phone };
+  } catch {
+    return { intent: "free", phone: "" };
+  }
+}
+
+const checkoutHref = (userId?: string, trial?: boolean) =>
+  `/subscribe?type=contractor${userId ? `&userId=${encodeURIComponent(userId)}` : ""}${trial ? "&trial=1" : ""}`;
+
 export default function ContractorSignupPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<Step>("info");
   const [checking, setChecking] = useState(true);
+  const [intent, setIntent] = useState<Intent>("free");
+  const paidIntent = intent !== "free"; // pro or trial: account → checkout instead of dashboard
+  const trialIntent = intent === "trial";
 
   // If a signed-in contractor tries to re-signup, send to dashboard
   useEffect(() => {
     const checkExistingContractor = async () => {
       try {
+        const { intent: wanted, phone: prefill } = readIntent();
+        setIntent(wanted);
+        if (prefill) setFormData((prev) => (prev.phone ? prev : { ...prev, phone: prefill }));
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
@@ -84,8 +114,8 @@ export default function ContractorSignupPage() {
             return;
           }
 
-          // Signed in as contractor — send to dashboard
-          router.push("/contractors/dashboard");
+          // Signed in as contractor — send to dashboard (or straight to checkout if they clicked GET HOMEBIDS NOW)
+          router.push(wanted !== "free" ? checkoutHref(user.id, wanted === "trial") : "/contractors/dashboard");
           return;
         }
 
@@ -162,7 +192,12 @@ export default function ContractorSignupPage() {
       return;
     }
 
-    // New contractors go straight to the dashboard — no subscription required
+    // Paid intent (GET HOMEBIDS NOW): account exists now → secure checkout, which lands on the
+    // dashboard after payment. Otherwise straight to the dashboard — no subscription required.
+    if (paidIntent) {
+      router.push(checkoutHref(result.userId, trialIntent));
+      return;
+    }
     router.push("/contractors/dashboard");
   };
 
@@ -206,8 +241,11 @@ export default function ContractorSignupPage() {
               Create Your Pro Account
             </h1>
             <p className="mt-3 text-muted-foreground text-pretty">
-              Create your account in under a minute. You can build your first bid right after —
-              no license, insurance, or portfolio required to get started.
+              {trialIntent
+                ? `Create your account in under a minute, add a card, and try everything free for ${TRIAL_DAYS} days — unlimited bids and your own landing page. $99/month after; cancel anytime before your trial ends.`
+                : paidIntent
+                  ? "Create your account in under a minute, then secure checkout — $99/month, cancel anytime. Unlimited bids and your own landing page from day one."
+                  : "Create your account in under a minute. You can build your first bid right after — no license, insurance, or portfolio required to get started."}
             </p>
           </motion.div>
 
@@ -288,6 +326,11 @@ export default function ContractorSignupPage() {
                         className="mt-1.5"
                         autoComplete="tel"
                       />
+                      {trialIntent && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Use the number you text HomeBids from — that&apos;s what unlocks unlimited bids on your texts.
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -468,15 +511,27 @@ export default function ContractorSignupPage() {
                   <div>
                     <h2 className="text-xl font-semibold text-foreground">Review &amp; Create Account</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Confirm your details below. Go unlimited anytime with HomeBids Pro — $99/month, cancel anytime.
+                      {trialIntent
+                        ? `Confirm your details below. Next step: add a card to start your ${TRIAL_DAYS}-day free trial — $0 today, $99/month after, cancel anytime before it ends.`
+                        : paidIntent
+                          ? "Confirm your details below. Next step: secure checkout for HomeBids Pro — $99/month, cancel anytime."
+                          : "Confirm your details below. Go unlimited anytime with HomeBids Pro — $99/month, cancel anytime."}
                     </p>
                   </div>
 
                   <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
                     <div className="flex items-baseline justify-between">
-                      <p className="text-2xl font-bold text-foreground">$99 / month</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {trialIntent ? (
+                          <>
+                            $0 today <span className="text-base font-semibold text-muted-foreground">· then $99 / month</span>
+                          </>
+                        ) : (
+                          "$99 / month"
+                        )}
+                      </p>
                       <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-                        <Clock className="h-3 w-3" /> Cancel anytime
+                        <Clock className="h-3 w-3" /> {trialIntent ? `${TRIAL_DAYS}-day free trial` : "Cancel anytime"}
                       </span>
                     </div>
                     <ul className="mt-4 space-y-2">
@@ -586,7 +641,7 @@ export default function ContractorSignupPage() {
                         </>
                       ) : (
                         <>
-                          Create My Account
+                          {trialIntent ? "Create Account & Start Free Trial" : paidIntent ? "Create Account & Continue to Payment" : "Create My Account"}
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </>
                       )}

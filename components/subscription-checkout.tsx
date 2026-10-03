@@ -23,11 +23,13 @@ const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
 interface SubscriptionCheckoutProps {
   planId: string
   userId?: string
+  /** TRIAL14: open the 14-day free trial version of the same plan (card up front, converts day 15). */
+  trial?: boolean
   onSuccess?: () => void
   onCancel?: () => void
 }
 
-export function SubscriptionCheckout({ planId, userId: propUserId, onSuccess, onCancel }: SubscriptionCheckoutProps) {
+export function SubscriptionCheckout({ planId, userId: propUserId, trial = false, onSuccess, onCancel }: SubscriptionCheckoutProps) {
   const { openSignIn } = useSignInModal()
   const [isComplete, setIsComplete] = useState(false)
   const [userId, setUserId] = useState<string | undefined>(propUserId)
@@ -71,14 +73,14 @@ export function SubscriptionCheckout({ planId, userId: propUserId, onSuccess, on
         // Rewardful referral (rw.js sets it when the visitor arrived via a ?via= link)
         const rw = typeof window !== 'undefined' ? (window as unknown as { Rewardful?: { referral?: string } }).Rewardful : undefined
         const referral = rw && rw.referral ? String(rw.referral) : undefined
-        return await startSubscriptionCheckout(planId, userId, referral)
+        return await startSubscriptionCheckout(planId, userId, referral, { trial })
       } catch (err) {
         console.error('[SubscriptionCheckout] Failed to start checkout:', err)
         setError("We couldn't start checkout. Please try again.")
         throw err
       }
     },
-    [planId, userId],
+    [planId, userId, trial],
   )
 
   // Stable reference — created once per mount, never recreated.

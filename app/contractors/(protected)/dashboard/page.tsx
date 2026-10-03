@@ -18,6 +18,7 @@ import { LandingPageDemoLink, LANDING_PAGE_FEATURE_DESC } from "@/components/lan
 import { ContractorTopbar } from "@/components/contractor/contractor-topbar";
 import { BuildBidModal } from "@/components/contractor/build-bid-modal";
 import { PageLeadsCard } from "@/components/contractor/page-leads-card";
+import { TrialBanner } from "@/components/contractor/trial-banner";
 import { EditGoalModal } from "@/components/contractor/edit-goal-modal";
 import { Button } from "@/components/ui/button";
 import { getMockUser, syncMirrorFromSupabase } from "@/lib/mock-auth";
@@ -126,6 +127,7 @@ export default function ContractorDashboard() {
     <div className="min-h-screen bg-muted/30">
       <ContractorTopbar />
       <main className="mx-auto w-full max-w-[1180px] px-4 pb-16 pt-8 sm:px-6">
+        <TrialBanner />
         {hasBids ? (
           <SeasonedDashboard
             name={displayName}

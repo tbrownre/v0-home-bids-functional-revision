@@ -6,7 +6,7 @@ import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { SubscriptionCheckout } from "@/components/subscription-checkout";
 import { LandingPageDemoLink, LANDING_PAGE_FEATURE_TITLE, LANDING_PAGE_FEATURE_DESC } from "@/components/landing-page-demo-link";
-import { getContractorPlans, getHomeownerPlan, type SubscriptionPlan } from "@/lib/products";
+import { getContractorPlans, getHomeownerPlan, TRIAL_DAYS, type SubscriptionPlan } from "@/lib/products";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle2, Zap,
@@ -34,12 +34,15 @@ export default function SubscribePage() {
   const [userType, setUserType] = useState<UserTypeFilter>("homeowner");
   const [error, setError] = useState<string | null>(null);
   const [resolvedUserId, setResolvedUserId] = useState<string | undefined>(undefined);
+  // TRIAL14 (Tim, Oct 4): ?trial=1 (set by the signup handoff) opens the 14-day free trial checkout.
+  const [trial, setTrial] = useState(false);
 
   useEffect(() => {
     const setupSubscribePage = async () => {
       const type = searchParams.get("type");
       if (type === "contractor") setUserType("contractor");
       else if (type === "homeowner") setUserType("homeowner");
+      setTrial(searchParams.get("trial") === "1" && type === "contractor");
 
       // If a plan ID is provided, auto-select it and show checkout
       const planId = searchParams.get("plan");
@@ -516,12 +519,16 @@ export default function SubscribePage() {
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl p-0">
           <DialogHeader className="px-6 pt-6">
             <DialogTitle>
-              {selectedPlan?.name} Plan — ${((selectedPlan?.priceInCents ?? 0) / 100).toFixed(2)}/mo
+              {trial
+                ? `HomeBids Pro — ${TRIAL_DAYS}-day free trial`
+                : `${selectedPlan?.name} Plan — $${((selectedPlan?.priceInCents ?? 0) / 100).toFixed(2)}/mo`}
             </DialogTitle>
             <DialogDescription>
-              {selectedPlan?.hasTrial === false
-                ? "Billed immediately. Cancel anytime."
-                : "Cancel anytime."}
+              {trial
+                ? `$0 today. $${((selectedPlan?.priceInCents ?? 0) / 100).toFixed(0)}/month after ${TRIAL_DAYS} days — cancel anytime before your trial ends.`
+                : selectedPlan?.hasTrial === false
+                  ? "Billed immediately. Cancel anytime."
+                  : "Cancel anytime."}
             </DialogDescription>
           </DialogHeader>
           <div className="px-6 pb-6">
@@ -529,6 +536,7 @@ export default function SubscribePage() {
               <SubscriptionCheckout
                 planId={selectedPlan.id}
                 userId={resolvedUserId}
+                trial={trial}
                 onSuccess={handleSuccess}
                 onCancel={() => setShowCheckout(false)}
               />

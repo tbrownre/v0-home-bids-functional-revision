@@ -1,7 +1,7 @@
 'use server'
 
 import { stripe } from '@/lib/stripe'
-import { getPlanById } from '@/lib/products'
+import { getPlanById, TRIAL_DAYS } from '@/lib/products'
 
 /** Rewardful referral UUID from the browser — passed to Stripe as
  *  client_reference_id so the affiliate gets credited (their Step 3). */
@@ -14,11 +14,17 @@ function cleanReferral(referral?: string): string | undefined {
  * Create a Stripe Embedded Checkout session for a subscription plan.
  * Returns the client_secret needed to mount EmbeddedCheckout.
  * Throws "SIGN_IN_REQUIRED" if userId is missing — the UI should prevent this.
+ *
+ * options.trial = true → Stripe 14-day trial, card collected up front, auto-converts to $99/mo
+ * on day 15 (Stripe sends the trial-ending email). Stripe reports status 'trialing', which the
+ * site gate (subscription-check / checkCanCreateOwnProjectBid) and the text gate
+ * (check_bid_allowance: trialing + period end > now) already treat as Pro — no gate changes.
  */
 export async function startSubscriptionCheckout(
   planId: string,
   userId?: string,
   referral?: string,
+  options?: { trial?: boolean },
 ): Promise<string> {
   if (!userId) {
     throw new Error('SIGN_IN_REQUIRED')
@@ -29,9 +35,14 @@ export async function startSubscriptionCheckout(
     throw new Error(`Plan "${planId}" not found`)
   }
 
+  const trial = options?.trial === true && plan.userType === 'contractor'
+  const flow = trial ? 'trial14' : 'paid'
+
   const session = await stripe.checkout.sessions.create({
     ui_mode: 'embedded',
     redirect_on_completion: 'never',
+    // Card is always collected — the trial converts on its own on day 15 (Tim's card: "Cancel anytime before your trial ends").
+    payment_method_collection: 'always',
     line_items: [
       {
         price_data: {
@@ -51,12 +62,14 @@ export async function startSubscriptionCheckout(
     mode: 'subscription',
     client_reference_id: cleanReferral(referral),
     subscription_data: {
+      ...(trial ? { trial_period_days: TRIAL_DAYS } : {}),
       // Pass userId + planId through so the webhook can link the subscription
       // back to the correct Supabase user without relying on the browser session.
       metadata: {
         userId,
         planId,
         userType: plan.userType,
+        flow,
       },
     },
     // Also store on the session itself for checkout.session.completed events.
@@ -64,6 +77,7 @@ export async function startSubscriptionCheckout(
       userId,
       planId,
       userType: plan.userType,
+      flow,
     },
   })
 

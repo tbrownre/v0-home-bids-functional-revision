@@ -18,7 +18,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import Link from "next/link";
-import { LandingPageDemoLink, LANDING_PAGE_FEATURE_DESC, LANDING_PAGE_DEMO_URL } from "@/components/landing-page-demo-link";
+import { LANDING_PAGE_FEATURE_DESC, LANDING_PAGE_DEMO_URL } from "@/components/landing-page-demo-link";
+import { TRIAL_DAYS } from "@/lib/products";
 import { motion, useInView, useMotionValue, useSpring, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
@@ -118,9 +119,9 @@ const planFeatures = [
   "SMS / iMessage Workflow",
   "Homeowner Bid Opportunities",
   "Contractor Profile",
-  "Your own contractor landing page",
-  "No bid fees — ever",
-  "Cancel anytime",
+  "Your Own Contractor Landing Page",
+  "No Bid Fees — Ever",
+  "Cancel Anytime",
 ];
 
 /* ─── ROI Calculator ─── */
@@ -642,8 +643,8 @@ export default function ContractorsPage() {
                     <span className="text-6xl font-extrabold text-foreground">$99</span>
                     <span className="mb-2 text-muted-foreground">/mo</span>
                   </div>
-                  <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                    <Zap className="h-3 w-3" /> Unlimited AI bids
+                  <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3.5 py-1.5 text-sm font-bold text-primary">
+                    <Zap className="h-3.5 w-3.5" /> {TRIAL_DAYS}-Day Free Trial
                   </span>
                 </div>
 
@@ -651,22 +652,26 @@ export default function ContractorsPage() {
                   {planFeatures.map((feat, i) => (
                     <li key={i} className="flex items-center gap-3">
                       <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
-                      <span className="text-sm text-foreground capitalize">{feat}</span>
+                      <span className="text-sm text-foreground">{feat}</span>
                     </li>
                   ))}
                 </ul>
-                <div className="relative mt-4 text-center">
-                  <LandingPageDemoLink />
-                </div>
-
-                <a
-                  href="sms:+12832291348?body=Let%27s%20create%20a%20new%20bid!"
-                  className="relative mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 active:scale-[0.98]"
+                {/* TRIAL14 — Tim's card (Oct 4): one CTA, 14-day free trial, card up front, $99/mo after.
+                    Replaces the 3-free-bids pitch here; the demo link lives in the landing-page section above. */}
+                <p className="relative mt-8 text-center text-lg font-bold text-foreground">
+                  Try everything free for {TRIAL_DAYS} days.
+                </p>
+                <Link
+                  href="/contractors/signup?plan=trial"
+                  className="relative mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 py-3 text-center text-[13px] font-bold uppercase leading-tight tracking-[0.04em] text-primary-foreground transition-colors hover:bg-primary/90 active:scale-[0.98] sm:text-sm"
                 >
-                  <ArrowRight className="h-4 w-4" />
-                  Start A Bid By Text
-                </a>
-                <p className="relative mt-4 text-center text-xs leading-relaxed text-muted-foreground">
+                  Start My {TRIAL_DAYS}-Day Free Trial
+                  <ArrowRight className="h-4 w-4 shrink-0" />
+                </Link>
+                <p className="relative mt-4 text-center text-sm text-muted-foreground">
+                  Start free today. Cancel anytime before your trial ends.
+                </p>
+                <p className="relative mt-4 text-center text-xs leading-relaxed text-muted-foreground/80">
                   HomeBids does not guarantee a specific number of leads or jobs. Homeowner
                   opportunities vary based on service area, category, and demand.
                 </p>

@@ -2,6 +2,10 @@
 // Contractors pay a flat $99/month — no bid fees, no per-lead charges.
 // Server-side price validation is done against these values.
 
+/** TRIAL14 (Tim, Oct 4): "give them the 14 day trial instead of 3 free bids". One length, server-owned —
+ *  the browser only says *whether* it wants a trial, never how long. */
+export const TRIAL_DAYS = 14
+
 export interface SubscriptionPlan {
   id: string
   name: string
