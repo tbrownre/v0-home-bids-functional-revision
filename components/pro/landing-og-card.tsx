@@ -13,6 +13,13 @@ import { HOMEBIDS_LOGO_PNG } from "@/lib/brand/logo-png";
 
 export const OG_SIZE = { width: 1200, height: 630 };
 
+// SHARESPIN (Tim, Oct 4: "Trying to share the landing page.. its not letting me"): the iOS share
+// sheet spins while it downloads this image, and an uncached render (fonts + Supabase + draw) is a
+// 2–3 s cold hit. Same lever that fixed the /j card on Sep 19 (2.8 s MISS → 0.4 s HIT): let Vercel's
+// CDN serve it for an hour and refresh in the background for a day. A renamed business shows on the
+// card within the hour.
+const OG_CACHE = { "Cache-Control": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400" };
+
 type LandingCard = {
   company: string;
   trade: string;
@@ -309,6 +316,6 @@ export async function renderLandingCard(slug: string) {
         </div>
       </div>
     ),
-    { ...OG_SIZE, ...(fonts.length ? { fonts } : {}) },
+    { ...OG_SIZE, headers: OG_CACHE, ...(fonts.length ? { fonts } : {}) },
   );
 }
