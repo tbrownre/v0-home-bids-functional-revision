@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { HOMEBIDS_LOGO_PNG } from "@/lib/brand/logo-png";
 
 /**
  * Link-preview card for a contractor's /pro/<slug> landing page (Tim, Oct 4: "OG image still says
@@ -196,10 +197,8 @@ export async function renderLandingCard(slug: string) {
 
         {/* header: wordmark + pill */}
         <div style={{ display: "flex", flexDirection: "column", padding: "56px 90px 0 90px" }}>
-          <div style={{ display: "flex", fontSize: "46px", fontWeight: 900, letterSpacing: "-0.03em", lineHeight: 1 }}>
-            <span style={{ color: "#0A84FF" }}>HOME</span>
-            <span style={{ color: "#05070A" }}>BIDS</span>
-          </div>
+          {/* Official logo file (lib/brand/logo-png.ts) — identical to the site header */}
+          <img src={HOMEBIDS_LOGO_PNG.dataUrl} width={Math.round(40 * HOMEBIDS_LOGO_PNG.ratio)} height={40} alt="" />
           <div
             style={{
               display: "flex",

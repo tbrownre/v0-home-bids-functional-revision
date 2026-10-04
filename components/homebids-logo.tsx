@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { HOMEBIDS_LOGO_PNG } from "@/lib/brand/logo-png";
 
 interface HomeBidsLogoProps {
   /**
-   * Font-size of the wordmark. Width is determined naturally by the text.
-   * Defaults to a responsive clamp suitable for the main header.
+   * Size of the wordmark, as the font-size the old text wordmark used (any CSS length, clamp() ok).
+   * The artwork's height is ~0.72× this so every existing call site keeps its visual size.
    */
   size?: string;
   /** Wrap in a <Link>. Defaults to true. */
@@ -13,10 +14,11 @@ interface HomeBidsLogoProps {
   className?: string;
 }
 
+const LOGO_SRC = "/brand/homebids-logo.png"; // the official file (transparent), same pixels as lib/brand/logo-png.ts
+
 /**
- * HomeBids wordmark — pure CSS, no image required.
- * "HOME" in brand blue, "BIDS" in near-black, bold, uppercase,
- * tight letter-spacing, transparent background.
+ * HomeBids wordmark — the OFFICIAL logo file (Tim, Oct 4 2026), not CSS text.
+ * Header, footer, topbars, auth pages and the link-preview cards all draw this same image.
  */
 export function HomeBidsLogo({
   size = "clamp(20px, 3vw, 28px)",
@@ -24,32 +26,22 @@ export function HomeBidsLogo({
   href = "/",
   className = "",
 }: HomeBidsLogoProps) {
+  const h = `calc(${size} * 0.72)`;
   const wordmark = (
-    <span
-      className={`select-none pointer-events-none inline-flex items-baseline leading-none ${className}`}
-      aria-hidden="true"
-      style={{
-        fontFamily: "'Red Hat Display', system-ui, sans-serif",
-        fontSize: size,
-        letterSpacing: "-0.02em",
-        lineHeight: 1,
-      }}
-    >
-      <span style={{ color: "#2B7FE8", fontWeight: 800 }}>HOME</span>
-      <span style={{ color: "#0D0D0D", fontWeight: 400 }}>BIDS</span>
-    </span>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={LOGO_SRC}
+      alt="HomeBids"
+      width={HOMEBIDS_LOGO_PNG.width}
+      height={HOMEBIDS_LOGO_PNG.height}
+      draggable={false}
+      className={`select-none pointer-events-none block shrink-0 ${className}`}
+      style={{ height: h, width: "auto" }}
+    />
   );
 
   if (!linked) {
-    return (
-      <span
-        aria-label="HomeBids"
-        role="img"
-        className="inline-flex items-center"
-      >
-        {wordmark}
-      </span>
-    );
+    return <span className="inline-flex items-center">{wordmark}</span>;
   }
 
   return (

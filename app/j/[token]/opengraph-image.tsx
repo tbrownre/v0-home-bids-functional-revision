@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { HOMEBIDS_LOGO_PNG } from "@/lib/brand/logo-png";
 
 export const alt = "HomeBids job share";
 export const size = { width: 1200, height: 630 };
@@ -102,9 +103,9 @@ function renderCard({ firstName, trade, city }: JobDetails) {
       <div style={{ display: "flex", position: "absolute", width: "420px", height: "420px", borderRadius: "50%", backgroundColor: "#E7F0FE", top: "-210px", left: "-210px" }} />
       <div style={{ display: "flex", position: "absolute", width: "420px", height: "420px", borderRadius: "50%", backgroundColor: "#E7F0FE", bottom: "-210px", right: "-210px" }} />
 
-      <div style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center", fontSize: 42, fontWeight: 800, zIndex: 1 }}>
-        <div style={{ display: "flex", color: "#0A84FF", letterSpacing: 7 }}>HOME</div>
-        <div style={{ display: "flex", color: "#111111", letterSpacing: 7 }}>BIDS</div>
+      <div style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center", zIndex: 1 }}>
+        {/* Official logo file (lib/brand/logo-png.ts) */}
+        <img src={HOMEBIDS_LOGO_PNG.dataUrl} width={Math.round(40 * HOMEBIDS_LOGO_PNG.ratio)} height={40} alt="" />
       </div>
 
       <div style={{ display: "flex", width: "100%", maxWidth: "1060px", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", zIndex: 1 }}>

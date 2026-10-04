@@ -1,9 +1,14 @@
 import { GatewayLanding } from "@/components/gateway-landing";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata = {
-  title: "HomeBids AI — Better bids. Better homes.",
-  description: "Meet HomeBids AI — your new assistant for all things home service. Get competitive bids from trusted local contractors.",
-};
+// Same page as "/" — canonical to the homepage, kept out of the index.
+export const metadata = pageMeta({
+  title: "HomeBids — Better bids. Better homes.",
+  description:
+    "Homeowners: text your project and get real bids from local pros — free. Contractors: build professional bids by text in minutes with AI. 14-day free trial.",
+  path: "/",
+  noindex: true,
+});
 
 export default function GatewayPage() {
   return <GatewayLanding />;

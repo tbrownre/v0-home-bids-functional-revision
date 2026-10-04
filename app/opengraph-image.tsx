@@ -1,4 +1,5 @@
 import { ImageResponse } from "@vercel/og";
+import { HOMEBIDS_LOGO_PNG } from "@/lib/brand/logo-png";
 
 export const runtime = "edge";
 export const alt = "HomeBids - Better bids. Better homes.";
@@ -21,21 +22,8 @@ export default async function Image() {
           fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
         }}
       >
-        {/* Wordmark: HOME in blue + BIDS in black */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0px",
-            fontSize: "120px",
-            fontWeight: 800,
-            letterSpacing: "-3px",
-            lineHeight: 1,
-          }}
-        >
-          <span style={{ color: "#2B7FE8" }}>HOME</span>
-          <span style={{ color: "#000000" }}>BIDS</span>
-        </div>
+        {/* Official logo file (lib/brand/logo-png.ts) — same image as the site header */}
+        <img src={HOMEBIDS_LOGO_PNG.dataUrl} width={Math.round(132 * HOMEBIDS_LOGO_PNG.ratio)} height={132} alt="" />
 
         {/* Tagline */}
         <div

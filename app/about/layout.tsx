@@ -1,16 +1,12 @@
-import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "About | HomeBids — Built for Contractors, Free for Homeowners",
+export const metadata = pageMeta({
+  title: "About HomeBids — Built for Contractors, Free for Homeowners",
   description:
-    "HomeBids is an AI-powered bidding platform that helps contractors win more work and homeowners get real competitive bids — fast, fair, and simple.",
-  openGraph: {
-    title: "About HomeBids",
-    description:
-      "AI-powered bidding: faster for contractors, fairer for homeowners.",
-    url: "https://homebids.ai/about",
-  },
-};
+    "HomeBids is an AI-powered bidding platform from Gilbert, Arizona: contractors build professional bids by text in minutes, homeowners get real competitive bids for free — fast, fair, and simple.",
+  ogDescription: "AI-powered bidding: faster for contractors, free for homeowners. Built in Gilbert, AZ.",
+  path: "/about",
+});
 
 export default function AboutLayout({
   children,

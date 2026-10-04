@@ -1,16 +1,12 @@
-import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "How It Works | HomeBids — Simple Bids for Homeowners & Contractors",
+export const metadata = pageMeta({
+  title: "How HomeBids Works — Bids by Text for Homeowners & Contractors",
   description:
-    "Homeowners describe their project and get competitive bids. Contractors use AI to respond in minutes. See exactly how HomeBids works for both sides.",
-  openGraph: {
-    title: "How It Works | HomeBids",
-    description:
-      "Post a project, get competitive bids, hire with confidence. See how HomeBids works.",
-    url: "https://homebids.ai/how-it-works",
-  },
-};
+    "Homeowners text their project and get competitive bids. Contractors text the job details and get a professional bid built by AI in minutes. See exactly how HomeBids works on both sides.",
+  ogDescription: "Text a project, get competitive bids, hire with confidence. See how HomeBids works.",
+  path: "/how-it-works",
+});
 
 export default function HowItWorksLayout({
   children,

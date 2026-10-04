@@ -7,6 +7,7 @@ import { FooterWrapper } from '@/components/footer-wrapper'
 import { ScrollToTop } from '@/components/scroll-to-top'
 import { SignInModalProvider } from '@/components/sign-in-modal-provider'
 import './globals.css'
+import { SITE_URL, SITE_NAME, TAGLINE, DEFAULT_DESCRIPTION, OG_IMAGE } from '@/lib/seo'
 
 const redHatDisplay = Red_Hat_Display({ subsets: ["latin"], weight: ["300", "400", "500", "600", "700", "800", "900"] });
 
@@ -21,30 +22,43 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'HomeBids - Better bids. Better homes.',
-  description: 'HomeBids connects homeowners with trusted local pros through competitive job bidding. Contractors only pay when they win work.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.homebids.ai'),
+  title: `${SITE_NAME} — ${TAGLINE}`,
+  description: DEFAULT_DESCRIPTION,
+  applicationName: SITE_NAME,
+  metadataBase: new URL(SITE_URL),
+  keywords: [
+    'contractor bid software',
+    'AI estimate generator for contractors',
+    'bid builder by text',
+    'home improvement bids',
+    'get contractor bids free',
+    'contractor landing page',
+    'HomeBids',
+  ],
+  authors: [{ name: 'HomeBids LLC', url: SITE_URL }],
+  creator: 'HomeBids LLC',
+  publisher: 'HomeBids LLC',
+  category: 'business',
+  formatDetection: { telephone: false },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1, 'max-video-preview': -1 },
+  },
   openGraph: {
-    title: 'HomeBids - Better bids. Better homes.',
-    description: 'HomeBids connects homeowners with trusted local pros through competitive job bidding. Contractors only pay when they win work.',
-    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://homebids.ai',
-    siteName: 'HomeBids',
+    title: `${SITE_NAME} — ${TAGLINE}`,
+    description: DEFAULT_DESCRIPTION,
+    url: SITE_URL,
+    siteName: SITE_NAME,
     locale: 'en_US',
     type: 'website',
-    images: [
-      {
-        url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://homebids.ai'}/opengraph-image?v=5`,
-        width: 1200,
-        height: 630,
-        alt: 'HomeBids - Better bids. Better homes.',
-      },
-    ],
+    images: [OG_IMAGE],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'HomeBids - Better bids. Better homes.',
-    description: 'HomeBids connects homeowners with trusted local pros through competitive job bidding. Contractors only pay when they win work.',
-    images: [`${process.env.NEXT_PUBLIC_SITE_URL || 'https://homebids.ai'}/twitter-image?v=5`],
+    title: `${SITE_NAME} — ${TAGLINE}`,
+    description: DEFAULT_DESCRIPTION,
+    images: [OG_IMAGE.url.replace('/opengraph-image', '/twitter-image')],
   },
   icons: {
     icon: [
@@ -65,6 +79,33 @@ export const metadata: Metadata = {
   },
 }
 
+// Organization + WebSite structured data: tells Google the official name, logo and tagline.
+const ORG_JSON_LD = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      legalName: 'HomeBids LLC',
+      url: SITE_URL,
+      logo: { '@type': 'ImageObject', url: `${SITE_URL}/brand/homebids-logo.png`, width: 1363, height: 193 },
+      slogan: TAGLINE,
+      description: DEFAULT_DESCRIPTION,
+      areaServed: 'US',
+      address: { '@type': 'PostalAddress', addressLocality: 'Gilbert', addressRegion: 'AZ', addressCountry: 'US' },
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: SITE_NAME,
+      publisher: { '@id': `${SITE_URL}/#organization` },
+      inLanguage: 'en-US',
+    },
+  ],
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -80,6 +121,7 @@ export default function RootLayout({
         <FooterWrapper />
         <ScrollToTop />
         <Analytics />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ORG_JSON_LD) }} />
         {/* Rewardful affiliate tracking (Sep 26) — public site tag; reads ?via= links and
             hands the referral to checkout.
             Sep 30: plain <script> tags instead of next/script. With next/script the rw.js tag

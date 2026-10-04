@@ -1,16 +1,12 @@
-import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "For Homeowners | HomeBids — Free Competitive Bids on Any Project",
+export const metadata = pageMeta({
+  title: "Get Contractor Bids by Text — Free for Homeowners | HomeBids",
   description:
-    "Describe your home project and get real bids from verified contractors in your area. Completely free for homeowners. No sign-up required to get started.",
-  openGraph: {
-    title: "For Homeowners | HomeBids",
-    description:
-      "Get real, competitive bids on any home project. Free for homeowners.",
-    url: "https://homebids.ai/homeowners",
-  },
-};
+    "Text us your home project and get real, competitive bids from local contractors — no forms, no fees, no sign-up to start. Compare bids, ask questions, and hire with confidence.",
+  ogDescription: "Text your project, get real bids from local pros. Always free for homeowners.",
+  path: "/homeowners",
+});
 
 export default function HomeownersLayout({
   children,

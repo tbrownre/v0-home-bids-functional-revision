@@ -1,16 +1,12 @@
-import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Affiliate Program | HomeBids — Earn $19.80/Month Per Contractor",
+export const metadata = pageMeta({
+  title: "HomeBids Affiliate Program — Earn 20% Recurring Per Contractor",
   description:
-    "Refer contractors to HomeBids and earn 20% recurring commission on every active subscription. No cap. Cancel-proof income from a tool contractors love using every day.",
-  openGraph: {
-    title: "Affiliate Program | HomeBids",
-    description:
-      "Earn 20% recurring commission per contractor you refer. No cap.",
-    url: "https://homebids.ai/affiliates",
-  },
-};
+    "Refer contractors to HomeBids and earn 20% recurring commission ($19.80/month) on every active $99 subscription, for as long as they stay. No cap. Free to join.",
+  ogDescription: "Earn 20% recurring commission on every contractor you refer. No cap. Free to join.",
+  path: "/affiliates",
+});
 
 export default function AffiliatesLayout({
   children,
