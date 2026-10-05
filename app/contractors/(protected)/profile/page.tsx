@@ -120,6 +120,16 @@ export default function ContractorProfilePage() {
         email: user.email || "",
         phone: user.phone || "",
       });
+      // PHONEFIX (Tim, Oct 5): the header painted from the cached mirror, which can be stale (old account's
+      // name, signup-typed phone). Reconcile with the live profile so name + phone are never stale.
+      void syncMirrorFromSupabase().then((fresh) => {
+        if (cancelled || !fresh) return;
+        setAccount({
+          name: [fresh.firstName, fresh.lastName].filter(Boolean).join(" ") || fresh.email || "Contractor",
+          email: fresh.email || "",
+          phone: fresh.phone || "",
+        });
+      });
 
       if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) {
         setLoading(false);

@@ -96,12 +96,13 @@ async function mapSupabaseUser(user: {
   // profiles.full_name is the source of truth for the display name (updated by
   // set_my_contractor_identity); auth user_metadata is only a fallback.
   let fullName: string | undefined;
+  let profilePhone: string | undefined;
   let role: MockRole = "homeowner";
   try {
     const supabase = createClient();
     const { data: profile } = await supabase
       .from("profiles")
-      .select("user_type, full_name")
+      .select("user_type, full_name, phone")
       .eq("id", user.id)
       .maybeSingle();
     const userType = profile?.user_type;
@@ -109,6 +110,9 @@ async function mapSupabaseUser(user: {
       role = userType;
     }
     fullName = profile?.full_name ?? undefined;
+    // PHONEFIX (Tim, Oct 5): the Account page showed the phone typed at signup (login metadata) while Bid Builder
+    // matches on profiles.phone - show the one that actually matters, fall back to the signup value.
+    profilePhone = profile?.phone ?? undefined;
   } catch {
     // Fallback to homeowner / metadata name on any error
   }
@@ -125,7 +129,7 @@ async function mapSupabaseUser(user: {
     name,
     firstName,
     lastName,
-    phone: meta.phone,
+    phone: profilePhone ?? meta.phone,
     role,
     authProvider: "email",
   };
