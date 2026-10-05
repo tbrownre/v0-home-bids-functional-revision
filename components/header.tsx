@@ -3,7 +3,7 @@
 import Link from "next/link";
 import React, { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle, LayoutDashboard, Sparkles, Users, Wrench, Search } from "lucide-react";
+import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle, LayoutDashboard, Sparkles, Users, Wrench, Search, Inbox } from "lucide-react";
 import { homeownerNavItems, loggedOutNavItems, contractorNavItems } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
@@ -18,6 +18,7 @@ import {
 } from "@/lib/inbox-store";
 import { createClient } from "@/lib/supabase/client";
 import { getMockUser, mockSignOut, syncMirrorFromSupabase } from "@/lib/mock-auth";
+import { useContractorBadges, badgeText } from "@/lib/use-contractor-badges";
 
 export interface HeaderProps {
   isContractor?: boolean;
@@ -144,7 +145,10 @@ export function Header({
     isContractor ? getContractorUnreadSnapshot : getHomeownerUnreadSnapshot,
     () => 0,
   );
-  const unreadCount = mounted && isLoggedIn ? unreadSnapshot : 0;
+  // Contractors (Tim, Oct 5): the hamburger number is the SUM of the per-tab counts shown inside the menu
+  // (Leads / Bids / Messages). The old feed counted every open marketplace job — meaningless, gone.
+  const badges = useContractorBadges({ enabled: mounted && isContractor });
+  const unreadCount = mounted && isLoggedIn ? (isContractor ? badges.total : unreadSnapshot) : 0;
 
   // Hydrate notifications on mount for signed-in users
   useEffect(() => {
@@ -360,10 +364,22 @@ export function Header({
                         onClick={closeMenu}
                       >
                         {item.label === "Dashboard" && <LayoutDashboard className="h-4 w-4 shrink-0" />}
+                        {item.label === "Leads"     && <Inbox           className="h-4 w-4 shrink-0" />}
                         {item.label === "Bids"      && <FileText        className="h-4 w-4 shrink-0" />}
                         {item.label === "Profile"   && <Wrench          className="h-4 w-4 shrink-0" />}
                         {item.label === "Messages"  && <MessageCircle   className="h-4 w-4 shrink-0" />}
-                        {item.label}
+                        <span className="flex-1">{item.label}</span>
+                        {(() => {
+                          const n = item.label === "Leads" ? badges.leads : item.label === "Bids" ? badges.bids : item.label === "Messages" ? badges.messages : 0;
+                          return n > 0 ? (
+                            <span
+                              className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-none text-white"
+                              aria-label={`${n} new`}
+                            >
+                              {badgeText(n)}
+                            </span>
+                          ) : null;
+                        })()}
                       </Link>
                     );
                   })}

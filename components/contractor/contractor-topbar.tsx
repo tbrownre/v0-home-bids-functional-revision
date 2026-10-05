@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, ChevronDown, Eye, MessageCircle, UserCog } from "lucide-react";
+import { Bell, ChevronDown, Eye, FileText, Inbox, MessageCircle, UserCog } from "lucide-react";
 import { HomeBidsLogo } from "@/components/homebids-logo";
 import { contractorNavItems } from "@/lib/navigation";
 import { getMockUser, mockSignOut, syncMirrorFromSupabase } from "@/lib/mock-auth";
@@ -15,10 +15,24 @@ import {
   profileCompletion,
   PROFILE_FIELD_LABELS,
 } from "@/lib/use-contractor-signals";
+import { useContractorBadges, badgeText } from "@/lib/use-contractor-badges";
+
+/** Red counter next to a nav tab (Tim, Oct 5: alerts belong next to the tab they are about). */
+function NavBadge({ n }: { n: number }) {
+  if (n <= 0) return null;
+  return (
+    <span
+      className="ml-1.5 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-none text-white"
+      aria-label={`${n} new`}
+    >
+      {badgeText(n)}
+    </span>
+  );
+}
 
 interface Note {
   id: string;
-  icon: "message" | "view" | "profile";
+  icon: "message" | "view" | "profile" | "lead" | "bid";
   title: string;
   detail: string;
   href: string;
@@ -29,6 +43,9 @@ const ICON_STYLE = "flex h-8 w-8 shrink-0 items-center justify-center rounded-fu
 export function ContractorTopbar() {
   const pathname = usePathname() ?? "";
   const signals = useContractorSignals();
+  const badges = useContractorBadges({ enabled: true, signals });
+  const badgeFor = (label: string) =>
+    label === "Leads" ? badges.leads : label === "Bids" ? badges.bids : label === "Messages" ? badges.messages : 0;
 
   // NAMEFIX (Tim, Sep 27): phone-first Pros have no profiles.full_name yet, and
   // the old default rendered the literal word "there". Fall back to the business
@@ -54,6 +71,26 @@ export function ContractorTopbar() {
   // ── Build the notification feed from real data ──────────────────────────────
   const notes = useMemo<Note[]>(() => {
     const out: Note[] = [];
+
+    // Tab counters first — the same numbers shown next to Leads / Bids (Tim, Oct 5)
+    if (badges.leads > 0) {
+      out.push({
+        id: "leads-new",
+        icon: "lead",
+        title: `${badges.leads} new lead${badges.leads === 1 ? "" : "s"} from your website`,
+        detail: "Homeowners who texted from your page since you last opened Leads",
+        href: "/contractors/leads",
+      });
+    }
+    if (badges.bids > 0) {
+      out.push({
+        id: "bids-new",
+        icon: "bid",
+        title: `${badges.bids} response${badges.bids === 1 ? "" : "s"} on your bids`,
+        detail: "Viewed, Approve or Call tapped, or accepted since you last opened Bids",
+        href: "/contractors/bids-history",
+      });
+    }
 
     for (const t of unansweredThreads(signals.threads).slice(0, 4)) {
       out.push({
@@ -87,7 +124,7 @@ export function ContractorTopbar() {
     }
 
     return out;
-  }, [signals]);
+  }, [signals, badges]);
 
   const hasNotes = notes.length > 0;
 
@@ -128,11 +165,12 @@ export function ContractorTopbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-xl px-4 py-2.5 text-sm font-bold transition-colors ${
+                className={`inline-flex items-center rounded-xl px-4 py-2.5 text-sm font-bold transition-colors ${
                   active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 {item.label}
+                <NavBadge n={badgeFor(item.label)} />
               </Link>
             );
           })}
@@ -167,14 +205,16 @@ export function ContractorTopbar() {
                     >
                       <span
                         className={`${ICON_STYLE} ${
-                          n.icon === "message"
+                          n.icon === "message" || n.icon === "lead"
                             ? "bg-primary/10 text-primary"
-                            : n.icon === "view"
+                            : n.icon === "view" || n.icon === "bid"
                               ? "bg-sky-100 text-sky-600"
                               : "bg-amber-100 text-amber-600"
                         }`}
                       >
                         {n.icon === "message" && <MessageCircle className="h-4 w-4" />}
+                        {n.icon === "lead" && <Inbox className="h-4 w-4" />}
+                        {n.icon === "bid" && <FileText className="h-4 w-4" />}
                         {n.icon === "view" && <Eye className="h-4 w-4" />}
                         {n.icon === "profile" && <UserCog className="h-4 w-4" />}
                       </span>
@@ -246,11 +286,12 @@ export function ContractorTopbar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-bold transition-colors ${
+              className={`inline-flex shrink-0 items-center rounded-lg px-3 py-1.5 text-sm font-bold transition-colors ${
                 active ? "bg-primary/10 text-primary" : "text-muted-foreground"
               }`}
             >
               {item.label}
+              <NavBadge n={badgeFor(item.label)} />
             </Link>
           );
         })}
