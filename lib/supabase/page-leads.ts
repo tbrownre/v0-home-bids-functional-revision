@@ -22,6 +22,12 @@ export interface PageLeadBid {
   total_price: number | null;
 }
 
+export interface PageLeadHomeowner {
+  name: string | null;
+  phone: string | null; // E.164 when known
+  email: string | null; // null for the synthetic <digits>@sms.homebids.ai accounts
+}
+
 export interface PageLead {
   id: string;
   job_ref: string | null;
@@ -32,9 +38,23 @@ export interface PageLead {
   status: string | null;
   created_at: string;
   bid: PageLeadBid | null;
+  // Lead details (Tim, Oct 5: "we want the contractor to open up the job details/scope,
+  // time frame/pics and all contact info we collected during the lead intake")
+  description: string | null;
+  urgency: string | null; // asap | within_week | within_month | flexible
+  budget_min: number | null;
+  budget_max: number | null;
+  images: string[];
+  homeowner: PageLeadHomeowner;
+  intake_notes: string[]; // the homeowner's own texts to Ava during this intake, oldest first
 }
 
 const digits10 = (v: unknown) => String(v ?? "").replace(/\D/g, "").slice(-10);
+const normalizePhone = (v: unknown): string | null => {
+  const d = String(v ?? "").replace(/\D/g, "");
+  if (d.length < 10) return null;
+  return "+" + (d.length === 10 ? "1" + d : d);
+};
 
 export async function getMyPageLeads(limit = 20): Promise<{ leads: PageLead[]; error: string | null }> {
   const supabase = await createClient();
@@ -52,7 +72,7 @@ export async function getMyPageLeads(limit = 20): Promise<{ leads: PageLead[]; e
 
   const { data: jobs, error } = await admin
     .from("jobs")
-    .select("id, job_ref, title, category, location, zip_code, status, created_at")
+    .select("id, job_ref, title, category, location, zip_code, status, created_at, description, urgency, budget_min, budget_max, images, homeowner_id")
     .eq("source_contractor_id", user.id)
     .order("created_at", { ascending: false })
     .limit(Math.max(1, Math.min(500, Math.floor(limit))));
@@ -85,6 +105,56 @@ export async function getMyPageLeads(limit = 20): Promise<{ leads: PageLead[]; e
     });
   }
 
+  // Homeowner contact for each lead. A page lead is exclusive to this contractor, so the
+  // name + phone the homeowner gave Ava are theirs to see (no scrub — unlike marketplace jobs).
+  const homeownerIds = Array.from(new Set(rows.map((j) => String(j.homeowner_id || "")).filter(Boolean)));
+  const ownerById = new Map<string, PageLeadHomeowner>();
+  if (homeownerIds.length) {
+    const { data: owners } = await admin.from("profiles").select("id, full_name, phone, email").in("id", homeownerIds);
+    for (const o of (owners ?? []) as Array<Record<string, unknown>>) {
+      const email = String(o.email ?? "").trim();
+      ownerById.set(String(o.id), {
+        name: String(o.full_name ?? "").trim() || null,
+        phone: normalizePhone(o.phone),
+        email: email && !/@sms\.homebids\.ai$/i.test(email) ? email : null,
+      });
+    }
+  }
+
+  // What the homeowner actually told Ava during the intake (their own texts, oldest first).
+  const notesByJob = new Map<string, string[]>();
+  const phones = Array.from(new Set(Array.from(ownerById.values()).map((o) => o.phone).filter(Boolean))) as string[];
+  if (phones.length) {
+    const times = rows.map((j) => new Date(String(j.created_at)).getTime()).filter((t) => Number.isFinite(t));
+    const from = new Date(Math.min(...times) - 36 * 3600 * 1000).toISOString();
+    const to = new Date(Math.max(...times) + 10 * 60 * 1000).toISOString();
+    const { data: msgs } = await admin
+      .from("messages")
+      .select("phone, role, content, created_at")
+      .in("phone", phones)
+      .eq("role", "user")
+      .gte("created_at", from)
+      .lte("created_at", to)
+      .order("created_at", { ascending: true })
+      .limit(2000);
+    const byPhone = new Map<string, Array<{ t: number; c: string }>>();
+    for (const m of (msgs ?? []) as Array<Record<string, unknown>>) {
+      const ph = normalizePhone(m.phone);
+      const c = String(m.content ?? "").replace(/\s+/g, " ").trim();
+      if (!ph || !c || /^\[photo:/i.test(c)) continue;
+      if (!byPhone.has(ph)) byPhone.set(ph, []);
+      byPhone.get(ph)!.push({ t: new Date(String(m.created_at)).getTime(), c });
+    }
+    for (const j of rows) {
+      const owner = ownerById.get(String(j.homeowner_id || ""));
+      const ph = owner?.phone;
+      if (!ph) continue;
+      const created = new Date(String(j.created_at)).getTime();
+      const win = (byPhone.get(ph) ?? []).filter((m) => m.t >= created - 36 * 3600 * 1000 && m.t <= created + 10 * 60 * 1000);
+      notesByJob.set(String(j.id), win.slice(-12).map((m) => (m.c.length > 400 ? m.c.slice(0, 400) + "…" : m.c)));
+    }
+  }
+
   const leads: PageLead[] = rows.map((j) => ({
     id: String(j.id),
     job_ref: (j.job_ref as string | null) ?? null,
@@ -95,6 +165,13 @@ export async function getMyPageLeads(limit = 20): Promise<{ leads: PageLead[]; e
     status: (j.status as string | null) ?? null,
     created_at: String(j.created_at),
     bid: bidByJob.get(String(j.id)) ?? null,
+    description: String(j.description ?? "").trim() || null,
+    urgency: (j.urgency as string | null) ?? null,
+    budget_min: typeof j.budget_min === "number" ? j.budget_min : null,
+    budget_max: typeof j.budget_max === "number" ? j.budget_max : null,
+    images: Array.isArray(j.images) ? (j.images as unknown[]).map(String).filter((u) => /^https?:\/\//.test(u)) : [],
+    homeowner: ownerById.get(String(j.homeowner_id || "")) ?? { name: null, phone: null, email: null },
+    intake_notes: notesByJob.get(String(j.id)) ?? [],
   }));
 
   return { leads, error: null };

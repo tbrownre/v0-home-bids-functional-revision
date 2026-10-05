@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { getSmsHref, CONTRACTOR_SMS_PHONE_NUMBER } from "@/lib/sms-config";
 import { formatPrice } from "@/lib/proposal-format";
 import { getMyPageLeads, type PageLead } from "@/lib/supabase/page-leads";
+import { leadLabel } from "@/lib/page-lead-label";
 
 const CARD = "rounded-[22px] border border-border bg-card shadow-[0_10px_30px_rgba(16,17,20,0.06)]";
 
@@ -115,7 +116,13 @@ export function PageLeadsCard({ pageLive }: { pageLive: boolean }) {
               <div key={l.id} className={`py-4 ${i > 0 ? "border-t border-border" : ""}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-foreground">{l.title}</p>
+                    {/* "Tim's Landscaping Project" (Tim, Oct 5) — opens the full details on the Leads page */}
+                    <Link
+                      href={`/contractors/leads?open=${encodeURIComponent(l.id)}`}
+                      className="block truncate font-semibold text-primary hover:underline"
+                    >
+                      {leadLabel({ homeownerName: l.homeowner.name, category: l.category })}
+                    </Link>
                     <p className="mt-0.5 truncate text-sm text-muted-foreground">
                       {[where, whenLabel(l.created_at), ref].filter(Boolean).join(" · ")}
                     </p>
