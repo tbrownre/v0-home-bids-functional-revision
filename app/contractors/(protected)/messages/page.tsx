@@ -11,11 +11,19 @@ import {
   ImageIcon,
   Send,
   MessageCircle,
+  ScrollText,
+  Clock,
+  MapPin,
+  Camera,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { ContractorTopbar } from "@/components/contractor/contractor-topbar";
 import { getMockUser, syncMirrorFromSupabase } from "@/lib/mock-auth";
 import { createClient } from "@/lib/supabase/client";
 import { useContractorSignals, type ContractorThread } from "@/lib/use-contractor-signals";
+import { getThreadJobCard, type ThreadJobCard } from "@/lib/supabase/job-card";
+import { serviceLabel } from "@/lib/page-lead-label";
 
 const CARD = "rounded-[22px] border border-border bg-card shadow-[0_10px_30px_rgba(16,17,20,0.06)]";
 const QUICK_REPLIES = ["Yes, that works for me.", "I can start next week.", "I'll send an update shortly."];
@@ -81,6 +89,83 @@ function stateClasses(state: string | null | undefined): string {
   }
 }
 
+const URGENCY_LABEL: Record<string, string> = {
+  asap: "ASAP",
+  within_week: "Within a week",
+  within_month: "Within a month",
+  flexible: "Flexible",
+};
+
+function jobBudgetLabel(min: number | null, max: number | null): string | null {
+  if (min == null && max == null) return null;
+  const f = (n: number) => "$" + Number(n).toLocaleString();
+  if (min != null && max != null) return min === max ? f(min) : `${f(min)} – ${f(max)}`;
+  return f((min ?? max) as number);
+}
+
+/** The job the thread is about (Tim, Oct 6: messages were blind — no scope/photos context). */
+function JobCard({ job }: { job: ThreadJobCard }) {
+  const where = [job.location, job.zip_code].filter(Boolean).join(" ");
+  const budget = jobBudgetLabel(job.budget_min, job.budget_max);
+  const Label = ({ children }: { children: React.ReactNode }) => (
+    <p className="text-xs font-extrabold uppercase tracking-[0.06em] text-muted-foreground">{children}</p>
+  );
+  return (
+    <div className="border-b border-border bg-muted/30 px-5 py-4 text-sm">
+      <div className="flex items-start gap-2.5">
+        <ScrollText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <div className="min-w-0 flex-1">
+          <Label>Scope</Label>
+          <p className="mt-0.5 whitespace-pre-wrap text-foreground">{job.description || "No description captured yet."}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {serviceLabel(job.category)}
+            {job.job_ref ? ` · ${job.job_ref}` : ""}
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <div className="flex items-start gap-2.5">
+          <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div>
+            <Label>Timeframe</Label>
+            <p className="mt-0.5 text-foreground">{(job.urgency && URGENCY_LABEL[job.urgency]) || job.urgency || "Not stated"}</p>
+          </div>
+        </div>
+        <div className="flex items-start gap-2.5">
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div>
+            <Label>Location</Label>
+            <p className="mt-0.5 text-foreground">{where || "Not stated"}</p>
+          </div>
+        </div>
+        <div className="flex items-start gap-2.5">
+          <span className="mt-0.5 inline-block h-4 w-4 shrink-0 text-center text-xs font-black leading-4 text-primary">$</span>
+          <div>
+            <Label>Budget</Label>
+            <p className="mt-0.5 text-foreground">{budget || "Not stated"}</p>
+          </div>
+        </div>
+      </div>
+      {job.images.length > 0 && (
+        <div className="mt-3 flex items-start gap-2.5">
+          <Camera className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div className="min-w-0 flex-1">
+            <Label>Photos ({job.images.length})</Label>
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {job.images.map((src, i) => (
+                <a key={src + i} href={src} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl border border-border bg-card">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt={`Project photo ${i + 1}`} loading="lazy" className="h-20 w-20 object-cover" />
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ContractorMessagesPage() {
   const { threads, loaded } = useContractorSignals();
 
@@ -90,6 +175,9 @@ export default function ContractorMessagesPage() {
   const [detail, setDetail] = useState<ThreadDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [composer, setComposer] = useState("");
+  const [jobOpen, setJobOpen] = useState(false);
+  const [jobCards, setJobCards] = useState<Record<string, ThreadJobCard | null>>({});
+  const [jobLoading, setJobLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const sendingRef = useRef(false);
@@ -202,6 +290,27 @@ export default function ContractorMessagesPage() {
     () => threads.find((t) => t.c_token === activeToken),
     [threads, activeToken],
   );
+
+  // Job details card — lazy-loaded per job_ref, cached for the session (Tim, Oct 6).
+  const activeJobRef = detail?.job?.job_ref || activeRow?.job_ref || "";
+  const jobCard = activeJobRef ? jobCards[activeJobRef] : undefined;
+  useEffect(() => { setJobOpen(false); }, [activeToken]);
+  useEffect(() => {
+    if (!jobOpen || !activeJobRef || jobCards[activeJobRef] !== undefined) return;
+    let cancelled = false;
+    setJobLoading(true);
+    (async () => {
+      try {
+        const { job } = await getThreadJobCard(activeJobRef);
+        if (!cancelled) setJobCards((m) => ({ ...m, [activeJobRef]: job }));
+      } catch {
+        if (!cancelled) setJobCards((m) => ({ ...m, [activeJobRef]: null }));
+      } finally {
+        if (!cancelled) setJobLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [jobOpen, activeJobRef, jobCards]);
 
   const contact = detail?.homeowner_contact ?? null;
   const bid = detail?.page_state?.bid ?? null;
@@ -414,6 +523,17 @@ export default function ContractorMessagesPage() {
                   </div>
 
                   <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                    {activeJobRef && (
+                      <button
+                        type="button"
+                        onClick={() => setJobOpen((o) => !o)}
+                        aria-expanded={jobOpen}
+                        className="inline-flex min-h-[38px] items-center gap-1.5 rounded-xl border border-border bg-card px-3 text-sm font-semibold text-foreground hover:bg-muted"
+                      >
+                        <ScrollText className="h-4 w-4" /> Job details
+                        {jobOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                      </button>
+                    )}
                     {bid?.share_token && (
                       <a
                         href={`/p/${bid.share_token}`}
@@ -451,6 +571,17 @@ export default function ContractorMessagesPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Job details (Tim, Oct 6: the job the thread is about, right here) */}
+                {jobOpen && (
+                  jobLoading && jobCard === undefined ? (
+                    <div className="border-b border-border bg-muted/30 px-5 py-4 text-sm text-muted-foreground">Loading job details…</div>
+                  ) : jobCard ? (
+                    <JobCard job={jobCard} />
+                  ) : (
+                    <div className="border-b border-border bg-muted/30 px-5 py-4 text-sm text-muted-foreground">Job details aren&apos;t available for this thread.</div>
+                  )
+                )}
 
                 {/* Transcript */}
                 <div ref={bodyRef} className="flex flex-1 min-h-0 flex-col gap-2.5 overflow-auto px-5 py-6">
