@@ -588,7 +588,7 @@ function LandingPageCard({ profile }: { profile: ContractorProfile | null }) {
     <section className={`${CARD} p-6`}>
       <div className="mb-2 flex items-center gap-2">
         <Globe className="h-5 w-5 shrink-0 text-primary" />
-        <h2 className="text-xl font-bold tracking-tight text-foreground">Your contractor landing page</h2>
+        <h2 className="text-xl font-bold tracking-tight text-foreground">Your website</h2>
       </div>
 
       {url ? (

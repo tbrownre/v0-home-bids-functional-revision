@@ -143,7 +143,7 @@ export default function ContractorLeadsPage() {
             <p className="text-xs font-extrabold uppercase tracking-[0.08em] text-primary">Your page</p>
             <h1 className="mt-1 text-4xl font-extrabold tracking-tight text-foreground">Leads</h1>
             <p className="mt-2 text-lg text-muted-foreground">
-              Homeowners who texted from your contractor landing page. Each one is yours alone — no other pros.
+              Homeowners who texted from your website. Each one is yours alone — no other pros.
             </p>
           </div>
           {pageUrl ? (
@@ -206,7 +206,7 @@ export default function ContractorLeadsPage() {
                 {leads.length === 0
                   ? pageUrl
                     ? "Put your page link in your bio, your truck and your cards — every homeowner who texts from it lands here with a one-tap bid."
-                    : "Publish your contractor landing page first — homeowners who text from it land here, yours alone."
+                    : "Publish your website first — homeowners who text from it land here, yours alone."
                   : "Try a different search or filter."}
               </p>
               {leads.length === 0 && !pageUrl && (

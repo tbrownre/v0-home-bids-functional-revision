@@ -53,7 +53,7 @@ const PLAN_FEATURES = [
   "HomeBids AI lead matching",
   "Direct homeowner contact after approval",
   "Bid Builder — shareable link + PDF included",
-  "Your own contractor landing page",
+  "Your own website",
 ];
 
 function CompletionPill({ done }: { done: boolean }) {
@@ -282,7 +282,7 @@ export default function ContractorProfilePage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
       if (res?.published && res.landing_page_url) {
-        showToast("Your contractor landing page is live \u2014 see it on your dashboard");
+        showToast("Your website is live \u2014 see it on your dashboard");
       }
     } catch (e) {
       console.error("[Profile] save failed:", e);
