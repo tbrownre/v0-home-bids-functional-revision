@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { SubscriptionCheckout } from "@/components/subscription-checkout";
+import { getMockUser } from "@/lib/mock-auth";
 import { LandingPageDemoLink, LANDING_PAGE_FEATURE_TITLE, LANDING_PAGE_FEATURE_DESC } from "@/components/landing-page-demo-link";
 import { getContractorPlans, getHomeownerPlan, TRIAL_DAYS, type SubscriptionPlan } from "@/lib/products";
 import { motion, AnimatePresence } from "framer-motion";
@@ -89,6 +90,12 @@ export default function SubscribePage() {
     // Homeowner plan is free — no checkout: start the project by texting Ava
     if (plan.userType === "homeowner") {
       window.location.href = "sms:+14043952879?body=Hi%20HomeBids%2C%20help%20me%20create%20a%20new%20job!";
+      return;
+    }
+    // PAYWALLFIX (Tim, Oct 6): a signed-out contractor must land in the contractor signup →
+    // 14-day-trial checkout flow, never the generic login modal.
+    if (!getMockUser()) {
+      window.location.href = "/contractors/signup?plan=trial";
       return;
     }
     setSelectedPlan(plan);
@@ -554,7 +561,7 @@ function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan:
   const monthlyPrice = (plan.priceInCents / 100).toFixed(0);
 
   const ctaLabel =
-    plan.id === "contractor-growth" ? "Subscribe — $99/mo"
+    plan.id === "contractor-growth" ? "Start My 14-Day Free Trial"
     : plan.id === "homeowner-monthly" ? "Post Your Project — Free"
     : plan.hasTrial === false ? `Get ${plan.name}`
     : "Get Started";
@@ -602,7 +609,7 @@ function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan:
                 <span className="text-sm font-medium text-muted-foreground">/month</span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground/50">
-                Billed monthly. Cancel anytime.
+                14-day free trial, then $99/mo. Cancel anytime before your trial ends.
               </p>
             </>
           )}

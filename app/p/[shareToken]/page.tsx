@@ -79,13 +79,13 @@ export default async function HostedProposalPage({ params }: PageProps) {
   }
 
   // Fetch contractor profile data for trust badges (bypass RLS with admin client)
-  let contractorProfile: { license_number?: string | null; insurance_details?: string | null } | null = null;
+  let contractorProfile: { license_number?: string | null; insurance_details?: string | null; google_review_link?: string | null } | null = null;
   if (proposal.contractor_id) {
     try {
       const supabase = createAdminClient();
       const { data } = await supabase
         .from('contractor_profiles')
-        .select('license_number, insurance_details')
+        .select('license_number, insurance_details, google_review_link')
         .eq('id', proposal.contractor_id)
         .maybeSingle();
       contractorProfile = data || null;
@@ -113,7 +113,7 @@ function ProposalDocument({
 }: {
   proposal: Proposal;
   shareToken: string;
-  contractorProfile?: { license_number?: string | null; insurance_details?: string | null } | null;
+  contractorProfile?: { license_number?: string | null; insurance_details?: string | null; google_review_link?: string | null } | null;
 }) {
   const preparedDate = formatDate(proposal.created_at);
   const hasAddOns = proposal.add_ons.length > 0;
@@ -156,7 +156,7 @@ function ProposalDocument({
                   {hasLicense && (
                     <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
                       <ShieldCheck className="h-3 w-3" />
-                      Licensed{contractorProfile?.license_number && ` #${contractorProfile.license_number.slice(-4)}`}
+                      Licensed{contractorProfile?.license_number && ` #${contractorProfile.license_number.trim()}`}
                     </span>
                   )}
                   {hasInsurance && (
@@ -164,6 +164,16 @@ function ProposalDocument({
                       <ShieldCheck className="h-3 w-3" />
                       Insured
                     </span>
+                  )}
+                  {contractorProfile?.google_review_link && (
+                    <a
+                      href={contractorProfile.google_review_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+                    >
+                      ★ See Our Google Reviews
+                    </a>
                   )}
                 </div>
               )}

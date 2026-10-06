@@ -23,6 +23,7 @@ import { getMockUser, syncMirrorFromSupabase } from "@/lib/mock-auth";
 import { createClient } from "@/lib/supabase/client";
 import { useContractorSignals, type ContractorThread } from "@/lib/use-contractor-signals";
 import { getThreadJobCard, type ThreadJobCard } from "@/lib/supabase/job-card";
+import { getThreadSeenMap, markThreadSeen, isThreadUnread } from "@/lib/thread-read";
 import { serviceLabel } from "@/lib/page-lead-label";
 
 const CARD = "rounded-[22px] border border-border bg-card shadow-[0_10px_30px_rgba(16,17,20,0.06)]";
@@ -176,6 +177,8 @@ export default function ContractorMessagesPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [composer, setComposer] = useState("");
   const [jobOpen, setJobOpen] = useState(false);
+  const [seenMap, setSeenMap] = useState<Record<string, number>>({});
+  useEffect(() => { setSeenMap(getThreadSeenMap()); }, []);
   const [jobCards, setJobCards] = useState<Record<string, ThreadJobCard | null>>({});
   const [jobLoading, setJobLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -225,7 +228,7 @@ export default function ContractorMessagesPage() {
       return tb - ta;
     });
     return sorted.filter((t) => {
-      if (filter === "unread" && t.last_sender !== "homeowner") return false;
+      if (filter === "unread" && !isThreadUnread(t, seenMap)) return false;
       if (!q) return true;
       return (
         (t.title ?? "").toLowerCase().includes(q) ||
@@ -233,7 +236,7 @@ export default function ContractorMessagesPage() {
         (t.job_ref ?? "").toLowerCase().includes(q)
       );
     });
-  }, [threads, query, filter]);
+  }, [threads, query, filter, seenMap]);
 
   // Auto-select the first thread on desktop once data arrives.
   useEffect(() => {
@@ -295,6 +298,13 @@ export default function ContractorMessagesPage() {
   const activeJobRef = detail?.job?.job_ref || activeRow?.job_ref || "";
   const jobCard = activeJobRef ? jobCards[activeJobRef] : undefined;
   useEffect(() => { setJobOpen(false); }, [activeToken]);
+  // READFIX (Tim, Oct 6): opening a conversation marks it read on this device — unread styling
+  // clears at once and the Messages badge drops with it (storage event feeds the badge hook).
+  useEffect(() => {
+    if (!activeToken) return;
+    markThreadSeen(activeToken);
+    setSeenMap(getThreadSeenMap());
+  }, [activeToken, detail?.messages?.length]);
   useEffect(() => {
     if (!jobOpen || !activeJobRef || jobCards[activeJobRef] !== undefined) return;
     let cancelled = false;
@@ -316,7 +326,9 @@ export default function ContractorMessagesPage() {
   const bid = detail?.page_state?.bid ?? null;
   const homeownerFirst = detail?.job?.homeowner_first || activeRow?.homeowner_first || "Homeowner";
   const jobTitle = detail?.job?.title || activeRow?.title || "Job";
-  const stateLabel = prettyState(detail?.page_state?.state || activeRow?.state);
+  // HIREDFIX (Tim, Oct 6): once the bid is accepted the chip must say Hired, whatever the stale thread state says.
+  const rawState = detail?.page_state?.state || activeRow?.state;
+  const stateLabel = prettyState(bid?.status === "accepted" ? "hired" : rawState);
 
   async function sendMessage() {
     const body = composer.trim();
@@ -369,8 +381,8 @@ export default function ContractorMessagesPage() {
   }
 
   const needsReplyCount = useMemo(
-    () => threads.filter((t) => t.last_sender === "homeowner").length,
-    [threads],
+    () => threads.filter((t) => isThreadUnread(t, seenMap)).length,
+    [threads, seenMap],
   );
 
   const paneOpen = activeToken != null;
@@ -441,24 +453,31 @@ export default function ContractorMessagesPage() {
                 </div>
               ) : (
                 filtered.map((t) => {
-                  const unread = t.last_sender === "homeowner";
+                  const unread = isThreadUnread(t, seenMap);
                   const active = t.c_token === activeToken;
                   return (
                     <button
                       key={t.c_token || t.job_ref}
                       onClick={() => setActiveToken(t.c_token)}
                       className={`flex w-full flex-col border-t border-border px-4 py-4 text-left first:border-t-0 transition-colors hover:bg-muted/50 ${
-                        active ? "bg-primary/[0.06] shadow-[inset_3px_0_0_var(--primary)]" : ""
+                        active ? "bg-primary/[0.06] shadow-[inset_3px_0_0_var(--primary)]"
+                        : unread ? "bg-primary/[0.07] shadow-[inset_3px_0_0_var(--primary)]" : ""
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="truncate font-bold text-foreground">{t.title}</span>
-                        <span className="shrink-0 text-xs text-muted-foreground">{relativeTime(t.last_at)}</span>
+                        <span className={`truncate ${unread ? "font-extrabold" : "font-bold"} text-foreground`}>
+                          {(t.homeowner_first || "Homeowner") + (t.location ? ` · ${t.location}` : "")}
+                        </span>
+                        <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+                          {unread && (
+                            <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-primary-foreground">NEW</span>
+                          )}
+                          {relativeTime(t.last_at)}
+                        </span>
                       </div>
-                      <span className="mt-1 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
-                        {unread && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden />}
+                      <span className={`mt-1 flex items-center gap-1.5 truncate text-xs ${unread ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
                         <span className="truncate">
-                          {t.homeowner_first || "Homeowner"}
+                          {t.title}
                           {" · "}
                           {t.last_message ? (
                             <>

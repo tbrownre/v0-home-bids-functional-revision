@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import type { ContractorSignals, ContractorThread } from "@/lib/use-contractor-signals";
-import { unansweredThreads } from "@/lib/use-contractor-signals";
+import { getThreadSeenMap, isThreadUnread } from "@/lib/thread-read";
 import type { Proposal } from "@/lib/supabase/proposals";
 
 /**
@@ -13,7 +13,7 @@ import type { Proposal } from "@/lib/supabase/proposals";
  *  Leads     = homeowners who texted from your website since you last opened Leads
  *  Bids      = responses to your bids since you last opened Bids (viewed, Approve tapped, Call tapped,
  *              question asked, PDF downloaded, accepted)
- *  Messages  = homeowner threads waiting for your reply (clears itself when you answer)
+ *  Messages  = unread homeowner messages (clears per conversation the moment you open it)
  *
  * "Last opened" is remembered on this device (localStorage); opening a section clears its count.
  * A first visit only looks back 7 days so nobody is greeted with "9+" on day one.
@@ -91,19 +91,21 @@ export function useContractorBadges({ enabled, signals }: Options): ContractorBa
   const [ownProposals, setOwnProposals] = useState<Proposal[] | null>(null);
   const [ownThreads, setOwnThreads] = useState<ContractorThread[] | null>(null);
   const [seen, setSeen] = useState<Record<BadgeSection, number>>({ leads: 0, bids: 0, messages: 0 });
+  const [threadSeen, setThreadSeen] = useState<Record<string, number>>({});
   const [tick, setTick] = useState(0);
 
   // Seen stamps live in localStorage — read after mount so server and client render the same (0) first.
   useEffect(() => {
     if (!enabled) return;
     setSeen({ leads: readSeen("leads"), bids: readSeen("bids"), messages: readSeen("messages") });
+    setThreadSeen(getThreadSeenMap());
   }, [enabled, tick]);
 
-  // Opening a section = seen. Clears that badge everywhere on this device.
+  // Opening a section = seen (Leads/Bids). Messages clears per conversation instead (Tim, Oct 6).
   useEffect(() => {
     if (!enabled) return;
     const s = sectionForPath(pathname);
-    if (!s) return;
+    if (!s || s === "messages") return;
     writeSeen(s);
     setSeen((prev) => ({ ...prev, [s]: Date.now() }));
   }, [enabled, pathname]);
@@ -166,9 +168,9 @@ export function useContractorBadges({ enabled, signals }: Options): ContractorBa
     const threads = signals ? signals.threads : ownThreads ?? [];
     const leads = seen.leads ? leadTimes.filter((t) => t > seen.leads).length : 0;
     const bids = seen.bids ? proposals.reduce((n, p) => n + bidEventTimes(p).filter((t) => t > seen.bids).length, 0) : 0;
-    const messages = unansweredThreads(threads).length;
+    const messages = threads.filter((t) => isThreadUnread(t, threadSeen)).length;
     return { leads, bids, messages, total: leads + bids + messages };
-  }, [enabled, signals, ownProposals, ownThreads, leadTimes, seen]);
+  }, [enabled, signals, ownProposals, ownThreads, leadTimes, seen, threadSeen]);
 }
 
 /** The little red counter used next to nav items. */

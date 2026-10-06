@@ -362,6 +362,73 @@ export default function ContractorsPage() {
         </motion.div>
       </section>
 
+      {/* ── YOUR WEBSITE (Tim, Oct 6: biggest selling point — moved up, iMessage/SMS intake headline) ── */}
+      <section className="bg-primary/5 px-4 py-24 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-5xl">
+          <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
+            <motion.div variants={fadeUp} className="mb-12 text-center">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">Your Website</span>
+              <h2 className="mt-3 text-3xl font-bold text-foreground sm:text-4xl">
+                Your own website that handles iMessage/SMS lead intake
+              </h2>
+              <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
+                A professional HomeBids-powered website you can share anywhere. Homeowners tap, text, describe the job
+                and send photos — AI collects the details while you keep working. Every lead is yours alone, 24/7.
+              </p>
+            </motion.div>
+
+            <div className="grid gap-6 md:grid-cols-3">
+              {[
+                {
+                  icon: Globe,
+                  title: "Your business, one link",
+                  body: "Your name, your services and a text-to-quote bar at homebids.ai/pro/your-business. Put it in your bio, on your truck, on your cards.",
+                },
+                {
+                  icon: MessageSquareText,
+                  title: "Customers start a project",
+                  body: "They tap Text us, describe the job and send photos. Ava collects the details and hands you the lead.",
+                },
+                {
+                  icon: Zap,
+                  title: "The job is yours alone",
+                  body: "Leads that start from your page are not sent to other contractors. Included with HomeBids Pro.",
+                },
+              ].map((item, i) => (
+                <motion.div
+                  key={i}
+                  variants={fadeUp}
+                  className="rounded-2xl border border-border p-7"
+                  style={{ background: "rgba(255,255,255,0.7)", backdropFilter: "blur(12px)" }}
+                >
+                  <div
+                    className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl"
+                    style={{ background: "rgba(43,127,232,0.08)" }}
+                  >
+                    <item.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="font-bold text-foreground">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
+                </motion.div>
+              ))}
+            </div>
+
+            <motion.div variants={fadeUp} className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <Link
+                href={LANDING_PAGE_DEMO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 active:scale-[0.98]"
+              >
+                View contractor page demo
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <span className="text-sm text-muted-foreground">Included with HomeBids Pro &middot; $99/month</span>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* ── BEFORE / AFTER ── */}
       <section className="px-4 py-24 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
@@ -549,71 +616,6 @@ export default function ContractorsPage() {
         </div>
       </section>
 
-      {/* ── CONTRACTOR LANDING PAGE (Tim, Sep 27: a real section, not a buried bullet) ── */}
-      <section className="bg-primary/5 px-4 py-24 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-5xl">
-          <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-            <motion.div variants={fadeUp} className="mb-12 text-center">
-              <span className="text-xs font-semibold uppercase tracking-widest text-primary">Contractor Landing Page</span>
-              <h2 className="mt-3 text-3xl font-bold text-foreground sm:text-4xl">
-                Your own contractor landing page
-              </h2>
-              <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-                {LANDING_PAGE_FEATURE_DESC} Homeowners who text from your page come to you only.
-              </p>
-            </motion.div>
-
-            <div className="grid gap-6 md:grid-cols-3">
-              {[
-                {
-                  icon: Globe,
-                  title: "Your business, one link",
-                  body: "Your name, your services and a text-to-quote bar at homebids.ai/pro/your-business. Put it in your bio, on your truck, on your cards.",
-                },
-                {
-                  icon: MessageSquareText,
-                  title: "Customers start a project",
-                  body: "They tap Text us, describe the job and send photos. Ava collects the details and hands you the lead.",
-                },
-                {
-                  icon: Zap,
-                  title: "The job is yours alone",
-                  body: "Leads that start from your page are not sent to other contractors. Included with HomeBids Pro.",
-                },
-              ].map((item, i) => (
-                <motion.div
-                  key={i}
-                  variants={fadeUp}
-                  className="rounded-2xl border border-border p-7"
-                  style={{ background: "rgba(255,255,255,0.7)", backdropFilter: "blur(12px)" }}
-                >
-                  <div
-                    className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl"
-                    style={{ background: "rgba(43,127,232,0.08)" }}
-                  >
-                    <item.icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <h3 className="font-bold text-foreground">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
-                </motion.div>
-              ))}
-            </div>
-
-            <motion.div variants={fadeUp} className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link
-                href={LANDING_PAGE_DEMO_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 active:scale-[0.98]"
-              >
-                View contractor page demo
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <span className="text-sm text-muted-foreground">Included with HomeBids Pro &middot; $99/month</span>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
 
       {/* ── PRICING ── */}
       <section className="bg-card px-4 py-24 sm:px-6 lg:px-8">
