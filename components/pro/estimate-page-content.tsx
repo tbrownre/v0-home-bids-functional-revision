@@ -13,9 +13,22 @@
  * sticky CTA is position:fixed to the real viewport bottom.
  * The "Chat online" panel is the HTML's scripted PREVIEW — client-side
  * only, sends nothing, books nothing.
+ *
+ * v3 LIVEDEMO (Oct 7, Tim's P0 "Contractor-Owned Homeowner Leads" card):
+ *   - the hero phone is now a LIVE iMessage-style demo: Tim's 13-bubble script
+ *     plays sequentially (typing dots before every company reply), the thread
+ *     auto-scrolls, the company Tapbacks 👍 ❤️ ✅ on homeowner messages, and the
+ *     final line "We got it ✅ Working on your estimate now 💨 You'll be hearing
+ *     from us soon." lands with confetti (the repo's own confetti recipe, kept
+ *     inside the phone screen). Holds 5s, then replays — only while on screen.
+ *   - the company speaks as itself: no "Ava", no "assistant", no "AI" anywhere
+ *     on the page or in the prefilled text. The (Ref: <slug>) tag is UNCHANGED
+ *     — Guard only reads the tag, never the greeting.
+ *   - prefers-reduced-motion: the whole thread renders at once, no motion.
+ *   - visual only: nothing here touches the CTA links or the texting flow.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import dynamic from 'next/dynamic';
 
 const QRCode = dynamic(() => import('qrcode.react').then((m) => m.QRCodeSVG), {
@@ -111,19 +124,36 @@ const CSS = `
 .hb2 .p-head .avatar{width:34px;height:34px;border-radius:50%;font-size:12px;background:var(--accent)}
 .hb2 .p-head .who b{display:block;font-size:14px;font-weight:600}
 .hb2 .p-head .who span{font-size:11.5px;color:#7a7f87}
-.hb2 .chat{padding:14px 12px 20px;display:flex;flex-direction:column;gap:7px;min-height:392px}
-.hb2 .day{align-self:center;font-size:11px;color:#9aa0a8;margin-bottom:4px}
-.hb2 .msg{max-width:80%;padding:9px 13px;border-radius:18px;font-size:14.5px;line-height:1.34;opacity:0;transform:translateY(10px) scale(.97);transition:opacity .32s ease,transform .32s ease}
-.hb2 .msg.show{opacity:1;transform:none}
+.hb2 .screen{position:relative}
+.hb2 .chat{padding:14px 12px 20px;display:flex;flex-direction:column;gap:7px;height:480px;overflow:hidden;scroll-behavior:smooth;transition:opacity .35s ease}
+@media(max-width:759px){.hb2 .chat{height:440px}}
+.hb2 .chat.fade{opacity:0}
+.hb2 .day{align-self:center;font-size:11px;color:#9aa0a8;margin-bottom:4px;flex:none}
+.hb2 .msg{display:none;position:relative;flex:none;max-width:80%;padding:9px 13px;border-radius:18px;font-size:14.5px;line-height:1.34}
+.hb2 .msg.show{display:block;animation:hb2pop .32s ease both}
+@keyframes hb2pop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
 .hb2 .msg.in{background:#E9E9EB;color:#111;align-self:flex-start;border-bottom-left-radius:5px}
 .hb2 .msg.out{background:#0A84FF;color:#fff;align-self:flex-end;border-bottom-right-radius:5px}
-.hb2 .delivered{align-self:flex-end;font-size:10.5px;color:#9aa0a8;margin:-2px 6px 0 0;opacity:0;transition:opacity .3s}
-.hb2 .delivered.show{opacity:1}
-.hb2 .typing{display:none;align-self:flex-start;background:#E9E9EB;border-radius:18px;border-bottom-left-radius:5px;padding:12px 14px}
+.hb2 .msg.out.reacted{margin-top:12px}
+.hb2 .tap{position:absolute;top:-15px;left:-10px;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#E9E9EB;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.18);font-size:13px;line-height:1;opacity:0;transform:scale(.4);transition:opacity .22s ease,transform .32s cubic-bezier(.34,1.56,.64,1)}
+.hb2 .tap.show{opacity:1;transform:scale(1)}
+.hb2 .delivered{display:none;align-self:flex-end;flex:none;font-size:10.5px;color:#9aa0a8;margin:-2px 6px 0 0}
+.hb2 .delivered.show{display:block;animation:hb2pop .3s ease both}
+.hb2 .typing{display:none;flex:none;align-self:flex-start;background:#E9E9EB;border-radius:18px;border-bottom-left-radius:5px;padding:12px 14px}
 .hb2 .typing.on{display:flex;gap:4px}
 .hb2 .typing i{width:7px;height:7px;border-radius:50%;background:#9aa0a8;animation:hb2blink 1.2s infinite}
 .hb2 .typing i:nth-child(2){animation-delay:.18s}.hb2 .typing i:nth-child(3){animation-delay:.36s}
 @keyframes hb2blink{0%,80%,100%{opacity:.35;transform:translateY(0)}40%{opacity:1;transform:translateY(-2px)}}
+.hb2 .p-bar{display:flex;align-items:center;gap:8px;padding:7px 10px 4px;border-top:1px solid #ECECEC;background:#fff}
+.hb2 .p-bar .plus{width:30px;height:30px;border-radius:50%;background:#E9E9EB;color:#6b7076;display:grid;place-items:center;flex:none}
+.hb2 .p-bar .plus svg{width:14px;height:14px}
+.hb2 .p-bar .field{flex:1;display:flex;align-items:center;justify-content:space-between;height:32px;border:1px solid #D9D9DE;border-radius:16px;padding:0 10px 0 12px;font-size:14px;color:#9aa0a8}
+.hb2 .p-bar .field svg{width:15px;height:15px;color:#9aa0a8;flex:none}
+.hb2 .p-home{height:5px;width:118px;border-radius:3px;background:#111;margin:7px auto 8px}
+.hb2 .confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;border-radius:36px}
+.hb2 .cf{position:absolute;top:-16px;left:var(--x);width:var(--w);height:var(--h);background:var(--c);border-radius:var(--br);opacity:0;transform:rotate(var(--rot))}
+.hb2 .confetti.on .cf{animation:hb2fall var(--d) ease-in var(--dl) forwards}
+@keyframes hb2fall{0%{opacity:1;transform:translate(0,0) rotate(var(--rot))}75%{opacity:.85}100%{opacity:0;transform:translate(var(--dx),720px) rotate(calc(var(--rot) + 720deg))}}
 .hb2 .phone-cap{text-align:center;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;color:var(--mute);margin-top:16px;text-transform:uppercase}
 .hb2 .trust{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:0;background:var(--card)}
 .hb2 .trust .wrap{display:grid;grid-template-columns:repeat(2,1fr)}
@@ -196,8 +226,98 @@ const CSS = `
 .hb2 .sticky-cta .btn{width:100%;max-width:420px;font-size:16px;padding:14px 24px}
 .hb2 .sticky-cta small{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
 @media(min-width:760px){.hb2 .sticky-cta{display:none}.hb2{padding-bottom:0}}
-@media(prefers-reduced-motion:reduce){.hb2 .msg,.hb2 .delivered{opacity:1;transform:none;transition:none}.hb2 .typing{display:none!important}.hb2 .btn,.hb2 .svc{transition:none}}
+@media(prefers-reduced-motion:reduce){.hb2 .msg,.hb2 .delivered{display:block;animation:none}.hb2 .tap{opacity:1;transform:none;transition:none}.hb2 .msg.out.reacted{margin-top:12px}.hb2 .typing,.hb2 .confetti{display:none!important}.hb2 .chat{height:auto;overflow:visible}.hb2 .btn,.hb2 .svc{transition:none}}
 `;
+
+/* ── the hero demo script: Tim's 13 bubbles (Trello P0, Oct 7). The plumbing
+   version is his mock verbatim and is also the default; other trades keep the
+   exact same shape with only the project nouns swapped. ── */
+type DemoStep = { in?: string; out?: string; react?: string };
+type TradeScript = { request: string; clarifyQ: string; clarifyA: string; confirm: string };
+
+const TRADE_SCRIPTS: Array<{ test: RegExp; s: TradeScript }> = [
+  { test: /hvac|heat|cool|air|a\/c|\bac\b/i, s: {
+    request: 'My AC is blowing warm air.',
+    clarifyQ: 'Absolutely! Is the outside unit running at all, or is it completely off?',
+    clarifyA: "It runs, but the air never gets cold.",
+    confirm: "your AC runs but isn't cooling and needs a repair visit" } },
+  { test: /electric/i, s: {
+    request: 'I need a couple of outlets added in my garage.',
+    clarifyQ: 'Absolutely! Are these standard outlets, or do you need 240V for equipment?',
+    clarifyA: 'Standard ones — two should do it.',
+    confirm: 'you need two standard outlets added in the garage' } },
+  { test: /roof/i, s: {
+    request: "I've got a leak coming through the ceiling when it rains.",
+    clarifyQ: "Absolutely! Do you know roughly where on the roof it's coming in?",
+    clarifyA: 'Somewhere above the back bedroom.',
+    confirm: 'you have a roof leak above the back bedroom that needs repair' } },
+  { test: /landscap|lawn|hardscape|yard|paver|turf|tree/i, s: {
+    request: 'I want to redo the front yard with pavers.',
+    clarifyQ: 'Absolutely! Roughly how big is the area, and is it currently grass or dirt?',
+    clarifyA: 'About 400 sq ft, mostly dead grass.',
+    confirm: 'you want about 400 sq ft of front yard converted to pavers' } },
+  { test: /paint/i, s: {
+    request: 'I need the exterior of my house repainted.',
+    clarifyQ: 'Absolutely! Is it stucco or siding, and roughly how many stories?',
+    clarifyA: 'Stucco, single story.',
+    confirm: 'you need a single-story stucco exterior repainted' } },
+];
+const PLUMBING_SCRIPT: TradeScript = { // Tim's mock, verbatim
+  request: "I'm looking to install a new toilet.",
+  clarifyQ: 'Absolutely! Is there an old toilet that needs to be removed, or is this a new installation?',
+  clarifyA: "You'll need to remove the old one.",
+  confirm: 'you need the old toilet removed and a new one installed',
+};
+const FINAL_LINE = "We got it ✅ Working on your estimate now 💨 You'll be hearing from us soon.";
+
+function demoCityLabel(city: string): string {
+  const c = city.trim();
+  if (!c || /^\d{5}(-\d{4})?$/.test(c)) return '';
+  const parts = c.split(',').map((p) => p.trim()).filter(Boolean);
+  if (parts.length >= 2 && /^[A-Z]{2}$/.test(parts[1])) return parts[0] + ', ' + parts[1];
+  return parts[0];
+}
+
+function buildDemoScript(trade: string, city: string): DemoStep[] {
+  const hit = TRADE_SCRIPTS.find((t) => t.test.test(trade));
+  const s = hit ? hit.s : PLUMBING_SCRIPT;
+  const place = demoCityLabel(city) || 'Gilbert, AZ'; // no usable city (zip only / blank) → Tim's mock value
+  return [
+    { in: 'Hi there! 👋 How can we help today?' },
+    { out: s.request },
+    { in: s.clarifyQ },
+    { out: s.clarifyA, react: '👍' },
+    { in: 'Got it. Could you send us a quick photo of the area? Totally optional, but it helps us quote the job more accurately.' },
+    { out: 'Sorry, not at home right now.', react: '❤️' },
+    { in: `No worries! Is this project in ${place}?` },
+    { out: 'Yep.' },
+    { in: 'Perfect. How soon are you looking to have this done?' },
+    { out: 'ASAP' },
+    { in: `Just to confirm — ${s.confirm} in ${place} as soon as possible. Sound right?` },
+    { out: 'Yes', react: '✅' },
+    { in: FINAL_LINE },
+  ];
+}
+
+// deterministic confetti pieces (seeded, so server and client render the same markup)
+const CONFETTI_COLORS = ['#22c55e', '#16a34a', '#facc15', '#f59e0b', '#3b82f6', '#ec4899', '#f97316', '#8b5cf6'];
+const CONFETTI = Array.from({ length: 48 }, (_, i) => {
+  let seed = (i + 1) * 2654435761 % 4294967296;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+  const size = 6 + rnd() * 8;
+  const shape = i % 3;
+  return {
+    x: (rnd() * 100).toFixed(1) + '%',
+    dx: ((rnd() - 0.5) * 80).toFixed(0) + 'px',
+    w: (shape === 2 ? size * 0.6 : size).toFixed(1) + 'px',
+    h: (shape === 1 ? size * 0.6 : size).toFixed(1) + 'px',
+    br: shape === 0 ? '50%' : shape === 1 ? '2px' : '1px',
+    c: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    rot: (rnd() * 360).toFixed(0) + 'deg',
+    d: (2.2 + rnd() * 1.8).toFixed(2) + 's',
+    dl: (rnd() * 0.7).toFixed(2) + 's',
+  };
+});
 
 const SMS_ICON = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -230,75 +350,94 @@ export function EstimatePageContent({ page }: { page: LandingPageData }) {
   const jobs = trust.jobs || '';
 
   // FUNCTIONAL sms format — the (Ref:) tag drives page-lead routing. Unchanged.
+  // v3: the homeowner texts the company, not "Ava" (P0, Oct 7). Guard reads only the (Ref:) tag.
   const smsBodyFor = (topic: string) =>
-    `Hi Ava! I need help with ${topic} from ${companyName} (Ref: ${refParam})`;
+    `Hi ${companyName}! I need help with ${topic} (Ref: ${refParam})`;
   const smsHref = (topic: string) =>
     `sms:${smsNumber}?body=${encodeURIComponent(smsBodyFor(topic))}`;
   const mainSms = smsHref(`a ${trade} project`);
 
-  // ── animated hero chat (ported from the template's script) ──
+  // ── live hero demo (v3): Tim's script plays like a real iMessage thread ──
+  const demo = buildDemoScript(trade, city);
+  const demoLastOut = demo.map((s, i) => (s.out ? i : -1)).filter((i) => i >= 0).pop();
   const chatRef = useRef<HTMLDivElement>(null);
+  const confettiRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const chat = chatRef.current;
     if (!chat) return;
+    const confetti = confettiRef.current;
     const msgs: HTMLElement[] = Array.prototype.slice.call(chat.querySelectorAll('.msg'));
-    const outs = msgs.filter((m) => m.classList.contains('out'));
-    const lastOut = outs[outs.length - 1];
+    const typings: HTMLElement[] = Array.prototype.slice.call(chat.querySelectorAll('.typing'));
+    const taps: HTMLElement[] = Array.prototype.slice.call(chat.querySelectorAll('.tap'));
     const delivered = chat.querySelector<HTMLElement>('.delivered');
-    const typing = chat.querySelector<HTMLElement>('.typing');
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const timers: number[] = [];
+    let timers: number[] = [];
 
     const showAll = () => {
       msgs.forEach((m) => m.classList.add('show'));
+      taps.forEach((t) => t.classList.add('show'));
       delivered?.classList.add('show');
-      typing?.remove();
+      typings.forEach((t) => t.remove());
     };
     if (reduce) { showAll(); return; }
 
-    let played = false;
-    const play = () => {
-      if (played) return;
-      played = true;
-      let t = 500;
-      msgs.forEach((m, i) => {
-        if (m.classList.contains('in')) {
-          const d1 = t;
-          timers.push(window.setTimeout(() => {
-            if (typing) { chat.insertBefore(typing, m); typing.classList.add('on'); }
-          }, d1));
-          t += i === 0 ? 900 : 1300;
-          const d2 = t;
-          timers.push(window.setTimeout(() => {
-            typing?.classList.remove('on');
-            m.classList.add('show');
-          }, d2));
-        } else {
-          t += 1100;
-          const d = t;
-          const isLast = m === lastOut;
-          timers.push(window.setTimeout(() => {
-            m.classList.add('show');
-            if (isLast) delivered?.classList.add('show');
-          }, d));
-        }
-        t += 600;
-      });
-      timers.push(window.setTimeout(() => typing?.remove(), t + 800));
+    const after = (ms: number, fn: () => void) => { timers.push(window.setTimeout(fn, ms)); };
+    const toBottom = () => { chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' }); };
+    const reset = () => {
+      timers.forEach(clearTimeout); timers = [];
+      msgs.forEach((m) => m.classList.remove('show'));
+      taps.forEach((t) => t.classList.remove('show'));
+      typings.forEach((t) => t.classList.remove('on'));
+      delivered?.classList.remove('show');
+      confetti?.classList.remove('on');
+      chat.scrollTo({ top: 0, behavior: 'auto' });
     };
 
+    // one pass through the script; quick pacing, no dead space (Tim)
+    const play = () => {
+      let t = 450;
+      msgs.forEach((m) => {
+        const isIn = m.classList.contains('in');
+        const len = (m.textContent || '').length;
+        if (isIn) {
+          const typing = m.previousElementSibling as HTMLElement | null; // its own dots
+          const think = Math.min(1400, 650 + len * 9);
+          after(t, () => { typing?.classList.add('on'); toBottom(); });
+          t += think;
+          after(t, () => { typing?.classList.remove('on'); m.classList.add('show'); toBottom(); });
+          t += 520;
+        } else {
+          t += 480;
+          after(t, () => { m.classList.add('show'); toBottom(); });
+          const tap = m.querySelector<HTMLElement>('.tap');
+          if (m.classList.contains('last-out')) after(t + 420, () => delivered?.classList.add('show'));
+          if (tap) { after(t + 620, () => { tap.classList.add('show'); }); t += 420; }
+          t += 420;
+        }
+      });
+      // final line is on screen: celebrate, hold, then replay
+      after(t - 300, () => { confetti?.classList.add('on'); });
+      after(t + 5000, () => { chat.classList.add('fade'); });
+      after(t + 5400, () => { reset(); chat.classList.remove('fade'); play(); });
+    };
+
+    let running = false;
     let io: IntersectionObserver | null = null;
     if ('IntersectionObserver' in window) {
       io = new IntersectionObserver((entries) => {
         entries.forEach((e) => {
-          if (e.isIntersecting) { play(); io?.disconnect(); }
+          if (e.isIntersecting && !running) { running = true; reset(); play(); }
+          else if (!e.isIntersecting && running) { running = false; reset(); }
         });
-      }, { threshold: 0.35 });
+      }, { threshold: 0.3 });
       io.observe(chat);
     } else {
       showAll();
     }
-    return () => { io?.disconnect(); timers.forEach(clearTimeout); };
+    // background tabs throttle timers and garble the sequence — replay cleanly on return
+    const onVis = () => { if (document.visibilityState === 'visible' && running) { reset(); play(); } };
+    document.addEventListener('visibilitychange', onVis);
+    return () => { io?.disconnect(); document.removeEventListener('visibilitychange', onVis); timers.forEach(clearTimeout); };
   }, []);
 
   const heroEyebrow = [city, license ? 'Licensed & insured' : '', since ? `Since ${since}` : '']
@@ -367,20 +506,46 @@ export function EstimatePageContent({ page }: { page: LandingPageData }) {
                     <div className="who"><b>{companyName}</b><span>usually replies in minutes</span></div>
                   </div>
                   <div className="chat" ref={chatRef}>
-                    <span className="day">Today 10:14 AM</span>
-                    <div className="msg in">Hi! I&apos;m Ava, {companyName}&apos;s assistant 👋 What can we help with today?</div>
-                    <div className="msg out">I need help with a {trade} project at my place.</div>
-                    <div className="msg in">Got it — describe it briefly, or text a photo if that&apos;s easier.</div>
-                    <div className="msg out">Just sent a photo. How soon can someone look at it?</div>
-                    <div className="msg in">✅ Thanks! You&apos;ll have an <b>itemized estimate</b> shortly — {companyName} reviews every quote before it&apos;s final.</div>
-                    <div className="msg out">Perfect, thank you!</div>
-                    <span className="delivered">Delivered</span>
-                    <div className="msg in">Done — watch your texts. We usually reply in minutes 🎉</div>
-                    <div className="typing"><i></i><i></i><i></i></div>
+                    <span className="day">Today 12:11 PM</span>
+                    {demo.map((step, i) =>
+                      step.in ? (
+                        <div key={i} style={{ display: 'contents' }}>
+                          <div className="typing"><i></i><i></i><i></i></div>
+                          <div className="msg in">{step.in}</div>
+                        </div>
+                      ) : (
+                        <div key={i} style={{ display: 'contents' }}>
+                          <div className={`msg out${step.react ? ' reacted' : ''}${i === demoLastOut ? ' last-out' : ''}`}>
+                            {step.out}
+                            {step.react && <span className="tap">{step.react}</span>}
+                          </div>
+                          {i === demoLastOut && <span className="delivered">Delivered</span>}
+                        </div>
+                      ),
+                    )}
+                  </div>
+                  <div className="p-bar">
+                    <span className="plus">
+                      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11" /></svg>
+                    </span>
+                    <span className="field">
+                      iMessage
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8" /></svg>
+                    </span>
+                  </div>
+                  <div className="p-home" />
+                  <div className="confetti" ref={confettiRef}>
+                    {CONFETTI.map((p, i) => (
+                      <i
+                        key={i}
+                        className="cf"
+                        style={{ '--x': p.x, '--dx': p.dx, '--w': p.w, '--h': p.h, '--br': p.br, '--c': p.c, '--rot': p.rot, '--d': p.d, '--dl': p.dl } as CSSProperties}
+                      />
+                    ))}
                   </div>
                 </div>
               </div>
-              <figcaption className="phone-cap">Actual quote flow · no app to download</figcaption>
+              <figcaption className="phone-cap">Real text quote flow · no app to download</figcaption>
             </figure>
           </div>
         </section>
@@ -417,7 +582,7 @@ export function EstimatePageContent({ page }: { page: LandingPageData }) {
               <div className="step">
                 <span className="num">01</span>
                 <h3>Text us</h3>
-                <p>Tap the button and your texting app opens with the first message ready. Ava replies right away — any hour, any day.</p>
+                <p>Tap the button and your texting app opens with the first message ready. We reply right away — any hour, any day.</p>
                 <span className="kick">No app · no account</span>
               </div>
               <div className="step">
@@ -509,8 +674,8 @@ export function EstimatePageContent({ page }: { page: LandingPageData }) {
                 <p>Yes — free and no obligation. You&apos;ll see an itemized estimate before you decide anything, and you can simply stop replying if it&apos;s not for you.</p>
               </details>
               <details className="faq">
-                <summary>Am I texting a bot?</summary>
-                <p>You&apos;ll start with Ava, {companyName}&apos;s AI assistant — that&apos;s how you get answers instantly, even at 9pm. {companyName} personally reviews and confirms every quote before any work is scheduled.</p>
+                <summary>Who am I texting?</summary>
+                <p>{companyName}&apos;s team line — you get a reply right away, even at 9pm. {companyName} personally reviews and confirms every quote before any work is scheduled.</p>
               </details>
               <details className="faq">
                 <summary>Will you spam me afterward?</summary>
