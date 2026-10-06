@@ -180,7 +180,6 @@ export default function ContractorMessagesPage() {
   const [seenMap, setSeenMap] = useState<Record<string, number>>({});
   useEffect(() => { setSeenMap(getThreadSeenMap()); }, []);
   const [jobCards, setJobCards] = useState<Record<string, ThreadJobCard | null>>({});
-  const [jobLoading, setJobLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const sendingRef = useRef(false);
@@ -314,28 +313,51 @@ export default function ContractorMessagesPage() {
   // Loaded once per thread with the same RPC the chat uses, 4 at a time, cached for the session.
   const [cardDetails, setCardDetails] = useState<Record<string, ThreadDetail | null>>({});
   const requestedRef = useRef<Set<string>>(new Set());
+  // One card's details (the bid + contact its buttons need). Messages are dropped — the list never
+  // shows them, so holding every conversation's history in memory would be waste. On failure the
+  // token is released, so the card retries the next time it scrolls into view.
+  const loadCardDetail = useCallback(async (tk: string) => {
+    if (!tk || requestedRef.current.has(tk)) return;
+    requestedRef.current.add(tk);
+    try {
+      const { data, error } = await createClient().rpc("get_contractor_thread", { p_token: tk });
+      if (!error && data) {
+        const d = data as ThreadDetail;
+        setCardDetails((m) => ({ ...m, [tk]: { ...d, messages: [] } }));
+      } else {
+        requestedRef.current.delete(tk);
+        setCardDetails((m) => (tk in m ? m : { ...m, [tk]: null }));
+      }
+    } catch {
+      requestedRef.current.delete(tk);
+      setCardDetails((m) => (tk in m ? m : { ...m, [tk]: null }));
+    }
+  }, []);
+  // PERF (Oct 7): details load per card as it scrolls into view (300px ahead), not all at once —
+  // a contractor with 50 conversations no longer fires 50 heavy fetches the moment the page opens.
   useEffect(() => {
     if (activeToken || !loaded) return;
     if (typeof window !== "undefined" && window.location.hostname.includes("vusercontent.net")) return;
-    const queue = filtered.map((t) => t.c_token).filter((tk) => tk && !requestedRef.current.has(tk));
-    if (queue.length === 0) return;
-    queue.forEach((tk) => requestedRef.current.add(tk));
-    const worker = async () => {
-      while (queue.length) {
-        const tk = queue.shift() as string;
-        try {
-          const { data, error } = await createClient().rpc("get_contractor_thread", { p_token: tk });
-          setCardDetails((m) => ({ ...m, [tk]: !error && data ? (data as ThreadDetail) : null }));
-        } catch {
-          setCardDetails((m) => ({ ...m, [tk]: null }));
+    if (!("IntersectionObserver" in window)) {
+      filtered.forEach((t) => void loadCardDetail(t.c_token));
+      return;
+    }
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          const tk = (e.target as HTMLElement).getAttribute("data-hb-token");
+          if (tk) void loadCardDetail(tk);
         }
-      }
-    };
-    void Promise.all([worker(), worker(), worker(), worker()]);
-  }, [activeToken, loaded, filtered]);
-  // Fresh chat data flows back into the list card when the contractor returns.
+      },
+      { rootMargin: "300px 0px" },
+    );
+    document.querySelectorAll<HTMLElement>("[data-hb-token]").forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, [activeToken, loaded, filtered, loadCardDetail]);
+  // Fresh chat data flows back into the list card when the contractor returns (messages dropped there too).
   useEffect(() => {
-    if (activeToken && detail) setCardDetails((m) => ({ ...m, [activeToken]: detail }));
+    if (activeToken && detail) setCardDetails((m) => ({ ...m, [activeToken]: { ...detail, messages: [] } }));
   }, [activeToken, detail]);
 
   const messages = useMemo(() => {
@@ -371,15 +393,12 @@ export default function ContractorMessagesPage() {
   useEffect(() => {
     if (!jobOpen || !activeJobRef || jobCards[activeJobRef] !== undefined) return;
     let cancelled = false;
-    setJobLoading(true);
     (async () => {
       try {
         const { job } = await getThreadJobCard(activeJobRef);
         if (!cancelled) setJobCards((m) => ({ ...m, [activeJobRef]: job }));
       } catch {
         if (!cancelled) setJobCards((m) => ({ ...m, [activeJobRef]: null }));
-      } finally {
-        if (!cancelled) setJobLoading(false);
       }
     })();
     return () => { cancelled = true; };
@@ -519,7 +538,7 @@ export default function ContractorMessagesPage() {
                   const callSpan = small % 2 === 0 ? "col-span-2" : "";
                   const BTN = "inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[10px] px-3 text-[13px] font-medium";
                   return (
-                    <div key={t.c_token || t.job_ref} className={`${CARD} overflow-hidden ${unread ? "ring-2 ring-primary/25" : ""}`}>
+                    <div key={t.c_token || t.job_ref} data-hb-token={t.c_token} className={`${CARD} overflow-hidden ${unread ? "ring-2 ring-primary/25" : ""}`}>
                       {/* Header row — tap to open the chat */}
                       <button
                         type="button"
@@ -610,7 +629,7 @@ export default function ContractorMessagesPage() {
 
                       {/* Job details (inline, under its own card) */}
                       {open && (
-                        jobLoading && jobCard === undefined ? (
+                        jobCard === undefined ? (
                           <div className="border-t border-border bg-muted/30 px-5 py-4 text-sm text-muted-foreground">Loading job details…</div>
                         ) : jobCard ? (
                           <div className="border-t border-border"><JobCard job={jobCard} /></div>
