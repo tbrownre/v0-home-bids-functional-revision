@@ -553,6 +553,14 @@ export default function ContractorMessagesPage() {
                         {jobOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                       </button>
                     )}
+                    {bid?.share_token && bid?.status === "accepted" && (
+                      <a
+                        href={`/contractors/project/${bid.share_token}`}
+                        className="inline-flex min-h-[38px] items-center gap-1.5 rounded-xl bg-green-600 px-3 text-sm font-semibold text-white hover:bg-green-700"
+                      >
+                        <ExternalLink className="h-4 w-4" /> Open project
+                      </a>
+                    )}
                     {bid?.share_token && (
                       <a
                         href={`/p/${bid.share_token}`}

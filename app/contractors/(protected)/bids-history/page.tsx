@@ -212,14 +212,24 @@ export default function BidsPage() {
                     key={p.id}
                     className="grid grid-cols-[minmax(200px,1.4fr)_120px_130px_150px_120px_44px] items-center gap-3 border-t border-border px-1 py-4"
                   >
-                    <a
-                      href={`/p/${p.share_token}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="truncate font-semibold text-foreground hover:text-primary hover:underline"
-                    >
-                      {p.project_title}
-                    </a>
+                    {p.status === "accepted" ? (
+                      <a
+                        href={`/contractors/project/${p.share_token}`}
+                        className="truncate font-semibold text-primary hover:underline"
+                        title="Open the approved project"
+                      >
+                        {p.project_title}
+                      </a>
+                    ) : (
+                      <a
+                        href={`/p/${p.share_token}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="truncate font-semibold text-foreground hover:text-primary hover:underline"
+                      >
+                        {p.project_title}
+                      </a>
+                    )}
                     <div className="font-bold text-foreground">{formatPrice(p.total_price)}</div>
                     <div>
                       <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-bold ${meta.className}`}>{meta.label}</span>
@@ -238,6 +248,15 @@ export default function BidsPage() {
                       </button>
                       {openMenu === p.id && (
                         <div className="absolute right-0 top-10 z-20 w-52 rounded-xl border border-border bg-background p-1.5 shadow-xl">
+                          {p.status === "accepted" && (
+                            <a
+                              href={`/contractors/project/${p.share_token}`}
+                              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-muted"
+                              onClick={() => setOpenMenu(null)}
+                            >
+                              <ExternalLink className="h-4 w-4" /> Open approved project
+                            </a>
+                          )}
                           <a
                             href={`/p/${p.share_token}`}
                             target="_blank"
