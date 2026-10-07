@@ -5,6 +5,7 @@ import { Mail, Phone, Upload, LogOut, Check, Pencil } from "lucide-react";
 import { LandingPageDemoLink } from "@/components/landing-page-demo-link";
 import { ContractorTopbar } from "@/components/contractor/contractor-topbar";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
+import { CancelSubscription } from "@/components/contractor/cancel-subscription";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -572,6 +573,10 @@ export default function ContractorProfilePage() {
             {pwSaving ? "Updating…" : "Update Password"}
           </Button>
         </section>
+
+        {/* CANCELFLOW (Tim, Oct 7): one quiet "Cancel subscription" link below Security → confirm → one-time
+            30-days-free offer → final feedback. Renders nothing when there is no subscription to cancel. */}
+        <CancelSubscription />
       </main>
     </div>
   );
