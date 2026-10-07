@@ -107,6 +107,9 @@ const CSS = `
 .hb2 .site-head .rate b{color:var(--ink);font-weight:500}
 .hb2 .site-head .btn{margin-left:auto}
 @media(max-width:759px){.hb2 .site-head .btn{display:none}.hb2 .site-head .rate{margin-left:auto}}
+/* GREVIEWS: the rating / trust tiles become real links when the contractor has a Google Review link */
+.hb2 .site-head a.rate{text-decoration:none}.hb2 .site-head a.rate:hover,.hb2 .site-head a.rate:hover b{color:var(--accent)}
+.hb2 a.t-item{text-decoration:none;color:inherit}
 .hb2 .hero{padding:56px 0 64px}
 .hb2 .hero .wrap{display:grid;gap:48px;align-items:center}
 @media(min-width:900px){.hb2 .hero{padding:80px 0 96px}.hb2 .hero .wrap{grid-template-columns:1.05fr .95fr;gap:56px}}
@@ -453,9 +456,16 @@ export function EstimatePageContent({ page }: { page: LandingPageData }) {
         <div className="wrap">
           <div className="avatar" aria-hidden="true">{monogram}</div>
           <span className="name">{companyName}</span>
-          {rating !== undefined && reviewCount !== undefined && (
-            <span className="rate"><b>{rating} ★</b> ({reviewCount})</span>
-          )}
+          {rating !== undefined && reviewCount !== undefined ? (
+            reviewsUrl ? (
+              <a className="rate" href={reviewsUrl} target="_blank" rel="noopener noreferrer" title="See our Google reviews" data-hb-greviews="header"><b>{rating} ★</b> ({reviewCount})</a>
+            ) : (
+              <span className="rate"><b>{rating} ★</b> ({reviewCount})</span>
+            )
+          ) : reviewsUrl ? (
+            // GREVIEWS: link only (no rating on file yet) - still one tap to the real Google profile
+            <a className="rate" href={reviewsUrl} target="_blank" rel="noopener noreferrer" data-hb-greviews="header">★ Google Reviews</a>
+          ) : null}
           {smsNumber && (
             <a className="btn btn--sm" href={mainSms}>Text for a free quote</a>
           )}
@@ -551,19 +561,25 @@ export function EstimatePageContent({ page }: { page: LandingPageData }) {
         </section>
 
         {/* ===== trust strip ===== */}
-        {(rating !== undefined || license || jobs || replyTime) && (
+        {(rating !== undefined || reviewsUrl || license || jobs || replyTime) && (
           <div className="trust">
             <div className="wrap">
-              {rating !== undefined && reviewCount !== undefined && (
+              {rating !== undefined && reviewCount !== undefined ? (
                 reviewsUrl ? (
-                  <a className="t-item" href={reviewsUrl} target="_blank" rel="noopener noreferrer">
+                  <a className="t-item" href={reviewsUrl} target="_blank" rel="noopener noreferrer" data-hb-greviews="trust">
                     <b>{rating} ★</b>
                     <span><span className="link">{reviewCount} Google reviews</span></span>
                   </a>
                 ) : (
                   <div className="t-item"><b>{rating} ★</b><span>{reviewCount} Google reviews</span></div>
                 )
-              )}
+              ) : reviewsUrl ? (
+                // GREVIEWS (Tim, Oct 7): the contractor's Google Review link shows even before a rating is on file
+                <a className="t-item" href={reviewsUrl} target="_blank" rel="noopener noreferrer" data-hb-greviews="trust">
+                  <b>★ Google</b>
+                  <span><span className="link">See Our Google Reviews</span></span>
+                </a>
+              ) : null}
               <div className="t-item"><b>{replyTime}</b><span>average reply time</span></div>
               {license && <div className="t-item"><b>{license}</b><span>licensed &amp; insured</span></div>}
               {jobs && <div className="t-item"><b>{jobs}</b><span>local jobs done</span></div>}
@@ -626,6 +642,19 @@ export function EstimatePageContent({ page }: { page: LandingPageData }) {
         )}
 
         {/* ===== reviews (only when real ones exist) ===== */}
+        {reviews.length === 0 && reviewsUrl && (
+          // GREVIEWS: no quotes on file yet, but the Google profile is real - one clear CTA, nothing invented
+          <section id="reviews" style={{ paddingTop: 0 }}>
+            <div className="wrap">
+              <div className="rev-head">
+                <span className="of">Read what customers say about {companyName} on Google.</span>
+                <a className="all" href={reviewsUrl} target="_blank" rel="noopener noreferrer" data-hb-greviews="section">
+                  See Our Google Reviews →
+                </a>
+              </div>
+            </div>
+          </section>
+        )}
         {reviews.length > 0 && (
           <section id="reviews" style={{ paddingTop: 0 }}>
             <div className="wrap">
