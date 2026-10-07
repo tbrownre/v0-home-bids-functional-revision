@@ -123,7 +123,11 @@ function ProposalDocument({
   // Determine which trust badges to show
   const hasLicense = Boolean(contractorProfile?.license_number);
   const hasInsurance = Boolean(contractorProfile?.insurance_details);
-  const hasTrustBadges = hasLicense || hasInsurance;
+  // GREVIEWS (Tim, Oct 7): the Google Review link is a trust badge in its own right - a profile with only the
+  // link (no license/insurance yet) used to show nothing here.
+  const googleUrl = String(contractorProfile?.google_review_link ?? '').trim();
+  const hasGoogle = /^https?:\/\//i.test(googleUrl);
+  const hasTrustBadges = hasLicense || hasInsurance || hasGoogle;
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -165,9 +169,10 @@ function ProposalDocument({
                       Insured
                     </span>
                   )}
-                  {contractorProfile?.google_review_link && (
+                  {hasGoogle && (
                     <a
-                      href={contractorProfile.google_review_link}
+                      data-hb-greviews="bid"
+                      href={googleUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100"
