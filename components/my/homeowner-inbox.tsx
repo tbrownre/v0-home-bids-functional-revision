@@ -33,6 +33,9 @@ const HB_CSS = `
 .hbo .person{display:flex;align-items:center;gap:12px;margin-top:14px}
 .hbo .avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--blue-tint);color:var(--blue);font-weight:800;flex:none}
 .hbo .person strong{display:block}.hbo .trust{font-size:14px;color:var(--ink-2);margin-top:1px}
+.hbo .tbadges{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.hbo .tbadge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:var(--pill);font-size:12px;font-weight:700;background:var(--blue-tint);color:var(--blue);text-decoration:none}
+.hbo a.tbadge-g{background:var(--amber-bg);color:var(--amber)}.hbo a.tbadge-g:hover{background:#FFEBB8}
 .hbo .primary{width:100%;min-height:58px;border:0;border-radius:var(--pill);background:var(--blue);color:#fff;font-weight:800;font-size:17px;padding:14px 20px;margin-top:20px;display:flex;align-items:center;justify-content:center}.hbo .primary:hover{background:var(--blue-press)}.hbo .primary:disabled{opacity:.6}
 .hbo .secondary{width:100%;min-height:54px;border:1.5px solid var(--line);border-radius:var(--pill);background:#fff;color:var(--ink);font-weight:700;font-size:16px;padding:12px 18px;margin-top:10px;display:flex;align-items:center;justify-content:center}
 .hbo .textbtn{display:block;width:100%;border:0;background:transparent;color:var(--blue);font-weight:700;padding:14px 8px;margin-top:2px;text-align:center}
@@ -138,11 +141,14 @@ type PageState = {
   visit_address: string | null
 }
 type Contact = { name: string; phone: string } | null
+// GREVIEWS (Tim, Oct 7): trust badges from the contractor's profile (get_owner_inbox v2). Null when no profile matched.
+type Trust = { google_review_link?: string | null; license?: string | null; insured?: boolean | null } | null
 type Thread = {
   thread_id: string
   contractor: Contractor
   page_state: PageState
   contractor_contact: Contact
+  contractor_trust?: Trust
   messages?: unknown[]
   handoff_needed?: boolean
   accepted_share_token?: string | null
@@ -557,10 +563,29 @@ export function HomeownerInbox({ token }: { token: string }) {
           const contact = thread.contractor_contact
           const amount = ps.bid ? money(ps.bid.amount) : ''
 
+          // GREVIEWS (Tim, Oct 7): same three trust badges as the bid page (/p) - Licensed · Insured · Google Reviews.
+          // Only what the contractor actually filled in on their profile; a blank Google link shows no CTA.
+          const trustInfo = thread.contractor_trust
+          const reviewsUrl = String(trustInfo?.google_review_link ?? '').trim()
+          const hasReviews = /^https?:\/\//i.test(reviewsUrl)
+          const licenseNo = String(trustInfo?.license ?? '').trim()
+          const insured = Boolean(trustInfo?.insured)
+          const badges = licenseNo || insured || hasReviews ? (
+            <div className="tbadges" data-hb-trust>
+              {licenseNo && <span className="tbadge">✓ Licensed #{licenseNo}</span>}
+              {insured && <span className="tbadge">✓ Insured</span>}
+              {hasReviews && (
+                <a className="tbadge tbadge-g" href={reviewsUrl} target="_blank" rel="noopener noreferrer" data-hb-greviews="inbox">
+                  ★ See Our Google Reviews
+                </a>
+              )}
+            </div>
+          ) : null
+
           const person = (trust: string) => (
             <div className="person">
               <div className="avatar">{initials(name)}</div>
-              <div><strong>{name}</strong><div className="trust">{trust}</div></div>
+              <div><strong>{name}</strong><div className="trust">{trust}</div>{badges}</div>
             </div>
           )
 
@@ -597,6 +622,7 @@ export function HomeownerInbox({ token }: { token: string }) {
                 <div className="eyebrow">{name} offered a free estimate</div>
                 <h2>Pick a time that works for you</h2>
                 <div className="sub">{name} offered these times to see the space before you decide.</div>
+                {badges}
                 {ps.slots_msg?.slots?.map((slot, index) => (
                   <button
                     key={index}
@@ -644,6 +670,7 @@ export function HomeownerInbox({ token }: { token: string }) {
                 <h2>{name} is coming</h2>
                 <div className="appt">{ps.confirmed?.when}</div>
                 <div className="sub">Free in-person estimate at your home.</div>
+                {badges}
                 {contact && (
                   <div className="contactrow">
                     <a className="secondary" href={`sms:${contact.phone}`}>Text {name}</a>
@@ -678,6 +705,7 @@ export function HomeownerInbox({ token }: { token: string }) {
                 <h2>You hired {name}</h2>
                 <div className="amount">{amount}</div>
                 <div className="sub">🎉 Your project is moving forward! Bid approved · Next step: scheduling · The team will reach out shortly.</div>
+                {badges}
                 {contact && (
                   <div className="contactrow">
                     <a className="secondary" href={`sms:${contact.phone}`}>Text {name}</a>
