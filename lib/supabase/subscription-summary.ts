@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
+import { findSubscriptionForUser } from "@/lib/supabase/my-subscription";
 
 /**
  * TRIAL14 (Tim, Oct 4): what the signed-in contractor's plan looks like right now, for the
@@ -25,14 +26,9 @@ export async function getMySubscriptionSummary(): Promise<SubscriptionSummary> {
     if (!user) return empty;
 
     const admin = createAdminClient();
-    const [{ data: sub }, { data: profile }] = await Promise.all([
-      admin
-        .from("subscriptions")
-        .select("status, current_period_end, trial_ends_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+    // SUBLINK (Oct 8): by user_id, else the phone-keyed row from a phone-first checkout (self-links when unambiguous)
+    const [sub, { data: profile }] = await Promise.all([
+      findSubscriptionForUser(admin, user.id),
       admin.from("contractor_profiles").select("is_admin").eq("id", user.id).maybeSingle(),
     ]);
 
@@ -61,14 +57,8 @@ export async function getBillingPortalUrl(returnPath = "/contractors/dashboard")
     if (!user) return { url: null, error: "Not signed in" };
 
     const admin = createAdminClient();
-    const { data } = await admin
-      .from("subscriptions")
-      .select("stripe_customer_id")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const customer = (data as { stripe_customer_id?: string | null } | null)?.stripe_customer_id;
+    const data = await findSubscriptionForUser(admin, user.id); // SUBLINK: phone-first rows too
+    const customer = data?.stripe_customer_id;
     if (!customer) return { url: null, error: "No billing account yet" };
 
     const base = process.env.NEXT_PUBLIC_SITE_URL || "https://www.homebids.ai";
