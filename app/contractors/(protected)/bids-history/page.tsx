@@ -178,12 +178,15 @@ export default function BidsPage() {
               <div className="md:hidden">
                 {filtered.map((p) => {
                   const meta = statusMeta(p.status);
+                  // LIVEBIDS (Tim, Oct 7): same rule as desktop + dashboard - an accepted bid opens the approved
+                  // project page (homeowner contact + next steps), everything else the current hosted bid.
+                  const accepted = p.status === "accepted";
                   return (
                     <a
                       key={p.id}
-                      href={`/p/${p.share_token}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href={accepted ? `/contractors/project/${p.share_token}` : `/p/${p.share_token}`}
+                      {...(accepted ? {} : { target: "_blank", rel: "noopener noreferrer" })}
+                      title={accepted ? "Open the approved project" : "Open the live bid"}
                       className="flex items-center gap-3 border-t border-border px-1 py-4 first:border-t-0"
                     >
                       <div className="min-w-0 flex-1">
