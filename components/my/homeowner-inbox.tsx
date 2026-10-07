@@ -315,7 +315,8 @@ export function HomeownerInbox({ token }: { token: string }) {
     setAccepting(false)
     sendingRef.current = false
     if (!error && data?.ok) {
-      say('Accepted — the pro has been notified')
+      // CELEBRATE (Tim, Oct 7): Message 1 line, we/team voice - no "the pro has been notified"
+      say("You're all set! 🎉 Your bid has been approved.")
       await refetch()
     }
   }
@@ -676,7 +677,7 @@ export function HomeownerInbox({ token }: { token: string }) {
                 <div className="eyebrow green">It&apos;s official</div>
                 <h2>You hired {name}</h2>
                 <div className="amount">{amount}</div>
-                <div className="sub">Bidding is closed. You and {name} can now coordinate the work directly.</div>
+                <div className="sub">🎉 Your project is moving forward! Bid approved · Next step: scheduling · The team will reach out shortly.</div>
                 {contact && (
                   <div className="contactrow">
                     <a className="secondary" href={`sms:${contact.phone}`}>Text {name}</a>
