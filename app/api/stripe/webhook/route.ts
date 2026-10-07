@@ -244,14 +244,23 @@ async function handleSubscriptionUpdated(
 
   if (!userId) return
 
-  const { error: updError } = await supabase
+  const base = {
+    status: subscription.status,
+    stripe_subscription_id: subscription.id,
+    current_period_end: periodEnd,
+  }
+  // CANCELFLOW (Oct 7): mirror Stripe's cancel flag (+ a trial end set by the 30-day save offer) so the
+  // Account page knows a cancel is scheduled. Falls back to the base columns on a DB without the migration.
+  const trialEnd = subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null
+  const extra: Record<string, unknown> = { cancel_at_period_end: Boolean(subscription.cancel_at_period_end) }
+  if (subscription.status === 'trialing' && trialEnd) extra.trial_ends_at = trialEnd
+  let { error: updError } = await supabase
     .from('subscriptions')
-    .update({
-      status: subscription.status,
-      stripe_subscription_id: subscription.id,
-      current_period_end: periodEnd,
-    })
+    .update({ ...base, ...extra })
     .eq('user_id', userId)
+  if (updError) {
+    ;({ error: updError } = await supabase.from('subscriptions').update(base).eq('user_id', userId))
+  }
 
   if (updError) {
     console.error('[stripe-webhook] Failed to update subscription:', updError)
