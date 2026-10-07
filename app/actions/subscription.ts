@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
 import { sendEmail } from "@/lib/email";
+import { findSubscriptionForUser } from "@/lib/supabase/my-subscription";
 
 /**
  * CANCELFLOW (Tim, Oct 7 — Trello "Add Subscription Cancellation Flow + 30-Day Save Offer").
@@ -58,25 +59,25 @@ async function me() {
   return user;
 }
 
-/** The newest subscription row for the user. The CANCELFLOW columns are read in a second, tolerant query
- *  so the account page keeps working on a database that does not have the migration yet. */
+/** The contractor's subscription row — by user_id, else the phone-keyed row from a phone-first checkout (SUBLINK,
+ *  Oct 8: Dillon's paid plan had user_id NULL, so this page showed no Cancel link). The CANCELFLOW columns are read in
+ *  a second, tolerant query so the account page keeps working on a database that does not have the migration yet. */
 async function loadRow(admin: ReturnType<typeof createAdminClient>, userId: string): Promise<SubRow | null> {
-  const { data } = await admin
-    .from("subscriptions")
-    .select("user_id, status, stripe_customer_id, stripe_subscription_id, current_period_end, trial_ends_at")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (!data) return null;
-  const row = data as SubRow;
+  const found = await findSubscriptionForUser(admin, userId);
+  if (!found) return null;
+  const row: SubRow = {
+    user_id: found.user_id ?? null,
+    status: found.status ?? null,
+    stripe_customer_id: found.stripe_customer_id ?? null,
+    stripe_subscription_id: found.stripe_subscription_id ?? null,
+    current_period_end: found.current_period_end ?? null,
+    trial_ends_at: found.trial_ends_at ?? null,
+  };
   try {
     const { data: extra, error } = await admin
       .from("subscriptions")
       .select("cancel_at_period_end, retention_offer_used_at, canceled_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(1)
+      .eq("id", String(found.id))
       .maybeSingle();
     if (!error && extra) Object.assign(row, extra as SubRow);
   } catch {
@@ -90,13 +91,20 @@ async function loadRow(admin: ReturnType<typeof createAdminClient>, userId: stri
 async function writeRow(
   admin: ReturnType<typeof createAdminClient>,
   userId: string,
+  stripeSubscriptionId: string | null | undefined,
   base: Record<string, unknown>,
   extra: Record<string, unknown>,
 ) {
-  const { error } = await admin.from("subscriptions").update({ ...base, ...extra }).eq("user_id", userId);
+  // SUBLINK: match the row by its Stripe subscription id as well as user_id — a phone-first row may still be
+  // linking up when the contractor clicks, and the webhook keys those rows on the Stripe id too.
+  const run = (patch: Record<string, unknown>) => {
+    const q = admin.from("subscriptions").update(patch);
+    return stripeSubscriptionId ? q.or(`stripe_subscription_id.eq.${stripeSubscriptionId},user_id.eq.${userId}`) : q.eq("user_id", userId);
+  };
+  const { error } = await run({ ...base, ...extra });
   if (!error) return;
   // 42703 = undefined column → migration not run yet; keep the base columns in sync at least
-  const { error: e2 } = await admin.from("subscriptions").update(base).eq("user_id", userId);
+  const { error: e2 } = await run(base);
   if (e2) console.error("[subscription] row update failed:", e2.message);
 }
 
@@ -168,6 +176,7 @@ export async function acceptRetentionOffer(): Promise<{ ok: boolean; nextBilling
     await writeRow(
       admin,
       user.id,
+      row.stripe_subscription_id,
       { status: updated.status, current_period_end: periodEndOf(updated) ?? nextBillingDate, trial_ends_at: nextBillingDate, trial_end: nextBillingDate, cancel_at_period_end: false, updated_at: new Date().toISOString() },
       { retention_offer_used_at: new Date().toISOString() },
     );
@@ -203,6 +212,7 @@ export async function cancelSubscription(
     await writeRow(
       admin,
       user.id,
+      row.stripe_subscription_id,
       { status: sub.status, current_period_end: accessUntil, cancel_at_period_end: true, updated_at: new Date().toISOString() },
       { canceled_at: new Date().toISOString(), ...(feedback ? { cancel_feedback: feedback } : {}) },
     );
