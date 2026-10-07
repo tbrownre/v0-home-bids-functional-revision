@@ -1,11 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, MessageCircle, Download } from "lucide-react";
+import { CheckCircle2, MessageCircle, Download, CalendarCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { acceptProposal, logProposalAction, type ProposalActionEvent } from "@/lib/supabase/proposals";
 
+/**
+ * CELEBRATE (Tim, Oct 7 — Trello "Celebrate Homeowner Approval + Clearly Guide Next Steps"):
+ * the moment a bid is approved the page celebrates (confetti, unchanged) and then GUIDES —
+ * Tim's exact success state: "🎉 Your project is moving forward!" + Bid approved · Contact details
+ * confirmed · Next step: scheduling · The team will reach out shortly. Own-customer bids with no
+ * phone on file first collect it, in the same we/team voice. No "they / they'll" anywhere.
+ * Everything else (accept RPC, questions, PDF, tracking, sticky variant) is untouched.
+ */
 interface ProposalCtaProps {
   shareToken: string;
   projectTitle: string;
@@ -184,8 +192,11 @@ export function ProposalCta({
         needsContact && !contactSaved ? (
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
             <h3 className="text-center text-lg font-semibold text-foreground">
-              You approved {company}&apos;s bid 🎉 — where should they reach you?
+              You&apos;re all set! 🎉 Your bid has been approved.
             </h3>
+            <p className="mt-1 text-center text-sm text-muted-foreground">
+              We just need a couple final details so we can get everything ready for scheduling.
+            </p>
             <div className="mt-4 space-y-3">
               <input
                 type="text"
@@ -216,13 +227,28 @@ export function ProposalCta({
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 text-center">
-            <h3 className="text-lg font-semibold text-foreground">You&apos;re all set! 🎉</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {jobId === null
-                ? `We've sent your contact to ${company} - they'll reach out shortly.`
-                : `We've notified ${company} - they'll text you shortly to schedule.`}
-            </p>
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5" data-hb-approved>
+            <h3 className="text-center text-lg font-semibold text-foreground">
+              🎉 Your project is moving forward!
+            </h3>
+            <ul className="mx-auto mt-4 max-w-xs space-y-2.5 text-sm text-foreground">
+              <li className="flex items-center gap-2.5">
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" />
+                Bid approved
+              </li>
+              <li className="flex items-center gap-2.5">
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" />
+                Contact details confirmed
+              </li>
+              <li className="flex items-center gap-2.5">
+                <CalendarCheck className="h-5 w-5 shrink-0 text-primary" />
+                Next step: scheduling
+              </li>
+              <li className="flex items-center gap-2.5">
+                <MessageCircle className="h-5 w-5 shrink-0 text-primary" />
+                The team will reach out shortly
+              </li>
+            </ul>
             <Button size="lg" className="mt-4 h-12 w-full rounded-full" disabled>
               Approved ✓
             </Button>
