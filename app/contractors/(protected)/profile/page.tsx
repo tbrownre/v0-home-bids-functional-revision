@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Mail, Phone, Upload, LogOut, Check, Pencil } from "lucide-react";
 import { LandingPageDemoLink } from "@/components/landing-page-demo-link";
 import { ContractorTopbar } from "@/components/contractor/contractor-topbar";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -485,7 +486,20 @@ export default function ContractorProfilePage() {
                 </Field>
 
                 <Field label="Business Address" done={isProfileFieldFilled(liveProfile, "business_address")}>
-                  <Input value={form.business_address} onChange={(e) => set("business_address", e.target.value)} placeholder="123 Main Street" />
+                  {/* ADDRESSPICK (Tim, Oct 7): real-address suggestions as they type; one tap fills the complete
+                      formatted address into this single field (street, city, state ZIP). Typing by hand still works. */}
+                  <AddressAutocomplete
+                    id="business_address"
+                    value={form.business_address}
+                    onChange={(v) => set("business_address", v)}
+                    onSelect={(a) =>
+                      set(
+                        "business_address",
+                        [a.address, a.city, [a.state, a.zip].filter(Boolean).join(" ")].filter(Boolean).join(", "),
+                      )
+                    }
+                    placeholder="123 Main Street, Gilbert, AZ 85234"
+                  />
                 </Field>
               </div>
 
