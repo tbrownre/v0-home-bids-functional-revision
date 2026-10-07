@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { cleanIntakeLine } from "@/lib/intake-clean";
 
 /**
  * Leads that came in through a contractor's own /pro landing page.
@@ -46,9 +47,15 @@ export interface PageLead {
   budget_max: number | null;
   images: string[];
   homeowner: PageLeadHomeowner;
-  intake_notes: string[]; // the homeowner's own texts to Ava during this intake, oldest first
+  // JOBSUMMARY (Tim, Oct 7): the AI brief written at intake (Ava v17.10 <JOB> block → jobs.intake_project /
+  // jobs.intake_notes). Null for leads created before that - the page falls back to the service label and hides Notes.
+  brief_project: string | null;
+  brief_notes: string | null;
+  // The homeowner's own texts to Ava during this intake, oldest first, CLEANED: Ava channel only (never the
+  // contractor's Bid Builder texts from the same phone), no [AVA CONTEXT …] brackets, no "(Ref: …)" setup lines,
+  // no repeats. Shown only behind "View original conversation".
+  conversation: string[];
 }
-
 const digits10 = (v: unknown) => String(v ?? "").replace(/\D/g, "").slice(-10);
 const normalizePhone = (v: unknown): string | null => {
   const d = String(v ?? "").replace(/\D/g, "");
@@ -80,6 +87,26 @@ export async function getMyPageLeads(limit = 20): Promise<{ leads: PageLead[]; e
 
   const rows = (jobs ?? []) as Array<Record<string, unknown>>;
   if (!rows.length) return { leads: [], error: null };
+
+  // JOBSUMMARY: the AI brief columns are read in their own query so the leads list keeps working even on a
+  // database that does not have them yet (the column migration and this code can ship in either order).
+  const briefByJob = new Map<string, { project: string | null; notes: string | null }>();
+  try {
+    const { data: briefs, error: briefErr } = await admin
+      .from("jobs")
+      .select("id, intake_project, intake_notes")
+      .in("id", rows.map((j) => String(j.id)));
+    if (!briefErr) {
+      for (const b of (briefs ?? []) as Array<Record<string, unknown>>) {
+        briefByJob.set(String(b.id), {
+          project: String(b.intake_project ?? "").trim() || null,
+          notes: String(b.intake_notes ?? "").trim() || null,
+        });
+      }
+    }
+  } catch {
+    /* columns not there yet - fall back to the service label, no Notes line */
+  }
 
   // This contractor's bids on those jobs (by account id, or by the phone the bid was built from).
   const { data: profile } = await admin.from("profiles").select("phone").eq("id", user.id).maybeSingle();
@@ -122,6 +149,8 @@ export async function getMyPageLeads(limit = 20): Promise<{ leads: PageLead[]; e
   }
 
   // What the homeowner actually told Ava during the intake (their own texts, oldest first).
+  // JOBSUMMARY: Ava channel only - Tim tests contractor + homeowner from one phone and the contractor's
+  // Bid Builder texts ("bid JB-…") were showing up as "what they told us" (JB-9F54: 43 rows, 22 Ava's).
   const notesByJob = new Map<string, string[]>();
   const phones = Array.from(new Set(Array.from(ownerById.values()).map((o) => o.phone).filter(Boolean))) as string[];
   if (phones.length) {
@@ -133,6 +162,7 @@ export async function getMyPageLeads(limit = 20): Promise<{ leads: PageLead[]; e
       .select("phone, role, content, created_at")
       .in("phone", phones)
       .eq("role", "user")
+      .eq("channel", "ava")
       .gte("created_at", from)
       .lte("created_at", to)
       .order("created_at", { ascending: true })
@@ -140,8 +170,8 @@ export async function getMyPageLeads(limit = 20): Promise<{ leads: PageLead[]; e
     const byPhone = new Map<string, Array<{ t: number; c: string }>>();
     for (const m of (msgs ?? []) as Array<Record<string, unknown>>) {
       const ph = normalizePhone(m.phone);
-      const c = String(m.content ?? "").replace(/\s+/g, " ").trim();
-      if (!ph || !c || /^\[photo:/i.test(c)) continue;
+      const c = cleanIntakeLine(m.content);
+      if (!ph || !c) continue;
       if (!byPhone.has(ph)) byPhone.set(ph, []);
       byPhone.get(ph)!.push({ t: new Date(String(m.created_at)).getTime(), c });
     }
@@ -151,7 +181,16 @@ export async function getMyPageLeads(limit = 20): Promise<{ leads: PageLead[]; e
       if (!ph) continue;
       const created = new Date(String(j.created_at)).getTime();
       const win = (byPhone.get(ph) ?? []).filter((m) => m.t >= created - 36 * 3600 * 1000 && m.t <= created + 10 * 60 * 1000);
-      notesByJob.set(String(j.id), win.slice(-12).map((m) => (m.c.length > 400 ? m.c.slice(0, 400) + "…" : m.c)));
+      // repeats collapse to the first occurrence ("Yes" / "yes." / "Yes!" are one answer)
+      const seen = new Set<string>();
+      const unique: string[] = [];
+      for (const m of win) {
+        const key = m.c.toLowerCase().replace(/[^a-z0-9]+/g, "");
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        unique.push(m.c);
+      }
+      notesByJob.set(String(j.id), unique.slice(-12));
     }
   }
 
@@ -171,7 +210,9 @@ export async function getMyPageLeads(limit = 20): Promise<{ leads: PageLead[]; e
     budget_max: typeof j.budget_max === "number" ? j.budget_max : null,
     images: Array.isArray(j.images) ? (j.images as unknown[]).map(String).filter((u) => /^https?:\/\//.test(u)) : [],
     homeowner: ownerById.get(String(j.homeowner_id || "")) ?? { name: null, phone: null, email: null },
-    intake_notes: notesByJob.get(String(j.id)) ?? [],
+    brief_project: briefByJob.get(String(j.id))?.project ?? null,
+    brief_notes: briefByJob.get(String(j.id))?.notes ?? null,
+    conversation: notesByJob.get(String(j.id)) ?? [],
   }));
 
   return { leads, error: null };
