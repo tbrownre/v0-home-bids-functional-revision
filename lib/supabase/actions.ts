@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { findSubscriptionForUser, linkPhoneSubscriptionsToUser } from "@/lib/supabase/my-subscription";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -149,6 +150,10 @@ export async function signUpContractor(formData: {
     console.error("[signUpContractor] contractor_profiles insert error:", contractorError.message);
     return { error: "We couldn't save your contractor details. Please try again or contact support." };
   }
+
+  // SUBLINK (Oct 8): a Pro who already paid by text (phone-first checkout) has a subscription row keyed by phone
+  // with no account yet — attach it now so the dashboard, bid limits and Cancel link see the paid plan.
+  await linkPhoneSubscriptionsToUser(admin, userId, formData.phone);
 
   await fireWebhook("user.signup", {
     user_type: "contractor",
@@ -1500,12 +1505,8 @@ export async function checkCanCreateOwnProjectBid(contractorId: string): Promise
   try {
     const supabase = await createClient();
 
-    // Check if contractor has active/trialing subscription
-    const { data: subscription, error: subError } = await supabase
-      .from('subscriptions')
-      .select('status')
-      .eq('user_id', contractorId)
-      .maybeSingle();
+    // Check if contractor has active/trialing subscription — SUBLINK (Oct 8): phone-first rows count too
+    const subscription = await findSubscriptionForUser(createAdminClient(), contractorId);
 
     // Check admin status
     const { data: profile, error: profileError } = await supabase
