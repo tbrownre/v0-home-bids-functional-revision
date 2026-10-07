@@ -36,7 +36,7 @@ async function getContractorLandingPage(slug: string) {
     // had been erroring silently and the profile (and its business name) never loaded.
     const { data: profileRow, error: profileErr } = await supabase
       .from('contractor_profiles')
-      .select('business_name, logo_url')
+      .select('business_name, logo_url, google_review_link')
       .eq('id', landingPage.contractor_id)
       .maybeSingle();
     if (profileErr) console.error('[estimate-page] Profile query error:', profileErr.message);
@@ -53,6 +53,16 @@ async function getContractorLandingPage(slug: string) {
     const isDemo = /^0{8}-/.test(String(landingPage.contractor_id ?? ''));
     if (liveName && !isDemo) {
       config.brand = { ...(config.brand || {}), company_name: liveName };
+    }
+    // GREVIEWS (Tim, Oct 7 Trello "Show Google Reviews Across Homeowner-Facing Experience"): the profile's
+    // Google Review link is the single source of truth. It overlays whatever the publish snapshot carried, and a
+    // blank profile field hides the link (never a stale or placeholder URL). The demo page keeps its demo config.
+    if (!isDemo) {
+      const liveReviews = String((profileRow as { google_review_link?: string | null } | null)?.google_review_link ?? '').trim();
+      const trust = { ...((config.trust as Record<string, unknown>) || {}) };
+      if (/^https?:\/\//i.test(liveReviews)) trust.google_reviews_url = liveReviews;
+      else delete trust.google_reviews_url;
+      config.trust = trust;
     }
 
     return {
