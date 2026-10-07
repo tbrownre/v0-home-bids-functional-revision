@@ -52,6 +52,16 @@ function shortDate(iso: string | null | undefined): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+// LIVEBIDS (Tim, Oct 7): one routing rule, identical to the Bids page. Accepted → the approved project page
+// (price, scope, homeowner contact, conversation, Call/Text/Schedule, workspace) in the same tab; anything
+// else → the current hosted bid (a draft has no separate edit flow in the app — its /p page IS the current draft).
+function bidTarget(p: Proposal): { href: string; external: boolean; hint: string } {
+  if (p.status === "accepted") {
+    return { href: `/contractors/project/${p.share_token}`, external: false, hint: "Open the approved project" };
+  }
+  return { href: `/p/${p.share_token}`, external: true, hint: p.status === "draft" ? "Open the current draft" : "Open the live bid" };
+}
+
 export default function ContractorDashboard() {
   // ── Auth guard (unchanged behavior) ─────────────────────────────────────────
   // NAMEFIX (Tim, Sep 27): empty until a real first name loads — the greeting
@@ -352,10 +362,12 @@ function SeasonedDashboard({
   onBuild: () => void;
   onEditGoal: () => void;
 }) {
+  // LIVEBIDS (Tim, Oct 7 CRITICAL): the same order as the Bids page — most recently UPDATED first — so a bid
+  // that was just viewed or accepted surfaces here instead of the five most recently drafted ones.
   const recent = useMemo(
     () =>
     [...proposals]
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime())
       .slice(0, 5),
     [proposals],
   );
@@ -443,13 +455,15 @@ function SeasonedDashboard({
           <div className="flex flex-col">
             {recent.map((p, i) => {
               const meta = statusMeta(p.status);
+              const target = bidTarget(p);
+              const linkProps = target.external ? { target: "_blank", rel: "noopener noreferrer" } : {};
               return (
                 <div key={p.id} className={i > 0 ? "border-t border-border" : ""}>
-                  {/* Mobile: Project + Amount + status pill; row opens the bid in a new tab */}
+                  {/* Mobile: Project + Amount + status pill; the whole row routes by status */}
                   <a
-                    href={`/p/${p.share_token}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={target.href}
+                    {...linkProps}
+                    title={target.hint}
                     className="flex items-center gap-3 py-4 md:hidden"
                   >
                     <div className="min-w-0 flex-1">
@@ -458,27 +472,27 @@ function SeasonedDashboard({
                     </div>
                     <span className={`inline-block shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${meta.className}`}>{meta.label}</span>
                   </a>
-                  {/* Desktop (unchanged) */}
-                  <div className="hidden items-center gap-3 py-4 md:grid md:grid-cols-[minmax(0,1.4fr)_120px_120px_100px_36px]">
+                  {/* Desktop: the ENTIRE row is the link (Tim: not just the small icon), routed by status */}
+                  <a
+                    href={target.href}
+                    {...linkProps}
+                    title={target.hint}
+                    aria-label={`${target.hint}: ${p.project_title}`}
+                    className="hidden items-center gap-3 rounded-xl py-4 transition-colors hover:bg-muted/50 md:grid md:grid-cols-[minmax(0,1.4fr)_120px_120px_100px_36px]"
+                  >
                     <div className="min-w-0">
-                      <p className="truncate font-semibold text-foreground">{p.project_title}</p>
+                      <p className={`truncate font-semibold ${p.status === "accepted" ? "text-primary" : "text-foreground"}`}>{p.project_title}</p>
                       <p className="mt-0.5 truncate text-sm text-muted-foreground">{p.homeowner_name || "Homeowner"}</p>
                     </div>
                     <div className="font-bold text-foreground">{formatPrice(p.total_price)}</div>
                     <div>
                       <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-bold ${meta.className}`}>{meta.label}</span>
                     </div>
-                    <div className="text-sm text-muted-foreground">{shortDate(p.created_at)}</div>
-                    <a
-                      href={`/p/${p.share_token}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted"
-                      aria-label={`View ${p.project_title}`}
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                  </div>
+                    <div className="text-sm text-muted-foreground" title="Last update">{shortDate(p.updated_at || p.created_at)}</div>
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground" aria-hidden="true">
+                      {target.external ? <ExternalLink className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
+                    </span>
+                  </a>
                 </div>
               );
             })}
