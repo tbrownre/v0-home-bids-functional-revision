@@ -1,6 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { findSubscriptionForUser } from '@/lib/supabase/my-subscription'
 
 /**
  * Check if a contractor has an active or trialing subscription.
@@ -28,14 +30,11 @@ export async function checkContractorSubscription(userId: string) {
       return { hasValidSubscription: true }
     }
 
-    // Check subscription status in the subscriptions table
-    const { data: subscription, error: subError } = await supabase
-      .from('subscriptions')
-      .select('status')
-      .eq('user_id', userId)
-      .single()
+    // Check subscription status — by user_id, else the phone-keyed row from a phone-first checkout
+    // (SUBLINK, Oct 8; orphan rows are not visible under RLS, so this goes through the service role).
+    const subscription = await findSubscriptionForUser(createAdminClient(), userId)
 
-    if (subError) {
+    if (!subscription) {
       // No subscription found is treated as invalid
       console.warn(`[subscription-check] No subscription found for user ${userId}`)
       return { hasValidSubscription: false }
