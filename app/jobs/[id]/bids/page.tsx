@@ -55,6 +55,8 @@ interface Bid {
   website: string;
   completedJobs: number;
   responseTime: string;
+  /** GREVIEWS (Tim, Oct 7): the contractor's own Google review/profile link, when they added one. */
+  googleReviewLink?: string | null;
   // Financing
   financingAvailable?: boolean;
   financingNote?: string;
@@ -133,6 +135,7 @@ export default function BidsPage() {
           email: b.email ?? "",
           website: b.website ?? "",
           completedJobs: b.completedJobs ?? 0,
+          googleReviewLink: /^https?:\/\//i.test(String(b.google_review_link ?? "").trim()) ? String(b.google_review_link).trim() : null,
           responseTime: b.responseTime ?? "",
           financingAvailable: b.financingAvailable,
           financingNote: b.financingNote,
@@ -690,10 +693,23 @@ export default function BidsPage() {
                                   </span>
                                 )}
                               </div>
-                              <div className="mt-1 flex items-center gap-1">
-                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                <span className="text-sm font-semibold">{selectedBid.rating}</span>
-                                <span className="text-xs text-muted-foreground">({selectedBid.reviewCount} reviews)</span>
+                              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <span className="flex items-center gap-1">
+                                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                  <span className="text-sm font-semibold">{selectedBid.rating}</span>
+                                  <span className="text-xs text-muted-foreground">({selectedBid.reviewCount} reviews)</span>
+                                </span>
+                                {selectedBid.googleReviewLink && (
+                                  <a
+                                    href={selectedBid.googleReviewLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    data-hb-greviews="jobbids"
+                                    className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+                                  >
+                                    ★ See Our Google Reviews
+                                  </a>
+                                )}
                               </div>
                             </div>
                             <button
