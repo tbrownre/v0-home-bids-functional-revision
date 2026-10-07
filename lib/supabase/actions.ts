@@ -497,13 +497,13 @@ export async function getJobBids(jobId: string) {
   // contractor_profiles.id = profiles.id = bids.contractor_id so we can look up
   // by the contractor_id column directly.
   const contractorIds = bids.map((b) => b.contractor_id).filter(Boolean);
-  let contractorProfileMap: Record<string, { business_name: string | null }> = {};
+  let contractorProfileMap: Record<string, { business_name: string | null; google_review_link?: string | null }> = {};
 
   if (contractorIds.length > 0) {
     try {
       const { data: contractorProfiles } = await supabase
         .from("contractor_profiles")
-        .select("id, business_name")
+        .select("id, business_name, google_review_link") // GREVIEWS (Tim, Oct 7): the profile link rides along to the homeowner's bid cards
         .in("id", contractorIds);
 
       if (contractorProfiles) {
@@ -524,6 +524,7 @@ export async function getJobBids(jobId: string) {
       contractorProfileMap[bid.contractor_id]?.business_name ??
       (bid.profiles as { full_name?: string | null } | null)?.full_name ??
       "Contractor",
+    google_review_link: contractorProfileMap[bid.contractor_id]?.google_review_link ?? null,
   }));
 
   return { bids: enrichedBids, error: null };
