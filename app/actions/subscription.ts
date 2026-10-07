@@ -236,6 +236,7 @@ export async function cancelSubscription(
       subject: `HomeBids cancellation — ${company || "contractor"}`,
       text: `A contractor canceled their HomeBids plan.\n\n${who}\nPlan status: ${sub.status} · access until ${until}\n${offer}\n\nWhat could we have done better?\n${feedback || "(no feedback left)"}\n\nStripe subscription: ${row.stripe_subscription_id}`,
       replyTo,
+      meta: { company, status: sub.status, accessUntil: until, offer, feedback, stripeSubscriptionId: row.stripe_subscription_id, userId: user.id },
     });
     if (!mail.sent) console.warn("[subscription] feedback email not sent:", mail.error);
 
