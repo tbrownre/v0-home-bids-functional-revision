@@ -673,6 +673,28 @@ export default function ContractorsPage() {
                 <p className="relative mt-4 text-center text-sm text-muted-foreground">
                   Start free today. Cancel anytime before your trial ends.
                 </p>
+
+                {/* PAIDCTA — Tim's card "Add Instant Paid Signup CTA" (Oct 3): a direct $99/mo path for contractors who are
+                    already sold — skips the trial and the free bids. Lands on the existing ?plan=pro signup → secure checkout
+                    → full plan the moment payment clears. Secondary to TRIAL14's main CTA (Oct 4, the newer card); the free
+                    text-to-start flow in the hero stays untouched. */}
+                <div className="relative mt-6 flex items-center gap-3" aria-hidden>
+                  <span className="h-px flex-1 bg-border" />
+                  <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">or</span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+                <Link
+                  href="/contractors/signup?plan=pro"
+                  data-hb-paid-cta
+                  className="relative mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-full border-2 border-primary bg-background px-4 py-3 text-center text-[13px] font-bold uppercase leading-tight tracking-[0.04em] text-primary transition-colors hover:bg-primary/5 active:scale-[0.98] sm:text-sm"
+                >
+                  Get HomeBids Now
+                  <ArrowRight className="h-4 w-4 shrink-0" />
+                </Link>
+                <p className="relative mt-3 text-center text-sm text-muted-foreground">
+                  Already sold? Pay $99/month today and skip the trial — unlimited bids, your landing page, the text workflow,
+                  your profile and homeowner bid opportunities unlock the moment you check out.
+                </p>
               </div>
             </motion.div>
           </motion.div>
