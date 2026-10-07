@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Search, MessageSquareText, ExternalLink, Inbox, Copy, Check, Globe,
-  ChevronDown, ChevronUp, Phone, Clock, MapPin, User, Camera, ScrollText, Mail,
+  ChevronDown, ChevronUp, Phone, User, ScrollText, Mail,
 } from "lucide-react";
 import { ContractorTopbar } from "@/components/contractor/contractor-topbar";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,12 @@ import { leadLabel, serviceLabel } from "@/lib/page-lead-label";
  * type; location has its own column) and is clickable — it opens everything we
  * collected during the intake: scope, timeframe, budget, photos, the homeowner's
  * name/phone/email and what they told Ava.
+ *
+ * Oct 7 (Tim, "Replace Raw 'What They Told Us' Feed With Clean AI Job Summary"): the
+ * details panel is the AI brief, not the raw feed — Project · Scope · Timeline · Location ·
+ * Photos · Notes, scannable in 5–10 seconds. The homeowner's own texts (cleaned: Ava channel
+ * only, no internal context, no setup lines, no repeats) sit behind "View original
+ * conversation". The homeowner card is contact + actions only (the "yours alone" line is gone).
  */
 
 const CARD = "rounded-[22px] border border-border bg-card shadow-[0_10px_30px_rgba(16,17,20,0.06)]";
@@ -119,10 +125,11 @@ function LeadAction({ lead }: { lead: PageLead }) {
 }
 
 /**
- * Everything we collected during the intake, in one panel (Tim, Oct 5: "we want the contractor to
- * open up the job details/scope, time frame/pics and all contact info we collected").
+ * The AI brief of the intake (Tim, Oct 7) — what a contractor needs in 5–10 seconds — plus the
+ * homeowner card. The raw conversation is one tap away but never the default view.
  */
 function LeadDetails({ lead }: { lead: PageLead }) {
+  const [showConvo, setShowConvo] = useState(false);
   const where = [lead.location, lead.zip_code].filter(Boolean).join(" ");
   const budget = budgetLabel(lead.budget_min, lead.budget_max);
   const ho = lead.homeowner;
@@ -131,83 +138,85 @@ function LeadDetails({ lead }: { lead: PageLead }) {
   const Label = ({ children }: { children: React.ReactNode }) => (
     <p className="text-xs font-extrabold uppercase tracking-[0.06em] text-muted-foreground">{children}</p>
   );
+  // Project: the AI's short title when the intake wrote one (Ava v17.10), else the service type.
+  const project = lead.brief_project || serviceLabel(lead.category);
+  const timeline = (lead.urgency && URGENCY_LABEL[lead.urgency]) || lead.urgency || "Not stated";
+  const photosLabel = lead.images.length ? `${lead.images.length} attached` : "None sent";
+  const rows: Array<[string, React.ReactNode]> = [
+    ["Project", project],
+    ["Scope", <span key="scope" className="whitespace-pre-wrap">{lead.description || "No description captured yet."}</span>],
+    ["Timeline", timeline],
+    ["Location", where || "Not stated"],
+  ];
+  if (budget) rows.push(["Budget", budget]);
+  rows.push([
+    "Photos",
+    <span key="photos">
+      {photosLabel}
+      {lead.images.length > 0 && (
+        <span className="mt-1.5 flex flex-wrap gap-2">
+          {lead.images.map((src, i) => (
+            <a key={src + i} href={src} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl border border-border bg-card">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={src} alt={`Project photo ${i + 1}`} loading="lazy" className="h-20 w-20 object-cover sm:h-24 sm:w-24" />
+            </a>
+          ))}
+        </span>
+      )}
+    </span>,
+  ]);
+  if (lead.brief_notes) rows.push(["Notes", <span key="notes" className="whitespace-pre-wrap">{lead.brief_notes}</span>]);
+
   return (
-    <div className="rounded-2xl border border-border bg-muted/30 p-4 text-sm sm:p-5">
+    <div className="rounded-2xl border border-border bg-muted/30 p-4 text-sm sm:p-5" data-hb-lead-details>
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        {/* Left: the job */}
-        <div className="min-w-0 space-y-4">
+        {/* Left: the brief */}
+        <div className="min-w-0">
           <div className="flex items-start gap-2.5">
             <ScrollText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <div className="min-w-0 flex-1">
-              <Label>Scope</Label>
-              <p className="mt-0.5 whitespace-pre-wrap text-foreground">{lead.description || "No description captured yet."}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <Label>What they told us</Label>
+              <dl className="mt-2 grid grid-cols-[84px_minmax(0,1fr)] gap-x-3 gap-y-2 sm:grid-cols-[92px_minmax(0,1fr)]" data-hb-brief>
+                {rows.map(([k, v]) => (
+                  <div key={k} className="contents">
+                    <dt className="pt-px text-xs font-bold text-muted-foreground">{k}</dt>
+                    <dd className="min-w-0 text-foreground">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-3 text-xs text-muted-foreground">
                 {serviceLabel(lead.category)}
                 {lead.job_ref ? ` · ${lead.job_ref}` : ""} · received {fullWhen(lead.created_at)}
               </p>
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="flex items-start gap-2.5">
-              <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <div>
-                <Label>Timeframe</Label>
-                <p className="mt-0.5 text-foreground">{(lead.urgency && URGENCY_LABEL[lead.urgency]) || lead.urgency || "Not stated"}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2.5">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <div>
-                <Label>Location</Label>
-                <p className="mt-0.5 text-foreground">{where || "Not stated"}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2.5">
-              <span className="mt-0.5 inline-block h-4 w-4 shrink-0 text-center text-xs font-black leading-4 text-primary">$</span>
-              <div>
-                <Label>Budget</Label>
-                <p className="mt-0.5 text-foreground">{budget || "Not stated"}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2.5">
-            <Camera className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-            <div className="min-w-0 flex-1">
-              <Label>Photos{lead.images.length ? ` (${lead.images.length})` : ""}</Label>
-              {lead.images.length ? (
-                <div className="mt-1.5 flex flex-wrap gap-2">
-                  {lead.images.map((src, i) => (
-                    <a key={src + i} href={src} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl border border-border bg-card">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={src} alt={`Project photo ${i + 1}`} loading="lazy" className="h-24 w-24 object-cover sm:h-28 sm:w-28" />
-                    </a>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-0.5 text-muted-foreground">No photos sent.</p>
-              )}
-            </div>
-          </div>
-
-          {lead.intake_notes.length > 0 && (
-            <div className="flex items-start gap-2.5">
-              <MessageSquareText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <div className="min-w-0 flex-1">
-                <Label>What they told us</Label>
-                <ul className="mt-1.5 space-y-1.5">
-                  {lead.intake_notes.map((n, i) => (
+          {lead.conversation.length > 0 && (
+            <div className="mt-4 border-t border-border/70 pt-3">
+              <button
+                type="button"
+                onClick={() => setShowConvo((v) => !v)}
+                aria-expanded={showConvo}
+                className="flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
+                data-hb-convo-toggle
+              >
+                <MessageSquareText className="h-3.5 w-3.5" />
+                {showConvo ? "Hide original conversation" : `View original conversation (${lead.conversation.length})`}
+                {showConvo ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              </button>
+              {showConvo && (
+                <ul className="mt-2 space-y-1.5" data-hb-convo>
+                  {lead.conversation.map((n, i) => (
                     <li key={i} className="rounded-xl bg-card px-3 py-2 text-foreground ring-1 ring-border">{n}</li>
                   ))}
                 </ul>
-              </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Right: the homeowner */}
-        <div className="h-fit rounded-2xl bg-card p-4 ring-1 ring-border">
+        {/* Right: the homeowner — contact + actions only */}
+        <div className="h-fit rounded-2xl bg-card p-4 ring-1 ring-border" data-hb-homeowner-card>
           <div className="flex items-start gap-2.5">
             <User className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <div className="min-w-0 flex-1">
@@ -240,9 +249,11 @@ function LeadDetails({ lead }: { lead: PageLead }) {
                   </Button>
                 </div>
               )}
-              <p className="mt-3 text-xs text-muted-foreground">
-                This lead came from your website — it is yours alone, no other pros were contacted.
-              </p>
+              {(where || lead.job_ref) && (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {[where, lead.job_ref].filter(Boolean).join(" · ")}
+                </p>
+              )}
             </div>
           </div>
         </div>
