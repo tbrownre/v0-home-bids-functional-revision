@@ -457,7 +457,7 @@ export function HomeownerInbox({ token }: { token: string }) {
     sendingRef.current = false
     if (!error && data?.ok) {
       setHandoffDone((current) => ({ ...current, [thread.thread_id]: true }))
-      say("Sent — you're connected 🎉")
+      say("Perfect ✅ We have everything we need. Next step is to get your project scheduled.")
       await refetch()
     } else {
       setHandoffError((current) => ({ ...current, [thread.thread_id]: (data?.error as string) || 'Something went wrong. Please try again.' }))
@@ -718,7 +718,7 @@ export function HomeownerInbox({ token }: { token: string }) {
                 <div className="sec"><div className="card hero">
                   <div className="eyebrow green">Last step</div>
                   <h2>Finish connecting with {name}</h2>
-                  <div className="sub">Share your details once and we&apos;ll send everything over — then you two take it from there.</div>
+                  <div className="sub">We just need a couple final details so we can get everything ready for scheduling.</div>
                   <div className="fieldlabel">Full name</div>
                   <input className="slotinput" placeholder="Your full name" value={form.name} onChange={(event) => setForm({ name: event.target.value })} />
                   <div className="fieldlabel">Service address</div>
