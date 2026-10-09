@@ -11,7 +11,8 @@ export function FooterWrapper() {
     pathname.startsWith('/j/') ||
     pathname.startsWith('/pro/') ||
     pathname.startsWith('/c/') ||
-    pathname.startsWith('/my/')
+    pathname.startsWith('/my/') ||
+    pathname.startsWith('/go/') // ADLAND: ad landing pages carry their own footer
   ) {
     return null;
   }
