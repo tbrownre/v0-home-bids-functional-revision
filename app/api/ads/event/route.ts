@@ -13,7 +13,7 @@ import { LANDING_SLUGS } from "@/lib/ads/landing-pages";
 export const runtime = "nodejs";
 
 const EVENTS = new Set(["Contact"]);
-const PLACEMENTS = new Set(["hero", "final"]);
+const PLACEMENTS = new Set(["cta", "page"]); // ADLAND v2: tap on the button vs anywhere else on the (full-page) link
 const clean = (v: unknown, max = 64) => String(v ?? "").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, max);
 
 export async function POST(req: NextRequest) {

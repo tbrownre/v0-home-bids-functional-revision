@@ -4,8 +4,10 @@ import { SMS_PHONE_NUMBER, SMS_PHONE_DISPLAY, CONTRACTOR_SMS_PHONE_NUMBER, CONTR
  * ADLAND (Tim + Abir, Oct 9 — Meta/IG ad landing pages).
  *
  * One landing page per ad creative, living at /go/<slug>. The page IS the creative, alive: the same headline,
- * the same subline, the same iMessage conversation playing itself out, one button that opens the visitor's
- * Messages app with the right HomeBids number and a starter text already typed.
+ * the same subline, the same iMessage conversation playing itself out, and the whole page is one tap that opens
+ * the visitor's Messages app with the right HomeBids number and a starter text already typed.
+ * Oct 10 (Tim): the page design is the replica of the reference experience page (components/ads/ad-landing.tsx);
+ * typewriter pages carry one conversation per rotating word (`scenes`).
  *
  *   homeowner pages  → Ava         (404) 395-2879   free, no account
  *   contractor pages → Bid Builder (283) 229-1348   $99/mo after a 14-day free trial
@@ -25,6 +27,8 @@ export interface ChatLine {
   /** "me" = the person texting (blue bubble, right); "them" = the business / HomeBids (grey, left) */
   from: "me" | "them";
   text: string;
+  /** Contractor demos: a compact estimate preview card under the bubble (Tim's brief §7). */
+  card?: { title: string; lines: string[]; cta?: string };
 }
 
 export interface LandingPage {
@@ -35,11 +39,15 @@ export interface LandingPage {
   /** Optional words that rotate in place of line 2 (typewriter) — the first one is the creative's own. */
   rotate?: string[];
   sub: string;
-  /** Small pill under the button, from the creative ("No app to learn", "Fast lead intake", …). */
+  /** Optional second, smaller line under the subline ("No account required. 100% free."). */
+  sub2?: string;
+  /** Caption under the button, from the creative ("No app to learn", "Fast lead intake", …). */
   tag: string;
   /** Who the conversation is with in the phone mock. */
   chat: { name: string; byline?: string; avatar: string };
   messages: ChatLine[];
+  /** Typewriter pages: one conversation per rotating word (falls back to `messages` for words not listed). */
+  scenes?: Record<string, ChatLine[]>;
   /** Starter text the button pre-fills (names the creative so leads can be attributed in the thread). */
   smsBody: string;
   /** For ad-manager naming / search terms; also the meta description keywords. */
@@ -149,8 +157,9 @@ export const LANDING_PAGES: LandingPage[] = [
   },
 
   {
-    // Tim's Astra contractor brief (Oct 9): "Meet your new" + the 15 rotating roles, his two support lines, his exact
+    // Tim's contractor brief (Oct 9): "Meet your new" + the 15 rotating roles, his two support lines, his exact
     // prefilled text - pointed at the CONTRACTOR line (the Astra page used Ava's homeowner number by mistake).
+    // Demos 1-3 are his verbatim scripts; the remaining 12 follow his role → demonstration mapping.
     slug: "your-new-assistant",
     audience: "contractor",
     headline: ["Meet your new", "assistant"],
@@ -159,16 +168,112 @@ export const LANDING_PAGES: LandingPage[] = [
       "customer service rep", "follow-up assistant", "24/7 receptionist", "sales assistant", "office assistant", "lead manager", "business assistant",
     ],
     sub: "More bids. More opportunities. Just text us.",
-    tag: "Free to try. No app. No software to learn.",
+    sub2: "Free to try. No app. No software to learn.",
+    tag: "No app to download. Just text.",
     chat: { name: "HomeBids", avatar: "HB" },
     messages: [
       { from: "me", text: "Hey HomeBids, help me build a new bid." },
       { from: "them", text: "Absolutely! What's the job?" },
       { from: "me", text: "Replace a kitchen faucet. Labor only." },
-      { from: "them", text: "Got it. For a standard swap, a suggested labor range is $150–$250. What would you like to charge?" },
+      { from: "them", text: "Got it. Is the new faucet already on-site?" },
+      { from: "me", text: "Yes. Standard swap." },
+      { from: "them", text: "For a standard replacement, a suggested labor range is $150–$250. What would you like to charge?" },
       { from: "me", text: "$195." },
-      { from: "them", text: "Perfect! ✅ Your professional estimate is ready. Kitchen Faucet Replacement · Labor $195 · Total $195 · View & Send Estimate →" },
+      { from: "them", text: "Perfect! ✅ Your professional estimate is ready.", card: { title: "Kitchen Faucet Replacement", lines: ["Labor: $195", "Total: $195"] } },
     ],
+    scenes: {
+      CSR: [
+        { from: "them", text: "🔔 New cleaning lead!" },
+        { from: "me", text: "Send me the details." },
+        { from: "them", text: "Sarah needs a house cleaning. 3 bed, 2 bath, approximately 1,800 sq ft. Friday preferred. ZIP 85296." },
+        { from: "me", text: "Let's quote $220." },
+        { from: "them", text: "Got it! ✅ Your professional cleaning estimate is ready.", card: { title: "Residential House Cleaning", lines: ["3 Bed / 2 Bath", "Total: $220"] } },
+      ],
+      website: [
+        { from: "them", text: "🔔 New lead from your HomeBids page!" },
+        { from: "me", text: "What's the job?" },
+        { from: "them", text: "James needs a ceiling fan replaced. Existing wiring is in place. Gilbert, AZ. Homeowner is ready for an estimate." },
+        { from: "me", text: "Build a quote for $175." },
+        { from: "them", text: "Done! ✅ Your professional estimate is ready to review and send.", card: { title: "Ceiling Fan Replacement", lines: ["Labor: $175", "Total: $175"] } },
+      ],
+      "sales rep": [
+        { from: "them", text: "🔔 New plumbing lead! Maria in Gilbert - water heater not heating. ZIP 85296." },
+        { from: "me", text: "Send the details." },
+        { from: "them", text: "10-year-old 40-gal gas unit, no hot water since last night. She wants a replacement quote." },
+        { from: "me", text: "Quote $1,450 installed." },
+        { from: "them", text: "Done! ✅ Your professional estimate is ready.", card: { title: "Water Heater Replacement", lines: ["40-gal gas, installed", "Total: $1,450"] } },
+      ],
+      "after-hours rep": [
+        { from: "them", text: "🔔 New inquiry at 9:42 PM - Dave in Chandler: AC blowing warm air. ZIP 85225." },
+        { from: "me", text: "Tell him I can be there at 8 AM." },
+        { from: "them", text: "Sent ✅ Dave confirmed 8 AM. His address and photos are on your leads page." },
+        { from: "me", text: "Build a diagnostic quote, $89." },
+        { from: "them", text: "Got it! ✅ Your estimate is ready.", card: { title: "AC Diagnostic Visit", lines: ["System check + report", "Total: $89"] } },
+      ],
+      "lead intake system": [
+        { from: "them", text: "🔔 New plumbing lead from your HomeBids page!" },
+        { from: "me", text: "What's the job?" },
+        { from: "them", text: "Suspected slab leak - wet spot in the hallway. 2-story, 2,400 sq ft, Mesa 85204. Homeowner is free weekday mornings." },
+        { from: "me", text: "Quote a leak detection visit, $185." },
+        { from: "them", text: "Got it! ✅ Your estimate is ready.", card: { title: "Leak Detection Visit", lines: ["Diagnostic + written report", "Total: $185"] } },
+      ],
+      "bid builder": [
+        { from: "me", text: "Build a bid: interior paint, 2 bedrooms, walls only." },
+        { from: "them", text: "Got it. About how big are the rooms?" },
+        { from: "me", text: "Both about 12 by 12. $650 total." },
+        { from: "them", text: "Perfect! ✅ Your professional estimate is ready.", card: { title: "Interior Painting - 2 Bedrooms", lines: ["Walls only, 2 coats", "Total: $650"] } },
+      ],
+      "estimating assistant": [
+        { from: "me", text: "Estimate for a backyard cleanup: weeds, shrub trim, haul away." },
+        { from: "them", text: "Got it. About how big is the yard?" },
+        { from: "me", text: "Small - maybe 1,500 sq ft. $320." },
+        { from: "them", text: "Done! ✅ Your estimate is ready.", card: { title: "Backyard Cleanup", lines: ["Weeds, shrub trim, haul-away", "Total: $320"] } },
+      ],
+      "customer service rep": [
+        { from: "them", text: "🔔 New homeowner request - Priya in Gilbert: garage door won't open." },
+        { from: "me", text: "Ask if the spring is broken." },
+        { from: "them", text: "Asked ✅ She heard a loud bang yesterday - likely the spring. Photos attached." },
+        { from: "me", text: "Quote $275 for a spring replacement." },
+        { from: "them", text: "Got it! ✅ Your estimate is ready.", card: { title: "Garage Door Spring Replacement", lines: ["Torsion spring, parts + labor", "Total: $275"] } },
+      ],
+      "follow-up assistant": [
+        { from: "them", text: "Reminder: Sarah hasn't opened your cleaning estimate ($220) from Tuesday." },
+        { from: "me", text: "Send her a friendly follow-up." },
+        { from: "them", text: "Sent ✅ \"Hi Sarah, just checking in - happy to answer any questions on the estimate.\"" },
+        { from: "them", text: "Sarah replied: \"Thanks! Can you do Friday?\"" },
+        { from: "me", text: "Yes, 9 AM works." },
+        { from: "them", text: "Passed along ✅ She confirmed Friday at 9 AM." },
+      ],
+      "24/7 receptionist": [
+        { from: "them", text: "🔔 New lead at 11:15 PM - Tom in Queen Creek: kitchen faucet dripping. ZIP 85142." },
+        { from: "me", text: "Offer him my first opening tomorrow." },
+        { from: "them", text: "Sent ✅ Tom took 10 AM. Details are on your leads page." },
+        { from: "me", text: "Quote $165 for the repair." },
+        { from: "them", text: "Got it! ✅ Your estimate is ready.", card: { title: "Faucet Repair", lines: ["Cartridge + labor", "Total: $165"] } },
+      ],
+      "sales assistant": [
+        { from: "them", text: "🔔 New lead! Ana in Mesa needs a ceiling fan installed - wiring already in place." },
+        { from: "me", text: "Quote $175." },
+        { from: "them", text: "Done! ✅ Your estimate is ready to send.", card: { title: "Ceiling Fan Installation", lines: ["Existing wiring", "Total: $175"] } },
+      ],
+      "office assistant": [
+        { from: "me", text: "New bid: yard cleanup for the Hendersons - weeds and two palm trims." },
+        { from: "them", text: "Got it. What would you like to charge?" },
+        { from: "me", text: "$390." },
+        { from: "them", text: "Perfect! ✅ Your estimate is ready.", card: { title: "Yard Cleanup + Palm Trim", lines: ["Weeds, 2 palms, haul-away", "Total: $390"] } },
+      ],
+      "lead manager": [
+        { from: "them", text: "🔔 New cleaning lead! Jen in Gilbert - 4 bed, 3 bath, deep clean before move-in. ZIP 85297." },
+        { from: "me", text: "Quote $380." },
+        { from: "them", text: "Got it! ✅ Your estimate is ready.", card: { title: "Move-In Deep Clean", lines: ["4 Bed / 3 Bath", "Total: $380"] } },
+      ],
+      "business assistant": [
+        { from: "me", text: "Hey HomeBids, build a bid for a drywall patch - two holes in the hallway." },
+        { from: "them", text: "Got it. Texture match and paint too?" },
+        { from: "me", text: "Yes. $240." },
+        { from: "them", text: "Done! ✅ Your professional estimate is ready to review and send.", card: { title: "Drywall Repair - Hallway", lines: ["2 patches, texture + paint", "Total: $240"] } },
+      ],
+    },
     smsBody: "Hi HomeBids, I want to try your assistant",
     keywords: ["meet your new assistant", "more bids", "more opportunities", "just text us", "no software to learn", "contractor"],
   },
@@ -254,21 +359,140 @@ export const LANDING_PAGES: LandingPage[] = [
     keywords: ["no forms just text", "get a real job filled", "get started in minutes", "homeowner"],
   },
   {
+    // The replica (Tim Oct 9): the reference homeowner page's 15 trades and conversations, verbatim, with our number.
     slug: "house-cleaner",
     audience: "homeowner",
     headline: ["Meet your new", "house cleaner"],
-    rotate: ["house cleaner", "plumber", "landscaper", "painter", "handyman"],
-    sub: "The fastest way to hire help at home. Just text us. No account required. 100% free.",
+    rotate: [
+      "house cleaner", "plumber", "electrician", "handyman", "landscaper", "painter", "HVAC technician", "roofer",
+      "carpet cleaner", "pool cleaner", "flooring installer", "window cleaner", "pest control pro", "pressure washer", "home remodeler",
+    ],
+    sub: "The fastest way to hire help at home. Just text us.",
+    sub2: "No account required. 100% free.",
     tag: "No app to download. Just text.",
     chat: HOMEOWNER_CHAT,
     messages: [
       { from: "me", text: "Hi HomeBids! I need help with a house cleaning." },
-      { from: "them", text: "Happy to help. What size home and when do you need it cleaned?" },
-      { from: "me", text: "3 bed, 2 bath. About 1,800 sq ft. This Friday if possible." },
-      { from: "them", text: "Perfect. Standard cleaning for that size home is usually around $180–$220. I'm finding a cleaner for you now." },
-      { from: "me", text: "Awesome, thank you." },
-      { from: "them", text: "You're all set ✅ Your request is in and you'll hear from a cleaner shortly." },
+      { from: "them", text: "Happy to help! 😊 How big is your home, and when do you need it cleaned?" },
+      { from: "me", text: "3 bed, 2 bath. About 1,800 sq ft. This Friday." },
+      { from: "them", text: "Perfect! What ZIP code are you in?" },
+      { from: "me", text: "85296" },
+      { from: "them", text: "Got it! ✅ I'm getting your request ready for local cleaners. You'll hear from us soon!" },
     ],
+    scenes: {
+      plumber: [
+        { from: "me", text: "Hey HomeBids! I need a plumber." },
+        { from: "them", text: "Of course! What's going on?" },
+        { from: "me", text: "My kitchen sink is leaking." },
+        { from: "them", text: "Can you send a photo and your ZIP code?" },
+        { from: "me", text: "85234. Here's a photo. 📷" },
+        { from: "them", text: "Perfect! ✅ I'm getting your request ready for local plumbers." },
+      ],
+      electrician: [
+        { from: "me", text: "I need an electrician to install a ceiling fan." },
+        { from: "them", text: "Happy to help! Is the wiring already there?" },
+        { from: "me", text: "Yes. Just replacing an old fan." },
+        { from: "them", text: "Great! What's your ZIP code?" },
+        { from: "me", text: "85295" },
+        { from: "them", text: "You're all set! ✅ I'm getting your request ready for local electricians." },
+      ],
+      handyman: [
+        { from: "me", text: "Hi! I need help mounting a TV." },
+        { from: "them", text: "Absolutely! What size TV, and what kind of wall?" },
+        { from: "me", text: "65 inches, on drywall. I have the mount." },
+        { from: "them", text: "Got it! What ZIP code, and when works for you?" },
+        { from: "me", text: "85296. Any afternoon next week." },
+        { from: "them", text: "Perfect! ✅ I'm preparing your request for local handymen." },
+      ],
+      landscaper: [
+        { from: "me", text: "My backyard needs a cleanup." },
+        { from: "them", text: "Happy to help! What needs attention?" },
+        { from: "me", text: "Weeds, overgrown shrubs, and a small lawn." },
+        { from: "them", text: "What ZIP code, and how soon do you need help?" },
+        { from: "me", text: "85234. Sometime this week." },
+        { from: "them", text: "Got it! ✅ I'm preparing your cleanup request for local landscapers." },
+      ],
+      painter: [
+        { from: "me", text: "I'd like to paint two bedrooms." },
+        { from: "them", text: "Of course! Just the walls, or ceilings and trim too?" },
+        { from: "me", text: "Just the walls. Both rooms are about 12 by 12." },
+        { from: "them", text: "Thanks! What ZIP code and timing?" },
+        { from: "me", text: "85295. In the next two weeks." },
+        { from: "them", text: "Perfect! ✅ I'm getting your request ready for local painters." },
+      ],
+      "HVAC technician": [
+        { from: "me", text: "My AC isn't cooling like it used to." },
+        { from: "them", text: "Is it still running? Any unusual sounds?" },
+        { from: "me", text: "It's running, but the air is warm. No odd noises." },
+        { from: "them", text: "Got it. What's your ZIP code and availability?" },
+        { from: "me", text: "85296. I'm home tomorrow." },
+        { from: "them", text: "Thanks! ✅ I'm preparing your service request for local HVAC pros." },
+      ],
+      roofer: [
+        { from: "me", text: "I noticed a few broken roof tiles." },
+        { from: "them", text: "I can help. Any leaks inside, or visible damage only?" },
+        { from: "me", text: "Visible damage only. It's a single-story home." },
+        { from: "them", text: "Please share your ZIP code and preferred timing." },
+        { from: "me", text: "85234. An inspection next week would be great." },
+        { from: "them", text: "Got it! ✅ I'm preparing your inspection request for local roofers." },
+      ],
+      "carpet cleaner": [
+        { from: "me", text: "Can you help me find a carpet cleaner?" },
+        { from: "them", text: "Sure! How many rooms, and any stains?" },
+        { from: "me", text: "Three bedrooms. A few pet stains in one." },
+        { from: "them", text: "What's your ZIP code, and when do you need it?" },
+        { from: "me", text: "85295. Before next weekend." },
+        { from: "them", text: "Perfect! ✅ I'm getting your request ready for local carpet cleaners." },
+      ],
+      "pool cleaner": [
+        { from: "me", text: "My pool needs a good cleaning." },
+        { from: "them", text: "Happy to help! A one-time clean or regular service?" },
+        { from: "me", text: "One-time for now. Lots of leaves, water is clear." },
+        { from: "them", text: "About how big is the pool, and your ZIP code?" },
+        { from: "me", text: "About 12,000 gallons. 85296. This week." },
+        { from: "them", text: "Got it! ✅ I'm preparing your request for local pool cleaners." },
+      ],
+      "flooring installer": [
+        { from: "me", text: "I want new flooring in my living room." },
+        { from: "them", text: "What material and approximate room size?" },
+        { from: "me", text: "Vinyl plank, about 350 sq ft. Replacing carpet." },
+        { from: "them", text: "Do you have the flooring? And what's your ZIP?" },
+        { from: "me", text: "Yes, it's here. 85234. Flexible on dates." },
+        { from: "them", text: "Perfect! ✅ I'm preparing your request for local flooring installers." },
+      ],
+      "window cleaner": [
+        { from: "me", text: "I need my home's windows cleaned." },
+        { from: "them", text: "Of course! About how many, and how many stories?" },
+        { from: "me", text: "20 windows, two stories. Inside and outside." },
+        { from: "them", text: "What ZIP code, and when would you like help?" },
+        { from: "me", text: "85295. Next week if possible." },
+        { from: "them", text: "Got it! ✅ I'm getting your request ready for local window cleaners." },
+      ],
+      "pest control pro": [
+        { from: "me", text: "We have ants coming into the kitchen." },
+        { from: "them", text: "I can help. When did you first notice them?" },
+        { from: "me", text: "A few days ago. Mostly around the back door." },
+        { from: "them", text: "What ZIP code? Any pets the pro should know about?" },
+        { from: "me", text: "85296. One dog. We'd like help this week." },
+        { from: "them", text: "Thanks! ✅ I'm preparing your request for local pest control pros." },
+      ],
+      "pressure washer": [
+        { from: "me", text: "I'd like my driveway pressure washed." },
+        { from: "them", text: "Happy to help! What surface and approximate size?" },
+        { from: "me", text: "Concrete. A two-car driveway with oil stains." },
+        { from: "them", text: "What's your ZIP code and preferred timing?" },
+        { from: "me", text: "85234. Sometime next week." },
+        { from: "them", text: "Perfect! ✅ I'm preparing your request for local pressure washing pros." },
+      ],
+      "home remodeler": [
+        { from: "me", text: "We're thinking about remodeling our bathroom." },
+        { from: "them", text: "Exciting! A full remodel or a few updates?" },
+        { from: "me", text: "New shower, tile, and vanity. About 60 sq ft." },
+        { from: "them", text: "What's your ZIP code and ideal start date?" },
+        { from: "me", text: "85295. In a few months. We're gathering estimates." },
+        { from: "them", text: "Got it! ✅ I'm preparing your project details for local remodelers." },
+      ],
+    },
     smsBody: "Hi HomeBids, I saw your ad - I need a house cleaner",
     keywords: ["meet your new house cleaner", "hire help at home", "no account required", "100% free", "homeowner"],
   },
@@ -292,39 +516,3 @@ export function smsHrefFor(page: LandingPage): string {
   const { phone } = smsTargetFor(page.audience);
   return `sms:${phone}?&body=${encodeURIComponent(page.smsBody)}`;
 }
-
-/** Audience copy for the sections below the fold — same words on every page of that lane. */
-export const AUDIENCE_COPY = {
-  homeowner: {
-    priceLine: "Free for homeowners. Always.",
-    riskLine: "No account. No forms. No obligation — you pick the bid, or none at all.",
-    proof: ["Local pros - license & insurance shown", "Real bids by text, usually same day", "You stay in control of who you hire"],
-    steps: [
-      ["Text what you need", "A photo helps. A sentence is enough."],
-      ["We line up local pros", "Your project goes out to pros who do this work in your area."],
-      ["Pick your bid", "Bids and questions come to you by text. Approve the one you like."],
-    ],
-    faq: [
-      ["Is it really free?", "Yes. Homeowners never pay HomeBids. Pros pay for the software, not for your project."],
-      ["Do I need an app or account?", "No. Everything happens in your Messages app. Your private project page opens from a link we text you."],
-      ["Who texts me back?", "HomeBids runs the first steps - collecting what the pro needs to quote. Then real local pros send real bids."],
-    ],
-    finalLine: "Your project starts with one text.",
-  },
-  contractor: {
-    priceLine: "$99/month after a 14-day free trial. Cancel anytime.",
-    riskLine: "Built for contractors. No contract - your leads, your bids, your customers. We just handle the texting.",
-    proof: ["Unlimited bids - PDF + online link", "Your own landing page that answers first", "Homeowner approvals come back by text"],
-    steps: [
-      ["Text the job", "Who, where, what. Photos if you have them."],
-      ["Bid Builder writes the bid", "Professional PDF + a link the homeowner can approve from their phone."],
-      ["You keep working", "Leads text your page, get a fast reply and a scope started - day or night."],
-    ],
-    faq: [
-      ["What does it cost?", "$99 a month after a 14-day free trial. Unlimited bids. Cancel anytime from your account page."],
-      ["Do I have to learn new software?", "No. You text. Bid Builder builds the bid and sends it. Your dashboard is there when you want it."],
-      ["Do you take a cut of my jobs?", "Never. No lead fees, no commissions. The subscription is the only charge."],
-    ],
-    finalLine: "Your next bid starts with one text.",
-  },
-} as const;
