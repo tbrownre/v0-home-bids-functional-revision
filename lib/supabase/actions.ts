@@ -285,31 +285,35 @@ export async function phoneSignIn(phone: string, password: string): Promise<{ su
       return { error: "Phone or password incorrect" };
     }
 
-    // Find profile by phone (last 10 digits)
-    const { data: profile, error: queryError } = await adminClient
+    // PHONELOGIN v2: homeowner accounts are created with the synthetic address
+    // 1XXXXXXXXXX@sms.homebids.ai (see /api/homeowner-reset and the n8n login text),
+    // so that address is tried first — no profile lookup can get in the way.
+    // Then any homeowner profile carrying this phone (newest first). The old
+    // maybeSingle() lookup returned "incorrect" whenever two profiles shared a
+    // phone or the user_type was missing; this walks the candidates instead.
+    const candidates: string[] = [`1${normalized}@sms.homebids.ai`];
+    const { data: profiles } = await adminClient
       .from("profiles")
-      .select("id, email")
-      .eq("user_type", "homeowner")
+      .select("email, user_type, created_at")
       .filter("phone", "ilike", `%${normalized}`)
-      .maybeSingle();
-
-    if (queryError || !profile) {
-      return { error: "Phone or password incorrect" };
+      .order("created_at", { ascending: false })
+      .limit(10);
+    for (const p of profiles ?? []) {
+      const email = (p.email || "").trim().toLowerCase();
+      if (!email || candidates.includes(email)) continue;
+      if (p.user_type && p.user_type !== "homeowner") continue;
+      candidates.push(email);
     }
 
-    // Sign in with email + password
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: profile.email,
-      password,
-    });
-
-    if (signInError) {
-      return { error: "Phone or password incorrect" };
+    for (const email of candidates) {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (!signInError) {
+        // Revalidate and return success (client will redirect)
+        revalidatePath("/", "layout");
+        return { success: true };
+      }
     }
-
-    // Revalidate and return success (client will redirect)
-    revalidatePath("/", "layout");
-    return { success: true };
+    return { error: "Phone or password incorrect" };
   } catch (e) {
     return { error: "Phone or password incorrect" };
   }
