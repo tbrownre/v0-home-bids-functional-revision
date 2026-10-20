@@ -101,13 +101,25 @@ export default function SignInPage() {
         setUsePhoneForHomeowner(false);
       }
       setRedirectTo(target);
+      // HOMEOWNERLINK: the login text links here as /auth/sign-in?as=homeowner&phone=6025551234 —
+      // open straight on the Homeowner tab with the phone filled in, so the only thing to type is
+      // the password. A homeowner deep link also wins over a contractor remembered on this device.
+      const asHomeowner = params.get("as") === "homeowner" || !!params.get("phone");
+      const phoneParam = (params.get("phone") || "").replace(/\D/g, "").slice(-10);
+      if (asHomeowner) {
+        setUserType("homeowner");
+        setUsePhoneForHomeowner(true);
+        if (phoneParam.length === 10) {
+          setPhone(`(${phoneParam.slice(0, 3)}) ${phoneParam.slice(3, 6)}-${phoneParam.slice(6)}`);
+        }
+      }
       const n = params.get("notice");
       if (n === "no-account") setNotice("No HomeBids account uses that Google/Apple email yet. Sign in with your HomeBids email below, or create an account.");
       if (n === "link-expired") setNotice("That sign-in link has expired or was already used. Request a new one below.");
       if (n === "link-invalid") setNotice("That sign-in link didn't work. Request a new one below.");
 
-      // Returning user on this device → one-field sign-in
-      const remembered = getLastLogin();
+      // Returning user on this device → one-field sign-in (not when a homeowner link brought us here)
+      const remembered = asHomeowner ? null : getLastLogin();
       if (remembered) {
         setLast(remembered);
         setUseRemembered(true);
