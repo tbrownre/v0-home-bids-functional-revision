@@ -250,6 +250,9 @@ export function HomeownerInbox({ token }: { token: string }) {
   const [handoff, setHandoff] = useState<Record<string, { name: string; address: string; email: string; phone: string }>>({})
   const [handoffDone, setHandoffDone] = useState<Record<string, boolean>>({})
   const [handoffError, setHandoffError] = useState<Record<string, string>>({})
+  // BACKTOACTIVE (Tim, Oct 20): homeowner puts an approved job back to active themselves
+  const [reopenOpen, setReopenOpen] = useState<Record<string, boolean>>({})
+  const [reopening, setReopening] = useState(false)
   const [uploadingThread, setUploadingThread] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<Record<string, string>>({})
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({})
@@ -467,6 +470,27 @@ export function HomeownerInbox({ token }: { token: string }) {
       await refetch()
     } else {
       setHandoffError((current) => ({ ...current, [thread.thread_id]: (data?.error as string) || 'Something went wrong. Please try again.' }))
+    }
+  }
+
+  // BACKTOACTIVE (Tim, Oct 20: "add a way for the homeowner to bring the job active so we don't have to"):
+  // reopen_job verifies owner token + bid token belong to the same job, un-approves the bid (back to 'viewed'),
+  // reopens the job and texts the pro once. The page re-reads its state right after.
+  async function reopenJob(thread: Thread) {
+    if (!thread.accepted_share_token || busy) return
+    sendingRef.current = true
+    setBusy(true)
+    setReopening(true)
+    const { data, error } = await createClient().rpc('reopen_job', { p_token: token, p_share_token: thread.accepted_share_token })
+    setBusy(false)
+    setReopening(false)
+    sendingRef.current = false
+    if (!error && data?.ok) {
+      setReopenOpen((current) => ({ ...current, [thread.thread_id]: false }))
+      say('Done - your job is back to active and open to other pros.')
+      await refetch()
+    } else {
+      say((data?.error as string) || 'Could not put the job back right now. Please try again.')
     }
   }
 
@@ -713,6 +737,17 @@ export function HomeownerInbox({ token }: { token: string }) {
                   </div>
                 )}
                 <div className="nextbox"><strong>HomeBids will keep this page available</strong> so you always have the accepted bid and project details in one place.</div>
+                {thread.accepted_share_token && (
+                  <>
+                    <button className="textbtn" onClick={() => setReopenOpen((current) => ({ ...current, [thread.thread_id]: !current[thread.thread_id] }))}>Didn&apos;t work out? Put the job back to active</button>
+                    <div className={`panel${reopenOpen[thread.thread_id] ? ' on' : ''}`}>
+                      <div style={{ fontWeight: 800 }}>Put &ldquo;{job.title}&rdquo; back to active?</div>
+                      <div className="sub" style={{ marginTop: 6 }}>{name}&apos;s approval is removed and other pros can bid again. {name} gets a heads-up text. You can still accept {name}&apos;s bid later.</div>
+                      <button className="secondary" onClick={() => reopenJob(thread)} disabled={busy}>{reopening ? 'Working…' : 'Yes, put it back to active'}</button>
+                      <button className="textbtn" onClick={() => setReopenOpen((current) => ({ ...current, [thread.thread_id]: false }))}>Keep {name}</button>
+                    </div>
+                  </>
+                )}
               </div></div>
             )
           }
