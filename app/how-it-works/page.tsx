@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowRight, CheckCircle2, MessageSquare, Users, ShieldCheck,
   Smartphone, Bot, Zap, FileText, TrendingUp, Star, DollarSign,
-  Clock, Hammer, Home, ChevronRight, Sparkles, Send,
+  Clock, Hammer, Home, ChevronRight, Sparkles, Send, Globe, Radar,
 } from "lucide-react";
 
 type Audience = "homeowner" | "contractor";
@@ -564,7 +564,9 @@ export default function HowItWorksPage() {
                       { icon: Zap, title: "Respond faster, win more.", desc: "AI-generated responses mean you reply in minutes. Fast replies close more jobs." },
                       { icon: TrendingUp, title: "Defend your pricing.", desc: "Stop losing jobs to price objections. Back up every bid with confidence." },
                       { icon: FileText, title: "Cleaner estimates.", desc: "AI-structured proposals look professional and communicate value — even from the job site." },
-                      { icon: DollarSign, title: "$99/month. All-in.", desc: "Unlimited AI bids, shareable bid links, no bid fees — one flat price, no surprises." },
+                      { icon: Globe, title: "Your own website, done for you.", desc: "Every pro gets a mobile-first landing page. Put the link on your truck, cards and bio — homeowners who text from it are your leads alone." },
+                      { icon: Radar, title: "Lead Radar for Facebook groups.", desc: "Add the local groups you're in. We watch them and text you the moment a homeowner asks for your trade — with a comment ready to paste." },
+                      { icon: DollarSign, title: "$99/month. All-in.", desc: "Unlimited AI bids, shareable bid links, your own website, Lead Radar, no bid fees — one flat price, no surprises." },
                     ].map((card, i) => (
                       <motion.div key={card.title} variants={fadeUp} transition={{ delay: i * 0.07 }}
                         whileHover={{ y: -3 }}
@@ -605,7 +607,7 @@ export default function HowItWorksPage() {
                       Build professional bids faster, send them the same day, and win more jobs.
                     </p>
                     <ul className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-white/80">
-                      {["Unlimited AI Bids", "Shareable Bid Links", "No Bid Fees", "$99/month"].map((item) => (
+                      {["Unlimited AI Bids", "Shareable Bid Links", "Your Own Website", "Lead Radar", "No Bid Fees", "$99/month"].map((item) => (
                         <li key={item} className="flex items-center gap-1.5">
                           <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                           {item}
