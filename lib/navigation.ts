@@ -31,6 +31,7 @@ export const homeownerNavItems: NavItem[] = [
 export const contractorNavItems: NavItem[] = [
   { label: "Dashboard", href: "/contractors/dashboard",    match: ["/contractors/dashboard"] },
   { label: "Leads",     href: "/contractors/leads",        match: ["/contractors/leads"] },
+  { label: "Radar",     href: "/contractors/lead-radar",   match: ["/contractors/lead-radar"] },
   { label: "Bids",      href: "/contractors/bids-history", match: ["/contractors/bids-history"] },
   { label: "Profile",   href: "/contractors/profile",      match: ["/contractors/profile"] },
   { label: "Messages",  href: "/contractors/messages",     match: ["/contractors/messages"] },
