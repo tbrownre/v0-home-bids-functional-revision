@@ -150,7 +150,7 @@ function Badge({ text, cls }: { text: string; cls: string }) {
   return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${cls}`}>{text}</span>;
 }
 
-function Metric({ label, row }: { label: string; row: Partial<KpiRow> | undefined }) {
+function Metric({ label, row, compact }: { label: string; row: Partial<KpiRow> | undefined; compact?: boolean }) {
   const cells: Array<[string, number | undefined]> = [
     ["Jobs", row?.jobs],
     ["Bids", row?.bids],
@@ -163,11 +163,12 @@ function Metric({ label, row }: { label: string; row: Partial<KpiRow> | undefine
   return (
     <div className="rounded-2xl border bg-card p-4">
       <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{label}</div>
-      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4 lg:grid-cols-7">
+      {/* compact = the three side-by-side tiles: 4 per row so "Homeowners"/"Contractors" never collide (Oct 22) */}
+      <div className={`mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4 ${compact ? "" : "lg:grid-cols-7"}`}>
         {cells.map(([k, v]) => (
-          <div key={k}>
+          <div key={k} className="min-w-0">
             <div className="text-2xl font-bold leading-none text-foreground">{v ?? 0}</div>
-            <div className="mt-1 text-[11px] text-muted-foreground">{k}</div>
+            <div className="mt-1 truncate text-[11px] leading-tight text-muted-foreground">{k}</div>
           </div>
         ))}
       </div>
@@ -304,9 +305,9 @@ export default function AdminHomePage() {
         <div className="mb-8 grid gap-3">
           <Metric label="Today" row={data?.kpis?.today} />
           <div className="grid gap-3 lg:grid-cols-3">
-            <Metric label="Last 7 days" row={data?.kpis?.d7} />
-            <Metric label="Last 30 days" row={data?.kpis?.d30} />
-            <Metric label="All time" row={data?.kpis?.all} />
+            <Metric label="Last 7 days" row={data?.kpis?.d7} compact />
+            <Metric label="Last 30 days" row={data?.kpis?.d30} compact />
+            <Metric label="All time" row={data?.kpis?.all} compact />
           </div>
         </div>
 
