@@ -1,40 +1,42 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  Radar, Plus, Trash2, Copy, Check, ExternalLink, Pause, Play, Loader2, Phone,
-  ShieldCheck, Inbox, AlertTriangle, Clock, MessageSquareText, Users, RefreshCw,
+  Radar, Plus, Copy, Check, ExternalLink, Pause, Play, Loader2, Inbox, AlertTriangle,
+  MessageSquareText, Users, RefreshCw, Facebook, X, Tag, Mail, ShieldCheck,
 } from "lucide-react";
 import { ContractorTopbar } from "@/components/contractor/contractor-topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { getMockUser, syncMirrorFromSupabase } from "@/lib/mock-auth";
 import {
-  getRadarOverview, addRadarGroups, removeRadarGroup, setRadarGroup, setRadarSettings, setRadarLeadStatus,
+  getRadarOverview, addRadarGroups, removeRadarGroup, setRadarSettings, setRadarLeadStatus,
   type RadarOverview, type RadarGroup, type RadarLead,
 } from "@/lib/supabase/lead-radar";
 
 /**
- * /contractors/lead-radar — Lead Radar (Tim/Abir, Oct 21): "the lead radar should have a
- * submit button where the contractors can upload 25 groups up to, so it will watch those
- * groups and send him leads about the posts and commenting thing".
+ * /contractors/lead-radar — Lead Radar.
  *
- * The contractor pastes up to 25 PUBLIC Facebook groups. n8n ("HomeBids - Lead Radar")
- * scans them every few hours, keeps the homeowner "looking for a pro" posts, and texts the
- * contractor each matching lead on the Bid Builder line with the post link + a comment he
- * can paste. Nothing is ever posted from anyone's Facebook account — he posts the comment
- * himself, from his own account, so he stays inside each group's rules.
+ * v2 (Tim, Oct 23 4:16 AM + 5:11 AM mockups: "Can we modify the design to this? ^" / "Should we have 'add custom trade'
+ * under your trades?"; Oct 25: "activate lead radar today with the revised design and make sure text/email alerts are
+ * available"). One column, phone-first, exactly the cards in his screenshots:
+ *   Lead Radar · Find local jobs. Get notified by text. · [● Active] | Alerts sent to (256) 975-9684 (+ email)
+ *   Your Facebook groups n/25 — paste a link, "+ Add group", group chips with ×
+ *   Your trades — chip grid with ✓ on the selected ones, "+ Add custom trade"
+ *   Opportunities — "New (n)" filter, empty state, lead cards (Open post · Copy comment · I commented · Skip)
  *
- * Same shell as /contractors/leads (ContractorTopbar, CARD, auth guard).
+ * Matching + alerts live in Postgres now (radar_match_post / radar_lead_alert, Oct 26): whoever inserts a post, the lead
+ * is created only for contractors whose group + trades match and the text/email goes out from there. The page only
+ * reads radar_overview and writes settings through the radar_* RPCs (auth.uid()-scoped).
  */
 
 const CARD = "rounded-[22px] border border-border bg-card shadow-[0_10px_30px_rgba(16,17,20,0.06)]";
 const MAX_GROUPS = 25;
+const MAX_CUSTOM = 10;
 
-/** The radar's trade list (same canonical names the classifier writes to radar_posts.category). */
+/** The radar's trade list — in the order of Tim's mockup, then the rest. Keys are what the classifier writes to radar_posts.category. */
 const TRADES: Array<{ key: string; label: string; hints: string[] }> = [
   { key: "Plumber",                          label: "Plumbing",         hints: ["plumb", "drain", "leak", "toilet", "water heater", "sewer", "faucet"] },
   { key: "Electrician",                      label: "Electrical",       hints: ["electric", "wiring", "panel"] },
@@ -52,10 +54,12 @@ const TRADES: Array<{ key: string; label: string; hints: string[] }> = [
   { key: "Fence contractor",                 label: "Fencing",          hints: ["fence", "gate"] },
   { key: "Tree service",                     label: "Tree service",     hints: ["tree", "arborist", "stump"] },
   { key: "House cleaning service",           label: "House cleaning",   hints: ["house clean", "maid", "cleaning service", "janitor"] },
-  { key: "Window installation service",      label: "Windows & doors",  hints: ["window", "door", "glass"] },
-  { key: "Locksmith",                        label: "Locksmith",        hints: ["lock"] },
+  { key: "Junk removal service",             label: "Junk removal",     hints: ["junk", "haul"] },
   { key: "Concrete contractor",              label: "Concrete",         hints: ["concrete", "masonry", "stucco", "block wall"] },
   { key: "Gutter cleaning service",          label: "Gutters",          hints: ["gutter"] },
+  { key: "Pressure washing service",         label: "Pressure washing", hints: ["pressure wash", "power wash"] },
+  { key: "Window installation service",      label: "Windows & doors",  hints: ["window", "door", "glass"] },
+  { key: "Locksmith",                        label: "Locksmith",        hints: ["lock"] },
   { key: "Water damage restoration service", label: "Water damage",     hints: ["water damage", "restoration", "mold", "flood"] },
   { key: "Pool cleaning service",            label: "Pool service",     hints: ["pool", "spa"] },
 ];
@@ -104,7 +108,7 @@ function groupTitle(g: RadarGroup): string {
   return slug || g.url;
 }
 
-/** Split whatever got pasted (one per line, commas, spaces) into candidate links. */
+/** Split whatever got pasted (one link, or several separated by spaces / commas / new lines) into candidate links. */
 function splitLinks(raw: string): string[] {
   return raw
     .split(/[\s,;]+/)
@@ -112,11 +116,8 @@ function splitLinks(raw: string): string[] {
     .filter((s) => s && !/^(https?:\/\/)?(www\.)?facebook\.com\/?$/i.test(s));
 }
 
-function Label({ children }: { children: ReactNode }) {
-  return <p className="text-xs font-extrabold uppercase tracking-[0.06em] text-muted-foreground">{children}</p>;
-}
-
 type LeadFilter = "new" | "contacted" | "skipped" | "all";
+type SaveState = "idle" | "saving" | "saved" | "error";
 
 export default function LeadRadarPage() {
   const [data, setData] = useState<RadarOverview | null>(null);
@@ -128,16 +129,24 @@ export default function LeadRadarPage() {
   const [adding, setAdding] = useState(false);
   const [addNote, setAddNote] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
   const [busyGroup, setBusyGroup] = useState<string | null>(null);
-  const [cityDraft, setCityDraft] = useState<Record<string, string>>({});
 
   // trades
   const [selected, setSelected] = useState<string[]>([]);
+  const [custom, setCustom] = useState<string[]>([]);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customDraft, setCustomDraft] = useState("");
   const [tradesDirty, setTradesDirty] = useState(false);
-  const [savingTrades, setSavingTrades] = useState(false);
-  const [tradesNote, setTradesNote] = useState<string | null>(null);
+  const [tradesSave, setTradesSave] = useState<SaveState>("idle");
+  const [tradesError, setTradesError] = useState<string | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestTrades = useRef<{ selected: string[]; custom: string[] }>({ selected: [], custom: [] });
 
-  // pause
+  // alerts
   const [pausing, setPausing] = useState(false);
+  const [emailOn, setEmailOn] = useState(false);
+  const [emailDraft, setEmailDraft] = useState("");
+  const [emailSave, setEmailSave] = useState<SaveState>("idle");
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   // leads
   const [filter, setFilter] = useState<LeadFilter>("new");
@@ -177,18 +186,23 @@ export default function LeadRadarPage() {
       setData(ov);
       setLoadError(null);
       if (first) {
-        const saved = ov.settings?.categories;
-        if (saved && saved.length) {
-          setSelected(saved.filter((c) => TRADE_LABEL[c]));
+        const s = ov.settings;
+        const savedCats = s?.categories;
+        const savedCustom = (s?.custom_trades ?? []).filter(Boolean);
+        if (s) {
+          setSelected((savedCats ?? []).filter((c) => TRADE_LABEL[c]));
+          setCustom(savedCustom);
           setTradesDirty(false);
-        } else if (!ov.settings) {
-          // never saved anything: start from what the profile says, so the first "Add groups" saves the right trades
+          setEmailOn(!!s.email_alerts);
+          setEmailDraft(s.alert_email ?? ov.profile?.email ?? "");
+        } else {
+          // never saved anything: start from what the profile says, so the first "Add group" saves the right trades
           const guess = guessTrades(ov.profile?.specialties, ov.profile?.company);
           setSelected(guess);
+          setCustom([]);
           setTradesDirty(guess.length > 0);
-        } else {
-          setSelected([]); // saved as "all trades"
-          setTradesDirty(false);
+          setEmailOn(false);
+          setEmailDraft(ov.profile?.email ?? "");
         }
       }
     } catch (e) {
@@ -202,15 +216,18 @@ export default function LeadRadarPage() {
   useEffect(() => {
     void load(true);
     const t = setInterval(() => void load(false), 90_000); // new leads land without a refresh
-    return () => clearInterval(t);
+    return () => { clearInterval(t); if (saveTimer.current) clearTimeout(saveTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => { latestTrades.current = { selected, custom }; }, [selected, custom]);
 
   const groups = data?.groups ?? [];
   const leads = data?.leads ?? [];
   const paused = !!data?.settings?.paused;
   const phone = data?.profile?.phone ?? null;
   const activeGroups = groups.filter((g) => g.enabled).length;
+  const tradeCount = selected.length + custom.length;
 
   const counts = useMemo(() => {
     const c = { all: leads.length, new: 0, contacted: 0, skipped: 0 };
@@ -222,9 +239,30 @@ export default function LeadRadarPage() {
   const pastedLinks = useMemo(() => splitLinks(paste), [paste]);
   const room = Math.max(0, MAX_GROUPS - groups.length);
 
-  const saveTrades = async (cats: string[]) => {
-    const res = await setRadarSettings(cats.length ? cats : null, null);
+  /** Persist the trade filter (standard + custom). `null` categories = every homeowner request. */
+  const persistTrades = async (cats: string[], cust: string[]) => {
+    const res = await setRadarSettings(cats.length ? cats : null, null, cust);
     if (res.error) throw new Error(res.error);
+  };
+
+  /** Trades save themselves ~0.6 s after the last tap (the mockup has no Save button). */
+  const queueTradesSave = () => {
+    setTradesDirty(true);
+    setTradesSave("saving");
+    setTradesError(null);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      const snap = latestTrades.current;
+      try {
+        await persistTrades(snap.selected, snap.custom);
+        setTradesDirty(false);
+        setTradesSave("saved");
+        void load(false);
+      } catch (e) {
+        setTradesSave("error");
+        setTradesError(e instanceof Error ? e.message : "Could not save");
+      }
+    }, 600);
   };
 
   const onAdd = async () => {
@@ -240,7 +278,7 @@ export default function LeadRadarPage() {
       const r = res.data;
       // First save of the trade filter rides along with the first groups, so the texts match what is on screen.
       if (tradesDirty) {
-        try { await saveTrades(selected); setTradesDirty(false); } catch { /* shown by the trades card on its own save */ }
+        try { await persistTrades(selected, custom); setTradesDirty(false); setTradesSave("saved"); } catch { /* shown by the trades card on its own save */ }
       }
       const parts: string[] = [];
       parts.push(r.added === 1 ? "Added 1 group" : `Added ${r.added} groups`);
@@ -248,34 +286,11 @@ export default function LeadRadarPage() {
       if (r.invalid.length) parts.push(`${r.invalid.length} ${r.invalid.length === 1 ? "link isn't" : "links aren't"} a facebook.com/groups link`);
       const over = pastedLinks.length - r.added - r.duplicates - r.invalid.length;
       if (over > 0) parts.push(`${over} skipped — ${MAX_GROUPS} groups is the limit`);
-      setAddNote({ tone: r.added > 0 ? "ok" : "warn", text: parts.join(" · ") + (r.added > 0 ? ". First scan runs within a few hours." : ".") });
+      setAddNote({ tone: r.added > 0 ? "ok" : "warn", text: parts.join(" · ") + (r.added > 0 ? ". We're watching it now." : ".") });
       if (r.added > 0 || r.invalid.length === 0) setPaste(r.invalid.join("\n"));
       await load(false);
     } finally {
       setAdding(false);
-    }
-  };
-
-  const onToggleGroup = async (g: RadarGroup, enabled: boolean) => {
-    setBusyGroup(g.id);
-    try {
-      setData((d) => d ? { ...d, groups: d.groups.map((x) => (x.id === g.id ? { ...x, enabled } : x)) } : d);
-      const res = await setRadarGroup(g.id, enabled, null);
-      if (res.error) await load(false);
-    } finally {
-      setBusyGroup(null);
-    }
-  };
-
-  const onCityBlur = async (g: RadarGroup) => {
-    const draft = cityDraft[g.id];
-    if (draft === undefined || draft.trim() === (g.city ?? "")) return;
-    setBusyGroup(g.id);
-    try {
-      await setRadarGroup(g.id, null, draft.trim());
-      await load(false);
-    } finally {
-      setBusyGroup(null);
     }
   };
 
@@ -292,23 +307,35 @@ export default function LeadRadarPage() {
 
   const toggleTrade = (key: string) => {
     setSelected((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]));
-    setTradesDirty(true);
-    setTradesNote(null);
+    queueTradesSave();
   };
 
-  const onSaveTrades = async () => {
-    setSavingTrades(true);
-    setTradesNote(null);
-    try {
-      await saveTrades(selected);
-      setTradesDirty(false);
-      setTradesNote(selected.length ? `Saved — you'll be texted about ${selected.length} ${selected.length === 1 ? "trade" : "trades"}.` : "Saved — you'll be texted about every homeowner request in your groups.");
-      await load(false);
-    } catch (e) {
-      setTradesNote(e instanceof Error ? e.message : "Could not save");
-    } finally {
-      setSavingTrades(false);
+  const selectAllTrades = () => {
+    setSelected([]);
+    setCustom([]);
+    queueTradesSave();
+  };
+
+  const addCustomTrade = () => {
+    const v = customDraft.trim().replace(/\s+/g, " ").slice(0, 40);
+    if (v.length < 2) return;
+    const dupStd = TRADES.find((t) => t.label.toLowerCase() === v.toLowerCase() || t.key.toLowerCase() === v.toLowerCase());
+    if (dupStd) {
+      if (!selected.includes(dupStd.key)) setSelected((cur) => [...cur, dupStd.key]);
+      setCustomDraft("");
+      queueTradesSave();
+      return;
     }
+    if (custom.some((c) => c.toLowerCase() === v.toLowerCase())) { setCustomDraft(""); return; }
+    if (custom.length >= MAX_CUSTOM) { setTradesError(`Up to ${MAX_CUSTOM} custom trades.`); return; }
+    setCustom((cur) => [...cur, v]);
+    setCustomDraft("");
+    queueTradesSave();
+  };
+
+  const removeCustomTrade = (v: string) => {
+    setCustom((cur) => cur.filter((c) => c !== v));
+    queueTradesSave();
   };
 
   const onPause = async (next: boolean) => {
@@ -320,6 +347,33 @@ export default function LeadRadarPage() {
     } finally {
       setPausing(false);
     }
+  };
+
+  const saveEmail = async (on: boolean, address: string) => {
+    setEmailSave("saving");
+    setEmailError(null);
+    try {
+      const cats = data?.settings?.categories ?? (tradesDirty ? selected : null);
+      const addr = address.trim();
+      if (on && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) {
+        setEmailSave("error");
+        setEmailError("Enter the email address the alerts should go to.");
+        return;
+      }
+      const res = await setRadarSettings(cats && cats.length ? cats : null, null, null, on, addr || null);
+      if (res.error) throw new Error(res.error);
+      setEmailSave("saved");
+      await load(false);
+    } catch (e) {
+      setEmailSave("error");
+      setEmailError(e instanceof Error ? e.message : "Could not save");
+    }
+  };
+
+  const onEmailToggle = (on: boolean) => {
+    setEmailOn(on);
+    if (!on) void saveEmail(false, emailDraft);
+    else if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailDraft.trim())) void saveEmail(true, emailDraft);
   };
 
   const copyComment = async (l: RadarLead) => {
@@ -342,35 +396,87 @@ export default function LeadRadarPage() {
     }
   };
 
+  const chipBase = "inline-flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold transition-colors";
+  const chipOff = "border-border bg-card text-foreground hover:bg-muted";
+  const chipOn = "border-primary bg-primary/5 text-primary";
+
   return (
     <div className="min-h-screen bg-muted/30">
       <ContractorTopbar />
-      <main className="mx-auto w-full max-w-[1180px] px-4 pb-16 pt-8 sm:px-6">
-        {/* Page head */}
-        <div className="mb-5 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
-          <div className="min-w-0">
-            <p className="text-xs font-extrabold uppercase tracking-[0.08em] text-primary">Facebook groups</p>
-            <h1 className="mt-1 flex items-center gap-3 text-4xl font-extrabold tracking-tight text-foreground">
-              <Radar className="h-8 w-8 text-primary" />
-              Lead Radar
-            </h1>
-            <p className="mt-2 max-w-2xl text-lg text-muted-foreground">
-              Paste the public Facebook groups you&apos;re in. We watch them around the clock and text you the moment a homeowner
-              asks for your kind of work — with a comment you can paste in seconds.
-            </p>
-          </div>
+      <main className="mx-auto w-full max-w-[720px] px-4 pb-16 pt-7 sm:px-6" data-hb-radar-v2>
+        {/* Head — exactly the mockup: icon + title, one line under it, status + where alerts go */}
+        <div className="mb-5">
+          <h1 className="flex items-center gap-3 text-[2.2rem] font-extrabold tracking-tight text-foreground sm:text-4xl">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <Radar className="h-6 w-6 text-primary" />
+            </span>
+            Lead Radar
+          </h1>
+          <p className="mt-2 text-lg text-muted-foreground">Find local jobs. Get notified by text.</p>
+
           {data && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${paused ? "bg-amber-50 text-amber-700" : activeGroups ? "bg-green-100 text-green-800" : "bg-muted text-muted-foreground"}`}>
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${paused ? "bg-amber-50 text-amber-700" : activeGroups ? "bg-green-100 text-green-800" : "bg-muted text-muted-foreground"}`} data-hb-radar-status>
                 <span className={`h-2 w-2 rounded-full ${paused ? "bg-amber-500" : activeGroups ? "bg-green-500" : "bg-muted-foreground/50"}`} />
-                {paused ? "Paused" : activeGroups ? `Watching ${activeGroups} ${activeGroups === 1 ? "group" : "groups"}` : "No groups yet"}
+                {paused ? "Paused" : activeGroups ? "Active" : "Add a group to start"}
               </span>
-              {groups.length > 0 && (
-                <Button size="sm" variant="outline" className="gap-1.5 rounded-full font-semibold" onClick={() => onPause(!paused)} disabled={pausing}>
-                  {pausing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-                  {paused ? "Resume texts" : "Pause texts"}
-                </Button>
+              <span className="hidden h-4 w-px bg-border sm:block" aria-hidden />
+              {phone ? (
+                <span className="text-muted-foreground">
+                  Alerts sent to <span className="font-semibold text-foreground">{prettyPhone(phone)}</span>
+                </span>
+              ) : (
+                <span className="text-amber-700">
+                  No mobile number on your profile —{" "}
+                  <Link href="/contractors/profile" className="font-bold underline">add it</Link> to get texts.
+                </span>
               )}
+              {groups.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => void onPause(!paused)}
+                  disabled={pausing}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground underline-offset-2 hover:text-foreground hover:underline disabled:opacity-60"
+                >
+                  {pausing ? <Loader2 className="h-3 w-3 animate-spin" /> : paused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
+                  {paused ? "Resume alerts" : "Pause alerts"}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Email alerts (Tim, Oct 25: "make sure text/email alerts are available") */}
+          {data && (
+            <div className="mt-3 rounded-2xl border border-border bg-card px-4 py-3" data-hb-radar-email>
+              <div className="flex items-center justify-between gap-3">
+                <label htmlFor="radar-email-switch" className="flex min-w-0 items-center gap-2 text-sm font-semibold text-foreground">
+                  <Mail className="h-4 w-4 shrink-0 text-primary" />
+                  Email me too
+                  {emailSave === "saving" && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+                  {emailSave === "saved" && <span className="text-xs font-semibold text-green-700">Saved</span>}
+                </label>
+                <Switch id="radar-email-switch" checked={emailOn} onCheckedChange={onEmailToggle} aria-label="Email alerts" />
+              </div>
+              {emailOn && (
+                <div className="mt-2.5 flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={emailDraft}
+                    onChange={(e) => { setEmailDraft(e.target.value); setEmailSave("idle"); setEmailError(null); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") void saveEmail(true, emailDraft); }}
+                    placeholder="you@company.com"
+                    className="h-11 flex-1 rounded-xl bg-card"
+                    aria-label="Email address for alerts"
+                  />
+                  <Button className="h-11 rounded-xl px-5 font-semibold" onClick={() => void saveEmail(true, emailDraft)} disabled={emailSave === "saving"}>
+                    {emailSave === "saving" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    Save
+                  </Button>
+                </div>
+              )}
+              {emailError && <p className="mt-2 text-sm text-amber-700">{emailError}</p>}
             </div>
           )}
         </div>
@@ -382,194 +488,158 @@ export default function LeadRadarPage() {
           </div>
         )}
 
-        {/* Where the texts go */}
-        {data && (
-          <div className={`mb-5 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl px-4 py-3 text-sm ring-1 ${phone ? "bg-card text-foreground ring-border" : "bg-amber-50 text-amber-900 ring-amber-200"}`}>
-            <Phone className="h-4 w-4 shrink-0 text-primary" />
-            {phone ? (
-              <span>Lead texts go to <span className="font-mono font-semibold">{prettyPhone(phone)}</span> from the HomeBids bid line. They also land on this page.</span>
-            ) : (
-              <span>
-                No phone on your profile yet — leads will show up here, but we can&apos;t text you.{" "}
-                <Link href="/contractors/profile" className="font-bold underline">Add your mobile number</Link>
-              </span>
+        <div className="space-y-4">
+          {/* Your Facebook groups */}
+          <section className={`${CARD} p-5 sm:p-6`} data-hb-radar-groups>
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="text-xl font-extrabold tracking-tight text-foreground">Your Facebook groups</h2>
+              <span className="shrink-0 pt-1 text-sm font-semibold text-muted-foreground">{groups.length} / {MAX_GROUPS}</span>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">Add one group at a time. We&apos;ll start watching for opportunities.</p>
+
+            <div className="relative mt-4">
+              <Facebook className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#1877F2]" aria-hidden />
+              <Input
+                value={paste}
+                onChange={(e) => { setPaste(e.target.value); setAddNote(null); }}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void onAdd(); } }}
+                placeholder="Paste Facebook group link"
+                className="h-12 rounded-xl bg-card pl-12 text-[15px]"
+                disabled={adding || room === 0}
+                inputMode="url"
+                autoComplete="off"
+                aria-label="Facebook group link"
+              />
+            </div>
+            <Button className="mt-2.5 h-12 w-full gap-2 rounded-xl text-[15px] font-semibold" onClick={onAdd} disabled={adding || !pastedLinks.length || room === 0}>
+              {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {adding ? "Adding…" : pastedLinks.length > 1 ? `Add ${pastedLinks.length} groups` : "Add group"}
+            </Button>
+            {room === 0 && <p className="mt-2 text-xs text-muted-foreground">You&apos;re at the {MAX_GROUPS}-group limit — remove one to add another.</p>}
+            {addNote && (
+              <p className={`mt-2 text-sm ${addNote.tone === "ok" ? "text-green-700" : "text-amber-700"}`} data-hb-radar-addnote>{addNote.text}</p>
             )}
-          </div>
-        )}
 
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
-          {/* LEFT: groups + trades + rules */}
-          <div className="min-w-0 space-y-5">
-            {/* Groups */}
-            <section className={`${CARD} p-5 sm:p-6`} data-hb-radar-groups>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <Label>Your groups</Label>
-                  <p className="mt-1 text-xl font-extrabold text-foreground">
-                    {groups.length} <span className="text-base font-semibold text-muted-foreground">/ {MAX_GROUPS}</span>
-                  </p>
-                </div>
-                <Users className="h-5 w-5 text-muted-foreground" />
-              </div>
-
-              <div className="mt-4">
-                <Textarea
-                  value={paste}
-                  onChange={(e) => { setPaste(e.target.value); setAddNote(null); }}
-                  placeholder={"Paste group links, one per line:\nhttps://www.facebook.com/groups/GilbertAZCommunity\nhttps://www.facebook.com/groups/1234567890"}
-                  className="min-h-[112px] rounded-xl bg-card font-mono text-[13px] leading-6"
-                  disabled={adding || room === 0}
-                  aria-label="Facebook group links"
-                />
-                <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                  <Button className="h-11 gap-2 rounded-xl px-5 font-semibold" onClick={onAdd} disabled={adding || !pastedLinks.length || room === 0}>
-                    {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                    {adding ? "Adding…" : pastedLinks.length > 1 ? `Add ${pastedLinks.length} groups` : "Add group"}
-                  </Button>
-                  <span className="text-xs text-muted-foreground">
-                    {room === 0 ? `You're at the ${MAX_GROUPS}-group limit — remove one to add another.` : `Room for ${room} more. Public groups only.`}
-                  </span>
-                </div>
-                {addNote && (
-                  <p className={`mt-2 text-sm ${addNote.tone === "ok" ? "text-green-700" : "text-amber-700"}`} data-hb-radar-addnote>{addNote.text}</p>
-                )}
-              </div>
-
-              {loading ? (
-                <p className="mt-5 text-sm text-muted-foreground">Loading…</p>
-              ) : groups.length > 0 ? (
-                <ul className="mt-5 divide-y divide-border border-t border-border" data-hb-radar-grouplist>
-                  {groups.map((g) => {
-                    const busy = busyGroup === g.id;
-                    return (
-                      <li key={g.id} className="py-3.5">
-                        <div className="flex items-start gap-3">
-                          <div className="min-w-0 flex-1">
-                            <a href={g.url} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-1.5 truncate font-semibold hover:underline ${g.enabled ? "text-foreground" : "text-muted-foreground line-through"}`}>
-                              <span className="truncate">{groupTitle(g)}</span>
-                              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                            </a>
-                            <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">{g.url.replace(/^https?:\/\/(www\.)?/, "")}</p>
-                            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                              {!g.enabled ? (
-                                <span className="text-muted-foreground">Paused</span>
-                              ) : g.last_error ? (
-                                <span className="inline-flex items-center gap-1 text-amber-700"><AlertTriangle className="h-3.5 w-3.5" />{g.last_error}</span>
-                              ) : g.last_scraped_at ? (
-                                <span className="inline-flex items-center gap-1 text-muted-foreground"><Clock className="h-3.5 w-3.5" />Checked {timeAgo(g.last_scraped_at)}{g.last_post_count != null ? ` · ${g.last_post_count} new ${g.last_post_count === 1 ? "post" : "posts"}` : ""}</span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 text-muted-foreground"><Clock className="h-3.5 w-3.5" />First scan within a few hours</span>
-                              )}
-                              <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                                City
-                                <Input
-                                  value={cityDraft[g.id] ?? g.city ?? ""}
-                                  onChange={(e) => setCityDraft((d) => ({ ...d, [g.id]: e.target.value }))}
-                                  onBlur={() => void onCityBlur(g)}
-                                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-                                  placeholder="e.g. Gilbert"
-                                  className="h-7 w-28 rounded-lg px-2 text-xs"
-                                  aria-label={`Default city for ${groupTitle(g)}`}
-                                />
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            {busy && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                            <Switch checked={g.enabled} onCheckedChange={(v) => void onToggleGroup(g, v)} disabled={busy} aria-label={g.enabled ? "Pause this group" : "Watch this group"} />
-                            <button type="button" onClick={() => void onRemove(g)} disabled={busy} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive" aria-label="Remove group">
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <p className="mt-5 rounded-xl bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-                  No groups yet. Open a group on Facebook, copy the link from the address bar and paste it above — up to {MAX_GROUPS}. Local
-                  community, neighborhood and &quot;recommendations&quot; groups work best.
-                </p>
-              )}
-            </section>
-
-            {/* Trades */}
-            <section className={`${CARD} p-5 sm:p-6`} data-hb-radar-trades>
-              <Label>Text me about</Label>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Pick your trades. Leave everything off to get every homeowner request in your groups.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => { setSelected([]); setTradesDirty(true); setTradesNote(null); }}
-                  className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${selected.length === 0 ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground hover:bg-muted"}`}
-                >
-                  All trades
-                </button>
-                {TRADES.map((t) => {
-                  const on = selected.includes(t.key);
+            {loading ? (
+              <p className="mt-4 text-sm text-muted-foreground">Loading…</p>
+            ) : groups.length > 0 ? (
+              <ul className="mt-4 flex flex-wrap gap-2" data-hb-radar-grouplist>
+                {groups.map((g) => {
+                  const busy = busyGroup === g.id;
                   return (
-                    <button
-                      key={t.key}
-                      type="button"
-                      onClick={() => toggleTrade(t.key)}
-                      aria-pressed={on}
-                      className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${on ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-foreground hover:bg-muted"}`}
-                    >
-                      {t.label}
-                    </button>
+                    <li key={g.id} className={`inline-flex h-10 max-w-full items-center gap-1 rounded-full bg-primary/10 pl-3 pr-1 text-sm font-semibold ${g.enabled ? "text-foreground" : "text-muted-foreground line-through"}`}>
+                      <Users className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                      <a href={g.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline" title={g.url}>{groupTitle(g)}</a>
+                      <button
+                        type="button"
+                        onClick={() => void onRemove(g)}
+                        disabled={busy}
+                        className="ml-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-primary/10 hover:text-foreground disabled:opacity-50"
+                        aria-label={`Remove ${groupTitle(g)}`}
+                      >
+                        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                      </button>
+                    </li>
                   );
                 })}
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <Button size="sm" className="rounded-full px-4 font-semibold" onClick={onSaveTrades} disabled={savingTrades || !tradesDirty}>
-                  {savingTrades ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                  {tradesDirty ? "Save trades" : "Saved"}
-                </Button>
-                {tradesNote && <span className="text-sm text-muted-foreground">{tradesNote}</span>}
-                {!tradesNote && tradesDirty && !data?.settings && selected.length > 0 && (
-                  <span className="text-sm text-muted-foreground">Pre-filled from your profile — saves with your first groups.</span>
+              </ul>
+            ) : null}
+          </section>
+
+          {/* Your trades */}
+          <section className={`${CARD} p-5 sm:p-6`} data-hb-radar-trades>
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="text-xl font-extrabold tracking-tight text-foreground">Your trades</h2>
+              <span className="inline-flex shrink-0 items-center gap-1.5 pt-1 text-sm font-semibold text-muted-foreground">
+                {tradesSave === "saving" ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…</>
+                ) : tradesSave === "saved" ? (
+                  <><Check className="h-3.5 w-3.5 text-green-700" /> Saved</>
+                ) : tradesSave === "error" ? (
+                  <span className="text-amber-700">Not saved</span>
+                ) : tradeCount === 0 ? (
+                  "All trades"
+                ) : (
+                  `${tradeCount} selected`
                 )}
-              </div>
-            </section>
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">What kind of jobs are you looking for?</p>
 
-            {/* How it works / rules */}
-            <section className={`${CARD} p-5 sm:p-6`}>
-              <div className="flex items-start gap-2.5">
-                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                <div className="text-sm text-foreground">
-                  <p className="font-bold">How it works — and what keeps you safe in the groups</p>
-                  <ul className="mt-2 list-disc space-y-1.5 pl-5 text-muted-foreground">
-                    <li>We read <span className="font-semibold text-foreground">public</span> groups only, every few hours. Private groups can&apos;t be read from outside — they stay at &quot;0 new posts&quot; here.</li>
-                    <li>You get a text with the post link and a suggested comment. Open the post and paste the comment <span className="font-semibold text-foreground">yourself, from your own account</span>. We never post or message anyone for you, so you stay inside each group&apos;s rules.</li>
-                    <li>Lead with help, not a pitch. Many groups ban advertising — a friendly, specific reply gets the DM; a link drop gets removed.</li>
-                    <li>One text per matching post, max five per scan. Pause any time.</li>
-                  </ul>
+            <div className="mt-3.5 flex flex-wrap gap-2">
+              <button type="button" onClick={selectAllTrades} aria-pressed={tradeCount === 0} className={`${chipBase} ${tradeCount === 0 ? chipOn : chipOff}`}>
+                {tradeCount === 0 && <Check className="h-4 w-4" />}
+                All trades
+              </button>
+              {TRADES.map((t) => {
+                const on = selected.includes(t.key);
+                return (
+                  <button key={t.key} type="button" onClick={() => toggleTrade(t.key)} aria-pressed={on} className={`${chipBase} ${on ? chipOn : chipOff}`}>
+                    {on && <Check className="h-4 w-4" />}
+                    {t.label}
+                  </button>
+                );
+              })}
+              {custom.map((c) => (
+                <span key={c} className={`${chipBase} ${chipOn} pr-1`}>
+                  <Check className="h-4 w-4" />
+                  {c}
+                  <button type="button" onClick={() => removeCustomTrade(c)} className="ml-0.5 flex h-7 w-7 items-center justify-center rounded-full hover:bg-primary/10" aria-label={`Remove ${c}`}>
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              ))}
+              <button
+                type="button"
+                onClick={() => setCustomOpen((v) => !v)}
+                className={`${chipBase} border-primary/20 bg-primary/5 text-primary hover:bg-primary/10`}
+                aria-expanded={customOpen}
+                data-hb-radar-customtrade
+              >
+                <Plus className="h-4 w-4" />
+                Add custom trade
+              </button>
+            </div>
+
+            {customOpen && (
+              <div className="mt-3 flex gap-2">
+                <div className="relative flex-1">
+                  <Tag className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                  <Input
+                    value={customDraft}
+                    onChange={(e) => { setCustomDraft(e.target.value); setTradesError(null); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomTrade(); } }}
+                    placeholder="Enter custom trade (e.g. Pool service)"
+                    maxLength={40}
+                    className="h-11 rounded-xl bg-muted/40 pl-10"
+                    aria-label="Custom trade"
+                    autoFocus
+                  />
                 </div>
+                <Button className="h-11 rounded-xl px-5 font-semibold" onClick={addCustomTrade} disabled={customDraft.trim().length < 2}>
+                  Add
+                </Button>
               </div>
-            </section>
-          </div>
+            )}
+            {tradesError && <p className="mt-2 text-sm text-amber-700">{tradesError}</p>}
+            {!tradesError && tradesDirty && !data?.settings && selected.length > 0 && tradesSave === "idle" && (
+              <p className="mt-2 text-xs text-muted-foreground">Pre-filled from your profile — saves with your first group.</p>
+            )}
+          </section>
 
-          {/* RIGHT: leads */}
-          <section className={`${CARD} min-w-0 p-5 sm:p-6`} data-hb-radar-leads>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <Label>Leads</Label>
-                <p className="mt-1 text-xl font-extrabold text-foreground">
-                  {counts.new} <span className="text-base font-semibold text-muted-foreground">new</span>
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
+          {/* Opportunities */}
+          <section className={`${CARD} p-5 sm:p-6`} data-hb-radar-leads>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-xl font-extrabold tracking-tight text-foreground">Opportunities</h2>
+              <div className="flex items-center gap-1.5">
                 <button type="button" onClick={() => void load(false)} className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Refresh">
                   <RefreshCw className="h-4 w-4" />
                 </button>
                 <select
                   value={filter}
                   onChange={(e) => setFilter(e.target.value as LeadFilter)}
-                  className="h-10 rounded-xl border border-border bg-card px-3 pr-8 text-sm font-medium text-foreground outline-none focus:border-primary/50"
-                  aria-label="Filter leads"
+                  className="h-10 rounded-full border border-border bg-card px-3.5 pr-8 text-sm font-semibold text-foreground outline-none focus:border-primary/50"
+                  aria-label="Filter opportunities"
                 >
                   <option value="new">New ({counts.new})</option>
                   <option value="contacted">Commented ({counts.contacted})</option>
@@ -580,18 +650,18 @@ export default function LeadRadarPage() {
             </div>
 
             {loading ? (
-              <p className="px-2 py-16 text-center text-sm text-muted-foreground">Loading leads…</p>
+              <p className="px-2 py-14 text-center text-sm text-muted-foreground">Loading…</p>
             ) : shownLeads.length === 0 ? (
-              <div className="px-2 py-14 text-center">
+              <div className="px-2 py-10 text-center">
                 <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                   <Inbox className="h-7 w-7 text-primary" />
                 </div>
-                <p className="font-semibold text-foreground">{leads.length === 0 ? "No leads yet." : "Nothing in this view."}</p>
+                <p className="text-lg font-extrabold text-foreground">{leads.length === 0 ? "No opportunities yet" : "Nothing in this view"}</p>
                 <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
                   {leads.length === 0
                     ? groups.length
-                      ? "As soon as a homeowner in one of your groups asks for your trade, it shows up here and on your phone."
-                      : "Add your first groups on the left — leads from them land here and on your phone."
+                      ? "We'll text you the moment a homeowner in your groups needs your services. Check back here anytime."
+                      : "Add Facebook groups and we'll text you when a homeowner in those groups needs your services."
                     : "Switch the filter above to see the rest."}
                 </p>
               </div>
@@ -617,7 +687,6 @@ export default function LeadRadarPage() {
                         {p.author ? <span className="font-semibold">{p.author}: </span> : null}
                         {p.text || "(no text — open the post)"}
                       </p>
-
                       {l.comment && (
                         <div className="mt-3 rounded-xl bg-muted/50 p-3 ring-1 ring-border">
                           <div className="flex items-center justify-between gap-2">
@@ -632,7 +701,6 @@ export default function LeadRadarPage() {
                           <p className="mt-1.5 whitespace-pre-wrap text-sm text-foreground">{l.comment}</p>
                         </div>
                       )}
-
                       <div className="mt-3 flex flex-wrap items-center gap-2">
                         {p.url && (
                           <Button asChild size="sm" className="h-9 gap-1.5 rounded-full px-4 font-semibold">
@@ -665,6 +733,23 @@ export default function LeadRadarPage() {
               </ul>
             )}
           </section>
+
+          {/* How it works — folded away so the page stays as clean as the mockup */}
+          <details className={`${CARD} group p-5 sm:p-6`}>
+            <summary className="flex cursor-pointer list-none items-center gap-2.5 text-sm font-bold text-foreground [&::-webkit-details-marker]:hidden">
+              <ShieldCheck className="h-5 w-5 shrink-0 text-primary" />
+              How Lead Radar works — and what keeps you safe in the groups
+              <span className="ml-auto text-xs font-semibold text-muted-foreground group-open:hidden">Show</span>
+              <span className="ml-auto hidden text-xs font-semibold text-muted-foreground group-open:inline">Hide</span>
+            </summary>
+            <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
+              <li>We watch the <span className="font-semibold text-foreground">public</span> groups you add, around the clock.</li>
+              <li>When a homeowner needs your type of work, we text you the post link and a suggested reply.</li>
+              <li>You respond <span className="font-semibold text-foreground">from your own Facebook account</span> — we never post or message anyone for you, so you stay inside each group&apos;s rules.</li>
+              <li>Lead with help, not a pitch. Many groups ban advertising — a friendly, specific reply gets the DM; a link drop gets removed.</li>
+              <li>One text per matching post, max five per scan. Pause any time.</li>
+            </ul>
+          </details>
         </div>
       </main>
     </div>
