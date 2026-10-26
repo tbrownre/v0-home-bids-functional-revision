@@ -1,11 +1,12 @@
 import { pageMeta } from "@/lib/seo";
 
-// SEO (Oct 4): matches the live offer — AI bids by text, own landing page, 14-day free trial, $99/mo after.
+// SEO (Oct 17, Tim: "change our messaging from bid builder to assistant"): a contractor's 24/7 assistant by text —
+// answers inquiries, collects job details, builds estimates, follows up. 14-day free trial, $99/mo after.
 export const metadata = pageMeta({
-  title: "AI Bid Builder for Contractors — 14-Day Free Trial | HomeBids",
+  title: "Your 24/7 Contractor Assistant — 14-Day Free Trial | HomeBids",
   description:
-    "Text the job, get a professional bid in minutes — PDF + online link with your branding. Unlimited bids, your own contractor landing page, and lead intake by SMS/iMessage. Try everything free for 14 days, then $99/month. Cancel anytime.",
-  ogDescription: "Build professional bids by text in minutes. Unlimited bids + your own landing page. 14 days free, then $99/month.",
+    "Meet your new 24/7 assistant. It answers new inquiries, collects job details, builds professional estimates, follows up, and helps turn bids into approved jobs — all through text. Unlimited bids, your own contractor page, lead intake by SMS/iMessage. 14 days free, then $99/month. Cancel anytime.",
+  ogDescription: "Your next employee costs $99/month. A 24/7 assistant by text: inquiries, job details, estimates, follow-ups. 14 days free.",
   path: "/contractors",
 });
 
