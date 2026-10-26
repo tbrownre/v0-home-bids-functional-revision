@@ -388,7 +388,7 @@ export default function ContractorsPage() {
 
             <div className="mt-7 flex items-end justify-between gap-4 border-t border-border pt-7">
               <div>
-                <p className="text-4xl font-extrabold tracking-tight text-foreground">$0 today</p>
+                <p className="whitespace-nowrap text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">$0 today</p>
                 <p className="mt-1 text-sm text-muted-foreground">{TRIAL_DAYS} days free</p>
               </div>
               <div className="text-right">
