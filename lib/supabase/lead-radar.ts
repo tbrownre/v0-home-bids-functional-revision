@@ -14,6 +14,11 @@ import { createClient } from "@/lib/supabase/server";
  * radar_set_settings / radar_set_lead_status on dpaj). The radar_* tables have
  * RLS on and no policies, so the signed-in session can only reach its own rows
  * through these functions.
+ *
+ * v2 (Oct 26): matching + alerts moved into Postgres (radar_match_post /
+ * radar_lead_alert, fired by triggers on radar_posts / radar_leads), so leads and
+ * texts/emails happen no matter who inserts the posts. Settings grew custom
+ * trades + email alerts.
  */
 
 export interface RadarGroup {
@@ -31,6 +36,9 @@ export interface RadarGroup {
 export interface RadarSettings {
   categories: string[] | null; // null = every homeowner request in my groups
   paused: boolean;
+  custom_trades: string[] | null; // free-text trades ("Pool service") matched against the post text
+  email_alerts: boolean;
+  alert_email: string | null;
 }
 
 export interface RadarLeadPost {
@@ -51,6 +59,7 @@ export interface RadarLead {
   status: "new" | "contacted" | "skipped";
   created_at: string;
   texted_at: string | null;
+  emailed_at: string | null;
   comment: string | null;
   post: RadarLeadPost;
 }
@@ -58,7 +67,7 @@ export interface RadarLead {
 export interface RadarOverview {
   max_groups: number;
   settings: RadarSettings | null;
-  profile: { company: string | null; specialties: string[] | null; phone: string | null } | null;
+  profile: { company: string | null; specialties: string[] | null; phone: string | null; email: string | null } | null;
   groups: RadarGroup[];
   leads: RadarLead[];
 }
@@ -113,10 +122,27 @@ export async function setRadarGroup(id: string, enabled: boolean | null, city?: 
   return rpc<{ ok: boolean }>("radar_set_group", { p_id: id, p_enabled: enabled, p_city: city ?? null });
 }
 
-/** Which trades this contractor wants texted about (empty/null = all homeowner requests) and the global pause. */
-export async function setRadarSettings(categories: string[] | null, paused?: boolean | null): Promise<Result<{ ok: boolean }>> {
+/**
+ * Which trades this contractor wants alerts about (empty/null = all homeowner requests), the global pause, the custom
+ * trades and the email alert switch. Pass `null`/`undefined` for anything that should stay as it is — only
+ * `categories` is always written.
+ */
+export async function setRadarSettings(
+  categories: string[] | null,
+  paused?: boolean | null,
+  customTrades?: string[] | null,
+  emailAlerts?: boolean | null,
+  alertEmail?: string | null,
+): Promise<Result<{ ok: boolean }>> {
   const cats = (categories ?? []).map((c) => String(c).trim()).filter(Boolean);
-  return rpc<{ ok: boolean }>("radar_set_settings", { p_categories: cats.length ? cats : null, p_paused: paused ?? null });
+  const custom = customTrades == null ? null : customTrades.map((c) => String(c).trim()).filter(Boolean).slice(0, 10);
+  return rpc<{ ok: boolean }>("radar_set_settings", {
+    p_categories: cats.length ? cats : null,
+    p_paused: paused ?? null,
+    p_custom_trades: custom,
+    p_email_alerts: emailAlerts ?? null,
+    p_alert_email: alertEmail === undefined ? null : alertEmail,
+  });
 }
 
 export async function setRadarLeadStatus(id: string, status: "new" | "contacted" | "skipped"): Promise<Result<{ ok: boolean }>> {
