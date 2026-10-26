@@ -45,7 +45,8 @@ const stagger = {
 
 
 /* ─── Rotating words ─── */
-const rotatingWords = ["Win More Jobs", "Build Better Bids", "Send Bids Faster", "Save Hours Every Week"];
+// ASSISTANT (Tim, Oct 17): "change our messaging from bid builder to assistant" — what the assistant does, not what a bid tool does.
+const rotatingWords = ["Answers New Inquiries", "Collects Job Details", "Builds Professional Estimates", "Follows Up For You", "Turns Bids Into Jobs"];
 
 function RotatingWord() {
   const [index, setIndex] = useState(0);
@@ -54,7 +55,7 @@ function RotatingWord() {
     return () => clearInterval(t);
   }, []);
   return (
-    <span className="relative inline-block overflow-hidden" style={{ minWidth: "20ch" }}>
+    <span className="relative inline-block overflow-hidden" style={{ minWidth: "24ch" }}>
       <AnimatePresence mode="wait">
         <motion.span
           key={index}
@@ -277,17 +278,18 @@ export default function ContractorsPage() {
           <motion.div variants={stagger} initial="hidden" animate="show">
             <motion.div variants={fadeUp}>
               <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary">
-                <Zap className="h-3 w-3" /> AI-Powered Contractor Tools
+                <Zap className="h-3 w-3" /> Your 24/7 Assistant &middot; By Text
               </span>
             </motion.div>
 
+            {/* ASSISTANT (Tim, Oct 17): "position HomeBids as a contractor's 24/7 assistant, not just a bid builder" */}
             <motion.h1
               variants={fadeUp}
               className="mt-6 text-balance text-4xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl"
             >
-              The Fastest Way for Contractors
+              Meet Your New
               <br />
-              to Create Winning Bids
+              24/7 Assistant
             </motion.h1>
 
             <motion.div variants={fadeUp} className="mt-4 text-3xl font-bold sm:text-4xl">
@@ -298,24 +300,24 @@ export default function ContractorsPage() {
               variants={fadeUp}
               className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground"
             >
-              Text us job details and photos. The AI Bid Builder asks follow-up questions,
-              organizes the scope, and generates a clean proposal you can review, edit, and send.
+              HomeBids answers your inquiries, collects the job details, builds professional estimates and follows up
+              with homeowners &mdash; all by text, around the clock &mdash; so you can stay on the job.
             </motion.p>
 
             <motion.div variants={fadeUp} className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-              <a
-                href="sms:+12832291348?body=Let%27s%20create%20a%20new%20bid!"
+              <Link
+                href="/contractors/signup?plan=trial"
                 className="inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-full bg-primary px-10 text-base font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 active:scale-[0.98] sm:w-auto"
               >
+                Try Your New Assistant
                 <ArrowRight className="h-4 w-4" />
-                Text Us To Build A Bid
-              </a>
-                <a
-                href="sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid!"
+              </Link>
+              <a
+                href="sms:+12832291348?body=Let%27s%20create%20a%20new%20bid!"
                 className="inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-full border border-primary bg-background px-10 text-base font-semibold text-primary shadow-sm transition-colors hover:bg-primary/5 active:scale-[0.98] sm:w-auto"
               >
-                <ChevronRight className="h-4 w-4" />
-                Start Free Right Now
+                <MessageSquareText className="h-4 w-4" />
+                Text Us To See It Work
               </a>
             </motion.div>
             <motion.div variants={fadeUp} className="mt-4 flex justify-center">
@@ -328,9 +330,9 @@ export default function ContractorsPage() {
             </motion.div>
 
             <motion.div variants={fadeUp} className="mt-5 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-primary" /> $99/month</span>
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-primary" /> Unlimited AI bids</span>
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-primary" /> No contracts</span>
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-primary" /> {TRIAL_DAYS} days free</span>
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-primary" /> $99/month after</span>
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-primary" /> Cancel anytime</span>
             </motion.div>
           </motion.div>
         </div>
@@ -347,8 +349,8 @@ export default function ContractorsPage() {
             style={{ background: "rgba(255,255,255,0.6)", backdropFilter: "blur(16px)" }}
           >
             {[
-              { value: 3, prefix: "", suffix: "min", label: "Average bid time" },
-              { value: 10, prefix: "", suffix: "x", label: "Faster than manual bids" },
+              { value: 24, prefix: "", suffix: "/7", label: "Answers texts, day and night" },
+              { value: 3, prefix: "", suffix: "min", label: "Average estimate time" },
               { value: 99, prefix: "$", suffix: "", label: "Per month, all-in" },
             ].map((s, i) => (
               <div key={i} className="px-4 text-center">
@@ -360,6 +362,68 @@ export default function ContractorsPage() {
             ))}
           </div>
         </motion.div>
+      </section>
+
+      {/* ── THE CORE OFFER (Tim, Oct 17: "Directly below the hero, add a clean section highlighting the 14-day free trial,
+          $99/month pricing, and key benefits … Minimal, premium, mobile-first" — his offer card, word for word) ── */}
+      <section className="px-4 pb-24 sm:px-6 lg:px-8" data-hb-core-offer>
+        <div className="mx-auto max-w-2xl">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="rounded-3xl border border-border p-7 sm:p-10"
+            style={{ background: "rgba(255,255,255,0.8)", backdropFilter: "blur(20px)", boxShadow: "0 20px 60px rgba(43,127,232,0.10)" }}
+          >
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">The core offer</p>
+            <h2 className="mt-3 text-balance text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl">
+              Your next employee costs $99/month.
+            </h2>
+            <p className="mt-5 text-lg leading-relaxed text-foreground">
+              Meet your new 24/7 assistant. It answers new inquiries, collects job details, builds professional estimates,
+              follows up, and helps turn bids into approved jobs.
+            </p>
+            <p className="mt-3 text-lg text-foreground">All through text. No new software to learn.</p>
+
+            <div className="mt-7 flex items-end justify-between gap-4 border-t border-border pt-7">
+              <div>
+                <p className="text-4xl font-extrabold tracking-tight text-foreground">$0 today</p>
+                <p className="mt-1 text-sm text-muted-foreground">{TRIAL_DAYS} days free</p>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-extrabold tracking-tight text-foreground">$99/mo</p>
+                <p className="mt-1 text-sm text-muted-foreground">After trial &middot; Cancel anytime</p>
+              </div>
+            </div>
+
+            <ul className="mt-6 space-y-3 rounded-2xl bg-muted/40 p-5">
+              {[
+                "Unlimited professional bids",
+                "24/7 lead intake through your own page",
+                "Homeowner approvals by text",
+                "iMessage and SMS access",
+                "Your leads stay yours",
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-3 text-base text-foreground">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+
+            <Link
+              href="/contractors/signup?plan=trial"
+              className="mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-full bg-foreground px-6 text-base font-semibold text-background transition-colors hover:bg-foreground/90 active:scale-[0.98]"
+            >
+              Try Your New Assistant
+              <ArrowRight className="h-4 w-4 -rotate-45" />
+            </Link>
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              Done-for-you setup, first real bid, unlimited bids during the trial. Then $99/month.
+            </p>
+          </motion.div>
+        </div>
       </section>
 
       {/* ── YOUR WEBSITE (Tim, Oct 6: biggest selling point — moved up, iMessage/SMS intake headline) ── */}
@@ -758,25 +822,25 @@ export default function ContractorsPage() {
           <h2 className="text-balance text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
             Your Competitors Are Still
             <br />
-            Building Bids Manually.
+            Answering Every Text Themselves.
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">You don&apos;t have to.</p>
           <div className="mt-10 flex flex-col items-center gap-4">
-            <a
-              href="sms:+12832291348?body=Let%27s%20create%20a%20new%20bid!"
+            <Link
+              href="/contractors/signup?plan=trial"
               className="inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-primary px-10 text-lg font-bold text-primary-foreground shadow-xl transition-colors hover:bg-primary/90 active:scale-[0.98]"
             >
+              Try Your New Assistant
               <ArrowRight className="h-5 w-5" />
-              Text Us To Build A Bid
-            </a>
-            <a href="sms:+12832291348?body=I%20want%20to%20build%20a%20new%20bid!" className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
-              Start Free Right Now
+            </Link>
+            <a href="sms:+12832291348?body=Let%27s%20create%20a%20new%20bid!" className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
+              Text us to see it work first
             </a>
           </div>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-5 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1.5"><DollarSign className="h-4 w-4 text-primary" />$99/month</span>
-            <span className="flex items-center gap-1.5"><Zap className="h-4 w-4 text-primary" />Unlimited AI Bids</span>
-            <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-primary" />No Contracts</span>
+            <span className="flex items-center gap-1.5"><Zap className="h-4 w-4 text-primary" />{TRIAL_DAYS} days free</span>
+            <span className="flex items-center gap-1.5"><DollarSign className="h-4 w-4 text-primary" />$99/month after</span>
+            <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-primary" />Cancel anytime</span>
           </div>
         </motion.div>
       </section>
