@@ -338,11 +338,12 @@ export default function LeadRadarPage() {
     queueTradesSave();
   };
 
+  // Every settings write carries the trades exactly as shown on screen (`selected` + `custom`), never a stale server copy,
+  // so a pause or an email change can't undo a trade tap that was saved a moment earlier.
   const onPause = async (next: boolean) => {
     setPausing(true);
     try {
-      const cats = data?.settings?.categories ?? (tradesDirty ? selected : null);
-      const res = await setRadarSettings(cats && cats.length ? cats : null, next);
+      const res = await setRadarSettings(selected.length ? selected : null, next, custom);
       if (!res.error) await load(false);
     } finally {
       setPausing(false);
@@ -353,14 +354,13 @@ export default function LeadRadarPage() {
     setEmailSave("saving");
     setEmailError(null);
     try {
-      const cats = data?.settings?.categories ?? (tradesDirty ? selected : null);
       const addr = address.trim();
       if (on && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) {
         setEmailSave("error");
         setEmailError("Enter the email address the alerts should go to.");
         return;
       }
-      const res = await setRadarSettings(cats && cats.length ? cats : null, null, null, on, addr || null);
+      const res = await setRadarSettings(selected.length ? selected : null, null, custom, on, addr || null);
       if (res.error) throw new Error(res.error);
       setEmailSave("saved");
       await load(false);
@@ -629,16 +629,16 @@ export default function LeadRadarPage() {
 
           {/* Opportunities */}
           <section className={`${CARD} p-5 sm:p-6`} data-hb-radar-leads>
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-xl font-extrabold tracking-tight text-foreground">Opportunities</h2>
-              <div className="flex items-center gap-1.5">
-                <button type="button" onClick={() => void load(false)} className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Refresh">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <button type="button" onClick={() => void load(false)} className="hidden rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground sm:inline-flex" aria-label="Refresh">
                   <RefreshCw className="h-4 w-4" />
                 </button>
                 <select
                   value={filter}
                   onChange={(e) => setFilter(e.target.value as LeadFilter)}
-                  className="h-10 rounded-full border border-border bg-card px-3.5 pr-8 text-sm font-semibold text-foreground outline-none focus:border-primary/50"
+                  className="h-10 max-w-[170px] rounded-full border border-border bg-card px-3.5 pr-8 text-sm font-semibold text-foreground outline-none focus:border-primary/50"
                   aria-label="Filter opportunities"
                 >
                   <option value="new">New ({counts.new})</option>
