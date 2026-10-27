@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  Radar, Plus, Copy, Check, ExternalLink, Pause, Play, Loader2, Inbox, AlertTriangle,
-  MessageSquareText, Users, RefreshCw, Facebook, X, Tag, Mail, ShieldCheck,
+  Radar, Plus, Copy, Check, Pause, Play, Loader2, Inbox, AlertTriangle,
+  MessageSquareText, Users, RefreshCw, Facebook, X, Tag, Mail, ShieldCheck, ClipboardList, MessageSquare, EyeOff, Eye, FileText,
 } from "lucide-react";
 import { ContractorTopbar } from "@/components/contractor/contractor-topbar";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { getMockUser, syncMirrorFromSupabase } from "@/lib/mock-auth";
 import {
-  getRadarOverview, addRadarGroups, removeRadarGroup, setRadarSettings, setRadarLeadStatus,
+  getRadarOverview, addRadarGroups, removeRadarGroup, setRadarSettings, setRadarLeadStatus, startRadarBid,
   type RadarOverview, type RadarGroup, type RadarLead,
 } from "@/lib/supabase/lead-radar";
+import { CONTRACTOR_SMS_PHONE_NUMBER, CONTRACTOR_SMS_PHONE_DISPLAY, getSmsHref, isSmsCapableDevice } from "@/lib/sms-config";
 
 /**
  * /contractors/lead-radar — Lead Radar.
@@ -25,7 +26,12 @@ import {
  *   Lead Radar · Find local jobs. Get notified by text. · [● Active] | Alerts sent to (256) 975-9684 (+ email)
  *   Your Facebook groups n/25 — paste a link, "+ Add group", group chips with ×
  *   Your trades — chip grid with ✓ on the selected ones, "+ Add custom trade"
- *   Opportunities — "New (n)" filter, empty state, lead cards (Open post · Copy comment · I commented · Skip)
+ *   Opportunities — "New (n)" filter, empty state, lead cards
+ *
+ * v3 (Tim, Oct 27 9:51 PM mockup: "Can we modify the opportunities CTA's to this?"): the card's CTA row is
+ *   [Build Bid] [Open Post] [Hide] [Skip]. "Build Bid" opens a text to the Bid Builder line pre-filled with the lead's LR- ref
+ *   ("Build a bid for my Facebook lead LR-XXXX") and stamps the lead (radar_start_bid); Bid Builder reads the ref back out of
+ *   Supabase (radar_lead_for_bid) so the assistant knows the post, and the finished proposal shows up on the card as "View bid".
  *
  * Matching + alerts live in Postgres now (radar_match_post / radar_lead_alert, Oct 26): whoever inserts a post, the lead
  * is created only for contractors whose group + trades match and the text/email goes out from there. The page only
@@ -116,7 +122,19 @@ function splitLinks(raw: string): string[] {
     .filter((s) => s && !/^(https?:\/\/)?(www\.)?facebook\.com\/?$/i.test(s));
 }
 
-type LeadFilter = "new" | "contacted" | "skipped" | "all";
+type LeadFilter = "new" | "bid" | "skipped" | "hidden" | "all";
+type LeadAction = "new" | "contacted" | "skipped" | "hidden";
+
+/** What the contractor texts the Bid Builder line for this lead - Detect Job Ref v7.7 RADARREF picks the LR- ref out of it. */
+function bidText(l: RadarLead): string {
+  const ref = l.bid_ref ?? "";
+  return l.status === "bid" || l.bid_started_at ? `Continue my bid for Facebook lead ${ref}` : `Build a bid for my Facebook lead ${ref}`;
+}
+
+function money(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(Number(n))) return "";
+  return "$" + Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 });
+}
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 export default function LeadRadarPage() {
@@ -152,6 +170,10 @@ export default function LeadRadarPage() {
   const [filter, setFilter] = useState<LeadFilter>("new");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [busyLead, setBusyLead] = useState<string | null>(null);
+  const [bidOpened, setBidOpened] = useState<string | null>(null); // lead whose "text this to your assistant" helper is showing
+  const [copiedBid, setCopiedBid] = useState<string | null>(null);
+  const [smsDevice, setSmsDevice] = useState(false);
+  useEffect(() => { setSmsDevice(isSmsCapableDevice()); }, []);
 
   // Auth guard (same pattern as the dashboard / leads pages).
   useEffect(() => {
@@ -230,11 +252,17 @@ export default function LeadRadarPage() {
   const tradeCount = selected.length + custom.length;
 
   const counts = useMemo(() => {
-    const c = { all: leads.length, new: 0, contacted: 0, skipped: 0 };
-    for (const l of leads) c[l.status] += 1;
+    const c: Record<LeadFilter | "contacted", number> = { all: 0, new: 0, bid: 0, contacted: 0, skipped: 0, hidden: 0 };
+    for (const l of leads) {
+      c[l.status] += 1;
+      if (l.status !== "hidden") c.all += 1; // "All" is everything you haven't hidden
+    }
     return c;
   }, [leads]);
-  const shownLeads = useMemo(() => (filter === "all" ? leads : leads.filter((l) => l.status === filter)), [leads, filter]);
+  const shownLeads = useMemo(
+    () => (filter === "all" ? leads.filter((l) => l.status !== "hidden") : leads.filter((l) => l.status === filter)),
+    [leads, filter],
+  );
 
   const pastedLinks = useMemo(() => splitLinks(paste), [paste]);
   const room = Math.max(0, MAX_GROUPS - groups.length);
@@ -385,7 +413,7 @@ export default function LeadRadarPage() {
     } catch { /* no-op */ }
   };
 
-  const markLead = async (l: RadarLead, status: "new" | "contacted" | "skipped") => {
+  const markLead = async (l: RadarLead, status: LeadAction) => {
     setBusyLead(l.id);
     try {
       setData((d) => d ? { ...d, leads: d.leads.map((x) => (x.id === l.id ? { ...x, status } : x)) } : d);
@@ -394,6 +422,31 @@ export default function LeadRadarPage() {
     } finally {
       setBusyLead(null);
     }
+  };
+
+  /**
+   * "Build Bid": on a phone the button itself is the sms: link (Messages opens inside the tap, body pre-filled with the
+   * LR- ref); here we stamp the lead so it shows as "Bid started" and Bid Builder's lookup finds it. On a desktop the helper box
+   * under the card shows the exact text to send instead.
+   */
+  const startBid = async (l: RadarLead) => {
+    setBidOpened(l.id);
+    const now = new Date().toISOString();
+    setData((d) => d ? { ...d, leads: d.leads.map((x) => (x.id === l.id ? { ...x, status: "bid", bid_started_at: x.bid_started_at ?? now } : x)) } : d);
+    try {
+      const res = await startRadarBid(l.id);
+      if (res.error) console.error("[LeadRadar] start bid:", res.error);
+    } finally {
+      void load(false);
+    }
+  };
+
+  const copyBidText = async (l: RadarLead) => {
+    try {
+      await navigator.clipboard.writeText(bidText(l));
+      setCopiedBid(l.id);
+      setTimeout(() => setCopiedBid((c) => (c === l.id ? null : c)), 2000);
+    } catch { /* no-op */ }
   };
 
   const chipBase = "inline-flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold transition-colors";
@@ -642,8 +695,9 @@ export default function LeadRadarPage() {
                   aria-label="Filter opportunities"
                 >
                   <option value="new">New ({counts.new})</option>
-                  <option value="contacted">Commented ({counts.contacted})</option>
+                  <option value="bid">Bid started ({counts.bid})</option>
                   <option value="skipped">Skipped ({counts.skipped})</option>
+                  <option value="hidden">Hidden ({counts.hidden})</option>
                   <option value="all">All ({counts.all})</option>
                 </select>
               </div>
@@ -681,7 +735,13 @@ export default function LeadRadarPage() {
                         {trade && <span className="rounded-full bg-primary/10 px-2 py-0.5 font-bold text-primary">{trade}</span>}
                         {urgency && <span className={`rounded-full px-2 py-0.5 font-bold ${p.urgency === "asap" ? "bg-red-50 text-red-700" : "bg-muted text-muted-foreground"}`}>{urgency}</span>}
                         {p.city && <span>{p.city}</span>}
-                        {l.status !== "new" && <span className="rounded-full bg-muted px-2 py-0.5 font-bold">{l.status === "contacted" ? "Commented" : "Skipped"}</span>}
+                        {l.proposal ? (
+                          <span className="rounded-full bg-green-100 px-2 py-0.5 font-bold text-green-800">Bid built{l.proposal.total_price != null ? ` · ${money(l.proposal.total_price)}` : ""}</span>
+                        ) : l.status === "bid" ? (
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 font-bold text-primary">Bid started · {l.bid_ref}</span>
+                        ) : l.status !== "new" ? (
+                          <span className="rounded-full bg-muted px-2 py-0.5 font-bold">{l.status === "contacted" ? "Commented" : l.status === "hidden" ? "Hidden" : "Skipped"}</span>
+                        ) : null}
                       </div>
                       <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
                         {p.author ? <span className="font-semibold">{p.author}: </span> : null}
@@ -701,32 +761,77 @@ export default function LeadRadarPage() {
                           <p className="mt-1.5 whitespace-pre-wrap text-sm text-foreground">{l.comment}</p>
                         </div>
                       )}
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        {p.url && (
+                      {/* CTA row - Tim's Oct 27 mockup: [Build Bid] [Open Post] [Hide] [Skip] */}
+                      <div className="mt-3 flex flex-wrap items-center gap-2" data-hb-radar-cta>
+                        {l.proposal ? (
                           <Button asChild size="sm" className="h-9 gap-1.5 rounded-full px-4 font-semibold">
+                            <Link href={l.proposal.status === "accepted" ? `/contractors/project/${l.proposal.share_token}` : `/p/${l.proposal.share_token}`}>
+                              <FileText className="h-3.5 w-3.5" />
+                              View bid
+                            </Link>
+                          </Button>
+                        ) : l.bid_ref && smsDevice ? (
+                          <Button asChild size="sm" className="h-9 gap-1.5 rounded-full px-4 font-semibold">
+                            <a href={getSmsHref(CONTRACTOR_SMS_PHONE_NUMBER, bidText(l))} onClick={() => void startBid(l)} data-hb-radar-buildbid>
+                              <ClipboardList className="h-3.5 w-3.5" />
+                              {l.status === "bid" ? "Continue bid" : "Build Bid"}
+                            </a>
+                          </Button>
+                        ) : l.bid_ref ? (
+                          <Button size="sm" className="h-9 gap-1.5 rounded-full px-4 font-semibold" onClick={() => void startBid(l)} data-hb-radar-buildbid>
+                            <ClipboardList className="h-3.5 w-3.5" />
+                            {l.status === "bid" ? "Continue bid" : "Build Bid"}
+                          </Button>
+                        ) : null}
+                        {p.url && (
+                          <Button asChild size="sm" variant="outline" className="h-9 gap-1.5 rounded-full px-4 font-semibold">
                             <a href={p.url} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="h-3.5 w-3.5" />
-                              Open post
+                              <MessageSquare className="h-3.5 w-3.5" />
+                              Open Post
                             </a>
                           </Button>
                         )}
-                        {l.status !== "contacted" ? (
-                          <Button size="sm" variant="outline" className="h-9 gap-1.5 rounded-full px-4 font-semibold" onClick={() => void markLead(l, "contacted")} disabled={busy}>
-                            <Check className="h-3.5 w-3.5" />
-                            I commented
+                        {l.status === "hidden" ? (
+                          <Button size="sm" variant="ghost" className="h-9 gap-1.5 rounded-full px-3 font-semibold text-muted-foreground" onClick={() => void markLead(l, "new")} disabled={busy}>
+                            <Eye className="h-3.5 w-3.5" />
+                            Unhide
                           </Button>
                         ) : (
+                          <Button size="sm" variant="ghost" className="h-9 gap-1.5 rounded-full px-3 font-semibold text-muted-foreground" onClick={() => void markLead(l, "hidden")} disabled={busy}>
+                            <EyeOff className="h-3.5 w-3.5" />
+                            Hide
+                          </Button>
+                        )}
+                        {l.status === "new" || l.status === "contacted" ? (
+                          <Button size="sm" variant="ghost" className="h-9 gap-1.5 rounded-full px-3 font-semibold text-muted-foreground" onClick={() => void markLead(l, "skipped")} disabled={busy}>
+                            <X className="h-3.5 w-3.5" />
+                            Skip
+                          </Button>
+                        ) : l.status === "skipped" ? (
                           <Button size="sm" variant="ghost" className="h-9 rounded-full px-3 font-semibold text-muted-foreground" onClick={() => void markLead(l, "new")} disabled={busy}>
                             Undo
                           </Button>
-                        )}
-                        {l.status === "new" && (
-                          <Button size="sm" variant="ghost" className="h-9 rounded-full px-3 font-semibold text-muted-foreground" onClick={() => void markLead(l, "skipped")} disabled={busy}>
-                            Skip
-                          </Button>
-                        )}
+                        ) : null}
                         {busy && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                       </div>
+                      {bidOpened === l.id && !l.proposal && l.bid_ref && (
+                        <div className="mt-3 rounded-xl bg-primary/5 p-3 ring-1 ring-primary/20" data-hb-radar-bidhelp>
+                          <p className="text-xs font-extrabold uppercase tracking-[0.06em] text-primary">
+                            {smsDevice ? "Opening Messages…" : "Text your assistant to build it"}
+                          </p>
+                          <p className="mt-1 text-sm text-foreground">
+                            {smsDevice ? "If Messages didn't open, text this to " : "Text this to "}
+                            <span className="font-semibold">{CONTRACTOR_SMS_PHONE_DISPLAY}</span> from your phone and your HomeBids assistant builds the estimate from this post. You send the finished link to {p.homeowner_first || p.author || "the homeowner"} yourself — in your comment or a DM.
+                          </p>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <code className="rounded-lg bg-card px-2.5 py-1.5 text-sm text-foreground ring-1 ring-border">{bidText(l)}</code>
+                            <Button size="sm" variant="outline" className="h-8 gap-1.5 rounded-full px-3 text-xs font-semibold" onClick={() => void copyBidText(l)}>
+                              {copiedBid === l.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                              {copiedBid === l.id ? "Copied" : "Copy"}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </li>
                   );
                 })}
@@ -745,6 +850,7 @@ export default function LeadRadarPage() {
             <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
               <li>We watch the <span className="font-semibold text-foreground">public</span> groups you add, around the clock.</li>
               <li>When a homeowner needs your type of work, we text you the post link and a suggested reply.</li>
+              <li>Tap <span className="font-semibold text-foreground">Build Bid</span> and your assistant builds the estimate from the post by text — you send the finished link in your comment or DM.</li>
               <li>You respond <span className="font-semibold text-foreground">from your own Facebook account</span> — we never post or message anyone for you, so you stay inside each group&apos;s rules.</li>
               <li>Lead with help, not a pitch. Many groups ban advertising — a friendly, specific reply gets the DM; a link drop gets removed.</li>
               <li>One text per matching post, max five per scan. Pause any time.</li>
