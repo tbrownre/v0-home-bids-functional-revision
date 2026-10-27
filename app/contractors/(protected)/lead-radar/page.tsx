@@ -170,7 +170,7 @@ export default function LeadRadarPage() {
   const [filter, setFilter] = useState<LeadFilter>("new");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [busyLead, setBusyLead] = useState<string | null>(null);
-  const [bidOpened, setBidOpened] = useState<string | null>(null); // lead whose "text this to your assistant" helper is showing
+  const [bidOpened, setBidOpened] = useState<{ id: string; text: string } | null>(null); // lead whose "text this to your assistant" helper is showing + the exact text the tap sent
   const [copiedBid, setCopiedBid] = useState<string | null>(null);
   const [smsDevice, setSmsDevice] = useState(false);
   useEffect(() => { setSmsDevice(isSmsCapableDevice()); }, []);
@@ -432,7 +432,7 @@ export default function LeadRadarPage() {
    * under the card shows the exact text to send instead.
    */
   const startBid = async (l: RadarLead) => {
-    setBidOpened(l.id);
+    setBidOpened({ id: l.id, text: bidText(l) }); // captured before the status flips, so the helper shows the same text the sms: link carried
     const now = new Date().toISOString();
     setData((d) => d ? { ...d, leads: d.leads.map((x) => (x.id === l.id ? { ...x, status: "bid", bid_started_at: x.bid_started_at ?? now } : x)) } : d);
     if (filter !== "all") setFilter("bid"); // the card moves to "Bid started" - follow it so the helper box stays in view
@@ -446,7 +446,7 @@ export default function LeadRadarPage() {
 
   const copyBidText = async (l: RadarLead) => {
     try {
-      await navigator.clipboard.writeText(bidText(l));
+      await navigator.clipboard.writeText(bidOpened && bidOpened.id === l.id ? bidOpened.text : bidText(l));
       setCopiedBid(l.id);
       setTimeout(() => setCopiedBid((c) => (c === l.id ? null : c)), 2000);
     } catch { /* no-op */ }
@@ -818,7 +818,7 @@ export default function LeadRadarPage() {
                         ) : null}
                         {busy && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                       </div>
-                      {bidOpened === l.id && !l.proposal && l.bid_ref && (
+                      {bidOpened && bidOpened.id === l.id && !l.proposal && l.bid_ref && (
                         <div className="mt-3 rounded-xl bg-primary/5 p-3 ring-1 ring-primary/20" data-hb-radar-bidhelp>
                           <p className="text-xs font-extrabold uppercase tracking-[0.06em] text-primary">
                             {smsDevice ? "Opening Messages…" : "Text your assistant to build it"}
@@ -828,7 +828,7 @@ export default function LeadRadarPage() {
                             <span className="font-semibold">{CONTRACTOR_SMS_PHONE_DISPLAY}</span> from your phone and your HomeBids assistant builds the estimate from this post. You send the finished link to {p.homeowner_first || p.author || "the homeowner"} yourself — in your comment or a DM.
                           </p>
                           <div className="mt-2 flex flex-wrap items-center gap-2">
-                            <code className="rounded-lg bg-card px-2.5 py-1.5 text-sm text-foreground ring-1 ring-border">{bidText(l)}</code>
+                            <code className="rounded-lg bg-card px-2.5 py-1.5 text-sm text-foreground ring-1 ring-border">{bidOpened.text}</code>
                             <Button size="sm" variant="outline" className="h-8 gap-1.5 rounded-full px-3 text-xs font-semibold" onClick={() => void copyBidText(l)}>
                               {copiedBid === l.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                               {copiedBid === l.id ? "Copied" : "Copy"}
