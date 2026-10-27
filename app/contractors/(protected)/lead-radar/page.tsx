@@ -416,7 +416,9 @@ export default function LeadRadarPage() {
   const markLead = async (l: RadarLead, status: LeadAction) => {
     setBusyLead(l.id);
     try {
-      setData((d) => d ? { ...d, leads: d.leads.map((x) => (x.id === l.id ? { ...x, status } : x)) } : d);
+      // Undo / Unhide on a lead whose bid already started goes back to "Bid started" (the RPC applies the same rule)
+      const shown: RadarLead["status"] = status === "new" && l.bid_started_at ? "bid" : status;
+      setData((d) => d ? { ...d, leads: d.leads.map((x) => (x.id === l.id ? { ...x, status: shown } : x)) } : d);
       const res = await setRadarLeadStatus(l.id, status);
       if (res.error) await load(false);
     } finally {
@@ -433,6 +435,7 @@ export default function LeadRadarPage() {
     setBidOpened(l.id);
     const now = new Date().toISOString();
     setData((d) => d ? { ...d, leads: d.leads.map((x) => (x.id === l.id ? { ...x, status: "bid", bid_started_at: x.bid_started_at ?? now } : x)) } : d);
+    if (filter !== "all") setFilter("bid"); // the card moves to "Bid started" - follow it so the helper box stays in view
     try {
       const res = await startRadarBid(l.id);
       if (res.error) console.error("[LeadRadar] start bid:", res.error);
@@ -726,6 +729,7 @@ export default function LeadRadarPage() {
                   const busy = busyLead === l.id;
                   const urgency = p.urgency ? URGENCY_LABEL[p.urgency] ?? p.urgency : null;
                   const trade = p.category ? TRADE_LABEL[p.category] ?? p.category : null;
+                  const started = l.status === "bid" || !!l.bid_started_at; // a bid was started from this post (maybe later skipped/hidden)
                   return (
                     <li key={l.id} id={`radar-lead-${l.id}`} className={`rounded-2xl border p-4 ${l.status === "new" ? "border-primary/30 bg-primary/[0.03]" : "border-border bg-card"}`}>
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
@@ -774,13 +778,13 @@ export default function LeadRadarPage() {
                           <Button asChild size="sm" className="h-9 gap-1.5 rounded-full px-4 font-semibold">
                             <a href={getSmsHref(CONTRACTOR_SMS_PHONE_NUMBER, bidText(l))} onClick={() => void startBid(l)} data-hb-radar-buildbid>
                               <ClipboardList className="h-3.5 w-3.5" />
-                              {l.status === "bid" ? "Continue bid" : "Build Bid"}
+                              {started ? "Continue bid" : "Build Bid"}
                             </a>
                           </Button>
                         ) : l.bid_ref ? (
                           <Button size="sm" className="h-9 gap-1.5 rounded-full px-4 font-semibold" onClick={() => void startBid(l)} data-hb-radar-buildbid>
                             <ClipboardList className="h-3.5 w-3.5" />
-                            {l.status === "bid" ? "Continue bid" : "Build Bid"}
+                            {started ? "Continue bid" : "Build Bid"}
                           </Button>
                         ) : null}
                         {p.url && (
