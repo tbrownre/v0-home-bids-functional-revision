@@ -19,6 +19,13 @@ import { createClient } from "@/lib/supabase/server";
  * radar_lead_alert, fired by triggers on radar_posts / radar_leads), so leads and
  * texts/emails happen no matter who inserts the posts. Settings grew custom
  * trades + email alerts.
+ *
+ * v3 (Tim, Oct 27 "Can we modify the opportunities CTA's to this?" - Build Bid /
+ * Open Post / Hide / Skip): every lead carries a short ref (LR-XXXX, assigned at
+ * birth). "Build Bid" opens a text to the Bid Builder line pre-filled with that ref and
+ * stamps the lead (radar_start_bid); Bid Builder looks the ref up in Supabase
+ * (radar_lead_for_bid) so the assistant already knows the Facebook post, and the
+ * proposal it builds is linked back to the lead by trigger (lead.proposal).
  */
 
 export interface RadarGroup {
@@ -54,14 +61,38 @@ export interface RadarLeadPost {
   homeowner_first: string | null;
 }
 
+export type RadarLeadStatus = "new" | "contacted" | "skipped" | "hidden" | "bid";
+
+export interface RadarLeadProposal {
+  id: string;
+  share_token: string;
+  status: string | null; // draft | sent | viewed | accepted ...
+  total_price: number | null;
+  created_at: string;
+}
+
 export interface RadarLead {
   id: string;
-  status: "new" | "contacted" | "skipped";
+  status: RadarLeadStatus;
   created_at: string;
   texted_at: string | null;
   emailed_at: string | null;
   comment: string | null;
+  bid_ref: string | null; // LR-XXXX - what the contractor texts the Bid Builder line to build the bid from this post
+  bid_started_at: string | null;
+  proposal: RadarLeadProposal | null; // the bid the assistant built from this post, once there is one
   post: RadarLeadPost;
+}
+
+export interface StartBidResult {
+  ok: boolean;
+  error?: string;
+  ref?: string;
+  sms_body?: string;
+  first?: string | null;
+  city?: string | null;
+  trade?: string | null;
+  group_name?: string | null;
 }
 
 export interface RadarOverview {
@@ -145,6 +176,14 @@ export async function setRadarSettings(
   });
 }
 
-export async function setRadarLeadStatus(id: string, status: "new" | "contacted" | "skipped"): Promise<Result<{ ok: boolean }>> {
+export async function setRadarLeadStatus(id: string, status: "new" | "contacted" | "skipped" | "hidden"): Promise<Result<{ ok: boolean }>> {
   return rpc<{ ok: boolean }>("radar_set_lead_status", { p_id: id, p_status: status });
+}
+
+/**
+ * "Build Bid" on an opportunity: stamps the lead (status `bid`, bid_started_at) and returns its LR- ref plus the text
+ * to send the Bid Builder line ("Build a bid for my Facebook lead LR-XXXX"). Idempotent - tapping again keeps the same ref.
+ */
+export async function startRadarBid(id: string): Promise<Result<StartBidResult>> {
+  return rpc<StartBidResult>("radar_start_bid", { p_id: id });
 }
