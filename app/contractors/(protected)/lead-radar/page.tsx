@@ -158,6 +158,9 @@ export default function LeadRadarPage() {
   const [tradesError, setTradesError] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestTrades = useRef<{ selected: string[]; custom: string[] }>({ selected: [], custom: [] });
+  // Bumped on every lead write (Build Bid / Hide / Skip / Undo). A refresh that started before the write must not overwrite
+  // the write's optimistic card state with older server data - the write triggers its own refresh when it is done.
+  const writeSeq = useRef(0);
 
   // alerts
   const [pausing, setPausing] = useState(false);
@@ -198,12 +201,14 @@ export default function LeadRadarPage() {
       setLoading(false);
       return;
     }
+    const seq = writeSeq.current;
     try {
       const res = await getRadarOverview();
       if (res.error !== null) {
         setLoadError(res.error);
         return;
       }
+      if (writeSeq.current !== seq) return; // a lead write happened meanwhile - this snapshot is already stale
       const ov = res.data;
       setData(ov);
       setLoadError(null);
@@ -415,14 +420,15 @@ export default function LeadRadarPage() {
 
   const markLead = async (l: RadarLead, status: LeadAction) => {
     setBusyLead(l.id);
+    writeSeq.current += 1;
     try {
       // Undo / Unhide on a lead whose bid already started goes back to "Bid started" (the RPC applies the same rule)
       const shown: RadarLead["status"] = status === "new" && l.bid_started_at ? "bid" : status;
       setData((d) => d ? { ...d, leads: d.leads.map((x) => (x.id === l.id ? { ...x, status: shown } : x)) } : d);
-      const res = await setRadarLeadStatus(l.id, status);
-      if (res.error) await load(false);
+      await setRadarLeadStatus(l.id, status);
     } finally {
       setBusyLead(null);
+      void load(false); // server truth after the write (also undoes the optimistic state if the write failed)
     }
   };
 
@@ -432,6 +438,7 @@ export default function LeadRadarPage() {
    * under the card shows the exact text to send instead.
    */
   const startBid = async (l: RadarLead) => {
+    writeSeq.current += 1;
     setBidOpened({ id: l.id, text: bidText(l) }); // captured before the status flips, so the helper shows the same text the sms: link carried
     const now = new Date().toISOString();
     setData((d) => d ? { ...d, leads: d.leads.map((x) => (x.id === l.id ? { ...x, status: "bid", bid_started_at: x.bid_started_at ?? now } : x)) } : d);
