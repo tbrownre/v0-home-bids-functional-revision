@@ -501,7 +501,7 @@ export default function LeadRadarPage() {
   const chipOff = "border-border bg-card text-foreground hover:bg-muted";
   const chipOn = "border-primary bg-primary/5 text-primary";
   const pill = (on: boolean) =>
-    `inline-flex h-9 shrink-0 items-center rounded-full px-4 text-sm font-semibold transition-colors ${on ? "bg-primary text-primary-foreground" : "bg-muted text-foreground hover:bg-muted/70"}`;
+    `inline-flex h-9 shrink-0 items-center rounded-full px-3.5 text-sm font-semibold transition-colors ${on ? "bg-primary text-primary-foreground" : "bg-muted text-foreground hover:bg-muted/70"}`;
   const cta = "h-11 w-full gap-2 rounded-xl text-[15px] font-semibold";
   const ctaGray = `${cta} border-0 bg-muted text-foreground hover:bg-muted/70`;
   const iconBox = "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10";
@@ -626,19 +626,20 @@ export default function LeadRadarPage() {
         <div className="space-y-4">
           {/* Opportunities */}
           <section className={`${CARD} p-4 sm:p-6`} data-hb-radar-leads>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-3">
+            {/* One row on desktop like the mock: title · filter pills · refresh + sort; on phones the pills drop to their own scrollable row */}
+            <div className="flex flex-wrap items-center gap-3 md:flex-nowrap">
+              <div className="flex shrink-0 items-center gap-3">
                 <span className={iconBox}><Scan className="h-5 w-5 text-primary" /></span>
                 <h2 className="text-[1.45rem] font-extrabold tracking-tight text-foreground">Opportunities</h2>
               </div>
-              <div className="-mx-1 flex max-w-full items-center gap-2 overflow-x-auto px-1 py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Filter opportunities" data-hb-radar-filters>
+              <div className="order-3 -mx-1 flex w-full min-w-0 items-center gap-2 overflow-x-auto px-1 py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:order-none md:w-auto md:flex-1" role="tablist" aria-label="Filter opportunities" data-hb-radar-filters>
                 {FILTERS.map((f) => (
                   <button key={f.key} type="button" role="tab" aria-selected={filter === f.key} onClick={() => setFilter(f.key)} className={pill(filter === f.key)} data-hb-radar-filter={f.key}>
                     {f.label} ({counts[f.key]})
                   </button>
                 ))}
               </div>
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ml-auto flex shrink-0 items-center gap-2">
                 <button type="button" onClick={() => void load(false)} className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Refresh">
                   <RefreshCw className="h-4 w-4" />
                 </button>
@@ -975,7 +976,7 @@ export default function LeadRadarPage() {
                   aria-label="Facebook group link"
                 />
               </div>
-              <Button className="h-12 gap-2 rounded-xl px-6 text-[15px] font-semibold" onClick={onAdd} disabled={adding || !pastedLinks.length || room === 0}>
+              <Button className="h-12 gap-2 rounded-xl px-6 text-[15px] font-semibold" onClick={onAdd} disabled={adding || room === 0} aria-disabled={!pastedLinks.length}>
                 {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 {adding ? "Adding…" : pastedLinks.length > 1 ? `Add ${pastedLinks.length} groups` : "Add group"}
               </Button>
