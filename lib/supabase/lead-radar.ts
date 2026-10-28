@@ -26,6 +26,9 @@ import { createClient } from "@/lib/supabase/server";
  * stamps the lead (radar_start_bid); Bid Builder looks the ref up in Supabase
  * (radar_lead_for_bid) so the assistant already knows the Facebook post, and the
  * proposal it builds is linked back to the lead by trigger (lead.proposal).
+ *
+ * v4 (Tim's Oct 27 full-page mock): leads can be bookmarked (saved_at, "Saved"
+ * filter) and posts carry an optional `details` list for the meta line.
  */
 
 export interface RadarGroup {
@@ -59,6 +62,7 @@ export interface RadarLeadPost {
   city: string | null;
   urgency: string | null; // asap | within_week | within_month | flexible
   homeowner_first: string | null;
+  details: string[] | null; // short facts pulled out of the post ("Recurring", "Every 2 weeks") - the meta line under the post
 }
 
 export type RadarLeadStatus = "new" | "contacted" | "skipped" | "hidden" | "bid";
@@ -80,6 +84,7 @@ export interface RadarLead {
   comment: string | null;
   bid_ref: string | null; // LR-XXXX - what the contractor texts the Bid Builder line to build the bid from this post
   bid_started_at: string | null;
+  saved_at: string | null; // bookmarked ("Saved" filter)
   proposal: RadarLeadProposal | null; // the bid the assistant built from this post, once there is one
   post: RadarLeadPost;
 }
@@ -178,6 +183,11 @@ export async function setRadarSettings(
 
 export async function setRadarLeadStatus(id: string, status: "new" | "contacted" | "skipped" | "hidden"): Promise<Result<{ ok: boolean }>> {
   return rpc<{ ok: boolean }>("radar_set_lead_status", { p_id: id, p_status: status });
+}
+
+/** Bookmark / un-bookmark an opportunity (the "Saved" filter). */
+export async function setRadarLeadSaved(id: string, saved: boolean): Promise<Result<{ ok: boolean }>> {
+  return rpc<{ ok: boolean }>("radar_set_lead_saved", { p_id: id, p_saved: saved });
 }
 
 /**
