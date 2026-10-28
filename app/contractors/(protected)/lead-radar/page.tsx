@@ -861,11 +861,11 @@ export default function LeadRadarPage() {
           <section className={`${CARD} p-4 sm:p-6`} data-hb-radar-trades>
             <div className="flex flex-wrap items-center gap-3">
               <span className={iconBox}><Wrench className="h-5 w-5 text-primary" /></span>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-[200px] flex-1">
                 <h2 className="text-[1.45rem] font-extrabold tracking-tight text-foreground">Your trades</h2>
                 <p className="text-sm text-muted-foreground">Get opportunities that match your services.</p>
               </div>
-              <div className="ml-auto flex items-center gap-3">
+              <div className="ml-auto flex shrink-0 items-center gap-3">
                 <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground" data-hb-radar-tradecount>
                   {tradesSave === "saving" ? (
                     <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…</>
@@ -954,7 +954,7 @@ export default function LeadRadarPage() {
           <section className={`${CARD} p-4 sm:p-6`} data-hb-radar-groups>
             <div className="flex flex-wrap items-center gap-3">
               <span className={iconBox}><Users className="h-5 w-5 text-primary" /></span>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-[200px] flex-1">
                 <h2 className="text-[1.45rem] font-extrabold tracking-tight text-foreground">Your Facebook groups</h2>
                 <p className="text-sm text-muted-foreground">Add one group at a time. We&apos;ll start watching for opportunities.</p>
               </div>
