@@ -216,3 +216,11 @@
     font-size: 16px !important;
   }
 }
+
+/* /contractors landing (Tim's Oct 31 design): on phones the sticky "Start Free Trial" bar sits over the bottom of the
+   page, so the site footer gets the mock's extra bottom room (footer{padding-bottom:84px} in the mock). */
+@media (max-width: 800px) {
+  body:has([data-hb-landing]) footer {
+    padding-bottom: 84px;
+  }
+}
