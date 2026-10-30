@@ -1,12 +1,12 @@
 import { pageMeta } from "@/lib/seo";
 
-// SEO (Oct 17, Tim: "change our messaging from bid builder to assistant"): a contractor's 24/7 assistant by text —
-// answers inquiries, collects job details, builds estimates, follows up. 14-day free trial, $99/mo after.
+// SEO — Oct 31, 2026 (Tim's "Find opportunities. Send more bids." landing: Lead Radar front and center):
+// Lead Radar + text-first contractor page + AI Bid Builder, 14-day free trial, $99/mo after.
 export const metadata = pageMeta({
-  title: "Your 24/7 Contractor Assistant — 14-Day Free Trial | HomeBids",
+  title: "HomeBids — Find opportunities. Send more bids.",
   description:
-    "Meet your new 24/7 assistant. It answers new inquiries, collects job details, builds professional estimates, follows up, and helps turn bids into approved jobs — all through text. Unlimited bids, your own contractor page, lead intake by SMS/iMessage. 14 days free, then $99/month. Cancel anytime.",
-  ogDescription: "Your next employee costs $99/month. A 24/7 assistant by text: inquiries, job details, estimates, follow-ups. 14 days free.",
+    "Find local jobs, turn website visitors into text conversations, and build professional bids—all in one place. Lead Radar watches up to 25 local Facebook groups and texts you matching projects; your contractor page captures leads through iMessage/SMS; the AI Bid Builder turns job details into professional bids. 14 days free, then $99/month. Cancel anytime.",
+  ogDescription: "Lead Radar alerts, a text-first contractor page and unlimited AI bids. 14 days free, then $99/month.",
   path: "/contractors",
 });
 
