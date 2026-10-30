@@ -13,6 +13,7 @@ import {
   Globe,
   Copy,
   Send,
+  MessageCircle,
 } from "lucide-react";
 import { LandingPageDemoLink, LANDING_PAGE_FEATURE_DESC } from "@/components/landing-page-demo-link";
 import { ContractorTopbar } from "@/components/contractor/contractor-topbar";
@@ -34,6 +35,8 @@ import {
   type ContractorProfile,
 } from "@/lib/use-contractor-signals";
 import type { Proposal, ProposalStatus } from "@/lib/supabase/proposals";
+import { getMyBidQuestions, type BidQuestion } from "@/lib/supabase/bid-questions";
+import { bidTarget, activeQuestion, firstName, questionAgo } from "@/lib/bid-routing";
 
 const CARD = "rounded-[22px] border border-border bg-card shadow-[0_10px_30px_rgba(16,17,20,0.06)]";
 const SENT_STATUSES: ProposalStatus[] = ["sent", "viewed", "question_asked", "approval_clicked", "accepted", "changes_requested"];
@@ -52,15 +55,10 @@ function shortDate(iso: string | null | undefined): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// LIVEBIDS (Tim, Oct 7): one routing rule, identical to the Bids page. Accepted → the approved project page
-// (price, scope, homeowner contact, conversation, Call/Text/Schedule, workspace) in the same tab; anything
-// else → the current hosted bid (a draft has no separate edit flow in the app — its /p page IS the current draft).
-function bidTarget(p: Proposal): { href: string; external: boolean; hint: string } {
-  if (p.status === "accepted") {
-    return { href: `/contractors/project/${p.share_token}`, external: false, hint: "Open the approved project" };
-  }
-  return { href: `/p/${p.share_token}`, external: true, hint: p.status === "draft" ? "Open the current draft" : "Open the live bid" };
-}
+// LIVEBIDS (Tim, Oct 7) + QUESTIONS (Tim, Oct 29): one routing rule, identical to the Bids page — lib/bid-routing.
+// Accepted → the approved project page; a bid the homeowner asked about → the conversation (never the estimate);
+// anything else → the current hosted bid (a draft has no separate edit flow in the app — its /p page IS the current draft).
+type QuestionMap = Record<string, BidQuestion>;
 
 export default function ContractorDashboard() {
   // ── Auth guard (unchanged behavior) ─────────────────────────────────────────
@@ -113,6 +111,26 @@ export default function ContractorDashboard() {
   const [showBuild, setShowBuild] = useState(false);
   const [showGoal, setShowGoal] = useState(false);
 
+  // QUESTIONS (Tim, Oct 29): what each homeowner asked, per bid — shown on the rows and in "Needs attention"
+  const [questions, setQuestions] = useState<QuestionMap>({});
+  const proposalCount = signals.proposals.length;
+  useEffect(() => {
+    if (!signals.loaded || proposalCount === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await getMyBidQuestions();
+        if (cancelled || res.error !== null) return;
+        const map: QuestionMap = {};
+        for (const q of res.data) map[q.share_token] = q;
+        setQuestions(map);
+      } catch (e) {
+        console.error("[Dashboard] questions failed:", e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [signals.loaded, proposalCount]);
+
   const bidsCount = signals.monthBidsCount;
   const percent = Math.max(0, Math.min(100, Math.round((bidsCount / goal) * 100)));
   const remaining = Math.max(0, goal - bidsCount);
@@ -143,6 +161,7 @@ export default function ContractorDashboard() {
             name={displayName}
             greeting={greeting}
             proposals={signals.proposals}
+            questions={questions}
             profile={signals.profile}
             threads={signals.threads}
             bidsCount={bidsCount}
@@ -341,6 +360,7 @@ function SeasonedDashboard({
   name,
   greeting,
   proposals,
+  questions,
   profile,
   threads,
   bidsCount,
@@ -353,6 +373,7 @@ function SeasonedDashboard({
   name: string;
   greeting: string;
   proposals: Proposal[];
+  questions: QuestionMap;
   profile: ContractorProfile | null;
   threads: import("@/lib/use-contractor-signals").ContractorThread[];
   bidsCount: number;
@@ -373,8 +394,18 @@ function SeasonedDashboard({
   );
 
   const messageItems = unansweredThreads(threads).slice(0, 2);
+  // Own-customer bids the homeowner asked about by text (marketplace questions already arrive as thread messages above)
+  const questionItems = useMemo(
+    () =>
+      proposals
+        .map((p) => ({ p, q: activeQuestion(p, questions[p.share_token]) }))
+        .filter((x): x is { p: Proposal; q: BidQuestion } => !!x.q && x.q.kind === "text")
+        .sort((a, b) => new Date(b.q.asked_at ?? 0).getTime() - new Date(a.q.asked_at ?? 0).getTime())
+        .slice(0, 3),
+    [proposals, questions],
+  );
   const { missing, isComplete } = profileCompletion(profile);
-  const attentionCount = messageItems.length + (isComplete ? 0 : 1);
+  const attentionCount = messageItems.length + questionItems.length + (isComplete ? 0 : 1);
 
   return (
     <div className="flex flex-col gap-5">
@@ -455,10 +486,20 @@ function SeasonedDashboard({
           <div className="flex flex-col">
             {recent.map((p, i) => {
               const meta = statusMeta(p.status);
-              const target = bidTarget(p);
+              const q = questions[p.share_token];
+              const aq = activeQuestion(p, q);
+              const target = bidTarget(p, q);
               const linkProps = target.external ? { target: "_blank", rel: "noopener noreferrer" } : {};
+              const questionLine = aq ? (
+                <p className="mt-1 line-clamp-2 text-sm text-foreground" data-hb-bid-question>
+                  <MessageCircle className="mr-1 inline h-3.5 w-3.5 text-amber-600" aria-hidden />
+                  <span className="font-semibold">{firstName(p.homeowner_name)} asked</span>
+                  {aq.asked_at ? <span className="text-muted-foreground"> · {questionAgo(aq.asked_at)}</span> : null}
+                  {": "}&ldquo;{aq.question}&rdquo;
+                </p>
+              ) : null;
               return (
-                <div key={p.id} className={i > 0 ? "border-t border-border" : ""}>
+                <div key={p.id} className={i > 0 ? "border-t border-border" : ""} data-hb-bid-row={target.kind}>
                   {/* Mobile: Project + Amount + status pill; the whole row routes by status */}
                   <a
                     href={target.href}
@@ -469,6 +510,7 @@ function SeasonedDashboard({
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold text-foreground">{p.project_title}</p>
                       <p className="mt-0.5 font-bold text-foreground">{formatPrice(p.total_price)}</p>
+                      {questionLine}
                     </div>
                     <span className={`inline-block shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${meta.className}`}>{meta.label}</span>
                   </a>
@@ -481,8 +523,8 @@ function SeasonedDashboard({
                     className="hidden items-center gap-3 rounded-xl py-4 transition-colors hover:bg-muted/50 md:grid md:grid-cols-[minmax(0,1.4fr)_120px_120px_100px_36px]"
                   >
                     <div className="min-w-0">
-                      <p className={`truncate font-semibold ${p.status === "accepted" ? "text-primary" : "text-foreground"}`}>{p.project_title}</p>
-                      <p className="mt-0.5 truncate text-sm text-muted-foreground">{p.homeowner_name || "Homeowner"}</p>
+                      <p className={`truncate font-semibold ${target.kind === "bid" ? "text-foreground" : "text-primary"}`}>{p.project_title}</p>
+                      {questionLine ?? <p className="mt-0.5 truncate text-sm text-muted-foreground">{p.homeowner_name || "Homeowner"}</p>}
                     </div>
                     <div className="font-bold text-foreground">{formatPrice(p.total_price)}</div>
                     <div>
@@ -490,7 +532,7 @@ function SeasonedDashboard({
                     </div>
                     <div className="text-sm text-muted-foreground" title="Last update">{shortDate(p.updated_at || p.created_at)}</div>
                     <span className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground" aria-hidden="true">
-                      {target.external ? <ExternalLink className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
+                      {target.external ? <ExternalLink className="h-4 w-4" /> : aq ? <MessageCircle className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
                     </span>
                   </a>
                 </div>
@@ -529,8 +571,18 @@ function SeasonedDashboard({
               </div>
             ))}
 
+            {questionItems.map(({ p, q }, i) => (
+              <div key={p.id} className={`py-3 ${messageItems.length + i > 0 ? "border-t border-border" : ""}`} data-hb-bid-attention>
+                <p className="font-semibold text-foreground">
+                  {firstName(p.homeowner_name)} asked about your {p.project_title} bid
+                </p>
+                <p className="mb-2 mt-1 line-clamp-2 text-sm text-muted-foreground">&ldquo;{q.question}&rdquo;</p>
+                <Link href={`/contractors/bids-history?chat=${encodeURIComponent(p.share_token)}`} className="text-sm font-bold text-primary hover:underline">Reply now →</Link>
+              </div>
+            ))}
+
             {!isComplete && (
-              <div className={`py-3 ${messageItems.length > 0 ? "border-t border-border" : ""}`}>
+              <div className={`py-3 ${messageItems.length + questionItems.length > 0 ? "border-t border-border" : ""}`}>
                 <p className="font-semibold text-foreground">Profile is almost complete</p>
                 <p className="mb-2 mt-1 text-sm text-muted-foreground">
                   Add {missing.slice(0, 2).map((k) => PROFILE_FIELD_LABELS[k]).join(" and ")}.
