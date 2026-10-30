@@ -132,6 +132,18 @@ export default function BidsPage() {
 
   const chatProposal = chatToken ? proposals.find((p) => p.share_token === chatToken) ?? null : null;
   const chatQ = chatToken ? questions[chatToken] : undefined;
+  const chatHistoryCount = chatQ?.history?.length ?? 0;
+
+  // the newest message is what the contractor came for - keep the conversation scrolled to the bottom
+  const chatListRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!chatToken) return;
+    const id = requestAnimationFrame(() => {
+      const el = chatListRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    });
+    return () => cancelAnimationFrame(id);
+  }, [chatToken, chatHistoryCount]);
 
   const sendReply = async () => {
     if (!chatProposal || sending) return;
@@ -438,7 +450,7 @@ export default function BidsPage() {
               {chatProposal ? `${formatPrice(chatProposal.total_price)} bid · replies go to ${firstName(chatProposal.homeowner_name, "the homeowner")} by text` : ""}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 space-y-3 overflow-y-auto bg-muted/30 px-5 py-4" data-hb-bid-chat-list>
+          <div ref={chatListRef} className="flex-1 space-y-3 overflow-y-auto bg-muted/30 px-5 py-4" data-hb-bid-chat-list>
             {!chatProposal ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : (chatQ?.history ?? []).length === 0 ? (
