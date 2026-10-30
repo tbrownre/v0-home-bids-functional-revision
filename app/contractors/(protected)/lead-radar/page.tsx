@@ -72,12 +72,25 @@ const TRADES: Array<{ key: string; label: string; hints: string[] }> = [
 ];
 const TRADE_LABEL: Record<string, string> = Object.fromEntries(TRADES.map((t) => [t.key, t.label]));
 
+// The classifier writes asap | this_week | this_month | flexible (older posts: within_week / within_month) — never show the raw key.
 const URGENCY_LABEL: Record<string, string> = {
   asap: "ASAP",
+  urgent: "ASAP",
+  this_week: "This week",
   within_week: "This week",
+  next_week: "Next week",
+  this_month: "This month",
   within_month: "This month",
   flexible: "Flexible",
+  unknown: "",
 };
+function urgencyLabel(u: string | null | undefined): string | null {
+  if (!u) return null;
+  const key = u.trim().toLowerCase();
+  if (key in URGENCY_LABEL) return URGENCY_LABEL[key] || null;
+  const words = key.replace(/[_-]+/g, " ").trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : null;
+}
 
 /** Trades we pre-select from the profile when the contractor has never saved a choice. */
 function guessTrades(specialties: string[] | null | undefined, company: string | null | undefined): string[] {
@@ -679,7 +692,7 @@ export default function LeadRadarPage() {
                 {shownLeads.map((l) => {
                   const p = l.post;
                   const busy = busyLead === l.id;
-                  const urgency = p.urgency ? URGENCY_LABEL[p.urgency] ?? p.urgency : null;
+                  const urgency = urgencyLabel(p.urgency);
                   const trade = p.category ? TRADE_LABEL[p.category] ?? p.category : null;
                   const started = l.status === "bid" || !!l.bid_started_at; // a bid was started from this post (maybe later skipped/hidden)
                   const details = [...((p.details ?? []).map((d) => String(d).trim()).filter(Boolean)), ...(p.city ? [p.city] : [])];
