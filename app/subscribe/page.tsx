@@ -1,31 +1,53 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { SubscriptionCheckout } from "@/components/subscription-checkout";
-import { getMockUser } from "@/lib/mock-auth";
-import { LandingPageDemoLink, LANDING_PAGE_FEATURE_TITLE, LANDING_PAGE_FEATURE_DESC } from "@/components/landing-page-demo-link";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getMockUser, syncMirrorFromSupabase } from "@/lib/mock-auth";
 import { getContractorPlans, getHomeownerPlan, TRIAL_DAYS, type SubscriptionPlan } from "@/lib/products";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  CheckCircle2, Zap,
-  TrendingUp, BarChart2,
-  Activity, Users, FileText,
-  Thermometer, Droplets,
-  Lightbulb, PaintBucket, Trees, Hammer, Bath, ChefHat,
-  ArrowRight, BadgeCheck, Link2,
-  Shield, Star,
-  Smartphone, Bot, Home, Globe,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
+import { getMySubscriptionSummary, getBillingPortalUrl, type SubscriptionSummary } from "@/lib/supabase/subscription-summary";
+import { SUBSCRIBED_STATUSES, TRIAL_SIGNUP_HREF, DASHBOARD_HREF } from "@/components/trial-cta";
 import { createClient } from "@/lib/supabase/client";
+import h from "../how-it-works/hiw.module.css";
+import l from "../contractors/landing.module.css";
+
+/**
+ * /subscribe — pricing + checkout.
+ *
+ * Oct 31, 2026 (Tim: "Forgot this page too" — after the new /contractors and /how-it-works pages): the page now wears
+ * the same design. Hero + "I'M A" toggle + trust row are the How-It-Works mock; the plan card is the pricing card from
+ * the contractors mock (HOMEBIDS CONTRACTOR · $99 /month · 14-day free trial · checklist · Start My Free 14-Day Trial →).
+ * The homeowner side is the same card, free.
+ *
+ * LOGINSTATE (Tim, same day: "It's also not recognizing that we already have an acct and allowing the user to create an
+ * acct while still logged in to paid contractor acct ... Need the login behavior to be consistent"):
+ *   - a signed-in contractor already on a plan (trialing / active / past_due, or admin) sees "You're on HomeBids Pro"
+ *     with Go to your dashboard + Manage billing — the trial checkout never opens for them, even from ?trial=1 links;
+ *   - a signed-in contractor without a plan goes straight into the 14-day trial checkout (no second account);
+ *   - signed out -> the contractor signup, then the trial checkout (unchanged).
+ * Checkout wiring (SubscriptionCheckout, ?plan / ?userId / ?trial=1 handoff from signup) is unchanged.
+ */
 
 type UserTypeFilter = "homeowner" | "contractor";
+
+const CONTRACTOR_CHECKLIST = [
+  "Lead Radar alerts (up to 25 groups)",
+  "Your iMessage/SMS contractor webpage",
+  "Unlimited AI Bid Builder",
+  "Interactive bids and customer follow-up",
+  "No bid fees · Cancel anytime",
+];
+const HOMEOWNER_CHECKLIST = [
+  "Just iMessage or SMS — no app, no account",
+  "Ava organizes your project details",
+  "Contact info stays private until you approve a bid",
+  "No obligation to hire",
+];
+const HOMEOWNER_SMS = "sms:+14043952879?body=Hi%20HomeBids%2C%20help%20me%20create%20a%20new%20job!";
 
 export default function SubscribePage() {
   const searchParams = useSearchParams();
@@ -37,21 +59,51 @@ export default function SubscribePage() {
   const [resolvedUserId, setResolvedUserId] = useState<string | undefined>(undefined);
   // TRIAL14 (Tim, Oct 4): ?trial=1 (set by the signup handoff) opens the 14-day free trial checkout.
   const [trial, setTrial] = useState(false);
+  // LOGINSTATE: who is looking at this page
+  const [signedInContractor, setSignedInContractor] = useState(false);
+  const [sub, setSub] = useState<SubscriptionSummary | null>(null);
+  const [checked, setChecked] = useState(false); // session + plan lookup finished
+  const [portalBusy, setPortalBusy] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
+
+  const alreadyPro = !!sub && (sub.isAdmin || (!!sub.status && SUBSCRIBED_STATUSES.has(sub.status)));
 
   useEffect(() => {
+    let cancelled = false;
     const setupSubscribePage = async () => {
       const type = searchParams.get("type");
       if (type === "contractor") setUserType("contractor");
       else if (type === "homeowner") setUserType("homeowner");
       setTrial(searchParams.get("trial") === "1" && type === "contractor");
 
-      // If a plan ID is provided, auto-select it and show checkout
+      // Who is here? (same session signal as the header)
+      let user = getMockUser();
+      if (!user) user = await syncMirrorFromSupabase();
+      if (cancelled) return;
+      const isContractor = !!user && (user.role === "contractor" || user.role === "admin");
+      setSignedInContractor(isContractor);
+      let summary: SubscriptionSummary | null = null;
+      if (isContractor) {
+        if (!type) setUserType("contractor"); // a contractor landing here without ?type is here for the contractor plan
+        try {
+          summary = await getMySubscriptionSummary();
+        } catch {
+          summary = null;
+        }
+        if (cancelled) return;
+        setSub(summary);
+      }
+      const onPlan = !!summary && (summary.isAdmin || (!!summary.status && SUBSCRIBED_STATUSES.has(summary.status)));
+
+      // If a plan ID is provided, auto-select it and show checkout (never for an account that already pays)
       const planId = searchParams.get("plan");
       if (planId) {
-        const plan = [getHomeownerPlan(), ...getContractorPlans()].find(p => p.id === planId);
+        const plan = [getHomeownerPlan(), ...getContractorPlans()].find((p) => p.id === planId);
         if (plan) {
-          setSelectedPlan(plan);
-          setShowCheckout(true);
+          if (!(onPlan && plan.userType === "contractor")) {
+            setSelectedPlan(plan);
+            setShowCheckout(true);
+          }
         } else {
           setError("Please select a contractor plan to continue.");
         }
@@ -60,470 +112,222 @@ export default function SubscribePage() {
       // Get userId from params, or fall back to signed-in user's ID as safety net
       let userId = searchParams.get("userId") ?? undefined;
       if (!userId && type === "contractor") {
-        // Safety net: if no userId param but a contractor is trying to checkout, use their signed-in ID
         const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.id) {
-          userId = user.id;
-          console.warn('[subscribe] No userId in params but user is signed in, using user ID for checkout');
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser?.id) {
+          userId = authUser.id;
+          console.warn("[subscribe] No userId in params but user is signed in, using user ID for checkout");
         }
       }
+      if (cancelled) return;
       setResolvedUserId(userId);
 
-      // If coming from new contractor signup, auto-select the contractor plan and show checkout
-      if (userId && type === "contractor" && !planId) {
+      // Coming from the contractor signup: auto-select the contractor plan and open the (trial) checkout —
+      // unless this account is already on a plan (LOGINSTATE).
+      if (userId && type === "contractor" && !planId && !onPlan) {
         const plan = getContractorPlans()[0];
         if (plan) {
           setSelectedPlan(plan);
           setShowCheckout(true);
         }
       }
+      setChecked(true);
     };
 
     setupSubscribePage();
+    return () => { cancelled = true; };
   }, [searchParams]);
 
-  const homeownerPlan = getHomeownerPlan();
-  const contractorPlans = getContractorPlans();
+  const contractorPlan = getContractorPlans()[0];
 
-  const handleSelectPlan = (plan: SubscriptionPlan) => {
-    // Homeowner plan is free — no checkout: start the project by texting Ava
-    if (plan.userType === "homeowner") {
-      window.location.href = "sms:+14043952879?body=Hi%20HomeBids%2C%20help%20me%20create%20a%20new%20job!";
+  const startHomeowner = () => {
+    // Homeowners never pay — starting a project happens over text
+    window.location.href = HOMEOWNER_SMS;
+  };
+
+  const startContractor = () => {
+    if (!contractorPlan) return;
+    if (alreadyPro) {
+      router.push(DASHBOARD_HREF);
       return;
     }
     // PAYWALLFIX (Tim, Oct 6): a signed-out contractor must land in the contractor signup →
     // 14-day-trial checkout flow, never the generic login modal.
     if (!getMockUser()) {
-      window.location.href = "/contractors/signup?plan=trial";
+      window.location.href = TRIAL_SIGNUP_HREF;
       return;
     }
-    setSelectedPlan(plan);
+    // TRIAL14: the button says 14 days free, so the checkout is the trial checkout
+    setTrial(true);
+    setSelectedPlan(contractorPlan);
     setShowCheckout(true);
   };
 
   const handleSuccess = async () => {
     const isContractor = selectedPlan?.userType === "contractor";
-    
     setShowCheckout(false);
     if (isContractor) {
-      // Payment confirmed — send contractor to their dashboard
-      router.push("/contractors/dashboard");
+      router.push(DASHBOARD_HREF); // Payment confirmed — send contractor to their dashboard
     } else {
-      // Homeowners never pay — starting a project happens over text
-      window.location.href = "sms:+14043952879?body=Hi%20HomeBids%2C%20help%20me%20create%20a%20new%20job!";
+      window.location.href = HOMEOWNER_SMS;
     }
   };
 
+  const openPortal = async () => {
+    setPortalBusy(true);
+    setPortalError(null);
+    const win = window.open("", "_blank"); // open synchronously so Safari/iOS doesn't block it
+    try {
+      const { url, error: portalErr } = await getBillingPortalUrl("/subscribe?type=contractor");
+      if (url) {
+        if (win) win.location.href = url;
+        else window.location.href = url;
+      } else {
+        win?.close();
+        setPortalError(portalErr || "Billing portal unavailable");
+      }
+    } catch (e) {
+      win?.close();
+      setPortalError(e instanceof Error ? e.message : "Billing portal unavailable");
+    } finally {
+      setPortalBusy(false);
+    }
+  };
+
+  const homeowner = userType === "homeowner";
+  const trialEnds = sub?.status === "trialing" && sub.periodEnd ? new Date(sub.periodEnd) : null;
+  const trialEndsLabel = trialEnds && !Number.isNaN(trialEnds.getTime())
+    ? trialEnds.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : null;
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className={`min-h-screen bg-white ${h.page} ${homeowner ? h.homeowner : ""}`} data-hb-subscribe={homeowner ? "homeowner" : alreadyPro ? "pro" : signedInContractor ? "contractor" : "guest"}>
       <Header />
 
-      <main className="px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-5xl">
+      {/* HERO — the How-It-Works mock's hero with the I'M A toggle */}
+      <section className={h.hero}>
+        <span className={h.eyebrow}>{homeowner ? "ALWAYS FREE FOR HOMEOWNERS" : "SIMPLE, TRANSPARENT PRICING"}</span>
+        <h1>
+          {homeowner ? (
+            <>
+              Need work done?
+              <br />
+              <span className={h.blue}>Just text HomeBids.</span>
+            </>
+          ) : (
+            <>
+              Everything you need.
+              <br />
+              <span className={h.blue}>One simple price.</span>
+            </>
+          )}
+        </h1>
+        <p>
+          {homeowner
+            ? "Text HomeBids. Ava organizes your project and helps you reach matching local contractors."
+            : "Lead Radar, your own text-first contractor page, unlimited bids and a 24/7 assistant. No extra estimating software to learn."}
+        </p>
+        <div className={h.personaCaption}>I&apos;M A</div>
+        <div className={h.persona} role="group" aria-label="Choose how you use HomeBids">
+          <button type="button" aria-pressed={homeowner} onClick={() => setUserType("homeowner")}>
+            ⌂ &nbsp; Homeowner · Free
+          </button>
+          <button type="button" aria-pressed={!homeowner} onClick={() => setUserType("contractor")}>
+            ⚒ &nbsp; Contractor · $99/mo
+          </button>
+        </div>
+        <div className={`${h.trust} ${h.contractorOnly}`}>
+          <span><i>✓</i> 14 days free</span>
+          <span><i>✓</i> Then $99/month</span>
+          <span><i>✓</i> Cancel anytime</span>
+        </div>
+        <div className={`${h.trust} ${h.homeownerOnly}`}>
+          <span><i>✓</i> Always free for homeowners</span>
+          <span><i>✓</i> No app or account</span>
+        </div>
+      </section>
 
-          {/* Audience toggle — same pattern as /how-it-works (Tim spec Sep 21:
-              "include a toggle... Homeowner = free. Contractor = paid") */}
-          <div className="mb-10 flex flex-col items-center gap-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">I am a</p>
-            <div
-              className="relative inline-flex rounded-2xl border border-border p-1.5"
-              style={{
-                background: "rgba(255,255,255,0.6)",
-                backdropFilter: "blur(12px)",
-                boxShadow: "0 2px 16px #0001, inset 0 1px 0 #fff4",
-              }}
-            >
-              <motion.div
-                className="absolute top-1.5 h-[calc(100%-12px)] rounded-xl bg-background shadow-md"
-                animate={{ left: userType === "homeowner" ? "6px" : "calc(50%)" }}
-                style={{ width: "calc(50% - 6px)" }}
-                transition={{ type: "spring", stiffness: 380, damping: 32 }}
-              />
-              {(["homeowner", "contractor"] as UserTypeFilter[]).map((opt) => (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => setUserType(opt)}
-                  className={`relative z-10 min-w-[150px] rounded-xl px-6 py-2.5 text-sm font-semibold transition-colors duration-200 ${
-                    userType === opt ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {opt === "homeowner" ? (
-                    <span className="flex items-center justify-center gap-1.5"><Home className="h-3.5 w-3.5" />Homeowner · Free</span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-1.5"><Hammer className="h-3.5 w-3.5" />Contractor · $99/mo</span>
-                  )}
+      <main className={l.page} style={{ background: "linear-gradient(120deg, #eff6ff, #fff)" }}>
+        <div className={h.wrap} style={{ padding: "48px 34px 64px" }}>
+          <div style={{ maxWidth: 440, margin: "0 auto" }}>
+            {homeowner ? (
+              /* HOMEOWNER — same card, free */
+              <div className={l.priceCard} data-hb-plan="homeowner">
+                <div style={{ fontSize: 12, letterSpacing: ".1em", fontWeight: 800, color: "#687583" }}>HOMEBIDS HOMEOWNER</div>
+                <div style={{ margin: "10px 0" }}>
+                  <span className={l.dollar}>Free</span>
+                  <span style={{ color: "#6a7381" }}> always</span>
+                </div>
+                <span className={l.eyebrow}>No credit card · No account</span>
+                <ul className={l.checklist}>
+                  {HOMEOWNER_CHECKLIST.map((item) => <li key={item}>{item}</li>)}
+                </ul>
+                <button type="button" className={`${l.btn} ${l.full}`} onClick={startHomeowner}>
+                  Text Your Project →
                 </button>
-              ))}
-            </div>
-          </div>
-
-          <AnimatePresence mode="wait">
-            {userType === "homeowner" ? (
-              <motion.div
-                key="homeowner"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-              >
-                {/* HERO — side by side on desktop */}
-                <div className="flex flex-col items-center gap-8 lg:flex-row lg:items-center lg:justify-center lg:gap-12">
-                  {/* Left: hero copy */}
-                  <div className="flex-1 text-center lg:text-left">
-                    <h1 className="text-balance text-4xl font-bold text-foreground sm:text-5xl">
-                      Get Multiple Contractor Bids for Your Project
-                    </h1>
-                    <p className="mt-4 text-lg text-muted-foreground">
-                      Post your project once and local contractors compete for the job.
-                    </p>
-                    <p className="mt-2 text-base text-muted-foreground">
-                      Compare prices, ask questions, and hire the right contractor with confidence.
-                    </p>
-                    <div className="mt-5 flex items-center gap-2 justify-center lg:justify-start">
-                      <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                      <p className="text-sm text-muted-foreground">
-                        Most homeowners receive <span className="font-semibold text-foreground">3–5 contractor bids</span> within 24 hours.
-                      </p>
-                    </div>
-                    <p className="mt-3 text-xs text-muted-foreground/50">
-                      Zero cost to homeowners. No credit card required.
-                    </p>
-                  </div>
-                  {/* Right: plan card */}
-                  <div className="w-full max-w-sm shrink-0">
-                    <PlanCard plan={homeownerPlan} onSelect={handleSelectPlan} />
-                  </div>
-                </div>
-
-                {/* Activity signal */}
-                <div className="mt-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Activity className="h-4 w-4 text-green-500" />
-                  <span>New contractor bids are submitted every hour.</span>
-                </div>
-
-                {/* Stats bar */}
-                <div className="mt-10 grid grid-cols-1 gap-4 rounded-2xl border border-border bg-card p-6 sm:grid-cols-3">
-                  {[
-                    { icon: FileText, label: "Projects Posted", desc: "Thousands of homeowners post projects each month" },
-                    { icon: Users, label: "Contractor Network", desc: "Verified local contractors ready to bid" },
-                    { icon: BarChart2, label: "Average Bids", desc: "Most projects receive 3–5 contractor bids" },
-                  ].map((stat) => (
-                    <div key={stat.label} className="flex flex-col items-center gap-2 text-center">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                        <stat.icon className="h-5 w-5 text-primary" />
-                      </div>
-                      <p className="font-semibold text-foreground">{stat.label}</p>
-                      <p className="text-xs text-muted-foreground">{stat.desc}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* How It Works */}
-                <div className="mt-16">
-                  <h2 className="text-center text-2xl font-bold text-foreground">How HomeBids Works</h2>
-                  <div className="mt-8 grid gap-6 sm:grid-cols-3">
-                    {[
-                      { step: "1", icon: FileText, title: "Post Your Project", desc: "Describe what you need done in under 2 minutes." },
-                      { step: "2", icon: Users, title: "Contractors Submit Bids", desc: "Local professionals send quotes and availability." },
-                      { step: "3", icon: BadgeCheck, title: "Compare & Hire", desc: "Review bids, ask questions, and hire the contractor you trust." },
-                    ].map((s) => (
-                      <div key={s.step} className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card p-6 text-center">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-                          {s.step}
-                        </div>
-                        <s.icon className="h-6 w-6 text-primary" />
-                        <p className="font-semibold text-foreground">{s.title}</p>
-                        <p className="text-sm text-muted-foreground">{s.desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="mt-6 text-center text-sm text-muted-foreground">
-                    Most homeowners receive multiple bids within hours.
-                  </p>
-                </div>
-
-                {/* Savings / Competition section */}
-                <div className="mt-16 rounded-2xl border border-border bg-card p-8">
-                  <h2 className="text-2xl font-bold text-foreground">Contractors Compete For Your Project</h2>
-                  <p className="mt-3 text-muted-foreground">
-                    When multiple contractors bid on your project, you get better pricing and more options.
-                  </p>
-                  <p className="mt-2 text-muted-foreground">
-                    Typical projects receive <span className="font-semibold text-foreground">3–5 bids</span>, allowing homeowners to compare:
-                  </p>
-                  <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {["Price", "Timeline", "Reviews", "Experience"].map((item) => (
-                      <li key={item} className="flex items-center gap-2 text-sm font-medium text-foreground">
-                        <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-6 text-sm text-muted-foreground border-t border-border pt-4">
-                    Hiring without multiple quotes often costs hundreds or thousands more.
-                  </p>
-                </div>
-
-                {/* Verified Contractors */}
-                <div className="mt-16 grid gap-8 lg:grid-cols-2 lg:items-center">
-                  <div>
-                    <h2 className="text-2xl font-bold text-foreground">Verified Contractors</h2>
-                    <p className="mt-3 text-muted-foreground">
-                      Every contractor profile includes information to help you choose the right professional.
-                    </p>
-                    <ul className="mt-5 space-y-3">
-                      {[
-                        "Business information",
-                        "Customer reviews",
-                        "Google rating history",
-                        "Direct messaging access",
-                      ].map((item) => (
-                        <li key={item} className="flex items-center gap-2.5 text-sm text-foreground">
-                          <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="mt-5 text-sm text-muted-foreground">
-                      You stay in control and choose who to hire.
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-border bg-card p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                        <Shield className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-foreground">Contractor Verified</p>
-                        <p className="text-xs text-muted-foreground">Profile reviewed by HomeBids</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      {["Business info on file", "4.8 ★ Google rating", "12 customer reviews", "3 years on HomeBids"].map((item) => (
-                        <div key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary" />
-                          {item}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Service categories */}
-                <div className="mt-16">
-                  <h2 className="text-center text-2xl font-bold text-foreground">Contractors Ready to Bid Near You</h2>
-                  <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {[
-                      { icon: Thermometer, label: "HVAC Repair" },
-                      { icon: Hammer, label: "Roofing" },
-                      { icon: Droplets, label: "Plumbing" },
-                      { icon: Lightbulb, label: "Electrical" },
-                      { icon: ChefHat, label: "Kitchen Remodeling" },
-                      { icon: Trees, label: "Landscaping" },
-                      { icon: PaintBucket, label: "Painting" },
-                      { icon: Bath, label: "Bathroom Remodeling" },
-                    ].map((cat) => (
-                      <div key={cat.label} className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-4 text-center">
-                        <cat.icon className="h-6 w-6 text-primary" />
-                        <span className="text-xs font-medium text-foreground">{cat.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Recent activity feed */}
-                <div className="mt-16">
-                  <h2 className="text-center text-2xl font-bold text-foreground">Recent Activity on HomeBids</h2>
-                  <div className="mt-6 space-y-3">
-                    {[
-                      { icon: FileText, text: "A homeowner in Phoenix posted a kitchen remodel project", time: "2 min ago" },
-                      { icon: TrendingUp, text: "A roofing contractor submitted a bid", time: "10 min ago" },
-                      { icon: Users, text: "A bathroom renovation received 4 bids today", time: "1 hr ago" },
-                      { icon: Activity, text: "A landscaping project received 3 bids this morning", time: "3 hr ago" },
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-center gap-4 rounded-xl border border-border bg-card px-4 py-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                          <item.icon className="h-4 w-4 text-primary" />
-                        </div>
-                        <p className="flex-1 text-sm text-foreground">{item.text}</p>
-                        <span className="shrink-0 text-xs text-muted-foreground">{item.time}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Final CTA */}
-                <div className="mt-16 rounded-2xl bg-primary px-8 py-12 text-center">
-                  <h2 className="text-balance text-3xl font-bold text-primary-foreground sm:text-4xl">
-                    Ready to Get Contractor Bids?
-                  </h2>
-                  <p className="mx-auto mt-4 max-w-lg text-primary-foreground/80">
-                    Post your project in under 2 minutes and start receiving quotes from local contractors.
-                  </p>
-                  <Button
-                    size="lg"
-                    variant="secondary"
-                    className="mt-8"
-                    onClick={() => handleSelectPlan(homeownerPlan)}
-                  >
-                    Post Your Project Free
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                  <p className="mt-3 text-xs text-primary-foreground/40">
-                    Completely free for homeowners. No credit card required.
-                  </p>
-                </div>
-
-              </motion.div>
+                <p className={l.micro}>No app · No account · Free for homeowners</p>
+              </div>
             ) : (
-              <motion.div
-                key="contractor"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-              >
-                {/* HEADER */}
-                <div className="mb-10 text-center">
-                  <h1 className="text-balance text-4xl font-bold text-foreground sm:text-5xl">
-                    AI Growth Tools for Contractors
-                  </h1>
-                  <p className="mx-auto mt-3 max-w-xl text-lg text-muted-foreground">
-                    Estimate faster. Respond better. Win more jobs.
-                  </p>
-                  <p className="mt-2 text-sm font-semibold uppercase tracking-widest text-primary">
-                    One Plan For All
-                  </p>
+              /* CONTRACTOR — the pricing card from the contractors mock */
+              <div className={l.priceCard} data-hb-plan={alreadyPro ? "pro" : "contractor"}>
+                <div style={{ fontSize: 12, letterSpacing: ".1em", fontWeight: 800, color: "#687583" }}>HOMEBIDS CONTRACTOR</div>
+                <div style={{ margin: "10px 0" }}>
+                  <span className={l.dollar}>$99</span>
+                  <span style={{ color: "#6a7381" }}> /month</span>
                 </div>
-
-                {/* SINGLE PLAN CARD */}
-                <div className="flex justify-center">
-                  {contractorPlans.slice(0, 1).map((plan) => (
-                    <div key={plan.id} className="w-full max-w-md">
-                      <PlanCard plan={plan} onSelect={handleSelectPlan} />
-                    </div>
-                  ))}
-                </div>
-
-                {/* WHAT'S INCLUDED */}
-                <div className="mt-16">
-                  <h2 className="mb-8 text-center text-2xl font-bold text-foreground">What&apos;s Included</h2>
-                  <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                    {[
-                      {
-                        icon: FileText,
-                        title: "AI Estimate Assistant",
-                        desc: "Generate clean, professional estimates in seconds. Describe the job and AI builds a formatted proposal you can send immediately.",
-                      },
-                      {
-                        icon: Link2,
-                        title: "Shareable Bid Link Previews",
-                        desc: "Turn every bid into a polished, shareable link. Homeowners see a rich preview with your bid details the moment you send it.",
-                      },
-                      {
-                        icon: Smartphone,
-                        title: "SMS-First Workflow",
-                        desc: "Send estimates and responses via SMS directly from your phone. No desktop required.",
-                      },
-                      {
-                        icon: Bot,
-                        title: "HomeBids AI Relay",
-                        desc: "For HomeBids-matched leads, our AI handles early communication until the homeowner approves direct contact.",
-                      },
-                    ].map((item) => (
-                      <div key={item.title} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                          <item.icon className="h-5 w-5 text-primary" />
-                        </div>
-                        <p className="font-semibold text-foreground">{item.title}</p>
-                        <p className="text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                        <Globe className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-foreground">{LANDING_PAGE_FEATURE_TITLE}</p>
-                        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{LANDING_PAGE_FEATURE_DESC}</p>
-                      </div>
-                    </div>
-                    <LandingPageDemoLink className="shrink-0" />
-                  </div>
-                </div>
-
-                {/* BUILT FOR CONTRACTORS */}
-                <div className="mt-16 rounded-2xl border border-border bg-card p-8">
-                  <h2 className="text-2xl font-bold text-foreground">Built for how contractors actually work</h2>
-                  <p className="mt-3 text-muted-foreground">
-                    No complex CRM. No heavy dashboard. Just fast, lightweight AI tools that help you estimate, respond, and win — all from your phone.
-                  </p>
-                  <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-                    {[
-                      "Send bids to homeowners in minutes, not hours",
-                      "Create professional estimates on the job site",
-                      "Share every bid as a polished link preview",
-                      "Stay organized without adding office staff",
-                      "Send everything via text message",
-                      "Your own contractor landing page — share it anywhere",
-                      "Works on any device — no app required",
-                    ].map((item) => (
-                      <li key={item} className="flex items-center gap-2 text-sm text-foreground">
-                        <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* FINAL CTA */}
-                <div className="mt-16 rounded-2xl bg-primary px-8 py-12 text-center">
-                  <h2 className="text-balance text-3xl font-bold text-primary-foreground sm:text-4xl">
-                    Ready to win more jobs?
-                  </h2>
-                  <p className="mx-auto mt-4 max-w-lg text-primary-foreground/80">
-                    $99/month. No commitment — cancel anytime.
-                  </p>
-                  <Button
-                    size="lg"
-                    variant="secondary"
-                    className="mt-8"
-                    onClick={() => contractorPlans[0] && handleSelectPlan(contractorPlans[0])}
-                  >
-                    Get AI Growth Tools
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                  <p className="mt-3 text-xs text-primary-foreground/40">
-                    $99/month. Cancel anytime.
-                  </p>
-                </div>
-
-              </motion.div>
+                <span className={l.eyebrow}>
+                  {alreadyPro
+                    ? trialEndsLabel
+                      ? `✓ Your free trial · $99/month from ${trialEndsLabel}`
+                      : "✓ Your plan is active"
+                    : `${TRIAL_DAYS}-day free trial`}
+                </span>
+                <ul className={l.checklist}>
+                  {CONTRACTOR_CHECKLIST.map((item) => <li key={item}>{item}</li>)}
+                </ul>
+                {alreadyPro ? (
+                  <>
+                    <Link className={`${l.btn} ${l.full}`} href={DASHBOARD_HREF}>Go to your dashboard →</Link>
+                    <p className={l.micro}>
+                      You&apos;re all set — this account already has HomeBids Pro.{" "}
+                      <button type="button" onClick={openPortal} disabled={portalBusy} style={{ color: "#0675ff", fontWeight: 700, background: "none", border: 0, padding: 0, cursor: "pointer" }}>
+                        {portalBusy ? "Opening billing…" : "Manage billing"}
+                      </button>
+                    </p>
+                    {portalError && <p className={l.micro} style={{ color: "#b45309" }}>{portalError}</p>}
+                  </>
+                ) : (
+                  <>
+                    <button type="button" className={`${l.btn} ${l.full}`} onClick={startContractor} disabled={!checked && signedInContractor}>
+                      Start My Free 14-Day Trial →
+                    </button>
+                    <p className={l.micro}>$99/month after your {TRIAL_DAYS}-day trial. Cancel anytime.</p>
+                  </>
+                )}
+              </div>
             )}
-          </AnimatePresence>
 
-          <p className="mt-10 text-center text-sm text-muted-foreground">
-            HomeBids does not process project payments between homeowners and contractors.
-            Billing is for platform access only.
-          </p>
+            <p className={l.micro} style={{ textAlign: "center", marginTop: 28 }}>
+              HomeBids does not process project payments between homeowners and contractors. Billing is for platform access only.
+            </p>
+          </div>
         </div>
       </main>
 
-      {/* Checkout Modal */}
+      {/* Error */}
       {error && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="rounded-lg bg-destructive/10 border border-destructive/50 p-6 max-w-md">
-            <h3 className="font-semibold text-destructive mb-2">Error</h3>
-            <p className="text-sm text-muted-foreground mb-4">{error}</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-w-md rounded-lg border border-destructive/50 bg-destructive/10 p-6">
+            <h3 className="mb-2 font-semibold text-destructive">Error</h3>
+            <p className="mb-4 text-sm text-muted-foreground">{error}</p>
             <Button onClick={() => setError(null)} className="w-full">Dismiss</Button>
           </div>
         </div>
       )}
-      
+
+      {/* Checkout Modal (unchanged) */}
       <Dialog open={showCheckout} onOpenChange={(open) => { if (!open) setShowCheckout(false); }}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl p-0">
+        <DialogContent className="max-h-[90vh] overflow-y-auto p-0 sm:max-w-xl">
           <DialogHeader className="px-6 pt-6">
             <DialogTitle>
               {trial
@@ -551,95 +355,6 @@ export default function SubscribePage() {
           </div>
         </DialogContent>
       </Dialog>
-
     </div>
-  );
-}
-
-// ── PlanCard ──────────────────────────────────────────────────────────────────
-function PlanCard({ plan, onSelect }: { plan: SubscriptionPlan; onSelect: (plan: SubscriptionPlan) => void }) {
-  const monthlyPrice = (plan.priceInCents / 100).toFixed(0);
-
-  const ctaLabel =
-    plan.id === "contractor-growth" ? "Start My 14-Day Free Trial"
-    : plan.id === "homeowner-monthly" ? "Post Your Project — Free"
-    : plan.hasTrial === false ? `Get ${plan.name}`
-    : "Get Started";
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`relative flex flex-col rounded-2xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md ${
-        plan.highlighted ? "border-primary ring-2 ring-primary/20" : "border-border"
-      }`}
-    >
-      {plan.highlighted && (
-        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-          <span className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
-            <Zap className="h-3 w-3" />
-            Most Popular
-          </span>
-        </div>
-      )}
-
-      <div className="flex-1">
-        <h3 className="text-lg font-bold text-foreground">{plan.name}</h3>
-        <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
-
-        <div className="mt-4">
-          {plan.priceInCents === 0 ? (
-            <div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-extrabold text-foreground">Free</span>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground/50">
-                No credit card required
-              </p>
-            </div>
-          ) : plan.hasTrial === false ? (
-            <div className="flex items-baseline gap-1">
-              <span className="text-4xl font-extrabold text-foreground">${monthlyPrice}</span>
-              <span className="text-sm font-medium text-muted-foreground">/month</span>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-extrabold text-foreground">$99</span>
-                <span className="text-sm font-medium text-muted-foreground">/month</span>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground/50">
-                14-day free trial, then $99/mo. Cancel anytime before your trial ends.
-              </p>
-            </>
-          )}
-        </div>
-
-        {plan.savingsCallout && (
-          <div className="mt-2 inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-            {plan.savingsCallout}
-          </div>
-        )}
-
-        <ul className="mt-6 space-y-3">
-          {plan.features.map((feature) => (
-            <li key={feature} className="flex items-start gap-2.5 text-sm text-foreground">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              {feature}
-            </li>
-          ))}
-        </ul>
-        {plan.userType === "contractor" && <LandingPageDemoLink className="mt-3" />}
-
-      </div>
-
-      <Button
-        className="mt-6 w-full"
-        variant={plan.highlighted ? "default" : "outline"}
-        onClick={() => onSelect(plan)}
-      >
-        {ctaLabel}
-      </Button>
-    </motion.div>
   );
 }
