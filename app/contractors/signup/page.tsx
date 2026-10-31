@@ -14,6 +14,8 @@ import { motion } from "framer-motion";
 import { signUpContractor } from "@/lib/supabase/actions";
 import { TRIAL_DAYS } from "@/lib/products";
 import { createClient } from "@/lib/supabase/client";
+import { getMySubscriptionSummary } from "@/lib/supabase/subscription-summary";
+import { SUBSCRIBED_STATUSES } from "@/components/trial-cta";
 import {
   ArrowRight,
   ArrowLeft,
@@ -114,7 +116,20 @@ export default function ContractorSignupPage() {
             return;
           }
 
-          // Signed in as contractor — send to dashboard (or straight to checkout if they clicked GET HOMEBIDS NOW)
+          // Signed in as contractor — send to dashboard (or straight to checkout if they clicked GET HOMEBIDS NOW).
+          // LOGINSTATE (Tim, Oct 31): an account that is already on a plan (trialing / active) never gets a second
+          // trial checkout — it goes to the dashboard like any other signed-in visit.
+          if (wanted !== "free") {
+            try {
+              const summary = await getMySubscriptionSummary();
+              if (summary.isAdmin || (summary.status && SUBSCRIBED_STATUSES.has(summary.status))) {
+                router.push("/contractors/dashboard");
+                return;
+              }
+            } catch {
+              /* lookup failed — fall through to the checkout, which checks again server-side */
+            }
+          }
           router.push(wanted !== "free" ? checkoutHref(user.id, wanted === "trial") : "/contractors/dashboard");
           return;
         }
