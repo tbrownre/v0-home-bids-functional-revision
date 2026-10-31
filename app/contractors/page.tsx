@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { Header } from "@/components/header";
 import { LANDING_PAGE_DEMO_URL } from "@/components/landing-page-demo-link";
+import { TrialCta } from "@/components/trial-cta";
 import s from "./landing.module.css";
 
 /**
@@ -11,11 +11,10 @@ import s from "./landing.module.css";
  * (landing.module.css is the mock's stylesheet). Only two deliberate differences:
  *   - the mock's placeholder header/footer (☰ · logo · Log In · Get Started / Platform · Company · Legal) are the site's
  *     real Header + Footer, so the logo is the transparent brand asset ("The logo looks like it has a background on it").
- *   - the mock's placeholder links (#pricing / homebids.ai/contractors) point at the real trial signup.
+ *   - the mock's placeholder links (#pricing / homebids.ai/contractors) point at the real trial signup - and, LOGINSTATE
+ *     (Tim, Oct 31), a signed-in contractor is sent to the trial checkout or, when already on a plan, to the dashboard.
  * The three screenshots are the mock's own images (Lead Radar card, Lead Radar list, the Pollard Palms page).
  */
-
-const TRIAL = "/contractors/signup?plan=trial";
 
 export default function ContractorsLandingPage() {
   return (
@@ -37,7 +36,7 @@ export default function ContractorsLandingPage() {
                 <p className={s.lede}>
                   Find local jobs, turn website visitors into text conversations, and build professional bids—all in one place.
                 </p>
-                <Link className={s.btn} href={TRIAL}>Start My Free 14-Day Trial →</Link>
+                <TrialCta className={s.btn} label="Start My Free 14-Day Trial →" />
                 <p className={s.micro}>✓ 14 days free &nbsp; ✓ Then $99/month &nbsp; ✓ Cancel anytime</p>
               </div>
               <div className={s.heroArt}>
@@ -246,7 +245,7 @@ export default function ContractorsLandingPage() {
                 <li>Interactive bids and customer follow-up</li>
                 <li>No bid fees · Cancel anytime</li>
               </ul>
-              <Link className={`${s.btn} ${s.full}`} href={TRIAL}>Start My Free 14-Day Trial →</Link>
+              <TrialCta className={`${s.btn} ${s.full}`} label="Start My Free 14-Day Trial →" />
               <p className={s.micro}>$99/month after your 14-day trial. Cancel anytime.</p>
             </div>
           </div>
@@ -284,7 +283,7 @@ export default function ContractorsLandingPage() {
             <span className={s.blue}>More paid work.</span>
           </h2>
           <p>Find opportunities. Capture leads by text. Build better bids.</p>
-          <Link className={s.btn} href={TRIAL}>Start My Free 14-Day Trial →</Link>
+          <TrialCta className={s.btn} label="Start My Free 14-Day Trial →" />
           <p className={s.micro}>14 days free · Then $99/month · Cancel anytime</p>
         </section>
       </main>
@@ -294,7 +293,7 @@ export default function ContractorsLandingPage() {
         <span>
           <b>14 days free</b>Then $99/month
         </span>
-        <Link className={s.btn} href={TRIAL}>Start Free Trial →</Link>
+        <TrialCta className={s.btn} label="Start Free Trial →" proLabel="Go to dashboard →" />
       </div>
     </div>
   );
