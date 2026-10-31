@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Header } from "@/components/header";
 import { LANDING_PAGE_DEMO_URL } from "@/components/landing-page-demo-link";
+import { TrialCta } from "@/components/trial-cta";
 import { getSmsLink } from "@/lib/sms-config";
 import s from "./hiw.module.css";
 
@@ -20,8 +21,6 @@ import s from "./hiw.module.css";
  */
 
 type Persona = "contractor" | "homeowner";
-
-const TRIAL = "/contractors/signup?plan=trial";
 
 export default function HowItWorksPage() {
   const [persona, setPersona] = useState<Persona>("contractor");
@@ -352,7 +351,7 @@ export default function HowItWorksPage() {
           <span className={s.eyebrow}>ALL THREE TOOLS INCLUDED</span>
           <h2>Less busywork. More paid work.</h2>
           <p>Lead Radar + Your Contractor Page + Unlimited Bid Builder</p>
-          <Link className={s.linkbtn} href={TRIAL}>Start My Free 14-Day Trial →</Link>
+          <TrialCta className={s.linkbtn} label="Start My Free 14-Day Trial →" />
           <div className={s.subprice}>Then $99/month · Cancel anytime</div>
         </section>
         <section className={`${s.closing} ${s.homeownerOnly}`}>
