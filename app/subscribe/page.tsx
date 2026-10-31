@@ -110,7 +110,8 @@ export default function SubscribePage() {
       }
 
       // Get userId from params, or fall back to signed-in user's ID as safety net
-      let userId = searchParams.get("userId") ?? undefined;
+      const handoffUserId = searchParams.get("userId") ?? undefined; // set by the contractor signup handoff
+      let userId = handoffUserId;
       if (!userId && type === "contractor") {
         const supabase = createClient();
         const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -122,9 +123,11 @@ export default function SubscribePage() {
       if (cancelled) return;
       setResolvedUserId(userId);
 
-      // Coming from the contractor signup: auto-select the contractor plan and open the (trial) checkout —
-      // unless this account is already on a plan (LOGINSTATE).
-      if (userId && type === "contractor" && !planId && !onPlan) {
+      // Coming from the contractor signup (?userId) or a trial button (?trial=1): auto-select the contractor plan and
+      // open the checkout - never for an account already on a plan (LOGINSTATE). A bare ?type=contractor just shows
+      // the card; the trial checkout opens when they tap Start My Free 14-Day Trial (no surprise "billed immediately").
+      const wantsCheckout = !!handoffUserId || searchParams.get("trial") === "1";
+      if (userId && wantsCheckout && type === "contractor" && !planId && !onPlan) {
         const plan = getContractorPlans()[0];
         if (plan) {
           setSelectedPlan(plan);
