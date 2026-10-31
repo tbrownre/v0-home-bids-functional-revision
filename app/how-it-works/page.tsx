@@ -1,643 +1,368 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence, useInView, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { HeaderWithEarlyAccess } from "@/components/header-with-early-access";
-import { ScrollToTop } from "@/components/scroll-to-top";
-import { Button } from "@/components/ui/button";
-import {
-  ArrowRight, CheckCircle2, MessageSquare, Users, ShieldCheck,
-  Smartphone, Bot, Zap, FileText, TrendingUp, Star, DollarSign,
-  Clock, Hammer, Home, ChevronRight, Sparkles, Send, Globe, Radar,
-} from "lucide-react";
+import { Header } from "@/components/header";
+import { LANDING_PAGE_DEMO_URL } from "@/components/landing-page-demo-link";
+import { getSmsLink } from "@/lib/sms-config";
+import s from "./hiw.module.css";
 
-type Audience = "homeowner" | "contractor";
+/**
+ * /how-it-works — Tim's "homebids_how_it_works_updated.html" (Oct 31, 2026), ported 1:1: the hero with the
+ * Homeowner / Contractor toggle (contractor first, like the file), the three contractor tools, the three homeowner
+ * steps with his purpose-built phone / job-card / offers visuals, the quick workflow band, FAQ and the dark closing card.
+ * Only three deliberate differences:
+ *   - the mock's placeholder header/footer are the site's real Header + Footer (transparent logo);
+ *   - the "random image" Tim flagged in 03 / AI Bid Builder is gone — that slot shows the rough-notes → estimate sample
+ *     from his /contractors page instead ("tell Claude to remove the image for that section");
+ *   - placeholder links point at the real pages: trial signup, the live demo page, the Ava text line.
+ * The two screenshots are the same files the /contractors page uses (byte-identical in his file).
+ */
 
-// ─── animation variants ────────────────────────────────────────────────────
-const fadeUp = {
-  hidden: { opacity: 0, y: 28 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const } },
-};
-const stagger = { show: { transition: { staggerChildren: 0.09 } } };
-const crossfade = {
-  initial: { opacity: 0, y: 18, filter: "blur(4px)" },
-  animate: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] as const } },
-  exit: { opacity: 0, y: -12, filter: "blur(4px)", transition: { duration: 0.25 } },
-};
+type Persona = "contractor" | "homeowner";
 
-// ─── Floating Particle field ───────────────────────────────────────────────
-function ParticleField({ count = 18, color = "#2B7FE8" }: { count?: number; color?: string }) {
-  const particles = useRef(
-    Array.from({ length: count }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 3 + 1,
-      duration: Math.random() * 12 + 8,
-      delay: Math.random() * 5,
-    }))
-  );
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      {particles.current.map((p) => (
-        <motion.div
-          key={p.id}
-          className="absolute rounded-full"
-          style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size, background: color, opacity: 0.35 }}
-          animate={{ y: [0, -30, 0], opacity: [0.2, 0.5, 0.2] }}
-          transition={{ duration: p.duration, delay: p.delay, repeat: Infinity, ease: "easeInOut" }}
-        />
-      ))}
-    </div>
-  );
-}
+const TRIAL = "/contractors/signup?plan=trial";
 
-// ─── Glowing connector line ────────────────────────────────────────────────
-function GlowLine({ vertical = false }: { vertical?: boolean }) {
-  return (
-    <motion.div
-      className={`${vertical ? "w-px h-12 mx-auto" : "h-px w-full"} rounded-full`}
-      style={{ background: "linear-gradient(90deg, transparent, #2B7FE840, transparent)" }}
-      animate={{ opacity: [0.4, 1, 0.4] }}
-      transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-    />
-  );
-}
-
-// ─── iMessage bubble ───────────────────────────────────────────────────────
-function MessageBubble({ text, from, delay = 0 }: { text: string; from: "user" | "ai"; delay?: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true });
-  return (
-    <motion.div
-      ref={ref}
-      className={`flex ${from === "user" ? "justify-end" : "justify-start"}`}
-      initial={{ opacity: 0, x: from === "user" ? 20 : -20, scale: 0.92 }}
-      animate={inView ? { opacity: 1, x: 0, scale: 1 } : {}}
-      transition={{ duration: 0.4, delay, ease: [0.16, 1, 0.3, 1] }}
-    >
-      <div
-        className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-          from === "user"
-            ? "rounded-br-sm bg-[#2B7FE8] text-white"
-            : "rounded-bl-sm border border-border bg-card text-foreground"
-        }`}
-      >
-        {text}
-      </div>
-    </motion.div>
-  );
-}
-
-// ─── Animated step card ────────────────────────────────────────────────────
-function StepCard({
-  number, icon: Icon, title, desc, delay = 0,
-}: { number: string; icon: React.ElementType; title: string; desc: string; delay?: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 32 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className="group relative overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
-    >
-      {/* Glow accent on hover */}
-      <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-        style={{ background: "radial-gradient(circle at top left, #2B7FE808, transparent 70%)" }} />
-      <div className="relative">
-        <div className="mb-4 flex items-center gap-3">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
-            {number}
-          </span>
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
-            <Icon className="h-4.5 w-4.5 text-primary" />
-          </div>
-        </div>
-        <h3 className="font-semibold text-foreground">{title}</h3>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{desc}</p>
-      </div>
-    </motion.div>
-  );
-}
-
-
-
-// ─── Before / After comparison ─────────────────────────────────────────────
-function BeforeAfter({ audience }: { audience: Audience }) {
-  const data = audience === "homeowner"
-    ? {
-        before: ["Searching endless directories", "Waiting days for callbacks", "Comparing contractors manually", "Sharing your number too early"],
-        after: ["One simple conversation", "AI handles the outreach", "Multiple options delivered", "Your info stays private"],
-      }
-    : {
-        before: ["Manual estimates taking hours", "Lost evenings on paperwork", "Slow follow-up losing jobs", "Looking less professional", "Nothing to send customers but a phone number"],
-        after: ["AI proposals in minutes", "Shareable bid link sent same day", "First bid out wins more jobs", "Professional bids every time", "Your own contractor landing page"],
-      };
-
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      {/* Before */}
-      <motion.div variants={fadeUp} className="rounded-2xl border border-border bg-card p-6">
-        <p className="mb-4 text-sm font-bold uppercase tracking-widest text-muted-foreground">Before</p>
-        <ul className="space-y-3">
-          {data.before.map((item) => (
-            <li key={item} className="flex items-start gap-2.5 text-sm text-muted-foreground">
-              <span className="mt-0.5 h-4 w-4 shrink-0 rounded-full border border-destructive/30 bg-destructive/10 flex items-center justify-center">
-                <span className="h-1.5 w-1.5 rounded-full bg-destructive/60" />
-              </span>
-              {item}
-            </li>
-          ))}
-        </ul>
-      </motion.div>
-      {/* After */}
-      <motion.div variants={fadeUp} className="rounded-2xl border border-primary/20 bg-primary/5 p-6">
-        <p className="mb-4 text-sm font-bold uppercase tracking-widest text-primary">After HomeBids</p>
-        <ul className="space-y-3">
-          {data.after.map((item) => (
-            <li key={item} className="flex items-start gap-2.5 text-sm text-foreground">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              {item}
-            </li>
-          ))}
-        </ul>
-      </motion.div>
-    </div>
-  );
-}
-
-// ─── Flow step with connector ──────────────────────────────────────────────
-function FlowStep({ icon: Icon, label, isLast = false, delay = 0 }: {
-  icon: React.ElementType; label: string; isLast?: boolean; delay?: number;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true });
-  return (
-    <div ref={ref} className="flex flex-col items-center">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.7 }}
-        animate={inView ? { opacity: 1, scale: 1 } : {}}
-        transition={{ duration: 0.4, delay, ease: [0.16, 1, 0.3, 1] }}
-        className="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 shadow-sm"
-        style={{ boxShadow: "0 0 16px #2B7FE820" }}
-      >
-        <Icon className="h-5 w-5 text-primary" />
-      </motion.div>
-      <motion.p
-        initial={{ opacity: 0, y: 6 }}
-        animate={inView ? { opacity: 1, y: 0 } : {}}
-        transition={{ duration: 0.35, delay: delay + 0.1 }}
-        className="mt-2 text-center text-[11px] font-medium text-muted-foreground leading-tight max-w-[64px]"
-      >
-        {label}
-      </motion.p>
-      {!isLast && (
-        <motion.div
-          className="my-1 h-6 w-px"
-          style={{ background: "linear-gradient(to bottom, #2B7FE860, transparent)" }}
-          initial={{ scaleY: 0, opacity: 0 }}
-          animate={inView ? { scaleY: 1, opacity: 1 } : {}}
-          transition={{ duration: 0.4, delay: delay + 0.2 }}
-        />
-      )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// PAGE
-// ═══════════════════════════════════════════════════════════════════════════
 export default function HowItWorksPage() {
-  const [audience, setAudience] = useState<Audience>("homeowner");
-
-  // Respect prefers-reduced-motion
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  }, []);
+  const [persona, setPersona] = useState<Persona>("contractor");
+  const homeowner = persona === "homeowner";
 
   return (
-    <div className="min-h-screen bg-background">
-      <HeaderWithEarlyAccess />
+    <div className={`min-h-screen bg-white ${s.page} ${homeowner ? s.homeowner : ""}`} data-hb-hiw={persona}>
+      <Header />
 
-      {/* ── HERO ────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden px-4 pb-16 pt-20 sm:px-6 lg:px-8">
-        {!reduced && <ParticleField count={20} />}
-        {/* ambient glow */}
-        <div className="pointer-events-none absolute left-1/2 top-0 h-64 w-96 -translate-x-1/2 rounded-full opacity-20"
-          style={{ background: "radial-gradient(ellipse, #2B7FE8, transparent 70%)", filter: "blur(48px)" }} />
-
-        <div className="relative mx-auto max-w-3xl text-center">
-          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55 }}>
-            <span className="inline-block rounded-full border border-primary/20 bg-primary/8 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary">
-              How It Works
-            </span>
-            <h1 className="mt-5 text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              {audience === "homeowner"
-                ? "Tell Us About Your Project. We'll Handle The Rest."
-                : "Turn Notes & Photos Into Professional Bids."}
-            </h1>
-            <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-              {audience === "homeowner"
-                ? "HomeBids acts like your personal home project assistant — helping you collect bids, compare options, and find the right contractor without endless phone calls."
-                : "HomeBids helps contractors build professional proposals, send them faster, and win more jobs using AI-powered tools built for how you actually work."}
-            </p>
-
-            {/* ── Premium toggle ── */}
-            <div className="mt-10 flex flex-col items-center gap-3">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">I am a</p>
-              <div
-                className="relative inline-flex rounded-2xl border border-border p-1.5"
-                style={{
-                  background: "rgba(255,255,255,0.6)",
-                  backdropFilter: "blur(12px)",
-                  boxShadow: "0 2px 16px #0001, inset 0 1px 0 #fff4",
-                }}
-              >
-                {/* sliding indicator */}
-                <motion.div
-                  className="absolute top-1.5 h-[calc(100%-12px)] rounded-xl bg-background shadow-md"
-                  animate={{ left: audience === "homeowner" ? "6px" : "calc(50%)" }}
-                  style={{ width: "calc(50% - 6px)" }}
-                  transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                />
-                {(["homeowner", "contractor"] as Audience[]).map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => setAudience(opt)}
-                    className={`relative z-10 min-w-[120px] rounded-xl px-6 py-2.5 text-sm font-semibold capitalize transition-colors duration-200 ${
-                      audience === opt ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {opt === "homeowner" ? (
-                      <span className="flex items-center justify-center gap-1.5"><Home className="h-3.5 w-3.5" />Homeowner</span>
-                    ) : (
-                      <span className="flex items-center justify-center gap-1.5"><Hammer className="h-3.5 w-3.5" />Contractor</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </motion.div>
+      {/* HERO */}
+      <section className={s.hero}>
+        <span className={s.eyebrow}>HOW IT WORKS</span>
+        <h1 id="heroTitle">
+          {homeowner ? (
+            <>
+              Need work done?
+              <br />
+              <span className={s.blue}>Just text HomeBids.</span>
+            </>
+          ) : (
+            <>
+              Find jobs. Get leads.
+              <br />
+              <span className={s.blue}>Send bids by text.</span>
+            </>
+          )}
+        </h1>
+        <p id="heroSub">
+          {homeowner
+            ? "Text HomeBids. Ava organizes your project and helps you reach matching local contractors."
+            : "Three tools that help you spend less time chasing work—and more time doing it."}
+        </p>
+        <div className={s.personaCaption}>I&apos;M A</div>
+        <div className={s.persona} role="group" aria-label="Choose how you use HomeBids">
+          <button id="homeBtn" type="button" aria-pressed={homeowner} onClick={() => setPersona("homeowner")}>
+            ⌂ &nbsp; Homeowner
+          </button>
+          <button id="proBtn" type="button" aria-pressed={!homeowner} onClick={() => setPersona("contractor")}>
+            ⚒ &nbsp; Contractor
+          </button>
+        </div>
+        <div className={`${s.trust} ${s.contractorOnly}`}>
+          <span><i>✓</i> 14 days free</span>
+          <span><i>✓</i> Then $99/month</span>
+          <span><i>✓</i> Cancel anytime</span>
+        </div>
+        <div className={`${s.trust} ${s.homeownerOnly}`}>
+          <span><i>✓</i> Always free for homeowners</span>
+          <span><i>✓</i> No app or account</span>
         </div>
       </section>
 
-      {/* ── AUDIENCE CONTENT ────────────────────────────────────────────── */}
-      <AnimatePresence mode="wait">
-        {audience === "homeowner" ? (
+      <main>
+        {/* CONTRACTOR — three tools */}
+        <div className={`${s.wrap} ${s.steps} ${s.contractorOnly}`}>
+          <div className={s.intro}>
+            <span className={s.stepTag}>THREE SIMPLE TOOLS</span>
+            <h2>Everything works together.</h2>
+            <p>Find opportunities. Capture inquiries. Build bids.</p>
+          </div>
 
-          <motion.div key="homeowner" variants={crossfade} initial="initial" animate="animate" exit="exit">
+          <section className={`${s.feature} ${s.tint}`}>
+            <div className={s.copy}>
+              <div className={s.stepTag}>01 / LEAD RADAR</div>
+              <h3>
+                Local jobs.
+                <br />
+                <span className={s.blue}>Instant alerts.</span>
+              </h3>
+              <p>
+                Monitor up to <strong>25 local Facebook community groups</strong> for opportunities that match your trades.
+              </p>
+              <ul className={s.bullets}>
+                <li><span className={s.check}>✓</span> Get notified when a matching post appears</li>
+                <li><span className={s.check}>✓</span> Build a bid or copy a ready-to-send reply</li>
+                <li><span className={s.check}>✓</span> Open the original post to respond</li>
+              </ul>
+              <Link className={s.linkbtn} href="/contractors">Explore Lead Radar →</Link>
+            </div>
+            <div className={s.visual}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                className={s.radarImg}
+                src="/contractors/lead-radar-list.png"
+                width={904}
+                height={515}
+                alt="Actual HomeBids Lead Radar opportunity interface with Build Bid and suggested message actions"
+              />
+            </div>
+          </section>
 
-            {/* ── HOMEOWNER: Animated Journey Flow ── */}
-            <section className="overflow-hidden bg-card px-4 py-20 sm:px-6 lg:px-8">
-              <div className="mx-auto max-w-5xl">
-                <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-                  <motion.div variants={fadeUp} className="mb-14 text-center">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-primary">The Journey</span>
-                    <h2 className="mt-3 text-balance text-3xl font-bold text-foreground sm:text-4xl">
-                      Your project, handled from start to finish
-                    </h2>
-                  </motion.div>
-                  <div className="flex flex-col items-center">
-                    <FlowStep icon={Smartphone} label="You Text HomeBids" delay={0} />
-                    <FlowStep icon={Bot} label="AI Understands Your Project" delay={0.1} />
-                    <FlowStep icon={Users} label="Contractor Outreach" delay={0.2} />
-                    <FlowStep icon={MessageSquare} label="Multiple Bids Arrive" delay={0.3} />
-                    <FlowStep icon={CheckCircle2} label="You Choose" isLast delay={0.4} />
-                  </div>
-                </motion.div>
-              </div>
-            </section>
+          <section className={s.feature}>
+            <div className={s.copy}>
+              <div className={s.stepTag}>02 / YOUR CONTRACTOR PAGE</div>
+              <h3>
+                Your page.
+                <br />
+                <span className={s.blue}>iMessage lead intake.</span>
+              </h3>
+              <p>Customers tap to text your business. HomeBids collects job details and photos while you work.</p>
+              <ul className={s.bullets}>
+                <li><span className={s.check}>✓</span> Your business and services on one page</li>
+                <li><span className={s.check}>✓</span> Homeowners start right in iMessage/SMS</li>
+                <li><span className={s.check}>✓</span> Their inquiries stay with your business</li>
+              </ul>
+              <a className={s.linkbtn} href={LANDING_PAGE_DEMO_URL} target="_blank" rel="noopener">
+                View Real Contractor Page →
+              </a>
+            </div>
+            <div className={s.visual}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                className={s.pollardImg}
+                src="/contractors/contractor-page-demo.png"
+                width={1584}
+                height={1250}
+                alt="Actual Pollard Palms contractor landing page with Text for a free quote button and iMessage conversation"
+              />
+            </div>
+          </section>
 
-            {/* ── HOMEOWNER: Steps ── */}
-            <section className="px-4 py-20 sm:px-6 lg:px-8">
-              <div className="mx-auto max-w-5xl">
-                <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-                  <motion.div variants={fadeUp} className="mb-14 text-center">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-primary">Step by Step</span>
-                    <h2 className="mt-3 text-balance text-3xl font-bold text-foreground sm:text-4xl">
-                      From text message to hired contractor
-                    </h2>
-                  </motion.div>
-                </motion.div>
-
-                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  <StepCard number="1" icon={Smartphone} title="Text HomeBids" delay={0}
-                    desc="Describe your project the same way you would text a friend. No forms, no accounts — just a message." />
-                  <StepCard number="2" icon={Bot} title="Confirm Your Project" delay={0.07}
-                    desc="Our AI summarizes your project — scope, timeline, location — and you approve before any outreach begins." />
-                  <StepCard number="3" icon={Users} title="We Contact Contractors" delay={0.14}
-                    desc="No searching directories. No chasing callbacks. HomeBids does the outreach to electricians, roofers, plumbers, and more." />
-                  <StepCard number="4" icon={MessageSquare} title="Review Multiple Options" delay={0.21}
-                    desc="Incoming bids arrive cleanly organized. Review side-by-side and decide what works best for your project." />
-                  <StepCard number="5" icon={CheckCircle2} title="Hire With Confidence" delay={0.28}
-                    desc="Choose the contractor that fits your timeline, budget, and goals. Your info stays private until you approve." />
+          <section className={`${s.feature} ${s.tint}`}>
+            <div className={s.copy}>
+              <div className={s.stepTag}>03 / AI BID BUILDER</div>
+              <h3>
+                Text the job.
+                <br />
+                <span className={s.blue}>Get a polished bid.</span>
+              </h3>
+              <p>Send rough notes or photos. Answer a few questions, review pricing, then share your estimate.</p>
+              <ul className={s.bullets}>
+                <li><span className={s.check}>✓</span> Professional, shareable bid links</li>
+                <li><span className={s.check}>✓</span> You review and approve every bid</li>
+                <li><span className={s.check}>✓</span> Customers can ask questions and approve</li>
+              </ul>
+              <Link className={s.linkbtn} href="/contractors">Explore Bid Builder →</Link>
+            </div>
+            <div className={s.visual}>
+              <div className={s.sample} aria-label="Illustrative estimate built from rough job notes">
+                <div>
+                  <div className={s.label}>Rough job notes</div>
+                  <p>“Paint master bedroom and hallway. Repair drywall in two spots. Labor $950. Materials around $200. Two days.”</p>
+                  <p className={s.notesLink}>Job details →</p>
+                </div>
+                <div className={s.doc}>
+                  <div className={s.label}>Professional estimate preview</div>
+                  <h4>Interior Painting &amp; Drywall</h4>
+                  <table>
+                    <tbody>
+                      <tr><td>Scope of work</td><td>Organized</td></tr>
+                      <tr><td>Labor</td><td>$950</td></tr>
+                      <tr><td>Materials</td><td>$200</td></tr>
+                      <tr><td><b>Total</b></td><td><b>$1,150</b></td></tr>
+                    </tbody>
+                  </table>
+                  <p className={s.approved}>✓ Awaiting contractor approval</p>
                 </div>
               </div>
-            </section>
+            </div>
+          </section>
+        </div>
 
-            {/* ── HOMEOWNER: iMessage Demo ── */}
-            <section className="bg-card px-4 py-20 sm:px-6 lg:px-8">
-              <div className="mx-auto max-w-4xl">
-                <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-                  <motion.div variants={fadeUp} className="mb-12 text-center">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-primary">Live Demo</span>
-                    <h2 className="mt-3 text-balance text-3xl font-bold text-foreground sm:text-4xl">
-                      Watch HomeBids Build A Project In Real Time
-                    </h2>
-                    <p className="mt-3 text-muted-foreground">
-                      A real conversation — from first text to organized project summary.
-                    </p>
-                  </motion.div>
+        {/* HOMEOWNER — three steps */}
+        <div className={`${s.wrap} ${s.steps} ${s.homeownerOnly}`}>
+          <div className={s.intro}>
+            <span className={s.stepTag}>ALWAYS FREE FOR HOMEOWNERS</span>
+            <h2>One text. Real bids.</h2>
+            <p>Tell HomeBids what you need. We help you find the right contractor.</p>
+          </div>
 
-                  <motion.div variants={fadeUp}
-                    className="mx-auto max-w-sm overflow-hidden rounded-3xl border border-border bg-background shadow-xl"
-                    style={{ backdropFilter: "blur(12px)" }}
-                  >
-                    {/* Phone top bar */}
-                    <div className="flex items-center gap-2 border-b border-border bg-card px-4 py-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                        <Bot className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-foreground">HomeBids AI</p>
-                        <p className="text-[10px] text-primary">Online</p>
-                      </div>
-                    </div>
-                    <div className="space-y-3 p-4">
-                      <MessageBubble from="user" text="Hey, my roof is leaking near the chimney. Need someone to fix it." delay={0} />
-                      <MessageBubble from="ai" text="Got it! A few quick questions — what's your zip code and roughly when do you need this done?" delay={0.4} />
-                      <MessageBubble from="user" text="90210, within the next 2 weeks ideally." delay={0.8} />
-                      <MessageBubble from="ai" text="Perfect. Here's your project summary — does this look right?" delay={1.2} />
-                      {/* Summary card */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.4, delay: 1.6 }}
-                        className="rounded-2xl border border-primary/20 bg-primary/5 p-3 text-xs space-y-1.5"
-                      >
-                        <p className="font-semibold text-foreground">Project: Roof Leak Repair</p>
-                        <p className="text-muted-foreground">Location: Beverly Hills, CA 90210</p>
-                        <p className="text-muted-foreground">Timeline: Within 2 weeks</p>
-                        <p className="text-muted-foreground">Area: Near chimney</p>
-                        <div className="mt-2 flex items-center gap-1.5 text-primary font-medium">
-                          <CheckCircle2 className="h-3 w-3" />
-                          Outreach ready to begin
-                        </div>
-                      </motion.div>
-                      <MessageBubble from="user" text="Yes, that's right. Go ahead!" delay={2.0} />
-                      <MessageBubble from="ai" text="Contacting 4 qualified roofers in your area now. I'll update you as bids come in." delay={2.4} />
-                    </div>
-                  </motion.div>
-                </motion.div>
-              </div>
-            </section>
-
-            {/* ── HOMEOWNER: Before / After ── */}
-            <section className="px-4 py-20 sm:px-6 lg:px-8">
-              <div className="mx-auto max-w-4xl">
-                <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-                  <motion.div variants={fadeUp} className="mb-12 text-center">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-primary">Comparison</span>
-                    <h2 className="mt-3 text-balance text-3xl font-bold text-foreground sm:text-4xl">
-                      Before HomeBids vs. After HomeBids
-                    </h2>
-                  </motion.div>
-                  <BeforeAfter audience="homeowner" />
-                </motion.div>
-              </div>
-            </section>
-
-            {/* ── HOMEOWNER: Why ── */}
-            <section className="bg-card px-4 py-20 sm:px-6 lg:px-8">
-              <div className="mx-auto max-w-5xl">
-                <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-                  <motion.div variants={fadeUp} className="mb-12 text-center">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-primary">Why Homeowners</span>
-                    <h2 className="mt-3 text-balance text-3xl font-bold text-foreground sm:text-4xl">
-                      Built to make this easy for you
-                    </h2>
-                  </motion.div>
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    {[
-                      { icon: Smartphone, title: "No apps. No accounts.", desc: "Everything works over text message. Nothing to download, sign up for, or log in to." },
-                      { icon: Zap, title: "Fast and frictionless.", desc: "Most homeowners go from text to contractor options in minutes — no forms, no phone calls." },
-                      { icon: ShieldCheck, title: "Your info stays private.", desc: "Contact details are never shared until you approve a contractor. AI handles early communication." },
-                      { icon: CheckCircle2, title: "You stay in control.", desc: "Review your options, approve who you want, and connect directly — on your terms." },
-                    ].map((card, i) => (
-                      <motion.div key={card.title} variants={fadeUp} transition={{ delay: i * 0.07 }}
-                        whileHover={{ y: -3 }}
-                        className="group relative overflow-hidden rounded-2xl border border-border bg-background p-6 transition-shadow hover:shadow-md"
-                      >
-                        <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity group-hover:opacity-100"
-                          style={{ background: "radial-gradient(circle at top left, #2B7FE808, transparent 70%)" }} />
-                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                          <card.icon className="h-5 w-5 text-primary" />
-                        </div>
-                        <h3 className="font-semibold text-foreground">{card.title}</h3>
-                        <p className="mt-2 text-sm text-muted-foreground">{card.desc}</p>
-                      </motion.div>
-                    ))}
+          <section className={`${s.feature} ${s.tint} ${s.homeownerOnly}`}>
+            <div className={s.copy}>
+              <div className={s.stepTag}>01 / TEXT HOMEBIDS</div>
+              <h3>
+                Tell Ava what <span className={s.blue}>you need done.</span>
+              </h3>
+              <p>Text your project details. Ava asks a few questions and puts your job together.</p>
+              <ul className={s.bullets}>
+                <li><span className={s.check}>✓</span>Just iMessage or SMS</li>
+                <li><span className={s.check}>✓</span>No app. No account.</li>
+              </ul>
+            </div>
+            <div className={s.visual}>
+              <div className={s.homePhone} aria-label="Illustrative HomeBids text conversation">
+                <div className={s.homePhoneTop}>9:41 <span>● ▰</span></div>
+                <div className={s.homeChatHead}>
+                  <span className={s.homeChatAvatar}>H</span>
+                  <div>
+                    <strong>HomeBids</strong>
+                    <small>Project assistant · Ava</small>
                   </div>
-                </motion.div>
+                </div>
+                <div className={s.homeChatBody}>
+                  <div className={`${s.bubble} ${s.bubbleUser}`}>Need someone to repair my sliding screen door.</div>
+                  <div className={`${s.bubble} ${s.bubbleAi}`}>Happy to help! ✅ Is the screen torn, the door hard to slide, or both?</div>
+                  <div className={`${s.bubble} ${s.bubbleUser}`}>Torn screen and missing wheels.</div>
+                  <div className={`${s.bubble} ${s.bubbleAi}`}>Got it! I&apos;ll organize the details so contractors can review the job.</div>
+                </div>
+                <div className={s.homeChatInput}>iMessage <span>＋</span></div>
               </div>
-            </section>
+            </div>
+          </section>
 
-            {/* ── HOMEOWNER: CTA ── */}
-            <section className="px-4 pb-20 pt-4 sm:px-6 lg:px-8">
-              <div className="mx-auto max-w-2xl">
-                <motion.div
-                  initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                  transition={{ duration: 0.5 }}
-                  className="relative overflow-hidden rounded-3xl px-8 py-14 text-center"
-                  style={{ background: "linear-gradient(135deg, #1A6FD8, #2B7FE8 60%, #3D8FF0)" }}
-                >
-                  {!reduced && <ParticleField count={12} color="#ffffff" />}
-                  <div className="relative">
-                    <h2 className="text-balance text-3xl font-bold text-white sm:text-4xl">
-                      Ready To Get Better Bids For Your Project?
-                    </h2>
-                    <p className="mt-3 text-white/80">
-                      Tell HomeBids about your project and let us do the contractor outreach.
-                    </p>
-                    <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-                      <Button size="lg" variant="secondary" asChild className="w-full sm:w-auto">
-                        <a href="sms:+14043952879?body=Hi%20HomeBids%2C%20help%20me%20create%20a%20new%20job!">
-                          Start Your Project
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </a>
-                      </Button>
-                    </div>
-                    <p className="mt-4 text-xs text-white/50">Free for homeowners. No account or credit card required.</p>
+          <section className={`${s.feature} ${s.homeownerOnly}`}>
+            <div className={s.copy}>
+              <div className={s.stepTag}>02 / SHARE YOUR PROJECT</div>
+              <h3>
+                Your job goes out. <span className={s.blue}>Your info stays private.</span>
+              </h3>
+              <p>Get a shareable job link. HomeBids helps reach matching contractors and local community groups.</p>
+              <ul className={s.bullets}>
+                <li><span className={s.check}>✓</span>Share it wherever you like</li>
+                <li><span className={s.check}>✓</span>Contact info stays private until you approve a bid or in-person estimate</li>
+              </ul>
+            </div>
+            <div className={s.visual}>
+              <div className={s.jobCard}>
+                <div className={s.jobCardLabel}>HOMEBIDS · JOB PREVIEW</div>
+                <div className={s.jobCardTitle}>Sliding screen door repair</div>
+                <div className={s.jobCardText}>Screen is torn and wheels are missing. Existing door frame in place.</div>
+                <div className={s.jobCardMeta}>
+                  <span>✓ Organized job details</span>
+                  <span>✓ Contact details private</span>
+                </div>
+                <div className={s.jobCardLink}>
+                  <span>Shareable job link</span>
+                  <strong>↗</strong>
+                </div>
+                <div className={s.jobCardFoot}>Illustrative preview · No personal details shown</div>
+              </div>
+            </div>
+          </section>
+
+          <section className={`${s.feature} ${s.tint} ${s.homeownerOnly}`}>
+            <div className={s.copy}>
+              <div className={s.stepTag}>03 / REVIEW YOUR OPTIONS</div>
+              <h3>
+                Get bids. <span className={s.blue}>Choose your pro.</span>
+              </h3>
+              <p>Contractors can send bids or offer a free in-person estimate. Review your options and choose who works for you.</p>
+              <ul className={s.bullets}>
+                <li><span className={s.check}>✓</span>No obligation to hire</li>
+                <li><span className={s.check}>✓</span>Always free for homeowners</li>
+              </ul>
+            </div>
+            <div className={s.visual}>
+              <div className={s.offersCard}>
+                <div className={s.offersTitle}>Your project</div>
+                <div className={s.offersSubtitle}>Sliding screen door repair</div>
+                <div className={s.offerRow}>
+                  <span className={s.offerIcon}>▤</span>
+                  <div>
+                    <strong>Professional bid</strong>
+                    <small>Review details and ask questions</small>
                   </div>
-                </motion.div>
-              </div>
-            </section>
-
-          </motion.div>
-
-        ) : (
-
-          <motion.div key="contractor" variants={crossfade} initial="initial" animate="animate" exit="exit">
-
-            {/* ── CONTRACTOR: Animated Flow ── */}
-            <section className="overflow-hidden bg-card px-4 py-20 sm:px-6 lg:px-8">
-              <div className="mx-auto max-w-5xl">
-                <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-                  <motion.div variants={fadeUp} className="mb-14 text-center">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-primary">The Superpower Flow</span>
-                    <h2 className="mt-3 text-balance text-3xl font-bold text-foreground sm:text-4xl">
-                      From raw notes to won job — in minutes
-                    </h2>
-                  </motion.div>
-                  <div className="flex flex-col items-center">
-                    <FlowStep icon={Smartphone} label="Photos & Details" delay={0} />
-                    <FlowStep icon={Bot} label="AI Processing" delay={0.1} />
-                    <FlowStep icon={FileText} label="Professional Proposal" delay={0.2} />
-                    <FlowStep icon={Home} label="Happy Homeowner" delay={0.3} />
-                    <FlowStep icon={CheckCircle2} label="Won Job" isLast delay={0.4} />
+                  <span className={s.offerArrow}>↗</span>
+                </div>
+                <div className={s.offerRow}>
+                  <span className={s.offerIcon}>⌂</span>
+                  <div>
+                    <strong>In-person estimate</strong>
+                    <small>Meet a contractor before deciding</small>
                   </div>
-                </motion.div>
+                  <span className={s.offerArrow}>↗</span>
+                </div>
+                <div className={s.offersFoot}>You decide who to hire.</div>
               </div>
-            </section>
+            </div>
+          </section>
+        </div>
 
-            {/* ── CONTRACTOR: Steps ── */}
-            <section className="px-4 py-20 sm:px-6 lg:px-8">
-              <div className="mx-auto max-w-5xl">
-                <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-                  <motion.div variants={fadeUp} className="mb-14 text-center">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-primary">Step by Step</span>
-                    <h2 className="mt-3 text-balance text-3xl font-bold text-foreground sm:text-4xl">
-                      Your AI growth toolkit
-                    </h2>
-                  </motion.div>
-                </motion.div>
-
-                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  <StepCard number="1" icon={Smartphone} title="Send What You Already Have" delay={0}
-                    desc="No complicated forms. Submit photos, rough scope, and pricing the way you already work." />
-                  <StepCard number="2" icon={Bot} title="AI Builds the Proposal" delay={0.07}
-                    desc="Messy notes transform into a clean scope of work, pricing, exclusions, and optional upgrades — instantly." />
-                  <StepCard number="3" icon={FileText} title="Review Before Sending" delay={0.14}
-                    desc="You stay in control of every proposal. Preview, edit, and approve before it reaches the homeowner." />
-                  <StepCard number="4" icon={Send} title="Deliver a Professional Bid" delay={0.21}
-                    desc="Look more professional without extra hours. Send via PDF, SMS, or mobile — your homeowner sees it instantly." />
-                  <StepCard number="5" icon={ShieldCheck} title="Win the Job" delay={0.28}
-                    desc="Send a professional bid link the same day. Homeowners who receive a fast, polished proposal are far more likely to hire you first." />
+        {/* Quick workflow (contractor) */}
+        <section className={`${s.flowband} ${s.contractorOnly}`}>
+          <div className={s.wrap}>
+            <h2>One simple workflow.</h2>
+            <div className={s.quickflow}>
+              <div className={s.quickstep}>
+                <span>1</span>
+                <div>
+                  <strong>Find the opportunity</strong>
+                  <small>Lead Radar alerts you</small>
                 </div>
               </div>
-            </section>
-
-            {/* ── CONTRACTOR: Before / After ── */}
-            <section className="px-4 py-20 sm:px-6 lg:px-8">
-              <div className="mx-auto max-w-4xl">
-                <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-                  <motion.div variants={fadeUp} className="mb-12 text-center">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-primary">Comparison</span>
-                    <h2 className="mt-3 text-balance text-3xl font-bold text-foreground sm:text-4xl">
-                      Before HomeBids vs. After HomeBids
-                    </h2>
-                  </motion.div>
-                  <BeforeAfter audience="contractor" />
-                </motion.div>
+              <div className={s.quickstep}>
+                <span>2</span>
+                <div>
+                  <strong>Connect by text</strong>
+                  <small>Your webpage handles intake</small>
+                </div>
               </div>
-            </section>
-
-            {/* ── CONTRACTOR: Why ── */}
-            <section className="bg-card px-4 py-20 sm:px-6 lg:px-8">
-              <div className="mx-auto max-w-5xl">
-                <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-                  <motion.div variants={fadeUp} className="mb-12 text-center">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-primary">Why Contractors</span>
-                    <h2 className="mt-3 text-balance text-3xl font-bold text-foreground sm:text-4xl">
-                      Built for how you actually work
-                    </h2>
-                  </motion.div>
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    {[
-                      { icon: Zap, title: "Respond faster, win more.", desc: "AI-generated responses mean you reply in minutes. Fast replies close more jobs." },
-                      { icon: TrendingUp, title: "Defend your pricing.", desc: "Stop losing jobs to price objections. Back up every bid with confidence." },
-                      { icon: FileText, title: "Cleaner estimates.", desc: "AI-structured proposals look professional and communicate value — even from the job site." },
-                      { icon: Globe, title: "Your own website, done for you.", desc: "Every pro gets a mobile-first landing page. Put the link on your truck, cards and bio — homeowners who text from it are your leads alone." },
-                      { icon: Radar, title: "Lead Radar for Facebook groups.", desc: "Add the local groups you're in. We watch them and text you the moment a homeowner asks for your trade — with a comment ready to paste." },
-                      { icon: DollarSign, title: "$99/month. All-in.", desc: "Unlimited AI bids, shareable bid links, your own website, Lead Radar, no bid fees — one flat price, no surprises." },
-                    ].map((card, i) => (
-                      <motion.div key={card.title} variants={fadeUp} transition={{ delay: i * 0.07 }}
-                        whileHover={{ y: -3 }}
-                        className="group relative overflow-hidden rounded-2xl border border-border bg-background p-6 transition-shadow hover:shadow-md"
-                      >
-                        <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity group-hover:opacity-100"
-                          style={{ background: "radial-gradient(circle at top left, #2B7FE808, transparent 70%)" }} />
-                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                          <card.icon className="h-5 w-5 text-primary" />
-                        </div>
-                        <h3 className="font-semibold text-foreground">{card.title}</h3>
-                        <p className="mt-2 text-sm text-muted-foreground">{card.desc}</p>
-                      </motion.div>
-                    ))}
-                  </div>
-                </motion.div>
+              <div className={s.quickstep}>
+                <span>3</span>
+                <div>
+                  <strong>Send your bid</strong>
+                  <small>Review, approve, share</small>
+                </div>
               </div>
-            </section>
+            </div>
+          </div>
+        </section>
 
-            {/* ── CONTRACTOR: CTA ── */}
-            <section className="px-4 pb-20 pt-4 sm:px-6 lg:px-8">
-              <div className="mx-auto max-w-2xl">
-                <motion.div
-                  initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                  transition={{ duration: 0.5 }}
-                  className="relative overflow-hidden rounded-3xl border border-primary/20 px-8 py-14 text-center"
-                  style={{ background: "linear-gradient(135deg, #0f172a 0%, #1a2744 50%, #0f172a 100%)" }}
-                >
-                  {!reduced && <ParticleField count={14} color="#2B7FE8" />}
-                  <div className="relative">
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                      <Sparkles className="h-3 w-3" /> AI-Powered
-                    </span>
-                    <h2 className="mt-4 text-balance text-3xl font-bold text-white sm:text-4xl">
-                      Ready To Give Yourself The AI Advantage?
-                    </h2>
-                    <p className="mt-3 text-white/70">
-                      Build professional bids faster, send them the same day, and win more jobs.
-                    </p>
-                    <ul className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-white/80">
-                      {["Unlimited AI Bids", "Shareable Bid Links", "Your Own Website", "Lead Radar", "No Bid Fees", "$99/month"].map((item) => (
-                        <li key={item} className="flex items-center gap-1.5">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-                      <Button size="lg" asChild className="w-full sm:w-auto">
-                        <Link href="/contractors">
-                          Start Using HomeBids
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Link>
-                      </Button>
-                      <Button size="lg" variant="ghost" className="w-full border border-white/20 text-white hover:bg-white/10 sm:w-auto" asChild>
-                        <Link href="/contractors">
-                          See Contractor Tools
-                          <ChevronRight className="ml-2 h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-            </section>
+        {/* FAQ (contractor) */}
+        <section className={`${s.wrap} ${s.faq} ${s.contractorOnly}`}>
+          <span className={s.stepTag} style={{ display: "block", textAlign: "center" }}>GOOD TO KNOW</span>
+          <h2>Quick answers.</h2>
+          <div className={s.faqgrid}>
+            <details>
+              <summary>Does Lead Radar post automatically?</summary>
+              <p>No. Review the opportunity, open the original post, and choose what to send or paste yourself.</p>
+            </details>
+            <details>
+              <summary>Can I pick my Facebook groups?</summary>
+              <p>Yes. Add up to 25 local community groups and choose your trades.</p>
+            </details>
+            <details>
+              <summary>Do homeowners need an app?</summary>
+              <p>No. They can use their regular iMessage or SMS app.</p>
+            </details>
+            <details>
+              <summary>Who controls my bid pricing?</summary>
+              <p>You do. Review and approve bids before sending them to customers.</p>
+            </details>
+          </div>
+        </section>
 
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <ScrollToTop />
+        {/* Closing */}
+        <section className={`${s.closing} ${s.contractorOnly}`}>
+          <span className={s.eyebrow}>ALL THREE TOOLS INCLUDED</span>
+          <h2>Less busywork. More paid work.</h2>
+          <p>Lead Radar + Your Contractor Page + Unlimited Bid Builder</p>
+          <Link className={s.linkbtn} href={TRIAL}>Start My Free 14-Day Trial →</Link>
+          <div className={s.subprice}>Then $99/month · Cancel anytime</div>
+        </section>
+        <section className={`${s.closing} ${s.homeownerOnly}`}>
+          <span className={s.eyebrow}>FREE FOR HOMEOWNERS</span>
+          <h2>Ready to get your project started?</h2>
+          <p>Text your project to Ava. We help you reach matching contractors.</p>
+          <a className={s.linkbtn} href={getSmsLink()}>Text Your Project →</a>
+          <div className={s.subprice}>No app · No account · Free for homeowners</div>
+        </section>
+      </main>
     </div>
   );
 }
