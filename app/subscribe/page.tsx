@@ -251,7 +251,7 @@ export default function SubscribePage() {
       </section>
 
       <main className={l.page} style={{ background: "linear-gradient(120deg, #eff6ff, #fff)" }}>
-        <div className={h.wrap} style={{ padding: "48px 34px 64px" }}>
+        <div className={`${h.wrap} ${h.planWrap}`}>
           <div style={{ maxWidth: 440, margin: "0 auto" }}>
             {homeowner ? (
               /* HOMEOWNER — same card, free */
