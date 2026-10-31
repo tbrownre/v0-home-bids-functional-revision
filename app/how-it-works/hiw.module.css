@@ -70,6 +70,8 @@
 .closing h2 { font-size: 34px; line-height: 1.12; letter-spacing: -.045em; margin: 15px 0 10px; font-weight: 700; }
 .closing p { color: #bbcada; font-size: 14px; margin: 0 auto 22px; }
 .closing .subprice { font-size: 12px; color: #b6c5d5; margin-top: 13px; }
+/* /subscribe: the plan card sits in .wrap; on phones the card needs the mock's 18px gutters or the trial button wraps */
+.planWrap { padding-top: 48px; padding-bottom: 64px; }
 
 /* persona toggle: the mock's body.homeowner rules */
 .homeownerOnly { display: none; }
@@ -125,6 +127,7 @@
 
 @media (max-width: 700px) {
   .wrap { padding-left: 18px; padding-right: 18px; }
+  .planWrap { padding-top: 36px; padding-bottom: 48px; }
   .hero { padding: 44px 17px 34px; }
   .hero h1 { font-size: 39px; margin: 19px auto 12px; max-width: 340px; }
   .hero p { font-size: 14px; margin-bottom: 18px; max-width: 335px; }
