@@ -5,7 +5,8 @@ import Link from "next/link";
 import {
   Radar, Plus, Copy, Check, Play, Loader2, Inbox, AlertTriangle, MessageSquareText, Users, RefreshCw, Facebook, X, Tag,
   Mail, ShieldCheck, ClipboardList, ExternalLink, EyeOff, Eye, FileText, Bookmark, MoreHorizontal, SkipForward, Settings,
-  Wrench, Pencil, ChevronDown, Scan, CircleDot, Smartphone,
+  Wrench, Pencil, ChevronDown, ChevronRight, Scan, CircleDot, Smartphone, Sparkles, Leaf, Home, Fan, BrickWall, Truck, Bell, Zap,
+  Target, Search,
 } from "lucide-react";
 import { ContractorTopbar } from "@/components/contractor/contractor-topbar";
 import { Button } from "@/components/ui/button";
@@ -15,8 +16,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { getMockUser, syncMirrorFromSupabase } from "@/lib/mock-auth";
 import {
-  getRadarOverview, addRadarGroups, removeRadarGroup, setRadarSettings, setRadarLeadStatus, setRadarLeadSaved, startRadarBid,
-  type RadarOverview, type RadarGroup, type RadarLead,
+  getRadarOverview, getRadarServicesCatalog, addRadarGroups, removeRadarGroup, setRadarSettings, setRadarLeadStatus, setRadarLeadSaved,
+  startRadarBid, type RadarOverview, type RadarGroup, type RadarLead, type RadarService,
 } from "@/lib/supabase/lead-radar";
 import { CONTRACTOR_SMS_PHONE_NUMBER, CONTRACTOR_SMS_PHONE_DISPLAY, getSmsHref, isSmsCapableDevice } from "@/lib/sms-config";
 
@@ -29,7 +30,12 @@ import { CONTRACTOR_SMS_PHONE_NUMBER, CONTRACTOR_SMS_PHONE_DISPLAY, getSmsHref, 
  *   Opportunities — pills New (n) · All (n) · Saved (n) · Bids (n) · Hidden (n), refresh, "Newest first" sort.
  *     Card: group · date · [trade] [timing] [city] … bookmark ⋯ / author + post / meta line (details · city) /
  *           SUGGESTED COMMENT + Copy / [Build Bid] [Open Post] [Hide] [Skip]
- *   Your trades — "Get opportunities that match your services." · n selected · [✎ Edit trades] · chips · + Add custom trade
+ *   Your services (v5, Tim's Nov 5 mock - "Can you help me add some more trades to select in the lead radar … I have a
+ *     carpet/couch cleaner that wants to try it") — "Choose the services you want job alerts for." · card "Your selected
+ *     services" [✎ Edit] with × chips · [+ Add services] · Get real job alerts / Match by keywords & job type / Only see the
+ *     jobs you want · "Browse services" search + the 6 category rows (icon · name · "n services · examples + more" ›) that
+ *     open into the services of that category · + Add custom service. The directory (107 services) comes from
+ *     radar_services_catalog; every tap saves radar_settings.services (nothing picked = every homeowner request).
  *   Your Facebook groups — "Add one group at a time…" · n / 25 · [link input] [+ Add group] · group chips with ×
  *   How Lead Radar works — and what keeps you safe in the groups (folded)
  * Alert settings (pause/resume texts, email alerts) live in the ⚙ dialog — same RPCs as before, nothing removed.
@@ -92,16 +98,35 @@ function urgencyLabel(u: string | null | undefined): string | null {
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : null;
 }
 
-/** Trades we pre-select from the profile when the contractor has never saved a choice. */
-function guessTrades(specialties: string[] | null | undefined, company: string | null | undefined): string[] {
-  const hay = " " + [...(specialties ?? []), company ?? ""].join(" | ").toLowerCase() + " ";
+/** v5 - the six groups of Tim's service directory (his Nov 5 mock: icon, name, example line). The services themselves come from radar_services. */
+const SERVICE_GROUPS: Array<{ key: string; label: string; examples: string; Icon: typeof Sparkles }> = [
+  { key: "cleaning",   label: "Cleaning & Restoration",      examples: "Carpet, upholstery, tile, windows + more",             Icon: Sparkles },
+  { key: "outdoor",    label: "Lawn, Landscape & Outdoor",   examples: "Lawn care, landscaping, tree service + more",          Icon: Leaf },
+  { key: "handyman",   label: "Handyman & Home Improvement", examples: "Painting, flooring, drywall, remodeling + more",       Icon: Home },
+  { key: "mechanical", label: "Mechanical & Home Systems",   examples: "Plumbing, electrical, HVAC, appliances + more",        Icon: Fan },
+  { key: "exterior",   label: "Exterior & Construction",     examples: "Roofing, gutters, fencing, concrete + more",           Icon: BrickWall },
+  { key: "specialty",  label: "Moving, Hauling & Specialty", examples: "Junk removal, moving, detailing, organization + more", Icon: Truck },
+];
+const SELECTED_PREVIEW = 6; // chips shown in "Your selected services" before "+N more"
+
+/** Services we pre-select from the profile when the contractor has never saved a choice (name of the service in his specialties / company name). */
+function guessServices(specialties: string[] | null | undefined, company: string | null | undefined, catalog: RadarService[]): string[] {
+  const hay = " " + [...(specialties ?? []), company ?? ""].join(" | ").toLowerCase().replace(/[^a-z0-9&/ ]+/g, " ") + " ";
+  if (!hay.trim()) return [];
   const out: string[] = [];
-  for (const t of TRADES) {
-    if (t.key === "Handyman" && /handyman/.test(hay)) { out.push(t.key); continue; }
-    if (t.key === "Handyman") continue; // "repair" alone is too broad
-    if (t.hints.some((h) => hay.includes(h))) out.push(t.key);
+  for (const s of catalog) {
+    const label = s.label.toLowerCase();
+    const named = hay.includes(label) || label.split(/\s*\/\s*/).some((part) => part.length >= 4 && hay.includes(part));
+    const hinted = s.main && s.keywords.some((k) => k.trim().length >= 5 && hay.includes(k.trim()));
+    if (named || hinted) out.push(s.key);
   }
   return out;
+}
+
+/** The old `categories` filter (classifier categories) shown as the services that stand for them - only for rows saved before v5. */
+function legacyToServices(categories: string[] | null | undefined, catalog: RadarService[]): string[] {
+  if (!categories?.length) return [];
+  return catalog.filter((s) => s.main && s.post_categories.some((c) => categories.includes(c))).map((s) => s.key);
 }
 
 function timeAgo(iso: string | null | undefined): string {
@@ -169,16 +194,23 @@ export default function LeadRadarPage() {
   const [addNote, setAddNote] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
   const [busyGroup, setBusyGroup] = useState<string | null>(null);
 
-  // trades
-  const [selected, setSelected] = useState<string[]>([]);
+  // services (v5) - `services` = picked radar_services keys, `custom` = free-text extras; both save together
+  const [catalog, setCatalog] = useState<RadarService[]>([]);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [services, setServices] = useState<string[]>([]);
   const [custom, setCustom] = useState<string[]>([]);
   const [customOpen, setCustomOpen] = useState(false);
   const [customDraft, setCustomDraft] = useState("");
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [showAllSelected, setShowAllSelected] = useState(false);
+  const browseRef = useRef<HTMLDivElement | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
   const [tradesDirty, setTradesDirty] = useState(false);
   const [tradesSave, setTradesSave] = useState<SaveState>("idle");
   const [tradesError, setTradesError] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latestTrades = useRef<{ selected: string[]; custom: string[] }>({ selected: [], custom: [] });
+  const latestTrades = useRef<{ services: string[]; custom: string[] }>({ services: [], custom: [] });
   // Bumped on every lead write (Build Bid / Hide / Skip / Undo / bookmark). A refresh that started before the write must not
   // overwrite the write's optimistic card state with older server data - the write triggers its own refresh when it is done.
   const writeSeq = useRef(0);
@@ -226,6 +258,13 @@ export default function LeadRadarPage() {
     }
     const seq = writeSeq.current;
     try {
+      // the directory first (once): the saved picks are keys into it
+      let cat: RadarService[] = catalog;
+      if (first) {
+        const c = await getRadarServicesCatalog();
+        if (c.error === null && Array.isArray(c.data)) { cat = c.data; setCatalog(cat); setCatalogError(null); }
+        else setCatalogError(c.error ?? "Could not load the service list");
+      }
       const res = await getRadarOverview();
       if (res.error !== null) {
         setLoadError(res.error);
@@ -237,18 +276,18 @@ export default function LeadRadarPage() {
       setLoadError(null);
       if (first) {
         const s = ov.settings;
-        const savedCats = s?.categories;
         const savedCustom = (s?.custom_trades ?? []).filter(Boolean);
         if (s) {
-          setSelected((savedCats ?? []).filter((c) => TRADE_LABEL[c]));
+          const saved = (s.services ?? []).filter(Boolean);
+          setServices(saved.length ? saved : legacyToServices(s.categories, cat));
           setCustom(savedCustom);
           setTradesDirty(false);
           setEmailOn(!!s.email_alerts);
           setEmailDraft(s.alert_email ?? ov.profile?.email ?? "");
         } else {
-          // never saved anything: start from what the profile says, so the first "Add group" saves the right trades
-          const guess = guessTrades(ov.profile?.specialties, ov.profile?.company);
-          setSelected(guess);
+          // never saved anything: start from what the profile says, so the first "Add group" saves the right services
+          const guess = guessServices(ov.profile?.specialties, ov.profile?.company, cat);
+          setServices(guess);
           setCustom([]);
           setTradesDirty(guess.length > 0);
           setEmailOn(false);
@@ -270,14 +309,25 @@ export default function LeadRadarPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { latestTrades.current = { selected, custom }; }, [selected, custom]);
+  useEffect(() => { latestTrades.current = { services, custom }; }, [services, custom]);
 
   const groups = data?.groups ?? [];
   const leads = data?.leads ?? [];
   const paused = !!data?.settings?.paused;
   const phone = data?.profile?.phone ?? null;
   const activeGroups = groups.filter((g) => g.enabled).length;
-  const tradeCount = selected.length + custom.length;
+  const tradeCount = services.length + custom.length;
+  const serviceByKey = useMemo(() => new Map(catalog.map((s) => [s.key, s])), [catalog]);
+  const pickedServices = useMemo(() => services.map((k) => serviceByKey.get(k)).filter((s): s is RadarService => !!s), [services, serviceByKey]);
+  // "Your selected services" shows a handful, then "+N more" (Edit / the chip itself shows them all)
+  const shownServices = showAllSelected ? pickedServices : pickedServices.slice(0, SELECTED_PREVIEW);
+  const shownCustom = showAllSelected ? custom : custom.slice(0, Math.max(0, SELECTED_PREVIEW - shownServices.length));
+  const hiddenSelected = showAllSelected ? 0 : Math.max(0, pickedServices.length + custom.length - shownServices.length - shownCustom.length);
+  const searchMatches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return catalog.filter((s) => s.label.toLowerCase().includes(q) || s.keywords.some((k) => k.trim().includes(q) && q.length >= 3));
+  }, [catalog, query]);
 
   const counts = useMemo(() => {
     const c: Record<LeadFilter, number> = { new: 0, all: 0, saved: 0, bid: 0, hidden: 0 };
@@ -306,13 +356,13 @@ export default function LeadRadarPage() {
   const pastedLinks = useMemo(() => splitLinks(paste), [paste]);
   const room = Math.max(0, MAX_GROUPS - groups.length);
 
-  /** Persist the trade filter (standard + custom). `null` categories = every homeowner request. */
-  const persistTrades = async (cats: string[], cust: string[]) => {
-    const res = await setRadarSettings(cats.length ? cats : null, null, cust);
+  /** Persist the service filter (picked services + custom). Nothing picked = every homeowner request. Legacy `categories` is cleared (null). */
+  const persistTrades = async (svc: string[], cust: string[]) => {
+    const res = await setRadarSettings(null, null, cust, undefined, undefined, svc);
     if (res.error) throw new Error(res.error);
   };
 
-  /** Trades save themselves ~0.6 s after the last tap (the mockup has no Save button). */
+  /** Services save themselves ~0.6 s after the last tap (the mockup has no Save button). */
   const queueTradesSave = () => {
     setTradesDirty(true);
     setTradesSave("saving");
@@ -321,7 +371,7 @@ export default function LeadRadarPage() {
     saveTimer.current = setTimeout(async () => {
       const snap = latestTrades.current;
       try {
-        await persistTrades(snap.selected, snap.custom);
+        await persistTrades(snap.services, snap.custom);
         setTradesDirty(false);
         setTradesSave("saved");
         void load(false);
@@ -343,9 +393,9 @@ export default function LeadRadarPage() {
         return;
       }
       const r = res.data;
-      // First save of the trade filter rides along with the first groups, so the texts match what is on screen.
+      // First save of the service filter rides along with the first groups, so the texts match what is on screen.
       if (tradesDirty) {
-        try { await persistTrades(selected, custom); setTradesDirty(false); setTradesSave("saved"); } catch { /* shown by the trades card on its own save */ }
+        try { await persistTrades(services, custom); setTradesDirty(false); setTradesSave("saved"); } catch { /* shown by the services card on its own save */ }
       }
       const parts: string[] = [];
       parts.push(r.added === 1 ? "Added 1 group" : `Added ${r.added} groups`);
@@ -372,31 +422,41 @@ export default function LeadRadarPage() {
     }
   };
 
-  const toggleTrade = (key: string) => {
-    setSelected((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]));
+  const toggleService = (key: string) => {
+    setServices((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]));
     queueTradesSave();
   };
 
-  const selectAllTrades = () => {
-    setSelected([]);
-    setCustom([]);
+  /** "Select all" / "Clear" inside one category row. */
+  const setGroup = (groupKey: string, on: boolean) => {
+    const keys = catalog.filter((s) => s.group === groupKey).map((s) => s.key);
+    setServices((cur) => (on ? Array.from(new Set([...cur, ...keys])) : cur.filter((k) => !keys.includes(k))));
     queueTradesSave();
   };
 
-  const addCustomTrade = () => {
-    const v = customDraft.trim().replace(/\s+/g, " ").slice(0, 40);
+  /** "+ Add services" / "Edit": jump to the directory and put the cursor in the search box. */
+  const openBrowse = () => {
+    browseRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => searchRef.current?.focus({ preventScroll: true }), 350);
+  };
+
+  const addCustomTrade = (raw?: string) => {
+    const v = (raw ?? customDraft).trim().replace(/\s+/g, " ").slice(0, 40);
     if (v.length < 2) return;
-    const dupStd = TRADES.find((t) => t.label.toLowerCase() === v.toLowerCase() || t.key.toLowerCase() === v.toLowerCase());
+    // typed the name of a directory service -> pick that one instead of a duplicate custom entry
+    const dupStd = catalog.find((s) => s.label.toLowerCase() === v.toLowerCase() || s.key === v.toLowerCase().replace(/[^a-z0-9]+/g, "-"));
     if (dupStd) {
-      if (!selected.includes(dupStd.key)) setSelected((cur) => [...cur, dupStd.key]);
+      if (!services.includes(dupStd.key)) setServices((cur) => [...cur, dupStd.key]);
       setCustomDraft("");
+      setQuery("");
       queueTradesSave();
       return;
     }
-    if (custom.some((c) => c.toLowerCase() === v.toLowerCase())) { setCustomDraft(""); return; }
-    if (custom.length >= MAX_CUSTOM) { setTradesError(`Up to ${MAX_CUSTOM} custom trades.`); return; }
+    if (custom.some((c) => c.toLowerCase() === v.toLowerCase())) { setCustomDraft(""); setQuery(""); return; }
+    if (custom.length >= MAX_CUSTOM) { setTradesError(`Up to ${MAX_CUSTOM} custom services.`); return; }
     setCustom((cur) => [...cur, v]);
     setCustomDraft("");
+    setQuery("");
     queueTradesSave();
   };
 
@@ -405,12 +465,12 @@ export default function LeadRadarPage() {
     queueTradesSave();
   };
 
-  // Every settings write carries the trades exactly as shown on screen (`selected` + `custom`), never a stale server copy,
-  // so a pause or an email change can't undo a trade tap that was saved a moment earlier.
+  // Every settings write carries the services exactly as shown on screen (`services` + `custom`), never a stale server copy,
+  // so a pause or an email change can't undo a service tap that was saved a moment earlier.
   const onPause = async (next: boolean) => {
     setPausing(true);
     try {
-      const res = await setRadarSettings(selected.length ? selected : null, next, custom);
+      const res = await setRadarSettings(null, next, custom, undefined, undefined, services);
       if (!res.error) await load(false);
     } finally {
       setPausing(false);
@@ -427,7 +487,7 @@ export default function LeadRadarPage() {
         setEmailError("Enter the email address the alerts should go to.");
         return;
       }
-      const res = await setRadarSettings(selected.length ? selected : null, null, custom, on, addr || null);
+      const res = await setRadarSettings(null, null, custom, on, addr || null, services);
       if (res.error) throw new Error(res.error);
       setEmailSave("saved");
       await load(false);
@@ -870,95 +930,224 @@ export default function LeadRadarPage() {
             )}
           </section>
 
-          {/* Your trades */}
-          <section className={`${CARD} p-4 sm:p-6`} data-hb-radar-trades>
+          {/* Your services — Tim's Nov 5 mock */}
+          <section className={`${CARD} p-4 sm:p-6`} data-hb-radar-services>
             <div className="flex flex-wrap items-center gap-3">
               <span className={iconBox}><Wrench className="h-5 w-5 text-primary" /></span>
               <div className="min-w-[200px] flex-1">
-                <h2 className="text-[1.45rem] font-extrabold tracking-tight text-foreground">Your trades</h2>
-                <p className="text-sm text-muted-foreground">Get opportunities that match your services.</p>
+                <h2 className="text-[1.45rem] font-extrabold tracking-tight text-foreground">Your services</h2>
+                <p className="text-sm text-muted-foreground">Choose the services you want job alerts for.</p>
               </div>
-              <div className="ml-auto flex shrink-0 items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground" data-hb-radar-tradecount>
-                  {tradesSave === "saving" ? (
-                    <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…</>
-                  ) : tradesSave === "saved" ? (
-                    <><Check className="h-3.5 w-3.5 text-green-700" /> Saved</>
-                  ) : tradesSave === "error" ? (
-                    <span className="text-amber-700">Not saved</span>
-                  ) : tradeCount === 0 ? (
-                    "All trades"
-                  ) : (
-                    `${tradeCount} selected`
-                  )}
-                </span>
-                <Button variant="outline" className="h-10 gap-2 rounded-full px-4 font-semibold" onClick={() => setCustomOpen((v) => !v)} aria-expanded={customOpen} data-hb-radar-edittrades>
+              <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-muted-foreground" data-hb-radar-tradecount>
+                {tradesSave === "saving" ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…</>
+                ) : tradesSave === "saved" ? (
+                  <><Check className="h-3.5 w-3.5 text-green-700" /> Saved</>
+                ) : tradesSave === "error" ? (
+                  <span className="text-amber-700">Not saved</span>
+                ) : tradeCount === 0 ? (
+                  "All services"
+                ) : (
+                  `${tradeCount} selected`
+                )}
+              </span>
+            </div>
+
+            {/* Your selected services — chips with ×, folded to a few + "+N more"; Edit shows them all */}
+            <div className="mt-4 rounded-2xl border border-border bg-muted/30 p-4" data-hb-radar-selected>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-[1.05rem] font-extrabold text-foreground">Your selected services</h3>
+                <button
+                  type="button"
+                  onClick={() => { if (tradeCount === 0) openBrowse(); else setShowAllSelected((v) => !v); }}
+                  className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+                  data-hb-radar-editservices
+                >
                   <Pencil className="h-4 w-4" />
-                  {customOpen ? "Done" : "Edit trades"}
-                </Button>
+                  {tradeCount > 0 && showAllSelected ? "Done" : "Edit"}
+                </button>
               </div>
-            </div>
-
-            {/* Mock order: the selected trades first (✓), then "All trades", then the rest */}
-            <div className="mt-4 flex flex-wrap gap-2">
-              {TRADES.filter((t) => selected.includes(t.key)).map((t) => (
-                <button key={t.key} type="button" onClick={() => toggleTrade(t.key)} aria-pressed className={`${chipBase} ${chipOn}`}>
-                  <Check className="h-4 w-4" />
-                  {t.label}
-                </button>
-              ))}
-              {custom.map((c) => (
-                <span key={c} className={`${chipBase} ${chipOn} pr-1`}>
-                  <Check className="h-4 w-4" />
-                  {c}
-                  <button type="button" onClick={() => removeCustomTrade(c)} className="ml-0.5 flex h-7 w-7 items-center justify-center rounded-full hover:bg-primary/10" aria-label={`Remove ${c}`}>
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </span>
-              ))}
-              <button type="button" onClick={selectAllTrades} aria-pressed={tradeCount === 0} className={`${chipBase} ${tradeCount === 0 ? chipOn : chipOff}`}>
-                {tradeCount === 0 && <Check className="h-4 w-4" />}
-                All trades
-              </button>
-              {TRADES.filter((t) => !selected.includes(t.key)).map((t) => (
-                <button key={t.key} type="button" onClick={() => toggleTrade(t.key)} aria-pressed={false} className={`${chipBase} ${chipOff}`}>
-                  {t.label}
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => setCustomOpen((v) => !v)}
-                className={`${chipBase} border-primary/20 bg-primary/5 text-primary hover:bg-primary/10`}
-                aria-expanded={customOpen}
-                data-hb-radar-customtrade
-              >
-                <Plus className="h-4 w-4" />
-                Add custom trade
-              </button>
-            </div>
-
-            {customOpen && (
-              <div className="mt-3 flex gap-2">
-                <div className="relative flex-1">
-                  <Tag className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-                  <Input
-                    value={customDraft}
-                    onChange={(e) => { setCustomDraft(e.target.value); setTradesError(null); }}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomTrade(); } }}
-                    placeholder="Enter custom trade (e.g. Pool service)"
-                    maxLength={40}
-                    className="h-11 rounded-xl bg-muted/40 pl-10"
-                    aria-label="Custom trade"
-                    autoFocus
-                  />
+              {tradeCount === 0 ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Nothing picked yet — you get every homeowner request in your groups. Add services to only get the jobs you want.
+                </p>
+              ) : (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {shownServices.map((s) => (
+                    <span key={s.key} className={`${chipBase} ${chipOn} pr-1`}>
+                      {s.label}
+                      <button type="button" onClick={() => toggleService(s.key)} className="ml-0.5 flex h-7 w-7 items-center justify-center rounded-full hover:bg-primary/10" aria-label={`Remove ${s.label}`}>
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                  {shownCustom.map((c) => (
+                    <span key={c} className={`${chipBase} ${chipOn} pr-1`}>
+                      {c}
+                      <button type="button" onClick={() => removeCustomTrade(c)} className="ml-0.5 flex h-7 w-7 items-center justify-center rounded-full hover:bg-primary/10" aria-label={`Remove ${c}`}>
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                  {hiddenSelected > 0 && (
+                    <button type="button" onClick={() => setShowAllSelected(true)} className={`${chipBase} ${chipOff}`}>
+                      +{hiddenSelected} more
+                    </button>
+                  )}
                 </div>
-                <Button className="h-11 rounded-xl px-5 font-semibold" onClick={addCustomTrade} disabled={customDraft.trim().length < 2}>
-                  Add
-                </Button>
+              )}
+            </div>
+
+            <Button className="mt-3 h-12 w-full gap-2 rounded-xl text-[15px] font-semibold" onClick={openBrowse} data-hb-radar-addservices>
+              <Plus className="h-4 w-4" />
+              Add services
+            </Button>
+
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+              {[
+                { Icon: Bell, text: "Get real job alerts" },
+                { Icon: Zap, text: "Match by keywords & job type" },
+                { Icon: Target, text: "Only see the jobs you want" },
+              ].map(({ Icon, text }) => (
+                <div key={text} className="flex items-center gap-2.5 text-sm font-semibold text-foreground">
+                  <Icon className="h-5 w-5 shrink-0 text-primary" aria-hidden />
+                  {text}
+                </div>
+              ))}
+            </div>
+
+            {/* Browse services — search + the six category rows; a row opens into its services */}
+            <div ref={browseRef} className="mt-5 scroll-mt-24 border-t border-border pt-5" data-hb-radar-browse>
+              <h3 className="text-[1.2rem] font-extrabold tracking-tight text-foreground">Browse services</h3>
+              <p className="text-sm text-muted-foreground">Explore all services and add what fits your business.</p>
+              <div className="relative mt-3">
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                <Input
+                  ref={searchRef}
+                  value={query}
+                  onChange={(e) => { setQuery(e.target.value); setTradesError(null); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" && searchMatches.length === 0 && query.trim().length >= 2) { e.preventDefault(); addCustomTrade(query); } }}
+                  placeholder="Search services (e.g. couch cleaning, plumbing)"
+                  className="h-11 rounded-xl bg-muted/40 pl-10"
+                  aria-label="Search services"
+                  autoComplete="off"
+                />
               </div>
-            )}
+
+              {catalogError && <p className="mt-3 text-sm text-amber-700">{catalogError} — custom services still work below.</p>}
+
+              {query.trim() ? (
+                <div className="mt-3" data-hb-radar-searchresults>
+                  {searchMatches.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {searchMatches.map((s) => {
+                        const on = services.includes(s.key);
+                        return (
+                          <button key={s.key} type="button" onClick={() => toggleService(s.key)} aria-pressed={on} className={`${chipBase} ${on ? chipOn : chipOff}`} title={SERVICE_GROUPS.find((g) => g.key === s.group)?.label}>
+                            {on && <Check className="h-4 w-4" />}
+                            {s.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No service called &ldquo;{query.trim()}&rdquo; yet.{" "}
+                      <button type="button" onClick={() => addCustomTrade(query)} className="font-semibold text-primary hover:underline">Add it as a custom service</button>
+                      {" "}— we&apos;ll match posts that mention it.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <ul className="mt-3 space-y-2" data-hb-radar-grouplist-services>
+                  {SERVICE_GROUPS.map((g) => {
+                    const list = catalog.filter((s) => s.group === g.key);
+                    const picked = list.filter((s) => services.includes(s.key)).length;
+                    const open = openGroup === g.key;
+                    return (
+                      <li key={g.key} className="rounded-2xl border border-border bg-card" data-hb-radar-group={g.key}>
+                        <button
+                          type="button"
+                          onClick={() => setOpenGroup(open ? null : g.key)}
+                          aria-expanded={open}
+                          className="flex w-full items-center gap-3 rounded-2xl p-3 text-left hover:bg-muted/40 sm:p-4"
+                        >
+                          <span className={iconBox}><g.Icon className="h-5 w-5 text-primary" aria-hidden /></span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[1.02rem] font-extrabold leading-tight text-foreground">{g.label}</span>
+                            <span className="block text-sm text-muted-foreground">
+                              {list.length || "…"} services · {g.examples}
+                            </span>
+                          </span>
+                          {picked > 0 && <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">{picked} picked</span>}
+                          <ChevronRight className={`h-5 w-5 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`} aria-hidden />
+                        </button>
+                        {open && (
+                          <div className="border-t border-border p-3 sm:p-4">
+                            <div className="mb-3 flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                              <span>{picked} of {list.length} selected</span>
+                              <span className="flex gap-3">
+                                <button type="button" onClick={() => setGroup(g.key, true)} className="text-primary hover:underline">Select all</button>
+                                <button type="button" onClick={() => setGroup(g.key, false)} className="hover:underline" disabled={picked === 0}>Clear</button>
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {list.map((s) => {
+                                const on = services.includes(s.key);
+                                return (
+                                  <button key={s.key} type="button" onClick={() => toggleService(s.key)} aria-pressed={on} className={`${chipBase} ${on ? chipOn : chipOff}`}>
+                                    {on && <Check className="h-4 w-4" />}
+                                    {s.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+
+              {/* custom service — anything the directory doesn't have */}
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCustomOpen((v) => !v)}
+                  className={`${chipBase} border-primary/20 bg-primary/5 text-primary hover:bg-primary/10`}
+                  aria-expanded={customOpen}
+                  data-hb-radar-customtrade
+                >
+                  <Plus className="h-4 w-4" />
+                  Add custom service
+                </button>
+                <span className="text-xs text-muted-foreground">{catalog.length || "100"}+ services across {SERVICE_GROUPS.length} categories</span>
+              </div>
+              {customOpen && (
+                <div className="mt-3 flex gap-2">
+                  <div className="relative flex-1">
+                    <Tag className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                    <Input
+                      value={customDraft}
+                      onChange={(e) => { setCustomDraft(e.target.value); setTradesError(null); }}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomTrade(); } }}
+                      placeholder="Enter custom service (e.g. Mattress cleaning)"
+                      maxLength={40}
+                      className="h-11 rounded-xl bg-muted/40 pl-10"
+                      aria-label="Custom service"
+                      autoFocus
+                    />
+                  </div>
+                  <Button className="h-11 rounded-xl px-5 font-semibold" onClick={() => addCustomTrade()} disabled={customDraft.trim().length < 2}>
+                    Add
+                  </Button>
+                </div>
+              )}
+            </div>
+
             {tradesError && <p className="mt-2 text-sm text-amber-700">{tradesError}</p>}
-            {!tradesError && tradesDirty && !data?.settings && selected.length > 0 && tradesSave === "idle" && (
+            {!tradesError && tradesDirty && !data?.settings && services.length > 0 && tradesSave === "idle" && (
               <p className="mt-2 text-xs text-muted-foreground">Pre-filled from your profile — saves with your first group.</p>
             )}
           </section>
