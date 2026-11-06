@@ -29,6 +29,15 @@ import { createClient } from "@/lib/supabase/server";
  *
  * v4 (Tim's Oct 27 full-page mock): leads can be bookmarked (saved_at, "Saved"
  * filter) and posts carry an optional `details` list for the meta line.
+ *
+ * v5 (Tim, Nov 5 "Can you help me add some more trades to select in the lead radar
+ * ... I have a carpet/couch cleaner that wants to try it"): the 24-trade chip list
+ * became his service directory - 107 services in 6 categories (radar_services on
+ * dpaj, read through radar_services_catalog). A contractor picks services
+ * (radar_settings.services); matching (radar_trade_match) fires when a post's
+ * category is one a picked service claims, or one of the service's keywords is in
+ * the post text - that is how "Carpet cleaning" finds a post the classifier filed
+ * under House cleaning. Nothing picked = every homeowner request, as before.
  */
 
 export interface RadarGroup {
@@ -44,11 +53,22 @@ export interface RadarGroup {
 }
 
 export interface RadarSettings {
-  categories: string[] | null; // null = every homeowner request in my groups
+  categories: string[] | null; // legacy trade filter (classifier categories); v5 writes null and uses `services`
   paused: boolean;
   custom_trades: string[] | null; // free-text trades ("Pool service") matched against the post text
   email_alerts: boolean;
   alert_email: string | null;
+  services?: string[] | null; // v5: picked radar_services keys ("carpet-cleaning"); null/empty = every homeowner request
+}
+
+/** One row of the service directory (radar_services) - what the "Your services" card draws. */
+export interface RadarService {
+  key: string; // "carpet-cleaning"
+  group: string; // cleaning | outdoor | handyman | mechanical | exterior | specialty
+  label: string; // Tim's wording: "Carpet cleaning"
+  main: boolean; // the service that stands for a classifier category ("Plumbing" for Plumber)
+  post_categories: string[]; // classifier categories this service claims outright
+  keywords: string[]; // words in a post that mean this service
 }
 
 export interface RadarLeadPost {
@@ -158,10 +178,16 @@ export async function setRadarGroup(id: string, enabled: boolean | null, city?: 
   return rpc<{ ok: boolean }>("radar_set_group", { p_id: id, p_enabled: enabled, p_city: city ?? null });
 }
 
+/** The service directory (107 services / 6 groups), in display order. */
+export async function getRadarServicesCatalog(): Promise<Result<RadarService[]>> {
+  return rpc<RadarService[]>("radar_services_catalog");
+}
+
 /**
- * Which trades this contractor wants alerts about (empty/null = all homeowner requests), the global pause, the custom
+ * Which services this contractor wants alerts about (empty/null = all homeowner requests), the global pause, the custom
  * trades and the email alert switch. Pass `null`/`undefined` for anything that should stay as it is — only
- * `categories` is always written.
+ * `categories` is always written (v5 pages pass null: the filter lives in `services`).
+ * `services`: undefined/null = keep what is saved, [] = clear (every homeowner request), otherwise the picked keys.
  */
 export async function setRadarSettings(
   categories: string[] | null,
@@ -169,15 +195,18 @@ export async function setRadarSettings(
   customTrades?: string[] | null,
   emailAlerts?: boolean | null,
   alertEmail?: string | null,
+  services?: string[] | null,
 ): Promise<Result<{ ok: boolean }>> {
   const cats = (categories ?? []).map((c) => String(c).trim()).filter(Boolean);
   const custom = customTrades == null ? null : customTrades.map((c) => String(c).trim()).filter(Boolean).slice(0, 10);
+  const svc = services == null ? null : services.map((s) => String(s).trim()).filter(Boolean).slice(0, 200);
   return rpc<{ ok: boolean }>("radar_set_settings", {
     p_categories: cats.length ? cats : null,
     p_paused: paused ?? null,
     p_custom_trades: custom,
     p_email_alerts: emailAlerts ?? null,
     p_alert_email: alertEmail === undefined ? null : alertEmail,
+    p_services: svc,
   });
 }
 
