@@ -959,12 +959,16 @@ export default function LeadRadarPage() {
                 <h3 className="text-[1.05rem] font-extrabold text-foreground">Your selected services</h3>
                 <button
                   type="button"
-                  onClick={() => { if (tradeCount === 0) openBrowse(); else setShowAllSelected((v) => !v); }}
+                  onClick={() => {
+                    if (hiddenSelected > 0) setShowAllSelected(true); // unfold the "+N more"
+                    else if (showAllSelected && tradeCount > SELECTED_PREVIEW) setShowAllSelected(false);
+                    else openBrowse(); // everything is already on screen - go pick more
+                  }}
                   className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
                   data-hb-radar-editservices
                 >
                   <Pencil className="h-4 w-4" />
-                  {tradeCount > 0 && showAllSelected ? "Done" : "Edit"}
+                  {showAllSelected && tradeCount > SELECTED_PREVIEW ? "Done" : "Edit"}
                 </button>
               </div>
               {tradeCount === 0 ? (
@@ -1122,7 +1126,7 @@ export default function LeadRadarPage() {
                   <Plus className="h-4 w-4" />
                   Add custom service
                 </button>
-                <span className="text-xs text-muted-foreground">{catalog.length || "100"}+ services across {SERVICE_GROUPS.length} categories</span>
+                <span className="text-xs text-muted-foreground">{catalog.length ? `${catalog.length} services` : "100+ services"} across {SERVICE_GROUPS.length} categories</span>
               </div>
               {customOpen && (
                 <div className="mt-3 flex gap-2">
