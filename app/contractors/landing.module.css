@@ -13,7 +13,8 @@
   -webkit-font-smoothing: antialiased;
 }
 .page * { box-sizing: border-box; }
-.page a { color: inherit; text-decoration: none; }
+/* :where() keeps this at class strength (0,1,0) like the mock's bare `a{color:inherit}`, so .btn's white text wins (it lost to `.page a` before) */
+.page :where(a) { color: inherit; text-decoration: none; }
 .page a, .page button { outline-offset: 4px; }
 .page a:focus-visible, .page button:focus-visible, .page summary:focus-visible { outline: 3px solid #005fc4; }
 
