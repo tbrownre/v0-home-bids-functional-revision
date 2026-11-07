@@ -95,6 +95,18 @@ export default function ContractorProfilePage() {
   const [pwSaving, setPwSaving] = useState(false);
   const [pwError, setPwError] = useState<string | null>(null);
 
+  // PHONECHANGE (Abir, Nov 8): change the mobile number with a code we text to the NEW number — proves it can receive our
+  // texts (Danny's office line bounced every Lead Radar / Bid Builder text). RPCs: request_phone_change / phone_change_status /
+  // confirm_phone_change on dpaj.
+  const [phoneOpen, setPhoneOpen] = useState(false);
+  const [phoneDraft, setPhoneDraft] = useState("");
+  const [phoneReq, setPhoneReq] = useState<{ id: string; phone: string } | null>(null);
+  const [phoneCode, setPhoneCode] = useState("");
+  const [phoneBusy, setPhoneBusy] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [phoneDelivery, setPhoneDelivery] = useState<"pending" | "sent" | "failed" | null>(null);
+  const phonePoll = useRef<ReturnType<typeof setInterval> | null>(null);
+
   function showToast(message: string) {
     setToast(message);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -163,6 +175,75 @@ export default function ContractorProfilePage() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  function prettyPhone(p: string) {
+    const d = p.replace(/\D/g, "").slice(-10);
+    return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : p;
+  }
+  function stopPhonePoll() {
+    if (phonePoll.current) { clearInterval(phonePoll.current); phonePoll.current = null; }
+  }
+  useEffect(() => () => stopPhonePoll(), []);
+
+  /** Step 1: text a 6-digit code to the new number, then watch the text go out (sent / failed = not a mobile). */
+  async function sendPhoneCode() {
+    setPhoneError(null);
+    setPhoneBusy(true);
+    try {
+      const { requestPhoneChange, phoneChangeStatus } = await import("@/lib/supabase/phone-change");
+      const res = await requestPhoneChange(phoneDraft);
+      if (res.error !== null) { setPhoneError(res.error); return; }
+      if (res.data.same || !res.data.request_id) { setPhoneError("That's already the number on your account."); return; }
+      const requestId = res.data.request_id;
+      setPhoneReq({ id: requestId, phone: res.data.phone });
+      setPhoneCode("");
+      setPhoneDelivery("pending");
+      stopPhonePoll();
+      let ticks = 0;
+      phonePoll.current = setInterval(async () => {
+        ticks += 1;
+        const s = await phoneChangeStatus(requestId);
+        const st = s.data?.status;
+        if (st === "sent" || st === "failed") { setPhoneDelivery(st); stopPhonePoll(); }
+        else if (ticks >= 40) stopPhonePoll(); // ~2 minutes - stop asking, the code field still works
+      }, 3000);
+    } catch {
+      setPhoneError("Couldn't send the code — please try again.");
+    } finally {
+      setPhoneBusy(false);
+    }
+  }
+
+  /** Step 2: the code matches -> profiles.phone is the new number everywhere (Bid Builder, Lead Radar, texts). */
+  async function confirmPhoneCode() {
+    if (!phoneReq) return;
+    setPhoneError(null);
+    setPhoneBusy(true);
+    try {
+      const { confirmPhoneChange } = await import("@/lib/supabase/phone-change");
+      const res = await confirmPhoneChange(phoneReq.id, phoneCode);
+      if (res.error !== null) { setPhoneError(res.error); return; }
+      if (!res.data.ok) {
+        const left = res.data.tries_left;
+        setPhoneError((res.data.error ?? "That code is not right.") + (typeof left === "number" && left > 0 ? ` ${left} ${left === 1 ? "try" : "tries"} left.` : ""));
+        return;
+      }
+      const newPhone = res.data.phone ?? phoneReq.phone;
+      setAccount((a) => ({ ...a, phone: newPhone }));
+      stopPhonePoll();
+      setPhoneOpen(false);
+      setPhoneReq(null);
+      setPhoneDraft("");
+      setPhoneCode("");
+      setPhoneDelivery(null);
+      showToast("Phone number updated");
+      void syncMirrorFromSupabase(); // the cached session mirror carries the phone too
+    } catch {
+      setPhoneError("Couldn't verify the code — please try again.");
+    } finally {
+      setPhoneBusy(false);
+    }
+  }
 
   async function changePassword() {
     setPwError(null);
@@ -395,10 +476,90 @@ export default function ContractorProfilePage() {
                   <Mail className="h-4 w-4 shrink-0" /> {account.email}
                 </p>
               )}
-              {account.phone && (
-                <p className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                  <Phone className="h-4 w-4 shrink-0" /> {account.phone}
-                </p>
+              <div className="flex items-center gap-2.5 text-sm text-muted-foreground" data-hb-account-phone>
+                <Phone className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 truncate">{account.phone ? prettyPhone(account.phone) : <span className="italic">No mobile number yet</span>}</span>
+                <button
+                  type="button"
+                  onClick={() => { setPhoneOpen((v) => !v); setPhoneError(null); }}
+                  className="ml-auto shrink-0 text-xs font-semibold text-primary hover:underline"
+                  data-hb-phone-change
+                >
+                  {phoneOpen ? "Cancel" : account.phone ? "Change" : "Add"}
+                </button>
+              </div>
+              {phoneOpen && (
+                <div className="rounded-xl border border-border bg-muted/30 p-3" data-hb-phone-panel>
+                  {!phoneReq ? (
+                    <>
+                      <p className="text-xs text-muted-foreground">
+                        Lead Radar alerts and Bid Builder replies are texted to this number, so it has to be a mobile that can receive texts.
+                        We&apos;ll text you a code to confirm it.
+                      </p>
+                      <div className="mt-2 flex gap-2">
+                        <Input
+                          type="tel"
+                          inputMode="tel"
+                          autoComplete="tel"
+                          value={phoneDraft}
+                          onChange={(e) => { setPhoneDraft(e.target.value); setPhoneError(null); }}
+                          onKeyDown={(e) => { if (e.key === "Enter" && phoneDraft.replace(/\D/g, "").length >= 10) { e.preventDefault(); void sendPhoneCode(); } }}
+                          placeholder="(480) 555-0123"
+                          className="h-10 rounded-lg"
+                          aria-label="New mobile number"
+                          autoFocus
+                        />
+                        <Button className="h-10 shrink-0 rounded-lg px-4 font-semibold" onClick={sendPhoneCode} disabled={phoneBusy || phoneDraft.replace(/\D/g, "").length < 10}>
+                          {phoneBusy ? "Sending…" : "Text me a code"}
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs text-muted-foreground" data-hb-phone-delivery={phoneDelivery ?? "pending"}>
+                        {phoneDelivery === "failed" ? (
+                          <span className="font-semibold text-destructive">
+                            We couldn&apos;t deliver a text to {prettyPhone(phoneReq.phone)} — that number can&apos;t receive texts. Use a mobile number.
+                          </span>
+                        ) : phoneDelivery === "sent" ? (
+                          <>Code sent to <b className="text-foreground">{prettyPhone(phoneReq.phone)}</b>. Enter it below.</>
+                        ) : (
+                          <>Texting a code to <b className="text-foreground">{prettyPhone(phoneReq.phone)}</b>…</>
+                        )}
+                      </p>
+                      <div className="mt-2 flex gap-2">
+                        <Input
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          maxLength={7}
+                          value={phoneCode}
+                          onChange={(e) => { setPhoneCode(e.target.value); setPhoneError(null); }}
+                          onKeyDown={(e) => { if (e.key === "Enter" && phoneCode.replace(/\D/g, "").length === 6) { e.preventDefault(); void confirmPhoneCode(); } }}
+                          placeholder="6-digit code"
+                          className="h-10 rounded-lg tracking-[0.25em]"
+                          aria-label="Verification code"
+                          autoFocus
+                        />
+                        <Button className="h-10 shrink-0 rounded-lg px-4 font-semibold" onClick={confirmPhoneCode} disabled={phoneBusy || phoneCode.replace(/\D/g, "").length !== 6}>
+                          {phoneBusy ? "Checking…" : "Verify & save"}
+                        </Button>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                        <button
+                          type="button"
+                          className="font-semibold text-primary hover:underline"
+                          onClick={() => { stopPhonePoll(); setPhoneReq(null); setPhoneCode(""); setPhoneDelivery(null); setPhoneError(null); }}
+                        >
+                          Use a different number
+                        </button>
+                        <button type="button" className="font-semibold text-primary hover:underline disabled:opacity-50" onClick={sendPhoneCode} disabled={phoneBusy}>
+                          Send the code again
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  {phoneError && <p className="mt-2 text-xs font-medium text-destructive">{phoneError}</p>}
+                </div>
               )}
             </div>
           </section>
