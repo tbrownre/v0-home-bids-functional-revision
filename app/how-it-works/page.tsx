@@ -105,8 +105,8 @@ export default function HowItWorksPage() {
               <img
                 className={s.radarImg}
                 src="/contractors/lead-radar-list.png"
-                width={904}
-                height={515}
+                width={960}
+                height={609}
                 alt="Actual HomeBids Lead Radar opportunity interface with Build Bid and suggested message actions"
               />
             </div>
