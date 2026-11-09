@@ -44,8 +44,8 @@ export default function ContractorsLandingPage() {
                 <img
                   className={s.productImg}
                   src="/contractors/lead-radar-card.png"
-                  width={831}
-                  height={316}
+                  width={851}
+                  height={377}
                   alt="Actual Lead Radar opportunity screen, with Build Bid and original post actions"
                 />
                 <div className={s.float}>Local opportunities, right on your phone</div>
@@ -102,8 +102,8 @@ export default function ContractorsLandingPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/contractors/lead-radar-list.png"
-                width={904}
-                height={515}
+                width={960}
+                height={609}
                 alt="Actual Lead Radar opportunity list showing suggested replies and Build Bid actions"
               />
               <p className={s.productNote}>Actual HomeBids Lead Radar interface · Group coverage depends on setup</p>
