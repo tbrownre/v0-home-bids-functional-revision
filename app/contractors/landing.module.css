@@ -16,8 +16,8 @@
 /* :where() keeps this at class strength (0,1,0) like the mock's bare `a{color:inherit}`, so .btn's white text wins (it lost to `.page a` before).
    Nov 11 (Tim: header "Get Started" text black → white): this module is unlayered, so it also beat the site Header's
    Tailwind `text-primary-foreground` (a layered utility) and turned that one button's text black. The mock's rule now
-   skips that button and nothing else. */
-.page :where(a:not(.text-primary-foreground)) { color: inherit; text-decoration: none; }
+   skips that button and nothing else (:global - it is a Tailwind class, not one of this module's). */
+.page :where(a:not(:global(.text-primary-foreground))) { color: inherit; text-decoration: none; }
 .page a, .page button { outline-offset: 4px; }
 .page a:focus-visible, .page button:focus-visible, .page summary:focus-visible { outline: 3px solid #005fc4; }
 
