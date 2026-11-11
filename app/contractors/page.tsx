@@ -1,3 +1,4 @@
+import { DemoPopup } from "@/components/demo-popup";
 import { Header } from "@/components/header";
 import { LANDING_PAGE_DEMO_URL } from "@/components/landing-page-demo-link";
 import { TrialCta } from "@/components/trial-cta";
@@ -295,6 +296,10 @@ export default function ContractorsLandingPage() {
         </span>
         <TrialCta className={s.btn} label="Start Free Trial →" proLabel="Go to dashboard →" />
       </div>
+
+      {/* Nov 11 (Tim: "restore the original Try Our Bid Builder popup"): the page's own DemoPopup from before the
+          Oct 31 rebuild (6416c56 dropped it), unchanged - 7 s after load, once per session, "Text Us to See a Live Demo". */}
+      <DemoPopup />
     </div>
   );
 }

@@ -13,8 +13,11 @@
   -webkit-font-smoothing: antialiased;
 }
 .page * { box-sizing: border-box; }
-/* :where() keeps this at class strength (0,1,0) like the mock's bare `a{color:inherit}`, so .btn's white text wins (it lost to `.page a` before) */
-.page :where(a) { color: inherit; text-decoration: none; }
+/* :where() keeps this at class strength (0,1,0) like the mock's bare `a{color:inherit}`, so .btn's white text wins (it lost to `.page a` before).
+   Nov 11 (Tim: header "Get Started" text black → white): this module is unlayered, so it also beat the site Header's
+   Tailwind `text-primary-foreground` (a layered utility) and turned that one button's text black. The mock's rule now
+   skips that button and nothing else. */
+.page :where(a:not(.text-primary-foreground)) { color: inherit; text-decoration: none; }
 .page a, .page button { outline-offset: 4px; }
 .page a:focus-visible, .page button:focus-visible, .page summary:focus-visible { outline: 3px solid #005fc4; }
 
