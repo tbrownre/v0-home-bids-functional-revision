@@ -5,6 +5,7 @@ import { Header } from "@/components/header";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { motion } from "framer-motion";
 import { Shield, ChevronDown, ChevronUp } from "lucide-react";
+import { COMPANY, COMPANY_MAILING_ONE_LINE } from "@/lib/company";
 
 const sections = [
   {
@@ -168,14 +169,33 @@ const sections = [
     ),
   },
   {
+    // A2P/10DLC (Nov 13 2026): how text messaging consent works and that opt-in data is never shared or sold.
+    id: "sms",
+    title: "Text Messaging (SMS)",
+    content: (
+      <>
+        <p>
+          HomeBids sends text messages (SMS/iMessage) to users who provide their mobile number and agree to receive them — for example account and trial updates, job and lead alerts, bid links and replies to messages you send us. Consent to receive text messages is optional and is not a condition of purchase.
+        </p>
+        <p>
+          Message frequency varies. Message and data rates may apply. You can opt out at any time by replying STOP to any message; reply HELP for help, or contact us at {COMPANY.phoneDisplay} or {COMPANY.email}.
+        </p>
+        <p>
+          Mobile phone numbers and text-messaging opt-in information are used only to deliver the messages described above. They are not sold, rented or shared with third parties or affiliates for their marketing purposes. Our messaging providers process this information solely to send messages on our behalf.
+        </p>
+      </>
+    ),
+  },
+  {
     id: "contact",
     title: "Contact",
     content: (
       <p>
-        HomeBids<br />
-        [Insert Address]<br />
-        [Insert Support Email]<br />
-        [Insert Website URL]
+        {COMPANY.legalName}<br />
+        {COMPANY_MAILING_ONE_LINE}<br />
+        {COMPANY.phoneDisplay}<br />
+        {COMPANY.email}<br />
+        {COMPANY.website}
       </p>
     ),
   },
