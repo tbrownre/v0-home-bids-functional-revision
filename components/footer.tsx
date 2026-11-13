@@ -1,23 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Home, Building2, Send, CheckCircle2, ChevronUp } from "lucide-react";
+import { ChevronUp, Mail, Phone } from "lucide-react";
 import { HomeBidsLogo } from "@/components/homebids-logo";
 import { useContractorLogoHref } from "@/lib/use-contractor-logo-href";
-import { submitContactMessage } from "@/lib/supabase/contact";
+import { COMPANY } from "@/lib/company";
 
 // Flyout group — keeps open while hovering trigger or panel
 function FlyoutGroup({ label, items }: { label: string; items: { href?: string; label: string; onClick?: () => void }[] }) {
@@ -81,197 +70,84 @@ function FlyoutGroup({ label, items }: { label: string; items: { href?: string; 
   );
 }
 
+const PLATFORM_ITEMS = [
+  { href: "/how-it-works", label: "How It Works" },
+  { href: "/homeowners", label: "For Homeowners" },
+  { href: "/contractors", label: "For Contractors" },
+  { href: "/subscribe", label: "Pricing" },
+];
+// A2P (Tim, Nov 13 2026): Contact is a real page with the company's details, linked from header and footer.
+const COMPANY_ITEMS = [
+  { href: "/about", label: "About Us" },
+  { href: "/affiliates", label: "Affiliates" },
+  { href: "/contact", label: "Contact" },
+];
+const LEGAL_ITEMS = [
+  { href: "/privacy", label: "Privacy Policy" },
+  { href: "/terms", label: "Terms of Service" },
+];
+
+/** Legal name + phone + email on every page (no street address here — that lives on /contact). */
+function CompanyLine({ className = "" }: { className?: string }) {
+  return (
+    <p className={`flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-muted-foreground ${className}`} data-hb-footer-company>
+      <span className="font-semibold text-foreground">{COMPANY.legalName}</span>
+      <a href={`tel:${COMPANY.phoneE164}`} className="inline-flex items-center gap-1 transition-colors hover:text-foreground">
+        <Phone className="h-3 w-3" aria-hidden /> {COMPANY.phoneDisplay}
+      </a>
+      <a href={`mailto:${COMPANY.email}`} className="inline-flex items-center gap-1 transition-colors hover:text-foreground">
+        <Mail className="h-3 w-3" aria-hidden /> {COMPANY.email}
+      </a>
+    </p>
+  );
+}
+
 export function Footer() {
   const pathname = usePathname();
+  const logoHref = useContractorLogoHref();
   // Hosted proposals (/p/[shareToken]) are standalone, contractor-branded pages
   // and must not show the HomeBids marketing footer.
   if (pathname?.startsWith("/p/")) return null;
 
-  const [showContact, setShowContact] = useState(false);
-  const [contactType, setContactType] = useState<"homeowner" | "contractor">("homeowner");
-  const [contactName, setContactName] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
-  const [contactMessage, setContactMessage] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState(false);
-  const logoHref = useContractorLogoHref();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (sending) return;
-    setSending(true);
-    setSendError(false);
-    const { ok } = await submitContactMessage({
-      type: contactType,
-      name: contactName,
-      email: contactEmail,
-      phone: contactPhone,
-      message: contactMessage,
-    });
-    setSending(false);
-    if (ok) {
-      setSubmitted(true);
-    } else {
-      setSendError(true);
-    }
-  };
-
-  const resetForm = () => {
-    setContactName(""); setContactEmail(""); setContactPhone("");
-    setContactMessage(""); setContactType("homeowner"); setSubmitted(false);
-    setSending(false); setSendError(false);
-  };
-
   return (
-    <>
-      <footer className="border-t border-border bg-background overflow-visible">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <footer className="border-t border-border bg-background overflow-visible">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
-          {/* Mobile: stacked centered layout */}
-          <div className="flex flex-col items-center gap-4 py-6 sm:hidden">
-            <nav className="flex flex-row items-center justify-center gap-5" aria-label="Footer navigation">
-              <FlyoutGroup
-                label="Platform"
-                items={[
-                  { href: "/how-it-works", label: "How It Works" },
-                  { href: "/homeowners", label: "For Homeowners" },
-                  { href: "/contractors", label: "For Contractors" },
-                  { href: "/subscribe", label: "Pricing" },
-                ]}
-              />
-              <FlyoutGroup
-                label="Company"
-                items={[
-                  { href: "/about", label: "About Us" },
-                  { href: "/affiliates", label: "Affiliates" },
-                  { label: "Contact", onClick: () => setShowContact(true) },
-                ]}
-              />
-              <FlyoutGroup
-                label="Legal"
-                items={[
-                  { href: "/privacy", label: "Privacy Policy" },
-                  { href: "/terms", label: "Terms of Service" },
-                ]}
-              />
-            </nav>
-            <div className="border-t border-border w-full pt-4 flex flex-col items-center gap-1">
-              <HomeBidsLogo size="16px" href={logoHref} />
-              <p className="text-xs text-muted-foreground">
-                &copy; {new Date().getFullYear()} HomeBids.ai. All rights reserved.
-              </p>
-            </div>
+        {/* Mobile: stacked centered layout */}
+        <div className="flex flex-col items-center gap-4 py-6 sm:hidden">
+          <nav className="flex flex-row items-center justify-center gap-5" aria-label="Footer navigation">
+            <FlyoutGroup label="Platform" items={PLATFORM_ITEMS} />
+            <FlyoutGroup label="Company" items={COMPANY_ITEMS} />
+            <FlyoutGroup label="Legal" items={LEGAL_ITEMS} />
+          </nav>
+          <div className="border-t border-border w-full pt-4 flex flex-col items-center gap-1.5">
+            <HomeBidsLogo size="16px" href={logoHref} />
+            <CompanyLine />
+            <p className="text-xs text-muted-foreground">
+              &copy; {new Date().getFullYear()} {COMPANY.legalName}. All rights reserved.
+            </p>
           </div>
-
-          {/* Desktop: single-line layout */}
-          <div className="hidden sm:flex flex-wrap items-center justify-between gap-y-2 py-3">
-            <div className="flex items-center gap-3">
-              <HomeBidsLogo size="14px" href={logoHref} />
-              <span className="text-muted-foreground/40">|</span>
-              <span className="text-xs text-muted-foreground">
-                &copy; {new Date().getFullYear()} HomeBids.ai. All rights reserved.
-              </span>
-            </div>
-            <nav className="flex flex-wrap items-center gap-x-5 gap-y-1" aria-label="Footer navigation">
-              <FlyoutGroup
-                label="Platform"
-                items={[
-                  { href: "/how-it-works", label: "How It Works" },
-                  { href: "/homeowners", label: "For Homeowners" },
-                  { href: "/contractors", label: "For Contractors" },
-                  { href: "/subscribe", label: "Pricing" },
-                ]}
-              />
-              <FlyoutGroup
-                label="Company"
-                items={[
-                  { href: "/about", label: "About Us" },
-                  { href: "/affiliates", label: "Affiliates" },
-                  { label: "Contact", onClick: () => setShowContact(true) },
-                ]}
-              />
-              <FlyoutGroup
-                label="Legal"
-                items={[
-                  { href: "/privacy", label: "Privacy Policy" },
-                  { href: "/terms", label: "Terms of Service" },
-                ]}
-              />
-            </nav>
-          </div>
-
         </div>
-      </footer>
 
-      {/* Contact Modal */}
-      <Dialog open={showContact} onOpenChange={(open) => { setShowContact(open); if (!open) resetForm(); }}>
-        <DialogContent className="sm:max-w-md overflow-hidden p-0">
-          {!submitted ? (
-            <>
-              <DialogHeader className="px-6 pb-4 pt-6">
-                <DialogTitle className="text-xl font-semibold">Get in Touch</DialogTitle>
-                <DialogDescription>Have a question? We&apos;d love to hear from you.</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-5 px-6 pb-6">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">I am a</Label>
-                  <div className="flex rounded-xl bg-muted p-1">
-                    {(["homeowner", "contractor"] as const).map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => setContactType(type)}
-                        className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-                          contactType === type ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        {type === "homeowner" ? <Home className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
-                        {type === "homeowner" ? "Property Owner" : "Contractor"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {[
-                  { id: "contact-name", label: "Name", type: "text", placeholder: "Your name", value: contactName, onChange: setContactName },
-                  { id: "contact-email", label: "Email", type: "email", placeholder: "you@example.com", value: contactEmail, onChange: setContactEmail },
-                  { id: "contact-phone", label: "Phone", type: "tel", placeholder: "(555) 123-4567", value: contactPhone, onChange: setContactPhone },
-                ].map((field) => (
-                  <div key={field.id} className="space-y-2">
-                    <Label htmlFor={field.id} className="text-sm font-medium">{field.label}</Label>
-                    <Input id={field.id} type={field.type} placeholder={field.placeholder} value={field.value}
-                      onChange={(e) => field.onChange(e.target.value)} className="h-11" required />
-                  </div>
-                ))}
-                <div className="space-y-2">
-                  <Label htmlFor="contact-message" className="text-sm font-medium">Message</Label>
-                  <Textarea id="contact-message" placeholder="How can we help?" value={contactMessage}
-                    onChange={(e) => setContactMessage(e.target.value)} className="min-h-[100px] resize-none" required />
-                </div>
-                <Button type="submit" className="h-11 w-full gap-2"
-                  disabled={sending || !contactName.trim() || !contactEmail.trim() || !contactPhone.trim() || !contactMessage.trim()}>
-                  <Send className="h-4 w-4" />{sending ? "Sending…" : "Send Message"}
-                </Button>
-                {sendError && (
-                  <p className="text-center text-sm text-red-600">
-                    Couldn&apos;t send your message — please try again.
-                  </p>
-                )}
-              </form>
-            </>
-          ) : (
-            <div className="p-8 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                <CheckCircle2 className="h-8 w-8 text-green-600" />
-              </div>
-              <h3 className="mt-4 text-xl font-semibold text-foreground">Message Sent!</h3>
-              <p className="mt-2 text-muted-foreground">Thank you for reaching out. We&apos;ll get back to you within 24 hours.</p>
-              <Button className="mt-6" onClick={() => setShowContact(false)}>Done</Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+        {/* Desktop: single-line layout */}
+        <div className="hidden sm:flex flex-wrap items-center justify-between gap-y-2 py-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <HomeBidsLogo size="14px" href={logoHref} />
+            <span className="text-muted-foreground/40">|</span>
+            <span className="text-xs text-muted-foreground">
+              &copy; {new Date().getFullYear()} {COMPANY.legalName}. All rights reserved.
+            </span>
+            <span className="text-muted-foreground/40">|</span>
+            <CompanyLine />
+          </div>
+          <nav className="flex flex-wrap items-center gap-x-5 gap-y-1" aria-label="Footer navigation">
+            <FlyoutGroup label="Platform" items={PLATFORM_ITEMS} />
+            <FlyoutGroup label="Company" items={COMPANY_ITEMS} />
+            <FlyoutGroup label="Legal" items={LEGAL_ITEMS} />
+          </nav>
+        </div>
+
+      </div>
+    </footer>
   );
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import React, { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle, LayoutDashboard, Sparkles, Users, Wrench, Search, Inbox } from "lucide-react";
+import { Menu, FileText, Briefcase, HelpCircle, LogIn, LogOut, Home, ArrowLeft, MessageCircle, Hammer, PlusCircle, LayoutDashboard, Sparkles, Users, Wrench, Search, Inbox, Mail } from "lucide-react";
 import { homeownerNavItems, loggedOutNavItems, contractorNavItems } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
 import { useSignInModal } from "@/components/sign-in-modal-provider";
@@ -244,6 +244,7 @@ export function Header({
                         {item.label === "Services"     && <Briefcase  className="h-4 w-4 shrink-0" />}
                         {item.label === "Contractors"  && <Hammer     className="h-4 w-4 shrink-0" />}
                         {item.label === "Pricing"      && <FileText   className="h-4 w-4 shrink-0" />}
+                        {item.label === "Contact"      && <Mail       className="h-4 w-4 shrink-0" />}
                         {item.label}
                       </Link>
                     );
