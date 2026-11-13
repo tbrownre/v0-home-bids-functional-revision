@@ -12,6 +12,7 @@ export const loggedOutNavItems: NavItem[] = [
   { label: "Services",     href: "/services" },
   { label: "Contractors",  href: "/contractors" },
   { label: "Pricing",      href: "/subscribe" },
+  { label: "Contact",      href: "/contact" }, // A2P (Nov 13, 2026): company contact page, linked from the header
 ];
 
 // Single source of truth for homeowner logged-in navigation.
