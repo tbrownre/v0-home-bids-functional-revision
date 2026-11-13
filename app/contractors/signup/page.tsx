@@ -81,6 +81,19 @@ function readIntent(): { intent: Intent; phone: string } {
 const checkoutHref = (userId?: string, trial?: boolean) =>
   `/subscribe?type=contractor${userId ? `&userId=${encodeURIComponent(userId)}` : ""}${trial ? "&trial=1" : ""}`;
 
+/** A2P SMS consent (Tim, Nov 13 2026) — exact wording, optional, unchecked by default; shown on step 1 and on Review. */
+const SMS_CONSENT_TEXT =
+  "I agree to receive text messages from HomeBids about my trial and job alerts. Message frequency varies. Message & data rates may apply. Reply STOP to opt out, HELP for help.";
+
+function SmsConsentCheckbox({ checked, onChange, id }: { checked: boolean; onChange: (v: boolean) => void; id: string }) {
+  return (
+    <label htmlFor={id} className="mt-3 flex items-start gap-3 rounded-lg border border-border bg-muted/40 p-3" data-hb-sms-consent>
+      <Checkbox id={id} checked={checked} onCheckedChange={(v) => onChange(v === true)} className="mt-0.5" />
+      <span className="text-xs leading-relaxed text-muted-foreground">{SMS_CONSENT_TEXT}</span>
+    </label>
+  );
+}
+
 export default function ContractorSignupPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<Step>("info");
@@ -156,6 +169,7 @@ export default function ContractorSignupPage() {
     password: "",
     confirmPassword: "",
     agreeToTerms: false,
+    smsConsent: false, // A2P (Tim, Nov 13 2026): optional, unchecked by default — signup never depends on it
   });
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -195,6 +209,7 @@ export default function ContractorSignupPage() {
       companyName: formData.companyName,
       trade: formData.trade,
       serviceArea: formData.serviceArea,
+      smsConsent: formData.smsConsent,
     });
     setSubmitting(false);
 
@@ -346,6 +361,11 @@ export default function ContractorSignupPage() {
                           Use the number you text HomeBids from — that&apos;s what unlocks unlimited bids on your texts.
                         </p>
                       )}
+                      <SmsConsentCheckbox
+                        checked={formData.smsConsent}
+                        onChange={(v) => update("smsConsent", v)}
+                        id="smsConsent"
+                      />
                     </div>
 
                     <div>
@@ -587,6 +607,12 @@ export default function ContractorSignupPage() {
                       </p>
                     </div>
                   </div>
+
+                  <SmsConsentCheckbox
+                    checked={formData.smsConsent}
+                    onChange={(v) => update("smsConsent", v)}
+                    id="smsConsentReview"
+                  />
 
                   <label className="flex items-start gap-3">
                     <Checkbox
