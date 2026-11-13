@@ -87,7 +87,7 @@ const SMS_CONSENT_TEXT =
 
 function SmsConsentCheckbox({ checked, onChange, id }: { checked: boolean; onChange: (v: boolean) => void; id: string }) {
   return (
-    <label htmlFor={id} className="mt-3 flex items-start gap-3 rounded-lg border border-border bg-muted/40 p-3" data-hb-sms-consent>
+    <label htmlFor={id} className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 p-3" data-hb-sms-consent>
       <Checkbox id={id} checked={checked} onCheckedChange={(v) => onChange(v === true)} className="mt-0.5" />
       <span className="text-xs leading-relaxed text-muted-foreground">{SMS_CONSENT_TEXT}</span>
     </label>
@@ -361,11 +361,6 @@ export default function ContractorSignupPage() {
                           Use the number you text HomeBids from — that&apos;s what unlocks unlimited bids on your texts.
                         </p>
                       )}
-                      <SmsConsentCheckbox
-                        checked={formData.smsConsent}
-                        onChange={(v) => update("smsConsent", v)}
-                        id="smsConsent"
-                      />
                     </div>
 
                     <div>
@@ -377,6 +372,15 @@ export default function ContractorSignupPage() {
                         placeholder="ABC Plumbing"
                         className="mt-1.5"
                         autoComplete="organization"
+                      />
+                    </div>
+
+                    {/* A2P SMS consent — full width, directly under the phone/company row */}
+                    <div className="sm:col-span-2">
+                      <SmsConsentCheckbox
+                        checked={formData.smsConsent}
+                        onChange={(v) => update("smsConsent", v)}
+                        id="smsConsent"
                       />
                     </div>
 
