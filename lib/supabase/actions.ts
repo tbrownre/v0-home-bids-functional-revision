@@ -84,6 +84,8 @@ export async function signUpContractor(formData: {
   companyName: string;
   trade: string;
   serviceArea: string;
+  /** A2P (Nov 13 2026): the optional SMS-consent checkbox on the signup form. Recorded on the profile, never required. */
+  smsConsent?: boolean;
 }) {
   const supabase = await createClient();
 
@@ -151,6 +153,20 @@ export async function signUpContractor(formData: {
     return { error: "We couldn't save your contractor details. Please try again or contact support." };
   }
 
+  // A2P consent record (Nov 13 2026): what was agreed, when and where. Best effort — a failure here is logged and
+  // never blocks the signup.
+  if (formData.smsConsent === true) {
+    const { error: consentError } = await admin
+      .from("profiles")
+      .update({
+        marketing_sms_consent: true,
+        marketing_consent_at: new Date().toISOString(),
+        marketing_consent_source: "contractor_signup",
+      })
+      .eq("id", userId);
+    if (consentError) console.error("[signUpContractor] sms consent save failed:", consentError.message);
+  }
+
   // SUBLINK (Oct 8): a Pro who already paid by text (phone-first checkout) has a subscription row keyed by phone
   // with no account yet — attach it now so the dashboard, bid limits and Cancel link see the paid plan.
   await linkPhoneSubscriptionsToUser(admin, userId, formData.phone);
@@ -163,6 +179,7 @@ export async function signUpContractor(formData: {
     trade,
     service_area: serviceArea,
     phone: formData.phone,
+    sms_consent: formData.smsConsent === true,
   });
 
   // Establish a session on the cookie-based server client so the contractor is
